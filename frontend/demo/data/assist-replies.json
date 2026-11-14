@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-11-08T07:19:59.491243+00:00",
+  "recordedAt": "2026-11-14T01:54:20.148903+00:00",
   "replies": [
     {
       "question": {
@@ -7,8 +7,38 @@
         "en": "How many cases are awaiting judgment across all halls?"
       },
       "answer": {
-        "zh-Hans": "我只能查到您自己范围的数字：共 13 件未结审判，其中待认领 12 件、他人认领 1 件、您认领 0 件、暂缓 0 件，逾期的有 10 件。这个数字只覆盖本殿（您的数据范围是本殿），各殿汇总的待审数要看「各殿概况」页，那里每个殿一行、可以点进去。",
-        "en": "I can't give you a figure across all halls: your data scope is this hall only, so the counts cover just your own hall. Here: 13 open cases in total — 0 claimed by you, 12 unclaimed, 1 claimed by someone else, 0 deferred; 10 are overdue and none are returned. For a cross-hall total you'd need an administrator who belongs to no hall."
+        "zh-Hans": "我先查一下我手上能用的工具。我只有 my_permissions 这一个工具，没有可以查审判队列计数的工具，因此查不到各殿待审一共多少件。\n\n这类计数通常要在审判队列页面查看；若要跨殿汇总，可看「各殿概况」，但它只对全局管理员开放。我这个助手账号是朋友圈审核员角色，只覆盖本殿，也没有审判方面的权限；具体数字请你到审判队列页面查看，或询问管理员。",
+        "en": "I can't give you that number: the judgment queue count tool only tells an officer about its own hall's queue, and it wasn't something I was given here. Open \"Judgment Queue\" and use the tabs and groups (Mine, Unclaimed, Claimed by others, Deferred) to see the cases themselves. For a cross-hall total, ask the global administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 5144,
+          "first_token_ms": 4365,
+          "tokens": {
+            "input": 13281,
+            "output": 98
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1610,
+          "first_token_ms": 971,
+          "tokens": {
+            "input": 15074,
+            "output": 79
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -17,8 +47,38 @@
         "en": "Which hall has the largest backlog?"
       },
       "answer": {
-        "zh-Hans": "抱歉，我没有能按殿统计积压的工具。你这个问题需要\"审判队列按殿分布\"之类的数据，助手只提供你本人队列的分组计数（我的、未认领、他人认领、延期、逾期、退回），给不出各殿之间的对比。\n\n要看哪个殿积压多，建议在审判队列页面按殿筛选后逐个数，或者找系统管理员做一次统计。",
-        "en": "I don't know — I can't answer that. The counts tools don't break the judgment queue down by hall, and I have no tool that reports hall-by-hall backlog. Your scope is this hall only anyway.\n\nTo compare backlogs, open the Judgment Queue (its \"Pending\" tab) and use the court and civilization filters to check each hall's open cases, or ask your system administrator for a cross-hall report."
+        "zh-Hans": "抱歉，我不能回答这个问题：「各殿概况」只对不属于任何殿的管理员开放，而我这边拿到的角色也不是那种全局视角。你可以在「各殿概况」页里自己查看各殿的待办、未结审判和待复核申诉，各殿排在一起便于比较。如果这个页面打不开，请联系本殿管理员或系统管理员确认权限。",
+        "en": "I don't know — I can't answer that. I have no tool that reports backlogs across halls, and my only data tool reports your own role and permissions (role=MODERATOR, scope=this_hall), not case counts per hall.\n\nFor backlog figures, open the \"Judgment Queue\" page and use its counts per group, or ask a global administrator, who can compare halls on the all-halls overview (and also see each hall's to-dos and open judgments)."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1662,
+          "first_token_ms": 979,
+          "tokens": {
+            "input": 13279,
+            "output": 77
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2454,
+          "first_token_ms": 1632,
+          "tokens": {
+            "input": 15071,
+            "output": 101
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -27,8 +87,38 @@
         "en": "Where is the longest-stuck workflow waiting?"
       },
       "answer": {
-        "zh-Hans": "我查不到这个问题的答案。我的工具只返回计数（审判队列、等你审批的流程、收件箱、你自己的权限），不提供任何具体流程实例、当前停在哪个节点或停留多久的信息，所以无法告诉你哪条流程卡得最久、停在哪一步。\n\n要看具体实例，请到「审批流程」页的「审批实例」页签，那里列出各个实例和它们的当前节点，可以配合排序查看。如果某个节点确实卡住，由有权限的官员用「越级推进」（需写理由，会留审计记录）处理，最多推到终审那一站。",
-        "en": "I don't know — I can't answer that from what I have. My tools only return counts (for example, how many workflow steps are waiting for your own decision), never which case has been waiting longest, so I can't point to a specific workflow.\n\nTo find it yourself: open \"Approval Workflow\" and go to the running instances tab, then sort or filter by how long each has been pending. I can only tell you whether workflows are waiting on you, not where the oldest one sits."
+        "zh-Hans": "员工无权查看工作流数据，因此我无法回答“最久卡在哪里”。我也没有工作流相关工具，无法替你判断停在哪一步。\n\n可行做法：打开侧栏的“审批流程”，进入“审批实例”页签，按节点和等待时间查看卡住的那一步；如果卡住的节点需要越级推进，必须由持越级推进权限的人操作，并要写明理由。\n\n如果你无法打开这个页面，原因很可能是权限。我确实没有“审批流程查看”权限，这类权限需要管理员在“权限与角色”里授予。建议联系本殿管理员。",
+        "en": "I can't answer that. The only tool I have for workflows tells me whether you personally hold the approve, advance and escalate permissions — it gives no queue or step data, and I'm not given anything that lists running workflow instances or their waiting times.\n\nTo find a stuck step, open \"Approval Workflow\" and look at the running instances tab; filter or sort there to see which step has been pending longest. Note that a Circle Moderator role doesn't read or work workflows, so you may not see them at all; if so, ask an administrator, or the system administrator if you believe you should have access."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2550,
+          "first_token_ms": 1619,
+          "tokens": {
+            "input": 13282,
+            "output": 125
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2063,
+          "first_token_ms": 1047,
+          "tokens": {
+            "input": 15073,
+            "output": 127
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -37,8 +127,40 @@
         "en": "What record does escalating a workflow leave?"
       },
       "answer": {
-        "zh-Hans": "越级推进必须写理由，并且会留下审计记录。审计日志可按动作、资源、日期筛选和搜索，你可到审计日志页查看。\n\n另外提醒：越级推进最多只能推到终审那一站，终审本身不能越过，也不会让流程直接走完。如果想知道自己是否持有越级推进权限，可以告诉我，我帮你查。",
-        "en": "Escalating leaves an audit record: \"Escalate past this node\" needs a written reason, and that is written to the audit log. It goes at most as far as the final review — the final review itself cannot be escalated past, and escalating never completes a workflow."
+        "zh-Hans": "越级推进必须写理由，并留下审计记录；它最多只能推到终审那一站，终审本身不能越过，也不会让流程直接走完。默认只有管理员持有这项权限。我帮你确认一下你的权限：\n\n记录方面：越级推进必须填写理由，并且留下一条审计记录（审计日志里可查看）。你的账号是朋友圈审核员，没有流程的批准、推进、越级推进权限，所以审批流程页上这些按钮对你是不可用的；若需要，请找管理员开通或由持该权限的官员操作。",
+        "en": "Escalating past a stuck step writes an audit record, and the reason you write is required. It moves the step past at most as far as the final review — the final review itself cannot be escalated, and escalation never completes the workflow. By default only administrators hold the escalate permission; the my_permissions tool reports whether you hold it if you want to check."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3267,
+          "first_token_ms": 1071,
+          "tokens": {
+            "input": 26726,
+            "output": 138
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1558,
+          "first_token_ms": 999,
+          "tokens": {
+            "input": 15072,
+            "output": 74
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -47,8 +169,38 @@
         "en": "How many dispatches are awaiting approval across the halls?"
       },
       "answer": {
-        "zh-Hans": "我这边查不到“各殿”的调拨数量：我没有用于获取调度计数的工具，而且你的权限范围只覆盖本殿，看不到其他殿的数据。请去调度页查看：「待处理提案」列出目标殿待办的提案，「历史记录」列出本殿作为发起殿或目标殿的全部记录，其中包含待处理的记录。",
-        "en": "I don't know — I have no tool that counts dispatch proposals, and I can't see any dispatch records. The \"Pending Proposals\" tab on the Dispatch page is the target hall's queue; since your scope is this hall only, it will show just what is waiting for your hall. For a cross-hall total, ask the system administrator."
+        "zh-Hans": "我的工具里没有调度（调拨）待批准件的计数，只能查审判队列、待我审批的流程和收件箱的计数，所以给不了这个数字。请看「调度」页的「待处理提案」，那是目标殿的待办。",
+        "en": "I can't give you that number — I don't have a dispatch count tool, and I'm not given permission to check dispatch approvals. For your own hall's queue, open \"Dispatch\" and the \"Pending Proposals\" tab, which lists what the target hall has to approve.\n\nNote also that a Circle Moderator doesn't work dispatches at all, so if you need dispatch numbers, ask your hall's administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1402,
+          "first_token_ms": 943,
+          "tokens": {
+            "input": 13282,
+            "output": 55
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1750,
+          "first_token_ms": 1033,
+          "tokens": {
+            "input": 15075,
+            "output": 86
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -57,8 +209,38 @@
         "en": "Does a return to the home hall take effect at once?"
       },
       "answer": {
-        "zh-Hans": "「结束暂居」要原属殿（或无殿管理员）点，且要写理由；点了立即生效，灵魂随即回到原殿。另外，灵魂在那里的处置执行完毕、或受刑计划这一站刑满时也会自动回归。若灵魂还有未结案的审判，手动结束暂居会被拒。页面是「调度」的「历史记录」里那一笔。",
-        "en": "Ending a residence (\"End residence\") takes effect once it is recorded, but there are two things that can block or delay it: it is refused while the soul still has an open judgment, and the soul may also return home by itself when its disposition, or its stay at that station of a sentence plan, has been carried out. To end one by hand, use \"End residence\" on the dispatch record, with a reason — that page is in the dispatch area, under the record's actions."
+        "zh-Hans": "我不能确定，系统管理员的权限检查里没有这一项，助手也查不了。\n\n按帮助说明，回归分两种情况：“结束暂居”需要灵魂原属殿（或管理员）持有调度的“回归”权限，并填写理由；如果灵魂在那里的处置已经执行完毕，或受刑计划这一站刑满，系统会自动让灵魂回归原属殿。另外，灵魂还有未结案审判时，手动结束暂居会被拒绝。至于具体什么时候生效，请到“调度”页查看当前状态，或咨询系统管理员。\n\n顺便提醒：你的角色是 MODERATOR（朋友圈审核员），默认没有调度相关权限，回归操作你本人应该做不了。",
+        "en": "I'm not sure I understand which returning you mean — ending a dispatch residence, a soul returning home after a sentence, or a rebirth-related return — and I don't want to guess.\n\nFor dispatch, the HELP entry I have says an approved dispatch is executed and a residence ends with the return home, and that \"End residence\" is done by the soul's home hall (or an administrator) with a reason; it also says ending a residence by hand is refused while the soul still has an open judgment. It does not say how immediately that takes effect.\n\nIf you can tell me which of these you mean, I can point you to the right page; otherwise please ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2595,
+          "first_token_ms": 1487,
+          "tokens": {
+            "input": 13281,
+            "output": 143
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2366,
+          "first_token_ms": 1272,
+          "tokens": {
+            "input": 15076,
+            "output": 140
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -67,8 +249,40 @@
         "en": "Which tasks have failed several times in a row?"
       },
       "answer": {
-        "zh-Hans": "助手查不到具体任务，只能给计数，无法列出哪些任务连续失败。\n\n你可以在侧栏「定时任务」→「任务」页签用「连续失败」筛选，把连续失败的任务列出来；「运行历史」页签是只读的执行记录。另外，你是绑定在某个殿的管理员，只能看到本殿的任务，全局任务和其他殿的任务不显示。",
-        "en": "I can't tell you that — I have no tool that reads scheduler job history. The assistant's tools only return judgment-queue counts, workflow approvals waiting on you, inbox counts and a few of your own permissions, so I can't see which jobs failed.\n\nTo find out yourself: open \"Scheduled Tasks\" in the sidebar, go to the \"Run history\" tab, and use the \"failing\" filter (there's also \"overdue\" and \"disabled only\"). Run records there are read-only. Note that, with your scope (this hall), you'll see only your own hall's jobs."
+        "zh-Hans": "「定时任务›任务」页可以按「连续失败」筛选，但助手查不到这类数据；而且定时任务页只对持有定时任务管理权限的人开放，这一权限只有管理员能持有。您当前是朋友圈审核员角色，不能查看定时任务，这也和助手手里没有对应工具一致：助手只提供审判队列、待审批流程、收件箱的计数和几项自己的权限。要了解具体哪些任务连续失败，请找本殿管理员或系统管理员查看。",
+        "en": "You cannot see that. The \"Run history\" of Scheduled Tasks, where a job's repeated failures would show, is read-only but the whole page sits under \"Scheduled Tasks\", which needs the scheduler manage permission, and only administrators may hold that. I also have no tool that reports job run history.\n\nCalling my_permissions to confirm what your role does hold:\n\nConfirmed: your role is Circle Moderator with this hall's scope and none of the workflow, user management or dispatch permissions; the scheduler is an administrator page, so the job list and run history are not open to you. If you need visibility on failing jobs, ask an administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2120,
+          "first_token_ms": 1205,
+          "tokens": {
+            "input": 13278,
+            "output": 104
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3564,
+          "first_token_ms": 1490,
+          "tokens": {
+            "input": 30341,
+            "output": 153
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -77,8 +291,38 @@
         "en": "Will rebuilding the schedules overwrite settings changed by hand?"
       },
       "answer": {
-        "zh-Hans": "重建调度只有不属于任何殿的管理员能做。你是绑定在某个殿的管理员，所以我看不到这个功能对你是否开放，也不清楚它会不会覆盖手动改动过的设置，建议问系统管理员（Administrator）。",
-        "en": "I don't know whether \"Rebuild schedules\" overwrites hand-edited job settings — the help entry only says that rebuilding is reserved for an administrator who belongs to no hall, and that \"Run now\", \"Edit schedule\" (cron and time zone) and enable/disable need the scheduler manage permission. It does not describe what rebuilding does to existing jobs. Please ask the system administrator to confirm."
+        "zh-Hans": "「重建调度」只有不属于任何殿的全局管理员能做；按你现在的身份（朋友圈审核员、范围限本殿），这个按钮你既看不到也用不了。至于重建会不会覆盖手动改过的设置，帮助条目里没有说明，我不确定，建议问系统管理员。",
+        "en": "I don't know — the help entry on Scheduled Tasks only says \"Rebuild schedules\" is for an administrator who belongs to no hall and that run records are read-only; it says nothing about whether hand-changed settings are overwritten. Please ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2240,
+          "first_token_ms": 1685,
+          "tokens": {
+            "input": 13284,
+            "output": 58
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1937,
+          "first_token_ms": 1528,
+          "tokens": {
+            "input": 15075,
+            "output": 54
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -87,8 +331,40 @@
         "en": "How many letters await a reply across the halls?"
       },
       "answer": {
-        "zh-Hans": "你的账号只覆盖本殿，看不到各殿的数字。本殿收件箱共 2 封来信，其中待回复 0 封，已回复 2 封，未读 2 封。要看其他殿的来信，需要不属于任何殿的管理员权限，可以找系统管理员。",
-        "en": "You can only see your own hall's letters: this hall has 0 letters awaiting a reply (2 letters in total, all from The Fifth Court, 2 unread, 2 open). An across-all-halls figure isn't available to you, since your data scope is this hall only."
+        "zh-Hans": "我无法回答各殿的信件数量：助手没有查询收件箱计数的工具，而且你的账号是朋友圈审核员，数据范围只覆盖本殿，看不到其他殿的数量。请到「殿司收件箱」的各个文件夹（如「待回复」）自行查看；如需各殿汇总，请找系统管理员。",
+        "en": "I don't know — I don't have a tool that counts inbox letters here, so I can't give you a number.\n\nYou can see it yourself on the \"Hall inbox\" page: the \"Awaiting reply\" folder shows those letters, and the per-hall folders under \"By hall\" break them down by hall. Note that you need the soul inbox read permission to read them.\n\nIf you think the count should be available and isn't, ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2532,
+          "first_token_ms": 1953,
+          "tokens": {
+            "input": 26681,
+            "output": 93
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1886,
+          "first_token_ms": 1051,
+          "tokens": {
+            "input": 15074,
+            "output": 98
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -97,8 +373,38 @@
         "en": "How long a wait counts as a backlog?"
       },
       "answer": {
-        "zh-Hans": "这个助手和帮助条目里都没有定义「积压」的等待时长标准，所以我没法给你一个天数。审判队列的计数工具会另外单列「已逾期」：指超过本殿截止日、且未暂缓的案子；要看具体案子请去「审判队列」页按「等待最久」排序。具体多久算积压，建议问系统管理员。",
-        "en": "I don't know, and that's not something the help entries cover. Nothing in the console documentation defines a backlog or a waiting time that counts as one. Please ask the system administrator."
+        "zh-Hans": "我在帮助条目里没有找到关于“积压”或等待多久算积压的定义，助手也没有能查询这个的工具，所以不知道答案。建议问系统管理员。",
+        "en": "I don't know — no help entry defines how long a wait counts as a backlog, and my tools only return counts, not thresholds. Please ask your system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1497,
+          "first_token_ms": 1149,
+          "tokens": {
+            "input": 13279,
+            "output": 35
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1055,
+          "first_token_ms": 713,
+          "tokens": {
+            "input": 15073,
+            "output": 34
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -107,8 +413,38 @@
         "en": "How many placement requests are pending in all?"
       },
       "answer": {
-        "zh-Hans": "我这边没有统计受刑请求（去处请求）件数的工具，能查的只有审判队列、待我审批的流程和收件箱的计数。要是问的是调度提案，可以看「调度」页的「待处理提案」；问受刑请求的话，请看「受刑请求」页——每件有待决请求的计划各占一行。具体数字我这边查不到。",
-        "en": "I don't know — I don't have a tool that counts placement requests, and the help entries don't give a number for them. The sentence-requests page (where you are) shows one row per plan with a pending request, so that is the place to see the pending count; if you need an exact total across halls, ask the system administrator."
+        "zh-Hans": "我不清楚。我手头没有可以查「待处理的去处请求」件数的工具，我的工具只能报告你自己的权限和范围。请到对应页面查看列表，或找系统管理员。",
+        "en": "I don't know — I have no tool for placement requests, and the help entries don't describe such a queue, so I can't give you a count.\n\nIf you mean judgment cases waiting to be placed, the Pending groups are on the Judgment Queue page (sidebar: \"Judgment Queue\"), where you can filter and count them. For anything called \"placement requests\" specifically, ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1931,
+          "first_token_ms": 1459,
+          "tokens": {
+            "input": 13281,
+            "output": 40
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1826,
+          "first_token_ms": 1163,
+          "tokens": {
+            "input": 15073,
+            "output": 83
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -117,8 +453,38 @@
         "en": "Who approves a change of station?"
       },
       "answer": {
-        "zh-Hans": "你问的「改站」我没有把握对应到具体功能：帮助条目里没有叫「改站」的条目。如果指的是受刑计划的加减项请求，这类由计划的**原属殿（或管理员）**决定，需要「执行审判」权限；如果是重开审判的请求，则由原审的结案判官本人决定（他停用、调离或没有结案人记录时，由原属殿持改派权限的官员决定）。\n\n如果你指的是别的页面，请告诉我是哪一个，或者问系统管理员确认。",
-        "en": "A sentence-request that amends a plan (adds or removes a station) is decided by the plan's home hall — or an administrator — and requires the judgment execute permission. Reopen requests are different: the judge who concluded the original case decides, unless that judge is deactivated, has left the home hall or is not on record, in which case an officer of the home hall with the reassign permission decides. The rows waiting for you are marked on the Sentence Requests page."
+        "zh-Hans": "改站不在我能查的权限范围里，我也不清楚你具体指哪一项「改站」。请说明是哪种改动：\n\n- 受刑计划加减项或重开审判：由计划原属殿（或管理员）决定，需要「执行审判」权限；其中重开审判的请求由原审结案判官本人决定。\n- 跨域审判里各站由该文明自己的判官填写，联审的裁决需要「跨域审判」的发起权限。\n- 挪站（十三站）：官员在灵魂详情页「挪站…」直接改，要状态流转权限，不需要批准。\n\n具体权限是否在你手上，助手只能查流程批准、推进、越级推进、用户管理和调度这几项，其他请找管理员确认。",
+        "en": "I don't know — the help entries don't cover a station change needing approval. The closest entries are sentence requests (an amend request to change a sentence plan's stations, decided by the plan's home hall with the judgment execute permission, or by the original judge for a reopen), and cross-realm judgment stops, which are filled in by that civilization's own judges. I'd suggest asking the system administrator which of these applies to your case."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2839,
+          "first_token_ms": 1602,
+          "tokens": {
+            "input": 13279,
+            "output": 162
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2343,
+          "first_token_ms": 1575,
+          "tokens": {
+            "input": 15071,
+            "output": 90
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -127,8 +493,38 @@
         "en": "What is this page for?"
       },
       "answer": {
-        "zh-Hans": "你说的“这一页”是指哪个页面？请告诉我：侧栏名称或页面标题，我才能告诉你它是做什么的。比如灵魂管理、审判队列、功过格、殿司收件箱、回收站、调度、通知等。",
-        "en": "This is the help assistant inside the SoulLedger officer console. It answers how-to questions about the back office: roles and permissions, the judgment queue, workflows, dispatch, rebirth applications and sentence requests, the hall-office inbox, the recycle bin, the scheduler and notifications.\n\nIt is read-only, so it won't approve, advance, claim, reply, restore or delete anything for you; it points you to the page and button that does. Its tools return counts only — it never shows souls' names, codes, statements or verdicts, so for a specific case it will send you to the page that lists it.\n\nI can see you're signed in as an administrator scoped to your own hall from the screen you asked on. Ask away, or tell me which screen has a button that won't work and I'll check your permissions."
+        "zh-Hans": "你还没有说明你问的是哪一页，所以我没法回答。请告诉我这一页的名称或侧栏位置，比如「审判队列」「受刑请求」「回收站」「各殿概况」等。\n\n另外，即使你说明页面，如果角色或权限会影响你看到的操作，我会先查一下你的权限再解释。",
+        "en": "Which page do you mean? It's not clear to me from this screen what you're looking at. If you name the page (or the menu item you opened it from), I can tell you what it's for.\n\nIn short, I can explain any console page from the help entries: the judgment queue, appeal reviews, approval workflows, dispatch, rebirth applications, sentence requests, the hall inbox, the recycle bin, scheduled tasks, notifications, and the settings pages. Tell me which one and I'll answer.\n\nOne note from your account: your role is Circle Moderator and your data scope is this hall only, so many judgment, workflow, dispatch and inbox pages will be unavailable to you."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1343,
+          "first_token_ms": 726,
+          "tokens": {
+            "input": 13279,
+            "output": 67
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2027,
+          "first_token_ms": 940,
+          "tokens": {
+            "input": 15070,
+            "output": 141
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -137,8 +533,38 @@
         "en": "Are changes made here written to the audit log?"
       },
       "answer": {
-        "zh-Hans": "看你指哪一处改动。越级推进流程必须写理由，并一定写进审计记录；「标记失踪」「召回」的原因也会记进灵魂账页和审计日志；改派越过认领人、结案越过认领人同样会留痕。审计日志要按动作、资源、日期筛选，需要审计查看权限，默认只有管理员有；你绑定在本殿，只能看本殿的记录。想确认某个具体操作是否审计、以及具体记了哪些字段，请到侧栏的审计日志页查看，或问系统管理员。",
-        "en": "I don't know — the help entries don't cover which actions made in this assistant are audited. What they do say is that conversations with the assistant are kept for thirty days and then deleted, and that you can delete one yourself at any time; and that some officer actions elsewhere in the console (such as marking a soul lost and recalling it) write to the audit log. For whether this assistant's own use is recorded in the audit log, please ask the system administrator."
+        "zh-Hans": "请问您指的是哪一处的改动？help 里的条目没有说明「这里」是哪个页面。\n\n一般请先确认两件事：\n\n- 看是哪一项操作：help 里提到，审计会记录的操作包括，管理员以别人身份查看（开始和结束各记一条）、重置两步验证的理由、用户导出 CSV、各殿概况的只读进入和退出；审批流程的越级推进也会留审计记录。\n- 看您有没有审计查看权限：help 里说明，审计日志默认只有管理员能看，绑定在某个殿的管理员只能查看本殿的记录。您的角色是朋友圈审核员（MODERATOR），适用范围只有本殿；不过我的权限工具查不到审计查看这类权限，因此我无法确认您是否能打开审计日志。\n\n请告诉我具体页面和按钮，我会按条目再查；如果条目也没写，建议询问本殿管理员。",
+        "en": "I don't know which changes you mean, since I can only see that you're on a different screen. In general: edits to a hall's own settings are logged (the audit log's resource filter has a \"Hall settings\" choice), and the help entries list specific things that are recorded, such as moving a soul's station, marking a soul lost, and resetting two-step verification. For a specific page, ask the system administrator.\n\nAlso note: your role is Circle Moderator, which does not include reading the audit log."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2798,
+          "first_token_ms": 1415,
+          "tokens": {
+            "input": 13280,
+            "output": 184
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1670,
+          "first_token_ms": 829,
+          "tokens": {
+            "input": 15074,
+            "output": 109
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -147,8 +573,38 @@
         "en": "How do I handle a reported post?"
       },
       "answer": {
-        "zh-Hans": "朋友圈审核的举报在「朋友圈审核」页的「举报」页签里查看和处理，需要朋友圈审核权限；删掉的帖子和评论会进回收站。具体每条举报怎么裁定，助手看不到内容，请到该页签里逐条打开处理。如果页签或按钮看不到，可以让我查一下你的权限。",
-        "en": "To handle a reported post, go to Circle moderation and open the \"Reports\" tab — the same page has \"Pending content\", \"Word list\", \"Mutes\" and \"Handled\". You'll need the social moderate permission (held by administrators and Circle Moderators by default), which is not something my tools can check for you.\n\nI'm read-only, so I can't take action on the report; the report's own actions on that page are what you use. Deleted posts and comments go to the recycle bin. If a button there is greyed out, ask an administrator about the permission."
+        "zh-Hans": "朋友圈审核在审批流里看不到；「动态」页的举报在「朋友圈审核 › 举报」页签里，需要朋友圈审核权限（默认管理员与朋友圈审核员持有）。你的角色是 MODERATOR（朋友圈审核员），权限范围是只限本殿，所以举报、待审内容、敏感词、禁言这些处理你都有权操作；删掉的帖子与评论会进回收站。具体每一步的按钮名称帮助语料里没有写，我可以确认的是入口和权限，操作细节建议看那个页签本身，或问系统管理员。",
+        "en": "You need the social moderate permission, which Circle Moderators hold by default. Go to \"Feed\" and open the \"Reports\" tab in circle moderation, then review the reported post there; handled reports moved on are under \"Handled\". Note deleted posts and comments go to the recycle bin, and restoring or permanently deleting from there is for administrators only. If the \"Reports\" tab is missing or greyed out for you, that would be a permission matter — I can't check that from here, so ask your system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1624,
+          "first_token_ms": 668,
+          "tokens": {
+            "input": 13280,
+            "output": 120
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2128,
+          "first_token_ms": 1225,
+          "tokens": {
+            "input": 15072,
+            "output": 107
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -157,8 +613,42 @@
         "en": "Why can't I see judgments or workflows?"
       },
       "answer": {
-        "zh-Hans": "你现在的角色是 MODERATOR，数据范围只限本殿，而且没有流程的批准、推进、越级推进权限，也没有用户管理和调度的各项权限。所以审批流程里你看不到可决定的节点，因为「提交决定」要流程批准权限，节点还必须是你在指定审批人之列；「推进」和「越级推进」分别要推进、越级推进权限。\n\n审判那边，助手查不到审判相关权限，也可能和权限无关：队列里「他人认领」的案子对你只读，具体某组是否为空要去「审判队列」页看。需要开通权限的话，请找管理员（Administrator）；改权限矩阵只有不属于任何殿的管理员能做。",
-        "en": "Your primary role is Circle Moderator (MODERATOR) with no additional roles, and you don't hold any workflow approve, advance or escalate permissions. The Circle Moderator role only covers the soul circle: reports, pending content, the word list and mutes, plus the dashboard and your own notifications. It neither reads nor works judgments or workflows at all — so their pages and buttons stay hidden or refused, and that's by role design, not a settings glitch.\n\nIf you need judgment or workflow access, an administrator who belongs to no hall would have to grant you an additional role (for example Judge) or change the permission matrix; ask your administrator."
+        "zh-Hans": "你的主角色是朋友圈审核员（MODERATOR），没有兼任角色，所以这个角色只能管灵魂朋友圈的审核（举报、待审内容、敏感词、禁言），另外只看得到仪表盘和自己的通知。审判队列、审批流程、调度、受刑计划、审计日志这些都不在这个角色的权限里，因此你看不到这些页面，流程的批准／推进／越级推进权限也都没有。\n\n这不是配置出错。如果工作需要看审判或流程，请找本殿管理员：只有不属于任何殿的管理员能改角色和权限矩阵，会在「权限与角色」里给你加相应角色或权限。注意朋友圈审核员永远不能持有用户管理权限；另外，一个角色只要持有流程的新建或编辑权限，就不能再持有流程的批准与推进权限。",
+        "en": "That's expected for your role. Your account is a Circle Moderator, which reviews the soul circle and nothing else: reports, pending content, the word list and mutes, plus the dashboard and your own notifications. It does not read or work judgments or workflows (nor dispatches, sentence plans, soul accounts or the hall-office inbox), and cannot read the audit log. The tool confirms you hold none of the workflow approve, advance or escalate permissions.\n\nWhat you can work is under Circle Moderation, which needs the social moderate permission that Circle Moderators hold by default. If you also need judgment or workflow access, only an administrator who belongs to no hall can change the permission matrix — ask one to grant it or to give you an additional role such as Judge."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3746,
+          "first_token_ms": 2520,
+          "tokens": {
+            "input": 26679,
+            "output": 186
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3683,
+          "first_token_ms": 2639,
+          "tokens": {
+            "input": 30265,
+            "output": 177
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -167,8 +657,42 @@
         "en": "How many are in my queue?"
       },
       "answer": {
-        "zh-Hans": "你的审判队列共 13 件未结案子：我认领 0 件、待认领 12 件、他人认领 1 件、暂缓 0 件；其中已逾期 10 件，退回后重审 0 件。这些数字只覆盖你所在的殿。要看具体案件，请打开侧栏「审判队列」的「待审」页。",
-        "en": "Your judgment queue for this hall has 13 open cases: 0 claimed by you, 12 unclaimed, 1 claimed by someone else, and 0 deferred. 10 are overdue and 0 are returned after a retry. Open the \"Judgment Queue\" page and its \"Pending\" tab to see them."
+        "zh-Hans": "我这边没有查审判队列计数的工具，所以给不出件数。另外，你的角色是朋友圈审核员（MODERATOR），默认不参与审判，也看不到审批流程，因此审判队列和待我审批的队列对你基本是空的；你能看的是仪表盘和自己的通知。要看具体的件数，请去「审判队列」页，或在仪表盘上看待办；如果你觉得自己应当能办案，请找管理员确认角色设置。",
+        "en": "I can't give you a count: the tools I have here only report judgment queue, pending approval and inbox counts, and none of them was given to me for your account. Also, a Circle Moderator doesn't work judgments, workflows, dispatches, sentence plans or the hall-office inbox, so there's normally no such queue for you. If you expected otherwise, ask an administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3065,
+          "first_token_ms": 2224,
+          "tokens": {
+            "input": 26673,
+            "output": 116
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2910,
+          "first_token_ms": 2249,
+          "tokens": {
+            "input": 30261,
+            "output": 101
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -177,8 +701,42 @@
         "en": "Why can't I close the case?"
       },
       "answer": {
-        "zh-Hans": "抱歉，我的权限工具只报告流程批准、推进、越级推进、用户管理和调度这几项，看不到“执行审判”相关的权限，所以没法判断你缺的是不是这一项。\n\n从手册看，结案（宣判等操作）在案件详情页进行，需要“执行审判”权限；另外，别人认领中的案子只有认领人能改，有改派权限的人才能越过认领人，已结案的案子除备注外都不能再改。请先确认案子是不是你认领的、是否已结案；如果都不是，可能是缺少“执行审判”权限，建议找管理员（Administrator）核实开通。",
-        "en": "Verdict and seal actions on a case page (including concluding a case) need the judgment execute permission. My permission tool only reports workflow, user management and dispatch permissions, so it can't confirm whether you hold it — the tool doesn't cover it, which means I can't tell you for sure why the button is refused.\n\nTwo common causes to check on the case page itself: the case may be claimed by someone else (then only the claimant can edit or conclude it, unless an officer with the reassign permission overrides the claim), or the judgment is still waiting on an approval workflow step, which only the step's named approver can decide with \"Submit Decision\". Ask an administrator if you believe you should hold the judgment execute permission."
+        "zh-Hans": "你的主角色是朋友圈审核员（MODERATOR），没有兼任其他角色。这个角色只管灵魂朋友圈的审核（举报、待审内容、敏感词、禁言），并查看仪表盘和自己的通知，不看也不办审判，因此没有「执行审判」权限；结案正需要该权限，按钮对你置灰或被拒就是缺权限。\n\n我没有能查「执行审判」这类权限的工具，只能报告流程、用户管理、调度等几项，所以具体还缺什么要向本殿管理员确认。需要办审判的话，请管理员在「用户管理 › 设置角色」里给你加一个审判者等兼任角色，或直接在权限矩阵里授予对应权限。",
+        "en": "I need to check your permissions first, since whether you can act on a case depends on them and not on what the screen shows.\n\nYour role is Circle Moderator, which reviews the soul circle only: reports, pending content, the word list and mutes. It neither reads nor works judgments, and none of the approval permissions are reported for you, so the judgment queue and case verdict actions are not yours to use.\n\nCase verdicts and closing a case need the judgment execute permission. Ask an administrator (\"管理员\") who belongs to no hall to grant you a role with it; the role's data scope and permissions are changed in Permissions & Roles. If you mean a workflow step rather than the case itself, that needs the workflow approve permission and being the approver the step names, and that is also set by the administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 4049,
+          "first_token_ms": 2989,
+          "tokens": {
+            "input": 26675,
+            "output": 165
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3734,
+          "first_token_ms": 1095,
+          "tokens": {
+            "input": 30289,
+            "output": 189
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -187,8 +745,42 @@
         "en": "How many are waiting for my approval?"
       },
       "answer": {
-        "zh-Hans": "目前没有流程节点在等你本人决定，总数是 0。你持有流程批准权限；如果某个节点指定了你却仍无法决定，页面会提示原因。要查看具体流程，请到「审批流程」页的「审批实例」页签。",
-        "en": "Nothing is waiting for your decision right now: 0 workflows have a current step awaiting you. You do hold the workflow approve permission, and these counts cover your own hall only."
+        "zh-Hans": "你的角色是朋友圈审核员（MODERATOR），不持有流程批准权限，所以没有「待我审批」的事可查（我没有用于查询待审批数量的工具）。朋友圈审核员默认只管朋友圈审核，不参与审判和审批流程。",
+        "en": "I can't give you that number: the tool that counts steps waiting for your decision was not given to me, which means your role does not hold the workflow approve permission. As a Circle Moderator you hold no approval steps, so nothing waits on you; the count would be zero in that sense. If you think you should approve steps, ask a global administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2614,
+          "first_token_ms": 2121,
+          "tokens": {
+            "input": 26679,
+            "output": 73
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3224,
+          "first_token_ms": 2531,
+          "tokens": {
+            "input": 30263,
+            "output": 96
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -197,8 +789,40 @@
         "en": "What is the next step in this workflow?"
       },
       "answer": {
-        "zh-Hans": "你说的“这个流程”没有具体指向，而我只按帮助条目和工具结果回答，看不到你屏幕上具体是哪一个审批实例。请告诉我是哪一类流程（审批流程里的审判处置流程、转生申请、申诉，还是调度），或者直接说明当前节点名称，我再说下一步是什么。\n\n一般来说：审批实例上的节点要靠“提交决定”完成，只有该节点指定的审批人能做；流程办完后要看下一站是哪个节点，需在“审批流程”页的实例里看指针位置。\n\n如果要我查你这个账号有多少节点在等你本人决定，我可以调用工具查计数（只返回数量），需要的话说一声。",
-        "en": "I don't know — I can't see any workflow instance, its steps or which step is current. My tools only return counts (how many steps are waiting for your decision), never case content.\n\nTo see a running instance's steps and where the pointer sits, open the \"Approval Workflow\" page and look under the running instances tab; the current step is the one marked pending, and \"Submit Decision\" there decides it (only the approver that step names, with the workflow approve permission). If you tell me what you'd like to check about your own pending decisions, I can call the counts tool."
+        "zh-Hans": "我查不到具体某个审批实例的节点和下一步；助手的工具只给等待审批的件数，看不到流程内容。请看「审批流程 › 审批实例」里那个实例的当前节点，节点指定的审批人才能提交决定；卡住了就用「越级推进」并写理由（需要权限）。\n\n如果你想确认自己能不能批或推进某一步，我可以帮你查自己的流程权限；也可以帮你查有几个节点在等你本人决定。要看的话告诉我。",
+        "en": "I can't see the workflow you're looking at, so I can't say what its next step is. To find out, open \"Approval Workflow\", go to the running instance for that case, and look at the current step — the instance page shows which step the pointer is on and who it names as approver.\n\nYou may also not be able to act on it: your role is Circle Moderator, which does not work workflows. Let me confirm what you hold.\n\nAs Circle Moderator you hold none of the workflow permissions (approve, advance, escalate), so you can read a running instance but cannot decide, advance or escalate its steps. To see which step is current, open \"Approval Workflow\" and the running instance for that case; if you think you should be able to act on that step, ask an administrator who belongs to no hall."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1812,
+          "first_token_ms": 883,
+          "tokens": {
+            "input": 13278,
+            "output": 97
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3049,
+          "first_token_ms": 982,
+          "tokens": {
+            "input": 30362,
+            "output": 199
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -207,8 +831,38 @@
         "en": "What step has this dispatch reached?"
       },
       "answer": {
-        "zh-Hans": "我查不到具体某一份调拨的进度，因为助手只给计数，看不到单份记录。请到侧栏「调度」页的「历史记录」页签查看：那里列出你所在殿作为发起殿或目标殿的全部调度记录，含待处理的那份，状态会写作草稿、待审批、已批准／已拒绝／已取消、已执行（暂居中）或已回归原殿。\n\n另外提醒一句：你的账号角色是 JUDGE，数据范围仅限本殿。批准、驳回与执行只有目标殿能做，所以如果这份调度的目标殿不是你所在殿，你只能看到它作为发起殿的记录，处理按钮也不会在你这里出现。",
-        "en": "I can't tell you that — I don't have any tool that reads dispatch records, and I never see individual souls, cases or records. To see a dispatch's current step, open the Dispatch page: the \"Pending Proposals\" tab shows proposals awaiting decision for your hall as target, and \"History\" lists every dispatch record where your hall is source or target, pending included, with its status (draft, proposed, approved/rejected/cancelled, executed/in residence, returned home)."
+        "zh-Hans": "我不确定你问的是哪一件，手头也查不到具体某一条调度记录的位置。调度记录要看你所在殿作为发起殿或目标殿的全部记录，可在「调度」页的「历史记录」里找到它，每行显示当前状态（草稿、待审批、已批准、已拒绝、已取消；批准后是暂居、结束暂居）。另外我是只读助手，工具只给计数、不给单条详情，具体进度请在那一页打开看。\n\n如果是问“为什么我不能点批准／执行”，告诉我，我再帮你查你的权限。",
+        "en": "I can't answer that: I have no access to dispatch records, only help text and, on request, counts and your own permissions. Open \"Dispatch\" and look at the record — the \"Pending Proposals\" tab shows the target hall's queue, and \"History\" lists every dispatch record where your hall is source or target, with its status (draft, proposed, approved or rejected, executed, returned). If you want to know whether you can act on it, I can check your permissions."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2161,
+          "first_token_ms": 971,
+          "tokens": {
+            "input": 13281,
+            "output": 122
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1970,
+          "first_token_ms": 1094,
+          "tokens": {
+            "input": 15071,
+            "output": 103
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -217,8 +871,38 @@
         "en": "Which hall does the case belong to after the dispatch?"
       },
       "answer": {
-        "zh-Hans": "关于调度的规则里，没有写「调拨后案子归哪一殿」这一条，我查不到，也就无法回答。建议问系统管理员（Administrator）。\n\n另外提醒一下：调度是让灵魂到另一个文明的殿暂居，它改变的是灵魂的暂居殿，不等于审判案子的归属；案子归属的规则在帮助条目里没有说明。",
-        "en": "I don't know — the help entries don't say how a judgment case's hall assignment follows a dispatch (or whether it changes at all). Ask the system administrator to confirm; the case page itself shows the hall the case currently belongs to."
+        "zh-Hans": "您说的「调拨」，后台里对应的是「调度」——让灵魂到另一个文明的殿暂居，见侧栏调度页。据帮助条目，调度决定的是灵魂去目标殿暂居，并不会把审判案子改归另一殿：调度期间提案由目标殿审批与执行，暂居结束时灵魂回归原殿，原属殿仍是原属殿。\n\n如果您问的是「改派」（审判队列里把案子转给别的官员），那只是换经办官员，案子仍在原来的殿。要是您指的是别处页面上的某个「调拨」按钮，我在帮助条目里没有查到，建议问系统管理员。\n\n您目前是朋友圈审核员角色，本殿范围；这个角色默认不看也不办审判、审批流程和调度。",
+        "en": "I don't know — the help entries don't say which hall a case belongs to after a dispatch; they only cover moving the soul's residence and the home hall ending it. Please ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2268,
+          "first_token_ms": 895,
+          "tokens": {
+            "input": 13282,
+            "output": 157
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1461,
+          "first_token_ms": 1005,
+          "tokens": {
+            "input": 15075,
+            "output": 42
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -227,8 +911,38 @@
         "en": "How many letters are waiting for my reply?"
       },
       "answer": {
-        "zh-Hans": "我这边没有查收件箱封数的工具（例如 inbox_counts），因此无法告诉你具体有几封待回复。请直接打开殿司收件箱，在「待回复」文件夹里看数量；如果打开该文件夹或写入回复时提示没有权限，请找系统管理员开通收件箱的查看或回复权限。",
-        "en": "I don't have a tool that counts the hall inbox folders, so I can't give you that number. The assistant is only given counts for the judgment queue and for workflows waiting on your decision, not the inbox.\n\nTo see it, open the hall office inbox (SoulLedger officer console) and look at the \"Awaiting reply\" folder, which lists exactly those letters."
+        "zh-Hans": "只有收件箱计数这类工具能回答这个问题，而我没有可用的这类工具，查不了各文件夹里的信件数。请你到「殿司收件箱」页面查看「待回复」文件夹；在那里，你自己先看有没有待回复的信件，这样更直接。",
+        "en": "I do not know: I do not have an inbox count tool, so I cannot tell you how many letters are waiting. Open \"Hall inbox\" and look at the \"Awaiting reply\" folder for the numbers, and ask your system administrator if you believe you are missing access to something."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1773,
+          "first_token_ms": 1230,
+          "tokens": {
+            "input": 13279,
+            "output": 58
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1375,
+          "first_token_ms": 788,
+          "tokens": {
+            "input": 15073,
+            "output": 60
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -237,8 +951,38 @@
         "en": "Can a reply cite the statutes?"
       },
       "answer": {
-        "zh-Hans": "可以。写回复时输入斜杠就能「引用律条」：搜索律条并把引用插进回信；这个功能只对持有审判查看权限的官员显示。发送和回复本身还需要收件箱回复权限。",
-        "en": "Yes, if you have the judgment read permission: while writing a reply, typing a slash opens \"cite a statute\", where you can search the statutes and insert a citation into the reply. If the slash option does not appear, you lack that permission; a system administrator can check it."
+        "zh-Hans": "能。在殿司收件箱写回复时，输入斜杠可以打开「引用律条」，搜索律条后把引用插进回信；这个入口只对持有审判查看权限的官员显示。\n\n不过按你这个账号目前的权限记录，我看不到你是否持有审判查看权限，若没有看到这个入口，请找管理员开通或确认。\n\n另外提醒一下：你当前身份是朋友圈审核员，殿司收件箱的查看与回复本身还需要收件箱查看／回复权限，这两项助手也查不了，同样需要找管理员确认。",
+        "en": "Yes. While writing a reply in the hall inbox, typing a slash opens \"cite a statute\": search the statutes and insert a citation into the reply. It is offered only to officers who hold the judgment read permission."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1705,
+          "first_token_ms": 915,
+          "tokens": {
+            "input": 13281,
+            "output": 118
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1878,
+          "first_token_ms": 1567,
+          "tokens": {
+            "input": 15071,
+            "output": 44
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -247,8 +991,40 @@
         "en": "How many are waiting for me?"
       },
       "answer": {
-        "zh-Hans": "目前没有流程节点在等您本人决定（待处理 0 件）。这只统计审批流程里的节点；若要看待审的审判案件，可在「审判队列」页查看各组。",
-        "en": "No approval steps are waiting for your decision right now — the total is 0, and you do hold the workflow approve permission, so nothing is being held back from you. For judgment cases instead, the Judgment Queue page shows your claimed and the unclaimed groups."
+        "zh-Hans": "你的角色是朋友圈审核员，不持有流程批准、推进、越级推进的权限，因此「待我审批」通常为 0 件，我这边也没有可调用的队列计数工具来给具体件数。\n\n要处理的事项请到对应页面看：审批流程 › 审批实例（有节点等你决定会标出）、审判队列、调度 › 待处理提案；如果你持有朋友圈审核权限，待审内容与举报在朋友圈审核页。",
+        "en": "I don't have a tool that counts waiting items in general — the ones I can check are the judgment queue, workflow approvals waiting for your decision, and the hall inbox, and I wasn't given those count tools here, so I can't give you a number.\n\nAlso, from your role: you're a Circle Moderator, so your work is the soul circle (reports, pending content, word list, mutes) rather than judgments, workflows or the inbox. The counts for those would be on their own pages — Judgment Queue, Approval Workflow, Hall inbox — and for moderation work, the \"Circle moderation\" page under its tabs (Reports, Pending content).\n\nIf you expected a count tool to be available, ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2627,
+          "first_token_ms": 1799,
+          "tokens": {
+            "input": 26679,
+            "output": 120
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1777,
+          "first_token_ms": 788,
+          "tokens": {
+            "input": 15071,
+            "output": 153
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -257,8 +1033,38 @@
         "en": "Who has to approve a change of station?"
       },
       "answer": {
-        "zh-Hans": "你说的“改站”在受刑请求里其实是两类情况，批准人不同：\n\n- 加项或减项的受刑请求：由这个受刑计划的原属殿（或不属于任何殿的管理员）决定，决定人需要「执行审判」权限。批准后立即生效，驳回可以附理由。\n- 重开审判的请求：由原审的结案判官本人决定；如果他已停用、调离原属殿或没有结案人记录，就由原属殿持改派权限的官员决定。批准会立即开启重审。\n\n撤回请求也是由提出请求的殿（或管理员）来做，同样需要「执行审判」权限。你现在这个页面是受刑请求页，等你决定的那些计划会带标记。",
-        "en": "That depends on the type of request. For a sentence request to amend the plan (add or remove a station), it is decided by the plan's home hall, or an administrator, and requires the judgment execute permission. For a request to reopen the judgment, it is decided by the judge who concluded the original case; if that judge is deactivated, has left the home hall or is not on record, an officer of the home hall holding the reassign permission decides. The page you are on lists one row per plan with a pending request, with rows waiting for you marked."
+        "zh-Hans": "我的权限工具里没有与「改站」相关的条目，所以我先确认一下你问的是哪一种：\n\n- 如果是跨域审判里受刑计划的「各站」（填界域、刑期、备注、调整顺序）：不需要逐站批准，开联审、入席、填站、激活与裁决都需要「跨域审判的发起权限」（默认审判者与管理员持有），联审结束前原审必须等它结案。见「跨域审判」页。\n- 如果是调度（灵魂到别的殿暂居）：批准与驳回只有目标殿能做（调度批准／驳回权限），不属于任何殿的管理员也可以。\n- 如果是十三站（挪站）：不需要批准，是官员在灵魂详情页「挪站…」直接改，要「状态流转权限」。\n\n你要的是哪一种？若是权限本身的问题，我可以按你的账号查一下你持有哪些相关权限。",
+        "en": "I don't know — the help entries don't cover a change of station in a sentence plan, so I can't say who approves it. A sentence-plan change normally arrives as a sentence request (\"amend it (add or remove a station)\"), and those are decided by the plan's home hall or an administrator with the judgment execute permission; for the exact approval rule on your case, ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2123,
+          "first_token_ms": 807,
+          "tokens": {
+            "input": 13279,
+            "output": 188
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1745,
+          "first_token_ms": 1122,
+          "tokens": {
+            "input": 15073,
+            "output": 83
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -267,8 +1073,42 @@
         "en": "What can I do here?"
       },
       "answer": {
-        "zh-Hans": "你是审判官（JUDGE），看的数据只覆盖本殿。\n\n- 流程：持有批准和推进权限，可以批你负责的步骤、推进流程；没有越级推进权限，卡住的节点要找管理员。\n- 用户管理：没有，所以看不到「待交付初始密码」里的密码操作、忘记密码通知里的「去用户页」等。\n- 调度：批准、驳回、执行、管理都没有，所以调度的批准、驳回、执行按钮以及「移交…」都用不了。\n- 其他权限（审判、账本、收件箱、审计等）助手查不到，要看对应页面能不能用；应当有而没有的，请找管理员开通。\n\n另外提醒：批准权限不等于能决定任何节点——只有该节点指定的审批人才行。",
-        "en": "I can answer questions about using the officer console: roles and permissions, the judgment queue, workflows and approvals, dispatch, rebirth applications and sentence requests, the hall-office inbox, the recycle bin, the scheduler, and notifications.\n\nI'm read-only — I can't approve, advance, claim, reply or delete anything; I'll point you to the page and button. My tools give counts only (your judgment queue, workflows waiting on you, and which permissions you hold), never souls' names or case details.\n\nAsk away — for example, \"why is my Submit Decision button greyed out?\" or \"how many cases are in my queue?\""
+        "zh-Hans": "你的主角色是朋友圈审核员（MODERATOR），没有兼任角色，数据范围只限本殿。\n\n按角色说明：你负责灵魂朋友圈的审核，包括举报、待审内容、敏感词和禁言，另外还能看到仪表盘和自己的通知。审判、审批流程、调度、受刑计划、灵魂账号、殿司收件箱和审计日志都不在你的工作范围内。工具查了流程批准、推进、越级推进，用户管理，以及调度的批准、驳回、执行、管理，这些你都没有；其他权限助手查不了，需要的话请找本殿管理员确认。\n\n另外提醒一句：朋友圈审核员永远不能持有用户管理权限。",
+        "en": "Your account is a Circle Moderator, scoped to your own hall only. In the console that role reviews what souls post in the soul app and nothing else: the \"Circle moderation\" page (reports, pending content, word list, mutes, handled), plus the dashboard and your own notifications. You hold no workflow approve, advance or escalate permission, no user management and no dispatch rights, and you cannot read or work judgments, workflows, dispatches, sentence plans, soul accounts or the hall-office inbox, nor read the audit log. A Circle Moderator also can never be given the user management permission. If you think you should have more, ask an administrator who belongs to no hall."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 3386,
+          "first_token_ms": 2512,
+          "tokens": {
+            "input": 26675,
+            "output": 163
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 4171,
+          "first_token_ms": 3245,
+          "tokens": {
+            "input": 30259,
+            "output": 164
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -277,8 +1117,38 @@
         "en": "How long after a case closes is it handed over for escort?"
       },
       "answer": {
-        "zh-Hans": "我没有这方面的规定——帮助条目里只有审判队列、认领、宣判和受刑请求的说明，没有“结案后多久交给押解”的时限，也没有能回答这个问题的工具。请去问系统管理员（管理员 / Administrator），或查看本殿针对押解与移交的内部规程。",
-        "en": "I don't know. The help entries I have don't cover the handover-for-escort timing after a case closes, so I can't give you a number of days or a deadline for it. Please ask the system administrator (管理员) for that rule."
+        "zh-Hans": "我查不到这一项：帮助条目里没有「结案后多久交给押解」的规定，助手也没有任何能给出天数的工具。\n\n如果这是本殿自己的流程约定，请去本殿的「系统设置」看殿设置，或直接问系统管理员（管理员 / Administrator）确认。",
+        "en": "I do not know. The help entries I have do not cover a hand-over period after a case closes, so I cannot give you a deadline or a number of days for that.\n\nIf you mean transfer or escort arrangements, I can point you to the pages that do cover them: dispatch (propose, approve and execute, end residence) and sentence requests, or the soul's detail page for its station and disposition. For the timing rule you are asking about, please ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1392,
+          "first_token_ms": 896,
+          "tokens": {
+            "input": 13281,
+            "output": 63
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1816,
+          "first_token_ms": 993,
+          "tokens": {
+            "input": 15077,
+            "output": 100
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -287,8 +1157,38 @@
         "en": "What do these verdict states mean?"
       },
       "answer": {
-        "zh-Hans": "我不确定你问的是哪里的「裁决状态」。我能直接依据的帮助条目里，只有审批流程这一处提到「裁决」：流程节点可以声明接受哪些裁决类型，节点上提交决定时只能用其中列出的那种；官员 App 的批准层在节点接受多种通过裁决时会让你选，只有一种就直接提交（见「审批流程」条目）。\n\n如果你指的是审判、转生申请或调度里的某个具体状态名，帮助条目里没有对应的定义，我不能凭猜测解释。麻烦你说一下是在哪个页面的哪个字段看到的，或者直接问系统管理员。",
-        "en": "I don't know — the help entries I have don't define the verdict states or their meanings. The entries describe the judgment queue groups (Mine, Unclaimed, Claimed by others, Deferred) and that verdict actions need the judgment execute permission, but not what each verdict state signifies.\n\nIf you tell me the exact state names you see on the case page, I can check whether anything in the entries covers them; otherwise please ask the system administrator."
+        "zh-Hans": "您问的应该是审批实例上的裁决。帮助条目里讲得比较简略：节点如果声明了它接受哪些裁决，提交决定时就只能从这些裁决里选；官员 App 的批准层在节点接受好几种「通过」类裁决时会让你选择，只有一种时就直接提交。除此之外的裁决清单及其含义，帮助条目没有说明，我也不知道，建议问系统管理员。",
+        "en": "I'm not sure which verdict states you mean — the console has several different sets, so I'd rather point you to the right page than guess.\n\nThe main ones:\n- Judgments: the verdict actions are on the case page in the Judgment Queue (they need the judgment execute permission). For European halls there are extra rules on Failed and Passed in the European sins help entry; Egyptian weighed cases have their own checks.\n- Appeals: after a review the outcomes are uphold, change the verdict, or the appeal is voided; a case's verdict itself can stand, be changed, or be voided.\n- Cross-realm judgments: passed or rejected.\n- Rebirth applications: Under review, Approved, Rejected, Under appeal, Appeal rejected.\n\nIf you tell me which page and which states you are looking at, I can explain those. Also note your account is a Circle Moderator, so judgment and workflow pages are not part of your work; if a page looks empty or refuses you, that is why. Since I cannot check your other permissions with my tools, ask the system administrator if you should be seeing something you cannot."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1747,
+          "first_token_ms": 976,
+          "tokens": {
+            "input": 13278,
+            "output": 82
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2740,
+          "first_token_ms": 1064,
+          "tokens": {
+            "input": 15071,
+            "output": 230
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -297,8 +1197,38 @@
         "en": "Which step must be approved before an escort?"
       },
       "answer": {
-        "zh-Hans": "你问的“押解”在后台没有对应的步骤或字面入口，帮助条目里也查不到，我不能凭猜测给答案。请说明它对应审批流程里的哪个节点，或直接问系统管理员。",
-        "en": "I do not know — the help entries I have do not describe an approval step that must precede an escort. I can tell you about workflow steps generally (only the approver a step names may \"Submit Decision\", and \"Advance\" moves the pointer without deciding), but nothing here ties a step to escorts. Please ask the system administrator."
+        "zh-Hans": "我查不了这个：助手只有计数和少量权限查询的工具，看不到审批流程的具体节点，也不了解押解（勾魂牒的拘到、交接）是否挂在某个审批流程上。帮助条目里也没有说明押解要等哪一步批完。\n\n建议到「审批流程 › 审批实例」里按案子查一下当前停在哪个节点，或问系统管理员确认流程模板的配置。",
+        "en": "I don't know — the help entries don't describe any approval step that precedes an escort. Capture escort choice follows the soul's karma (Ox Head and Horse Face, or Black and White Impermanence) with no approval step mentioned, so please ask the system administrator whether such a step exists in your hall's setup."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1722,
+          "first_token_ms": 949,
+          "tokens": {
+            "input": 13282,
+            "output": 86
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1211,
+          "first_token_ms": 614,
+          "tokens": {
+            "input": 15073,
+            "output": 65
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -307,8 +1237,40 @@
         "en": "How many dispatches are due to be executed today?"
       },
       "answer": {
-        "zh-Hans": "我无法回答这个问题：我没有查询调度数量的工具，助手能取到的计数只有审判队列、等你审批的流程和收件箱，调度相关的计数并不在其中。\n\n请到侧栏「调度」页面查看：「待处理提案」是目标殿的待办，「历史记录」列出你所在殿作为发起殿或目标殿的全部调度记录（含待处理的），可以按状态自行筛选。另外提醒一下，你当前的权限范围只覆盖本殿，看不到其他殿的数据。",
-        "en": "I don't know — I have no tool that counts dispatches, so I can't give you that number. To see them, open Dispatch and check the \"Pending Proposals\" tab (your hall's queue as the target hall) or the \"History\" tab, which lists every dispatch record where your hall is source or target, pending ones included."
+        "zh-Hans": "我查不了这件数量：我手上没有统计调拨（调度）待办的工具，而且你的角色是朋友圈审核员，没有调度的批准、驳回、执行或管理权限，所以「待处理提案」那一页你也看不到。\n\n要看件数，得请本殿管理员或有调度查看权限的官员打开调度页的「待处理提案」看。",
+        "en": "I don't know — I have no tool that counts dispatch records, so I can't tell you how many are due to be executed today. The place to see them is the Dispatch page: its \"Pending Proposals\" tab is the target hall's queue, and an approved dispatch that is ready to execute shows there. If you need an actual number rather than the list, ask the system administrator."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [
+            "my_permissions"
+          ],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2299,
+          "first_token_ms": 1729,
+          "tokens": {
+            "input": 26681,
+            "output": 98
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1774,
+          "first_token_ms": 1115,
+          "tokens": {
+            "input": 15075,
+            "output": 81
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -317,8 +1279,38 @@
         "en": "Where do discarded dispatch drafts go?"
       },
       "answer": {
-        "zh-Hans": "被删除的调度草稿可以在回收站里找。「永久删除」只适用于参考数据，调度草稿属于这类，所以要过了保留期才能永久删除；在那之前它一直留在回收站。\n\n但恢复和永久删除都只有管理员能做，而且绑定在某个殿的管理员只能动本殿的记录。你这边没有回收站相关的权限工具，能不能实际操作请以页面显示为准，需要的话可以找管理员（Administrator）处理。",
-        "en": "Deleted records, including dispatch drafts, go to the recycle bin. From there, only an administrator can restore or permanently delete them, and an administrator bound to a hall only for that hall's records. Note that permanent deletion applies only to reference data such as dispatch drafts, and only after the retention period."
+        "zh-Hans": "被删除的调度草稿会进回收站：只有管理员能看到「恢复」和「永久删除」，绑定在某个殿的管理员只能处理本殿的记录。如果你自己不是管理员，可以请本殿管理员到「回收站」查看。",
+        "en": "Discarded dispatch drafts go to the recycle bin, where they can be restored or, after the retention period, deleted permanently; both actions are for administrators only (a hall-bound administrator only for that hall's records)."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1511,
+          "first_token_ms": 1027,
+          "tokens": {
+            "input": 13281,
+            "output": 51
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 1543,
+          "first_token_ms": 1199,
+          "tokens": {
+            "input": 15071,
+            "output": 43
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -327,8 +1319,38 @@
         "en": "How many are waiting for me to escort?"
       },
       "answer": {
-        "zh-Hans": "我这边查不了「押解」的数量：我只有审判队列、待你审批的流程、收件箱这几项计数工具，没有押解相关的计数工具，所以无法给出具体件数。你可以去侧栏相关的押解／调度页面自己查看列表；如果页面上应当显示却看不到，或需要这项权限，请找系统管理员开通。",
-        "en": "I don't know — nothing in my help entries or tools covers an \"escort\" queue, and I have no tool that counts one. Please ask your system administrator (Administrator) about it."
+        "zh-Hans": "我查不了这个数。“待我押解”这类计数不在助手的工具里：我只有审判队列计数、待你审批的流程、收件箱计数这几个计数工具，没有押解或勾魂相关的计数。\n\n要看的话，请到灵魂详情页的「勾魂」一块，或侧栏「待发勾魂牒」按阳寿先后列出的名单里查看；另外按 my_permissions 的结果，你是朋友圈审核员（MODERATOR），只负责朋友圈审核，审判、勾魂这类办案页面通常不在你的权限范围内。具体能看到哪些，请找本殿管理员确认。",
+        "en": "I don't know — I don't have a tool that counts capture or escort work. The console shows that on \"Awaiting a capture warrant\" in the sidebar (undworld souls whose fated date has come and who have no open warrant), ordered by fated date, where you can issue the warrant; capturing and handing over are done in the \"Capture\" block on the soul's detail page. For a count from your post, you could ask the system administrator, or count the rows there yourself."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2042,
+          "first_token_ms": 764,
+          "tokens": {
+            "input": 13281,
+            "output": 130
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2516,
+          "first_token_ms": 1660,
+          "tokens": {
+            "input": 15073,
+            "output": 104
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     },
     {
@@ -337,8 +1359,38 @@
         "en": "What if the destination is full?"
       },
       "answer": {
-        "zh-Hans": "这个问题我不知道答案：助手工具和帮助条目里都没有「目的地已满」的处理办法。建议问本殿管理员，或在「系统设置」相关的页面查看提示。\n\n不过如果你的意思是某个殿的转生配额满了，帮助里有这一条：某一道本月配额满了之后，再办转生的灵魂留在原处等候，下个月或把上限调高后再办，不会丢；配额在「租户管理 › 改设置」的「转生配额」里改（本月已办、剩余量也能在「各殿概况」看到）。若你指的是调度或受刑计划的目的地，请具体说说是哪一页，我再帮你查。",
-        "en": "I don't know — the help entries I have on dispatch don't cover what happens when the destination hall is full, and my tools only return counts, so I can't check a hall's capacity. Please ask the system administrator about that.\n\nWhat I can tell you from the entries: a dispatch proposal needs a target civilization and a written reason of at least twenty characters, and approval, rejection and execution are done by the target hall's officers (or an administrator who belongs to no hall), so capacity questions would be settled on that side."
+        "zh-Hans": "助手查不到你手上具体是哪一类“目的地已满”的情况，只能按帮助条目讲：\n\n- 转生配额满了：再办转生的灵魂会留在原处等候转生，下个月或把上限调高后再办，不会丢。上限在「租户管理」里那个殿一行的「改设置」→「转生配额」改（埃及的殿没有这一块），各殿本月配额也能在「各殿概况」里看。\n- 调度的目标殿不接：调度由目标殿批准或驳回，驳回时只有目标殿（或不属于任何殿的管理员）能做，你可以看「待处理提案」和「历史记录」里的状态。\n\n如果你的“目的地已满”是别的情形，我没法确定，请说明是哪个页面，或问本殿管理员。另外你的角色是朋友圈审核员，只看得到本殿数据，审判、调度这些页面本身不在你的权限内。",
+        "en": "Could you tell me which destination you mean? The answer depends on the feature: a hall's rebirth quota for a path, a dispatch to another hall, a realm's capacity, or something else. Tell me the page you are on and I will look it up in the help."
+      },
+      "trace": {
+        "zh-Hans": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2474,
+          "first_token_ms": 966,
+          "tokens": {
+            "input": 13278,
+            "output": 197
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        },
+        "en": {
+          "tools_called": [],
+          "retrieval": "fallback",
+          "retrieved_entries": [],
+          "latency_ms": 2526,
+          "first_token_ms": 2008,
+          "tokens": {
+            "input": 15071,
+            "output": 57
+          },
+          "model": "deepseek-flash",
+          "provider_role": "primary",
+          "fallback_reason": null
+        }
       }
     }
   ]
