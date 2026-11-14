@@ -197,12 +197,12 @@ def as_request(user, tenant_id=None):
     """
     from types import SimpleNamespace
 
-    from apps.core.tenant import is_tenant_exempt
+    from apps.core.tenant import reaches_hall
     from apps.tenants.models import Tenant
 
     if tenant_id is None:
         tenant = getattr(user, "tenant", None)
-    elif is_tenant_exempt(user):
+    elif reaches_hall(user, tenant_id):  # SYSTEM_ADMIN any hall; a civilization ADMIN its civilization's
         tenant = Tenant.objects.filter(pk=tenant_id).first()
     elif getattr(user, "tenant_id", None) is not None and str(user.tenant_id) == str(tenant_id):
         tenant = user.tenant

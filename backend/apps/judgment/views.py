@@ -412,11 +412,13 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         # path of a sentence plan opens its case through the same function.
         from rest_framework.exceptions import ValidationError
 
-        from apps.core.tenant import is_tenant_exempt
+        from apps.core.tenant import is_hall_less_admin
 
         user = self.request.user
         in_tenant = None
-        if not is_tenant_exempt(user):
+        # A hall-less admin names no hall: SYSTEM_ADMIN any soul, a civilization ADMIN one of its civilization's
+        # (`validate_soul = tenant_scoped("soul")` checked the reach).
+        if not is_hall_less_admin(user):
             in_tenant = request_tenant(self.request)
             if in_tenant is None:
                 raise ValidationError({"soul": ["No such soul in this tenant."]})

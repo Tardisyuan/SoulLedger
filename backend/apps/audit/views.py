@@ -21,7 +21,7 @@ from apps.core.csv_safe import csv_safe
 from apps.core.exports import EXPORT_MAX_ROWS, record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
-from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
+from apps.core.tenant import is_hall_less_admin, reaches_hall, request_tenant, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.soul_assist.views import OfficerAssistThrottle
 
@@ -38,9 +38,10 @@ from .serializers import (
 
 
 def is_global_admin(user) -> bool:
-    """ADMIN with no hall of their own. Only this person may read across halls in the audit log
-    (list, export and the 「殿」 filter); an ADMIN bound to a hall sees that hall's rows only."""
-    return is_tenant_exempt(user)
+    """An administrator with no hall of their own (SYSTEM_ADMIN, or a civilization ADMIN). Only these may read
+    across halls in the audit log (list, export and the 「殿」 filter) — SYSTEM_ADMIN every hall, a civilization
+    ADMIN its civilization's (`scope_to_tenant`'s admin branch); an ADMIN bound to a hall sees that hall's rows only."""
+    return is_hall_less_admin(user)
 
 
 def _hall_scope(qs, request):
@@ -78,7 +79,7 @@ class AuditLogFilter(filters.FilterSet):
                 raise PermissionDenied("Only an administrator can read another hall's audit log.")
             return queryset.filter(tenant=own)
         tenant = Tenant.objects.filter(code=value).first()
-        if tenant is None:
+        if tenant is None or not reaches_hall(user, tenant.pk):  # 别文明的殿对文明管理员与不存在的同样答
             raise ValidationError({"tenant": "Unknown hall."})
         return queryset.filter(tenant=tenant)
 

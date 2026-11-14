@@ -21,11 +21,18 @@ Two rules this module fixes in place:
   unfiltered queryset. ``apps/death_sync/views.py`` used to fail *open* on its
   API-key axis (``if api_key: qs = qs.filter(...)`` with no ``else``); see
   ``scope_to_api_key`` below.
-* **Only a hall-less ADMIN is global.** ``User.role == "ADMIN"`` with no
-  ``tenant`` is the only tenant-exempt user in this codebase; an ADMIN bound
+* **Only SYSTEM_ADMIN is global.** ``User.role == "SYSTEM_ADMIN"`` (no hall)
+  is the only tenant-exempt user in this codebase. A hall-less ADMIN is a
+  *civilization* administrator: it sees every hall of ``User.civilization``
+  and nothing else — no other civilization's halls, no hall-less rows
+  (docs/ARCHITECTURE-tenant-sharding.md §7.5, user 2026-11-15). An ADMIN bound
   to a hall is scoped to that hall like every other role (user, 2026-10-29).
-  The check is spelled with ``getattr`` so an ``AnonymousUser`` — which has no
-  ``role`` — is never mistaken for one.
+  The checks are spelled with ``getattr`` so an ``AnonymousUser`` — which has
+  no ``role`` — is never mistaken for one.
+
+Every caller of ``is_tenant_exempt`` is classified in
+``backend/tests/tenancy_exempt_sites.py`` (SYSTEM_ADMIN-only, or widened to the
+civilization ADMIN through ``reaches_hall`` / ``is_hall_less_admin``).
 
 ``backend/tests/test_tenant_scoping_contract.py`` walks every router-registered
 viewset and fails if a tenant-bearing model's queryset does not pass through
@@ -35,26 +42,128 @@ this module.
 from django.db.models import Q
 
 ADMIN_ROLE = "ADMIN"
+SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN"
+#: Every role that passes an "is this an administrator" gate (``IsAdminPermission``, the checker's bypass,
+#: ``ROLE_HIERARCHY`` rank 0). SYSTEM_ADMIN passes every gate ADMIN passes.
+ADMIN_ROLES = frozenset({ADMIN_ROLE, SYSTEM_ADMIN_ROLE})
 
 SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
 
 
+def is_admin(user) -> bool:
+    """Any administrator — a hall's ADMIN, a civilization ADMIN or SYSTEM_ADMIN. Says nothing about *where*."""
+    return getattr(user, "role", None) in ADMIN_ROLES
+
+
+def _hall_less(user) -> bool:
+    # 进殿查看(`apps/authentication/impersonation.py::start_hall`):这一次请求里管理员只看那一殿。
+    return getattr(user, "tenant_id", None) is None and not getattr(user, "hall_view", None)
+
+
 def is_tenant_exempt(user) -> bool:
-    """True when ``user`` is the one role that sees across tenants.
+    """True when ``user`` is the one role that sees across every hall and every civilization: SYSTEM_ADMIN.
 
     ``getattr`` rather than ``user.role`` on purpose: ``AnonymousUser`` has no
     ``role`` attribute, and ``apps/core/mixins.py`` used to raise
     ``AttributeError`` on it before its own ``is_authenticated`` guard was
     added. Anonymous is never exempt.
     """
-    # 进殿查看(`apps/authentication/impersonation.py::start_hall`):这一次请求里管理员只看那一殿。
-    # 殿管理员限本殿(用户 2026-10-29):只有**没绑殿**的 ADMIN 是全局的;绑了殿的 ADMIN 与殿内其他角色
-    # 一样只读写本殿 —— 这里一处改,`scope_to_tenant`、`TenantPermission` 与各处豁免判定一起跟着变。
-    return (
-        getattr(user, "role", None) == ADMIN_ROLE
-        and getattr(user, "tenant_id", None) is None
-        and not getattr(user, "hall_view", None)
+    # 2026-11-15(§7.5):无殿 ADMIN 不再是全局的,收到本文明;全局只剩 SYSTEM_ADMIN。这里一处改,
+    # `scope_to_tenant`、`TenantPermission` 与各处豁免判定一起跟着变 —— 各处怎么跟,见 tests/tenancy_exempt_sites.py。
+    return getattr(user, "role", None) == SYSTEM_ADMIN_ROLE and _hall_less(user)
+
+
+def is_civilization_admin(user) -> bool:
+    """A hall-less ADMIN: administrator of every hall of ``user.civilization`` (§7.5). Not while viewing one hall."""
+    return getattr(user, "role", None) == ADMIN_ROLE and _hall_less(user)
+
+
+def is_hall_less_admin(user) -> bool:
+    """SYSTEM_ADMIN or a civilization ADMIN — the callers the old ``is_tenant_exempt`` answered True for."""
+    return is_tenant_exempt(user) or is_civilization_admin(user)
+
+
+def request_civilization(request):
+    """The civilization a civilization ADMIN's request is confined to; None for everyone else.
+
+    None also for a civilization ADMIN whose ``civilization`` is blank or not a member of the enum: such an
+    account reaches no hall (fail closed), the same answer ``civilization_halls`` gives.
+    """
+    from apps.souls.models import Civilization
+
+    user = getattr(request, "user", None)
+    if not is_civilization_admin(user):
+        return None
+    civ = getattr(user, "civilization", None)
+    return civ if civ in Civilization.values else None
+
+
+def civilization_halls(civilization):
+    """Every hall whose ``Tenant.civilization`` is ``civilization`` — soft-deleted halls included, as a queryset.
+
+    The same rule as the property, as a ``Q``: a seeded code answers from ``TENANT_CIVILIZATION`` and wins over
+    ``declared_civilization``; any other hall answers from ``declared_civilization``. An unknown or blank
+    civilization has no halls.
+    """
+    from apps.souls.models import TENANT_CIVILIZATION, Civilization
+    from apps.tenants.models import Tenant
+
+    if civilization not in Civilization.values:
+        return Tenant._base_manager.none()
+    seeded = [code for code, civ in TENANT_CIVILIZATION.items() if civ == civilization]
+    return Tenant._base_manager.filter(
+        Q(code__in=seeded) | (Q(declared_civilization=civilization) & ~Q(code__in=list(TENANT_CIVILIZATION)))
     )
+
+
+def user_civilization_halls(user):
+    from apps.souls.models import Civilization
+
+    civ = getattr(user, "civilization", None)
+    return civilization_halls(civ if civ in Civilization.values else None)
+
+
+def admin_hall_ids(user):
+    """A hall-less administrator's reach: None = every hall (SYSTEM_ADMIN); else a frozenset of hall pks.
+
+    Empty for a civilization ADMIN with no (known) civilization, and for anyone who is not a hall-less admin —
+    callers branch on ``is_hall_less_admin`` first; this never answers "everything" by mistake.
+    """
+    if is_tenant_exempt(user):
+        return None
+    if is_civilization_admin(user):
+        return frozenset(user_civilization_halls(user).values_list("pk", flat=True))
+    return frozenset()
+
+
+def reaches_hall(user, *tenant_ids) -> bool:
+    """Whether a hall-less administrator may act in any of ``tenant_ids``: SYSTEM_ADMIN always; a civilization
+    ADMIN when one of them is a hall of its civilization. False for everyone else — a hall-bound caller's own
+    rule (``tenant.pk == …``) stays at the call site."""
+    if is_tenant_exempt(user):
+        return True
+    if not is_civilization_admin(user):
+        return False
+    wanted = {pk for pk in tenant_ids if pk is not None}
+    return bool(wanted) and user_civilization_halls(user).filter(pk__in=wanted).exists()
+
+
+def hall_less_admins_q(tenant_id=None):
+    """A ``Q`` over ``User``: the hall-less administrators a notification falls back to.
+
+    SYSTEM_ADMIN always. With ``tenant_id`` (the hall the news is about), also the civilization ADMINs of that
+    hall's civilization — never another civilization's (§7.5). ``tenant_id=None`` is global news (a global
+    scheduled job, the assistant's configuration): SYSTEM_ADMIN only.
+    """
+    q = Q(role=SYSTEM_ADMIN_ROLE, tenant__isnull=True)
+    if tenant_id is not None:
+        from apps.tenants.models import Tenant
+
+        hall = Tenant._base_manager.filter(pk=tenant_id).first()
+        civ = hall.known_civilization if hall is not None else None
+        if civ:
+            q |= Q(role=ADMIN_ROLE, tenant__isnull=True, civilization=civ)
+    return q
 
 
 def request_tenant(request):
@@ -78,6 +187,25 @@ def request_tenant(request):
     return getattr(getattr(request, "user", None), "tenant", None)
 
 
+def within_reach(qs, request, *, field: str = "tenant"):
+    """``qs`` narrowed to the halls the caller reaches: SYSTEM_ADMIN all rows; a civilization ADMIN its
+    civilization's halls; anyone else ``request_tenant(request)``'s hall, nothing without one. Fails closed.
+
+    The rule the ``exempt = is_tenant_exempt(user); tenant = None if exempt else request_tenant(request)``
+    idiom spelled at hand-written aggregate views (the ledger overview, …). ``field="pk"`` scopes ``Tenant``.
+    """
+    user = getattr(request, "user", None)
+    if is_tenant_exempt(user):
+        return qs
+    if is_civilization_admin(user):
+        halls = user_civilization_halls(user)
+        return qs.filter(**{f"{field}__in": halls.values("pk") if field == "pk" else halls})
+    tenant = request_tenant(request)
+    if tenant is None:
+        return qs.none()
+    return qs.filter(**{field: tenant.pk if field == "pk" else tenant})
+
+
 def scope_to_tenant(
     qs,
     request,
@@ -96,7 +224,8 @@ def scope_to_tenant(
         field: the lookup path from ``qs.model`` to ``Tenant``. Defaults to the
             direct ``tenant`` FK. ``apps/social/views.py``'s ``UserProfile``
             has no tenant FK of its own and passes ``"user__tenant"``.
-        admin_bypass: whether ``role == "ADMIN"`` skips scoping entirely. True
+        admin_bypass: whether a hall-less administrator is scoped by its reach (SYSTEM_ADMIN: nothing;
+            civilization ADMIN: its civilization's halls) rather than by ``request.tenant``. True
             everywhere today; the knob exists so a call site that deliberately
             scopes ADMIN too (write-side cross-tenant checks in
             ``apps/social/serializers.py`` take that stance) can say so
@@ -133,6 +262,17 @@ def scope_to_tenant(
         if missing_field == "allow":
             return qs
         return qs.none()
+
+    if admin_bypass and is_civilization_admin(user):
+        # 文明管理员(§7.5):本文明每一殿 —— 与那几殿的殿管理员各自所见之并相同(暂居只读例外也按殿并起来)。
+        halls = user_civilization_halls(user)
+        if root == "pk":
+            return qs.filter(pk__in=halls.values("pk"))
+        if residence_read and field == "tenant" and getattr(request, "method", None) in SAFE_METHODS:
+            residence = residence_read_q(qs.model, halls)
+            if residence is not None:
+                return qs.filter(Q(tenant__in=halls) | residence)
+        return qs.filter(**{f"{field}__in": halls})
 
     tenant = getattr(request, "tenant", None)
     if tenant is None:
@@ -205,7 +345,10 @@ def residence_read_q(model, tenant):
     path = _soul_path(model)
     if path is None:
         return None
-    away = Q(**{f"{path}home_tenant": tenant}) & Q(**{f"{path}tenant__isnull": False})
+    from django.db.models import QuerySet
+
+    home = f"{path}home_tenant__in" if isinstance(tenant, QuerySet) else f"{path}home_tenant"
+    away = Q(**{home: tenant}) & Q(**{f"{path}tenant__isnull": False})
     if path:
         away &= Q(tenant=F(f"{path}tenant"))
     return away
@@ -334,8 +477,8 @@ def tenant_aggregate_filter(request, *, field: str) -> "Q":
             being counted, and a default would invite the wrong one.
 
     Returns:
-        ``Q()`` — matches everything — for the one tenant-exempt role, so an
-        ADMIN's count matches the ADMIN's unscoped queryset. ``Q(pk__in=[])``
+        ``Q()`` — matches everything — for the one tenant-exempt role (SYSTEM_ADMIN), so its count matches its
+        unscoped queryset; ``field__in=<its civilization's halls>`` for a civilization ADMIN. ``Q(pk__in=[])``
         — matches nothing, so every count is 0 — for an unauthenticated user
         and for a non-ADMIN with no resolvable tenant. Never an unfiltered
         aggregate for someone who cannot see the rows.
@@ -346,6 +489,8 @@ def tenant_aggregate_filter(request, *, field: str) -> "Q":
 
     if is_tenant_exempt(user):
         return Q()
+    if is_civilization_admin(user):
+        return Q(**{f"{field}__in": user_civilization_halls(user)})
 
     tenant = getattr(request, "tenant", None)
     if tenant is None:

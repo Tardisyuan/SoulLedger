@@ -108,21 +108,28 @@ def register_restore_check(check):
     _RESTORE_CHECKS.append(check)
 
 
+def _hall_pks(tenant):
+    """`tenant` as a set of hall pks: one Tenant (a hall's ADMIN), or a set of pks (a civilization ADMIN's halls)."""
+    return set(tenant) if isinstance(tenant, (set, frozenset)) else {tenant.pk}
+
+
 def _cascade_outside(cascade_id, tenant) -> bool:
     """Whether any row of this cascade is not `tenant`'s: another hall's, or a global row (a model with no
-    tenant column, a NULL tenant). A hall's ADMIN restores and destroys its own hall's rows only (2026-10-29)."""
+    tenant column, a NULL tenant). A hall's ADMIN restores and destroys its own hall's rows only (2026-10-29); a
+    civilization ADMIN its civilization's halls' (`tenant` is then a set of hall pks, 2026-11-15)."""
+    pks = _hall_pks(tenant)
     for model in _soft_deletable_models():
         rows = _unfiltered_manager(model).filter(delete_cascade_id=cascade_id, is_deleted=True)
         via = getattr(model, "RECYCLE_TENANT_PATH", None)
         if via:  # no tenant column of its own: the hall is read through the parent row (PostMedia -> post)
-            if rows.exclude(**{via: tenant.pk}).exists():
+            if rows.exclude(**{f"{via}__in": pks}).exists():
                 return True
             continue
         if not any(f.name == "tenant" for f in model._meta.get_fields()):
             if rows.exists():
                 return True
             continue
-        if rows.exclude(tenant_id=tenant.pk).exists():
+        if rows.exclude(tenant_id__in=pks).exists():
             return True
     return False
 
@@ -261,7 +268,7 @@ def list_bin_entries(tenant=None, is_admin=False):
                 # only the global ADMIN lists them (rbac-be3 L-8; a hall's `recycle_bin.read` saw them all).
                 continue
             # Fail closed: a non-ADMIN with no tenant context used to get every tenant's rows.
-            qs = qs.filter(tenant=tenant) if tenant is not None else qs.none()
+            qs = qs.filter(tenant_id__in=_hall_pks(tenant)) if tenant is not None else qs.none()
         for row in qs.order_by("-deleted_at"):
             cascade_id = row.delete_cascade_id
             dependent_count = cascade_dependent_count(cascade_id, row) if cascade_id else 0
@@ -305,7 +312,7 @@ def hard_delete(entity_type: str, pk, tenant=None) -> bool:
     if row is None or not row.deleted_at:
         return False
     # A hall's ADMIN: only its own hall's rows (global reference rows, NULL tenant, are not its own).
-    if tenant is not None and getattr(row, "tenant_id", None) != tenant.pk:
+    if tenant is not None and getattr(row, "tenant_id", None) not in _hall_pks(tenant):
         return False
     if timezone.now() - row.deleted_at < timedelta(days=REFERENCE_DATA_RETENTION_DAYS):
         return False

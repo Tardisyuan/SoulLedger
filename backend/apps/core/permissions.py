@@ -4,7 +4,15 @@ DRF permission classes for SoulLedger multi-tenant isolation.
 from django.core.exceptions import FieldDoesNotExist
 from rest_framework import permissions
 
-from apps.core.tenant import is_tenant_exempt, residence_read_allowed, residence_readable
+from apps.core.tenant import (
+    is_admin,
+    is_civilization_admin,
+    is_hall_less_admin,
+    is_tenant_exempt,
+    reaches_hall,
+    residence_read_allowed,
+    residence_readable,
+)
 
 
 class CodenamePermission(permissions.BasePermission):
@@ -90,7 +98,8 @@ class TenantPermission(permissions.BasePermission):
     Enforce tenant isolation at the DRF permission layer.
 
     - IsAuthenticated: unauthenticated requests are rejected (401)
-    - A hall-less ADMIN bypasses tenant filtering (global); an ADMIN bound to a hall does not
+    - SYSTEM_ADMIN bypasses tenant filtering (global); a hall-less ADMIN reaches its civilization's halls;
+      an ADMIN bound to a hall is that hall's
     - All other authenticated users: request must have a valid tenant
     """
 
@@ -103,6 +112,9 @@ class TenantPermission(permissions.BasePermission):
         # then the request's tenant must be that hall, and object checks below
         # compare against it like any hall-bound role.
         if is_tenant_exempt(request.user):
+            return True
+        # 文明管理员(§7.5):请求上没有殿;它能碰哪些行由 scope_to_tenant 与下面的对象检查按本文明收窄。
+        if is_civilization_admin(request.user):
             return True
 
         # Must have a tenant on the request (set by TenantMiddleware)
@@ -137,6 +149,8 @@ class TenantPermission(permissions.BasePermission):
         # SYS_ADMIN bypasses (not while viewing one hall — see has_permission)
         if is_tenant_exempt(request.user):
             return True
+        if is_civilization_admin(request.user):
+            return self._civilization_reaches(request.user, view, obj)
 
         tenant = getattr(request, 'tenant', None)
         if tenant is None:
@@ -180,6 +194,28 @@ class TenantPermission(permissions.BasePermission):
         return str(obj_tenant.pk) == str(tenant.pk)
 
 
+    @staticmethod
+    def _civilization_reaches(user, view, obj):
+        """The object rule for a civilization ADMIN: the row's hall is one of its civilization's halls (or, under the
+        residence read exception, the soul's home is). A model with no tenant column is global, as below; a NULL
+        tenant on a tenant-bearing model is SYSTEM_ADMIN's."""
+        try:
+            obj._meta.get_field("tenant")
+        except (FieldDoesNotExist, AttributeError):
+            if getattr(obj, "tenant", None) is None:
+                return True
+        tenant_id = getattr(obj, "tenant_id", None)
+        if tenant_id is None and getattr(obj, "tenant", None) is not None:
+            tenant_id = obj.tenant.pk
+        if reaches_hall(user, tenant_id):
+            return True
+        if residence_read_allowed(view):
+            soul = obj if hasattr(obj, "home_tenant_id") else getattr(obj, "soul", None)
+            home = getattr(soul, "home_tenant_id", None)
+            return home is not None and reaches_hall(user, home) and residence_readable(obj, soul.home_tenant)
+        return False
+
+
 class IsAdminPermission(permissions.BasePermission):
     """
     Permission class that only allows ADMIN role users — a hall's ADMIN included. It answers "is this an
@@ -191,21 +227,35 @@ class IsAdminPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return getattr(request.user, 'role', None) == 'ADMIN'
+        return is_admin(request.user)
 
     def has_object_permission(self, request, view, obj):
-        return getattr(request.user, 'role', None) == 'ADMIN'
+        return is_admin(request.user)
 
 
 class IsGlobalAdminPermission(permissions.BasePermission):
-    """Only the hall-less ADMIN (`apps/core/tenant.py::is_tenant_exempt`). For configuration that is not one
-    hall's — halls themselves, roles and the permission matrix, the assistant's provider settings: a write
-    there by a hall's ADMIN would change every other hall (user, 2026-10-29). Answers 403."""
+    """Only SYSTEM_ADMIN (`apps/core/tenant.py::is_tenant_exempt`). For configuration that is not one
+    hall's — creating halls, roles and the permission matrix, the assistant's provider settings: a write
+    there by a hall's ADMIN would change every other hall (user, 2026-10-29), and by a civilization ADMIN
+    every other civilization (2026-11-15). Answers 403."""
 
-    message = "Only a global administrator (not bound to a hall) may do this."
+    message = "Only the system administrator may do this."
 
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and is_tenant_exempt(request.user))
+
+    def has_object_permission(self, request, view, obj):
+        return self.has_permission(request, view)
+
+
+class IsHallLessAdminPermission(permissions.BasePermission):
+    """SYSTEM_ADMIN or a civilization ADMIN (`is_hall_less_admin`): actions over several halls whose rows are
+    then narrowed by the scoped queryset — a civilization ADMIN reaches its civilization's halls only."""
+
+    message = "Only an administrator not bound to a hall may do this."
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and is_hall_less_admin(request.user))
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)

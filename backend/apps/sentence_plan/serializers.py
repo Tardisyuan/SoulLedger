@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from apps.core.field_permissions import SoulFieldRulesMixin
 from apps.core.tenant import request_tenant
-from apps.core.viewer import SEE_ALL, viewer_tenant_id
+from apps.core.viewer import sees, viewer_tenant_id
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestKind
 from apps.sentence_plan.services import last_refusal
 from apps.sentence_plan.soul_view import origin_greek_account
@@ -98,7 +98,7 @@ class SentencePlanSerializer(SoulFieldRulesMixin, serializers.ModelSerializer):
         data = super().to_representation(plan)
         request = self.context.get("request")
         viewer = viewer_tenant_id(request)
-        if viewer is SEE_ALL or viewer == plan.tenant_id:
+        if sees(viewer, plan.tenant_id):
             return data
         code = getattr(request_tenant(request), "code", None)
         for node in data["nodes"]:

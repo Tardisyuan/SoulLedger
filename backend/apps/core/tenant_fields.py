@@ -35,7 +35,7 @@ fallback this check would be silently inert in half the suite.
 
 from rest_framework import serializers
 
-from apps.core.tenant import is_tenant_exempt, request_tenant
+from apps.core.tenant import is_civilization_admin, is_tenant_exempt, reaches_hall, request_tenant
 
 
 def same_tenant_or_404_message(value, context, what: str):
@@ -61,6 +61,12 @@ def same_tenant_or_404_message(value, context, what: str):
     # `TenantPermission.has_object_permission` makes the same distinction, and
     # for the same reason: absent column and NULL column are different facts.
     if not hasattr(value, "tenant_id"):
+        return value
+
+    # A civilization ADMIN (§7.5): any hall of its civilization; a NULL tenant is SYSTEM_ADMIN's.
+    if is_civilization_admin(user):
+        if not reaches_hall(user, value_tenant_id):
+            raise serializers.ValidationError(f"No such {what} in this tenant.")
         return value
 
     if tenant is None or value_tenant_id != tenant.pk:

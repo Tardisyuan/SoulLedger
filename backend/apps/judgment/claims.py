@@ -513,11 +513,13 @@ def request_reassign(judgment: Judgment, actor, reason: str = "") -> list:
     存 zh-Hans(推送与兜底),读时按请求语言重渲染(`apps/notifications/messages.py`)。
     """
     from apps.authentication.models import User
+    from apps.core.tenant import hall_less_admins_q
     from apps.events.services import EventService
     from apps.notifications import messages
 
-    admins = User.objects.filter(role="ADMIN", is_active=True).exclude(pk=actor.pk).order_by("pk")
-    recipients = list(admins.filter(tenant_id=judgment.tenant_id)) or list(admins.filter(tenant__isnull=True))
+    active = User.objects.filter(is_active=True).exclude(pk=actor.pk).order_by("pk")
+    recipients = (list(active.filter(role="ADMIN", tenant_id=judgment.tenant_id))
+                  or list(active.filter(hall_less_admins_q(judgment.tenant_id))))
     params = {"by": actor.display_name or actor.username, "soul": judgment.soul.name}
     # 有理由时用 `_with_reason` 那句(审批人读);没有理由(网页路径)与旧通知仍是原来的句子。
     if reason:

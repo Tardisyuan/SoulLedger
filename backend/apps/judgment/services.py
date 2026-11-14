@@ -813,7 +813,7 @@ class JudgmentService:
             soul = Soul.lock(soul.pk)
             if in_tenant is not None and soul.tenant_id != in_tenant.pk:
                 raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
-            if getattr(actor, "role", None) != "ADMIN":
+            if getattr(actor, "role", None) not in ("ADMIN", "SYSTEM_ADMIN"):
                 open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
                 if open_ids:
                     raise OpenCaseRefusedError(

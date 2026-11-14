@@ -87,7 +87,7 @@ def role_rule_sets(user, model_name):
     anonymous caller and a missing model name are never narrowed.
     """
     role = getattr(user, "role", None)
-    if not model_name or not role or role == "ADMIN" or not getattr(user, "is_authenticated", False):
+    if not model_name or not role or role in ("ADMIN", "SYSTEM_ADMIN") or not getattr(user, "is_authenticated", False):
         return None
 
     from apps.perm.checker import live_extra_roles

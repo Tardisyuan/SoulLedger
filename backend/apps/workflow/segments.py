@@ -29,6 +29,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from apps.core.viewer import sees
 from apps.workflow.models import (
     AUTOMATIC_KINDS,
     RESTORABLE_SKIPS,
@@ -436,7 +437,9 @@ def is_convener_admin(user, workflow, request=None):
         return False
     tenant_id = _user_tenant_id(user, request)
     if tenant_id is None:
-        return user.role == "ADMIN"
+        from apps.core.tenant import reaches_hall
+
+        return reaches_hall(user, workflow.tenant_id)  # SYSTEM_ADMIN;文明管理员限召集殿在本文明
     return tenant_id == workflow.tenant_id
 
 
@@ -695,12 +698,12 @@ def adjust(workflow_id, user, *, restore_node_ids, skip_node_ids, reason, versio
 
 def remind(workflow_id, order, user, request=None):
     """「再提醒一次」:召集殿的人,每段每小时一次。"""
-    from apps.core.tenant import is_tenant_exempt
+    from apps.core.tenant import reaches_hall
 
     now = timezone.now()
     with transaction.atomic():
         workflow, segment = _locked(workflow_id, order)
-        if not (is_tenant_exempt(user) or _user_tenant_id(user, request) == workflow.tenant_id):
+        if not (reaches_hall(user, workflow.tenant_id) or _user_tenant_id(user, request) == workflow.tenant_id):
             raise SegmentRefusedError("Only the convening hall sends reminders", "not_allowed", status=403)
         if segment.state != SegmentState.AWAITING_PICK:
             raise SegmentRefusedError("This segment is not waiting for a pick", "not_awaiting", status=409)
@@ -900,10 +903,14 @@ def remind_due(tenant, now=None):
 def foreign_workflows(qs, scope):
     """`qs` 里本租户作为参与域有一段的流程。**跨租户读审批流只经这里**:成员关系就是 `WorkflowSegment.tenant`,
     而外域段只由 `add_foreign` 按跨域审判的参与方建。全局 ADMIN 本来就看得到全部,这里给空集。"""
-    from apps.core.tenant import is_tenant_exempt
+    from apps.core.tenant import is_civilization_admin, is_tenant_exempt, user_civilization_halls
 
     user = getattr(scope, "user", None)
     tenant = getattr(scope, "tenant", None)
+    if user is not None and getattr(user, "is_authenticated", False) and is_civilization_admin(user):
+        # 文明管理员:本文明任一殿作为参与域有一段的流程(与那几殿各自的外域读之并相同)。
+        return qs.filter(pk__in=WorkflowSegment.objects.filter(
+            tenant__in=user_civilization_halls(user)).values("workflow_id"))
     if user is None or not getattr(user, "is_authenticated", False) or is_tenant_exempt(user) or tenant is None:
         return qs.none()
     return qs.filter(pk__in=WorkflowSegment.objects.filter(tenant=tenant).values("workflow_id"))
@@ -914,15 +921,13 @@ def is_party(workflow, tenant):
 
 
 def viewer_tenant_id(request, workflow):
-    """读详情的人属于哪个域:None = 全局 ADMIN(都看得到)。没有请求(服务内部序列化)按流程所属殿看。"""
-    from apps.core.tenant import is_tenant_exempt
+    """读详情的人属于哪个域(和行的殿比用 `apps.core.viewer.sees`):`SEE_ALL` = SYSTEM_ADMIN;文明管理员是本文明
+    各殿 pk 的 frozenset。没有请求(服务内部序列化)按流程所属殿看。"""
+    from apps.core.viewer import viewer_tenant_id as reader
 
     if request is None:
         return workflow.tenant_id
-    user = getattr(request, "user", None)
-    if is_tenant_exempt(user):
-        return None
-    return _user_tenant_id(user, request)
+    return reader(request)
 
 
 def segment_row(segment, workflow, request=None, now=None):
@@ -950,7 +955,7 @@ def segment_row(segment, workflow, request=None, now=None):
         "version": segment.version,
         "picked_at": segment.picked_at,
         "picked_by_name": (_name(segment.picked_by)
-                           if segment.picked_by_id and (viewer is None or viewer == segment.tenant_id) else None),
+                           if segment.picked_by_id and sees(viewer, segment.tenant_id) else None),
         "at_gate": gate,
         "gate_days": gate_days(segment, now) if gate else None,
         "no_picker": no_picker,
@@ -963,7 +968,7 @@ def segment_row(segment, workflow, request=None, now=None):
         "can_use_default": bool(user) and segment.state == SegmentState.AWAITING_PICK
         and is_convener_admin(user, workflow, request) and (no_picker or overdue),
         "can_remind": bool(user) and segment.state == SegmentState.AWAITING_PICK
-        and viewer in (None, workflow.tenant_id),
+        and sees(viewer, workflow.tenant_id),
     }
 
 
@@ -1001,11 +1006,11 @@ def history(workflow, request=None):
             "kind": changes.get("kind", ""),
             "segment": changes.get("segment"),
             "realm": changes.get("realm", ""),
-            "actor": _name(row.user) if viewer is None or viewer == row.tenant_id else None,
+            "actor": _name(row.user) if sees(viewer, row.tenant_id) else None,
             "at": row.timestamp,
             "restored": changes.get("restored", []),
             "skipped": changes.get("skipped", []),
-            "reason": changes.get("reason", "") if viewer is None or viewer == row.tenant_id else "",
+            "reason": changes.get("reason", "") if sees(viewer, row.tenant_id) else "",
         })
     return out
 

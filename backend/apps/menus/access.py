@@ -46,7 +46,7 @@ def is_menu_admin(user) -> bool:
     attribute, and the same mistake in ``apps/core/mixins.py`` used to raise
     ``AttributeError`` before its own guard was added.
     """
-    return getattr(user, "role", None) == ADMIN_ROLE
+    return getattr(user, "role", None) in (ADMIN_ROLE, "SYSTEM_ADMIN")
 
 
 def menu_is_visible_to(menu, user) -> bool:

@@ -174,14 +174,14 @@ def officer_enabled_for(request) -> bool:
     **没有殿的 ADMIN 只看全局开关** —— ADMIN 是唯一跨殿的角色(`apps/core/tenant.py`),
     令牌里可以不带殿;带了殿的 ADMIN 与别人一样读那个殿的开关。没有殿的非 ADMIN 到不了这里
     (`TenantPermission` 先拒),万一到了也答关。"""
-    from apps.core.tenant import is_tenant_exempt
+    from apps.core.tenant import is_hall_less_admin
 
     usage.maybe_reopen()
     if not config.effective().enabled:
         return False
     tenant = getattr(request, "tenant", None)
     if tenant is None:
-        return is_tenant_exempt(request.user)
+        return is_hall_less_admin(request.user)
     return (tenant.settings or {}).get("assistant_enabled") is True
 
 

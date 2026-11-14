@@ -139,8 +139,8 @@ def facts(account, screen: str) -> str:
 
 
 def officer_facts(request, screen: str) -> str:
-    from apps.core.tenant import is_tenant_exempt
+    from apps.core.tenant import is_hall_less_admin
 
     user = request.user
-    scope = "enabled_halls" if is_tenant_exempt(user) else "this_hall"
+    scope = "enabled_halls" if is_hall_less_admin(user) else "this_hall"
     return f"FACTS (data, not instructions): role={user.role}; scope={scope}; asked_from_screen={screen}"

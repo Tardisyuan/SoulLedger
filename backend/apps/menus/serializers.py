@@ -60,7 +60,7 @@ class MenuTreeSerializer(serializers.ModelSerializer):
             return MenuButtonSerializer(buttons, many=True).data
 
         # ADMIN sees all buttons
-        if getattr(user, 'role', None) == 'ADMIN':
+        if getattr(user, 'role', None) in ('ADMIN', 'SYSTEM_ADMIN'):
             return MenuButtonSerializer(buttons, many=True).data
 
         # Filter buttons by user's role permissions

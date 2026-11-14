@@ -11,7 +11,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer as Simpl
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
 from apps.core.problems import ProblemSerializer
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import is_admin, is_civilization_admin, is_hall_less_admin, is_tenant_exempt, reaches_hall
 
 from . import signin_sessions
 from .models import OfficerMfa
@@ -62,6 +62,7 @@ class UserOrganizationRefSerializer(serializers.Serializer):
 # never be used to escalate anything.
 # ---------------------------------------------------------------------------
 ROLE_HIERARCHY = {
+    "SYSTEM_ADMIN": 0,
     "ADMIN": 0,
     "MODERATOR": 10,
     "JUDGE": 20,
@@ -80,7 +81,7 @@ def holds_at_least(caller, role, extra_roles=()) -> bool:
     """Whether `caller` effectively holds every codename `role` (plus `extra_roles`) grants — both sides the
     union of main and additional roles, answered by the checker (`get_role_permission_codenames`).
     ADMIN holds everything. Audit 2026-11-11 P-05: custom roles have no rank, so this is their ceiling."""
-    if getattr(caller, 'role', None) == 'ADMIN':
+    if is_admin(caller):
         return True
     from apps.perm.services import get_role_permission_codenames
 
@@ -109,7 +110,7 @@ def may_assign_role(caller, role) -> bool:
         return False
     if role not in ROLE_HIERARCHY and not holds_at_least(caller, role):
         return False
-    return role != 'ADMIN' or is_tenant_exempt(caller)
+    return role != 'ADMIN' or is_hall_less_admin(caller)
 
 
 # ---------------------------------------------------------------------------
@@ -192,8 +193,9 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions", "mfa_enabled", "mfa_required",
-                  "password_change_required", "mfa_setup_required"]
+        fields = ["id", "username", "email", "role", "tenant", "civilization", "display_name", "permissions", "mfa_enabled",
+                  "mfa_required", "password_change_required", "mfa_setup_required"]
+        read_only_fields = ["civilization"]
 
     def get_mfa_setup_required(self, obj) -> bool:
         from apps.authentication import mfa
@@ -531,8 +533,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required", "mfa_setup_required", "permissions"]
-        read_only_fields = ["id", "is_active", "username", "role", "organization", "position"]
+        fields = ["id", "username", "email", "email_verified", "role", "tenant", "civilization", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required", "mfa_setup_required", "permissions"]
+        read_only_fields = ["id", "is_active", "username", "role", "civilization", "organization", "position"]
 
     #: Same list as the login payload's `user.permissions` (`UserWithTenantSerializer.get_permissions`):
     #: the officer app re-reads it here at start and on returning to the foreground, so a grant
@@ -667,8 +669,8 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity', 'extra_roles', 'mfa', 'invite_pending']
-        read_only_fields = ['id', 'create_time', 'extra_roles']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'civilization', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity', 'extra_roles', 'mfa', 'invite_pending']
+        read_only_fields = ['id', 'create_time', 'extra_roles', 'civilization']
 
     # 两步验证列(A12):三态 = enabled / required。`get_queryset` 把 `mfa` 行 select_related 进来,这里不另查。
     mfa = serializers.SerializerMethodField()
@@ -730,7 +732,7 @@ def organization_in_tenant(organization, tenant_id):
 def default_officer_organization(tenant, role, organization):
     """有殿的非管理员必须有机构,缺省本殿根机构(数据范围 B1;建人、改人、CSV 导入、邀请共用)。
     ADMIN 跳过数据范围,SOUL 不是官员 —— 两者原样返回。"""
-    if organization is not None or tenant is None or role in ('ADMIN', 'SOUL'):
+    if organization is not None or tenant is None or role in ('ADMIN', 'SYSTEM_ADMIN', 'SOUL'):
         return organization
     from apps.org.ownership import tenant_root
     return tenant_root(tenant)
@@ -751,7 +753,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active']
+        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'role', 'tenant', 'civilization', 'organization', 'position', 'is_active']
 
     def validate_email(self, value):
         """See `validate_email_is_unclaimed` (BP-04)."""
@@ -761,8 +763,25 @@ class UserCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         caller = getattr(request, 'user', None) if request is not None else None
 
-        # 只有没绑殿的全局 ADMIN 可以把人建在任意殿;绑殿的 ADMIN 与其他角色一样只能建在本殿(2026-10-29)。
-        if not is_tenant_exempt(caller):
+        # 文明(§7.5):只对无殿 ADMIN 有意义,只有系统管理员建无殿 ADMIN、给它定文明。
+        if attrs.get('civilization') and (attrs.get('role') != 'ADMIN' or attrs.get('tenant') is not None):
+            raise serializers.ValidationError(
+                {'civilization': 'Only an administrator with no hall has a civilization.'})
+        if not is_tenant_exempt(caller) and attrs.get('civilization'):
+            raise serializers.ValidationError(
+                {'civilization': 'Only the system administrator appoints a civilization administrator.'})
+
+        # 系统管理员可以把人建在任意殿;文明管理员建在本文明的某一殿;绑殿的 ADMIN 与其他角色一样只能建在本殿
+        # (2026-10-29,2026-11-15)。
+        if is_civilization_admin(caller):
+            target_tenant = attrs.get('tenant')
+            if target_tenant is None or not reaches_hall(caller, target_tenant.pk):
+                raise serializers.ValidationError(
+                    {'tenant': 'Give a hall of your civilization.'})
+            if not may_assign_role(caller, attrs.get('role', 'VIEWER')):
+                raise serializers.ValidationError(
+                    {'role': 'Cannot assign a role more privileged than your own.'})
+        elif not is_tenant_exempt(caller):
             caller_tenant = getattr(request, 'tenant', None) if request is not None else None
             target_tenant = attrs.get('tenant')
             if target_tenant is None:

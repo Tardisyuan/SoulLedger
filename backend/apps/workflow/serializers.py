@@ -570,10 +570,11 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
         data = super().to_representation(node)
         if node.segment_id is None:
             return data
+        from apps.core.viewer import sees
         from apps.workflow.segments import viewer_tenant_id
 
         viewer = viewer_tenant_id(self.context.get("request"), node.workflow)
-        if viewer is None or viewer == node.segment.tenant_id:
+        if sees(viewer, node.segment.tenant_id):
             return data
         # 决定 24(2026-10-29):别站的意见原文也不给 —— 节点 notes、会签各人的 notes、退回前的旧意见。
         data.update(approver=None, approver_username=None, approver_display_name=None, cosigners=[],
@@ -799,10 +800,11 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         """决定 24:别殿(合并流程的参与域)读流程时不给召集殿写的 `notes`(别站意见原文在节点序列化器里收)。"""
         data = super().to_representation(obj)
+        from apps.core.viewer import sees
         from apps.workflow.segments import viewer_tenant_id
 
         viewer = viewer_tenant_id(self.context.get("request"), obj)
-        if viewer is not None and viewer != obj.tenant_id:
+        if not sees(viewer, obj.tenant_id):
             data["notes"] = ""
         return data
 

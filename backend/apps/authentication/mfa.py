@@ -139,7 +139,7 @@ def is_required(user) -> bool:
     role = getattr(user, "role", None)
     if role == UserRole.SOUL:
         return False
-    if role == UserRole.ADMIN:
+    if role in (UserRole.ADMIN, UserRole.SYSTEM_ADMIN):
         return True
     return role in required_roles(getattr(user, "tenant", None))
 

@@ -37,7 +37,7 @@ class RoleMinimumLengthValidator:
     """管理员的最短长度比普通官员长(12 对 8)。用户还没建出来(管理员开通)时按 `user` 的 role 判。"""
 
     def validate(self, password, user=None):
-        if getattr(user, "role", None) == "ADMIN" and len(password) < ADMIN_MIN_PASSWORD_LENGTH:
+        if getattr(user, "role", None) in ("ADMIN", "SYSTEM_ADMIN") and len(password) < ADMIN_MIN_PASSWORD_LENGTH:
             raise DjangoValidationError(
                 f"This password is too short. It must contain at least {ADMIN_MIN_PASSWORD_LENGTH} characters.",
                 code="password_too_short",

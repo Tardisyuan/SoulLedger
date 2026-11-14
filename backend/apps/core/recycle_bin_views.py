@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from apps.core import recycle_bin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import ProblemSerializer, problem
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import admin_hall_ids, is_civilization_admin, is_tenant_exempt
 from apps.core.viewsets import CodenameViewSetMixin
 
 # ── Doc-only shapes ──────────────────────────────────────────────────────
@@ -132,12 +132,15 @@ class RecycleBinHardDeleteRequestSerializer(serializers.Serializer):
 
 
 def _bin_scope(request):
-    """Who may restore / destroy, and within what: the hall-less ADMIN everywhere (None); an ADMIN bound to a
-    hall within that hall (the Tenant); anyone else not at all (False). 2026-10-29: hall admins are hall-scoped,
-    not refused outright. Viewing one hall (`hall_view`) is read-only and never gets here."""
+    """Who may restore / destroy, and within what: SYSTEM_ADMIN everywhere (None); a civilization ADMIN within its
+    civilization's halls (a frozenset of pks); an ADMIN bound to a hall within that hall (the Tenant); anyone else
+    not at all (False). 2026-10-29: hall admins are hall-scoped, not refused outright. Viewing one hall
+    (`hall_view`) is read-only and never gets here."""
     user = request.user
     if is_tenant_exempt(user):
         return None
+    if is_civilization_admin(user):
+        return admin_hall_ids(user)
     tenant = getattr(request, "tenant", None)
     if getattr(user, "role", None) == "ADMIN" and not getattr(user, "hall_view", None) and tenant is not None:
         return tenant
@@ -174,7 +177,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         codebase); a non-ADMIN sees only their own tenant's."""
         user = request.user
         is_admin = is_tenant_exempt(user)
-        tenant = getattr(request, "tenant", None)
+        tenant = admin_hall_ids(user) if is_civilization_admin(user) else getattr(request, "tenant", None)
         entries = recycle_bin.list_bin_entries(tenant=tenant, is_admin=is_admin)
         return Response({"results": entries, "count": len(entries)})
 
