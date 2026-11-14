@@ -166,7 +166,9 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
   );
 }
 
-const DemoLogin = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => import("@/demo/DemoLogin")) : null;
+// `ssr: false`, as app/page.tsx: rendered on the server, it hydrates under app/loading.tsx's boundary, and the theme
+// switch after mount makes React throw the server DOM away and draw it again (2026-11-14).
+const DemoLogin = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => import("@/demo/DemoLogin"), { ssr: false }) : null;
 
 export default function LoginPage() {
   return DemoLogin ? <DemoLogin /> : <PasswordLogin />;
