@@ -170,16 +170,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.155755, 0.026149, 30.8308],
-            "hex": "#160806"
+            "components": [0.213366, 0.023945, 32.5207],
+            "hex": "#231512"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.965855, 0.01716, 35.3449],
-                  "hex": "#FFF0EC"
+                  "components": [0.93948, 0.030589, 30.1804],
+                  "hex": "#FFE4DF"
                 }
               }
             }
@@ -254,16 +254,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.152695, 0.037888, 307.3255],
-            "hex": "#100718"
+            "components": [0.214612, 0.022693, 319.4646],
+            "hex": "#1E1620"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.95648, 0.015971, 328.7762],
-                  "hex": "#F7EDF6"
+                  "components": [0.940161, 0.030471, 320.8736],
+                  "hex": "#F5E5F8"
                 }
               }
             }
@@ -338,16 +338,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.157951, 0.03571, 265.5927],
-            "hex": "#060C1C"
+            "components": [0.214015, 0.023887, 251.5668],
+            "hex": "#111A24"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.95774, 0.014822, 251.157],
-                  "hex": "#EAF2FB"
+                  "components": [0.939633, 0.029802, 251.2804],
+                  "hex": "#DDEDFF"
                 }
               }
             }
@@ -379,16 +379,16 @@
         "ink": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.880378, 0.049995, 178.8645],
-            "hex": "#B5E3D8"
+            "components": [0.839483, 0.085071, 177.7434],
+            "hex": "#8BDDCA"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.479365, 0.062143, 178.9771],
-                  "hex": "#31695E"
+                  "components": [0.469974, 0.08471, 178.2756],
+                  "hex": "#066A5B"
                 }
               }
             }
@@ -422,16 +422,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.166432, 0.023937, 180.0758],
-            "hex": "#03120F"
+            "components": [0.214288, 0.02437, 176.959],
+            "hex": "#0C1D19"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.971025, 0.019277, 184.9251],
-                  "hex": "#E8FAF7"
+                  "components": [0.939565, 0.029759, 178.3271],
+                  "hex": "#D7F2EB"
                 }
               }
             }

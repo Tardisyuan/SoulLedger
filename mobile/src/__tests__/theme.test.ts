@@ -94,10 +94,10 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     expect(v4.light).toEqual({ main: "#F8F8F6", card: "#FFFFFF", card2: "#F1F1EE", ink: "#16171A", sub: "#54575C", faint: "#8A8D92", line: "rgba(0,0,0,0.08)", line2: "rgba(0,0,0,0.16)", field: "rgba(0,0,0,0.035)", onSolid: "#FFFFFF", pos: "#1F6B3F", neg: "#A81E3C", onNeg: "#FFFFFF" });
     const nine = (c: (typeof CIVS)[number]) => [v4.civ[c].glow, v4.civ[c].tD, v4.civ[c].tL, v4.civ[c].sL, v4.civ[c].sD, v4.civ[c].mD, v4.civ[c].mL, v4.civ[c].sideD, v4.civ[c].sideL].join(" ");
     expect(CIVS.map((c) => [c, nine(c)])).toEqual([
-      ["cn", "#C8604F #D98A7A #A04636 #A64A3B #7E362B #C9A35E #8A6A24 #160806 #FFF0EC"],
-      ["eu", "#A0709F #A883AE #885A94 #7A4F85 #5A3A63 #B9C2CF #5C6878 #100718 #F7EDF6"],
-      ["eg", "#5F93C8 #89BCF1 #174A88 #3C69A2 #2B4E79 #D6B25E #86671E #060C1C #EAF2FB"],
-      ["gr", "#5F9C94 #B5E3D8 #31695E #37716A #28544F #C98B62 #8F5B36 #03120F #E8FAF7"],
+      ["cn", "#C8604F #D98A7A #A04636 #A64A3B #7E362B #C9A35E #8A6A24 #231512 #FFE4DF"],
+      ["eu", "#A0709F #A883AE #885A94 #7A4F85 #5A3A63 #B9C2CF #5C6878 #1E1620 #F5E5F8"],
+      ["eg", "#5F93C8 #89BCF1 #174A88 #3C69A2 #2B4E79 #D6B25E #86671E #111A24 #DDEDFF"],
+      ["gr", "#5F9C94 #8BDDCA #066A5B #37716A #28544F #C98B62 #8F5B36 #0C1D19 #D7F2EB"],
     ]);
     expect(ON_PLAQUE).toBe(v4.dark.onSolid);
     expect(ON_PLAQUE).toBe(v4.light.onSolid);
