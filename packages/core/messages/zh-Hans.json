@@ -7875,13 +7875,13 @@
       "confirm": "开跑",
       "scope": "范围",
       "requests": "请求",
-      "requests_value": "约 {{count}} 条（单次最多 {{max}}）",
+      "requests_value": "约 {{count}} 条（每个候选最多 {{max}}）",
       "estimate": "预计花费 / 上限",
       "not_counted": "不计入本月用量与月度上限，也不计入任何账号的每小时次数。",
       "problem": {
         "unpriced_model": "有模型还没有单价，算不出花费。",
         "no_cases": "这一端没有启用的评测题。",
-        "too_many_asks": "请求数超过单次上限。",
+        "too_many_asks": "用例数超过每个候选的单次上限。",
         "over_spend_cap": "预计花费超过单次评测上限。",
         "no_eval_soul": "缺少评测灵魂，先创建评测身份。",
         "no_eval_officer": "缺少评测官员，先创建评测身份。"

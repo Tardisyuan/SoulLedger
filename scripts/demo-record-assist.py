@@ -24,7 +24,8 @@ Environment (nothing else is read; no .env):
   DEMO_ASSIST_ONLY       optional, comma-separated subset of: replies,security,eval
   DEMO_ASSIST_CANDIDATES for eval: a JSON list of one or two candidates as the eval page sends them,
                          e.g. [{"platform":"deepseek","model":"deepseek-chat"},{"platform":"anthropic","model":"..."}]
-  DEMO_ASSIST_EVAL_SIDES for eval: default "officer,soul" (one run per side; each must fit the 100-ask cap)
+  DEMO_ASSIST_EVAL_SIDES for eval: default "officer,soul" (one run per side; each side's active cases must
+                         be at most 100: the cap is per candidate, so two candidates may ask up to 200)
 
 Every string written goes through the same private-host rewrite as scripts/demo-record.mjs, and
 frontend/src/__tests__/demoDataHasNoInternalHosts.test.ts scans the result.

@@ -260,8 +260,8 @@ class EvalPreviewCandidateSerializer(serializers.Serializer):
 
 
 class EvalPreviewSerializer(serializers.Serializer):
-    asks = serializers.IntegerField()
-    max_asks = serializers.IntegerField()
+    asks = serializers.IntegerField(help_text="所有候选合计的请求条数(候选数 × 用例数)")
+    max_asks = serializers.IntegerField(help_text="每个候选的上限;用例数超过它即 too_many_asks。总花费另由 spend_cap 限制")
     estimated_cost = serializers.FloatField()
     spend_cap = serializers.FloatField()
     candidates = EvalPreviewCandidateSerializer(many=True)

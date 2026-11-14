@@ -21,12 +21,13 @@ from apps.soul_assist.usage import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
-#: 单次运行的请求条数上限(候选数 × 用例数)。
+#: 每个候选单次运行的请求条数上限,即用例数的上限(2026-11-14 起按候选算:80 条官员用例比两个候选不该被拒)。
+#: 所有候选合计的花费另由 `eval_spend_cap` 限制。
 MAX_ASKS = 100
 PREVIEW_TTL_SECONDS = 10 * 60
 PREVIEW_KEY = "soul_assist:eval_preview:"
-#: 排队或运行超过这么久的评测视为死了(worker 崩了、任务丢了)。100 条 × 22 秒约 37 分钟,留足余量。
-STALE_AFTER = timedelta(hours=1)
+#: 排队或运行超过这么久的评测视为死了(worker 崩了、任务丢了)。两个候选 × 100 条 × 22 秒约 73 分钟(逐条串行),留足余量。
+STALE_AFTER = timedelta(hours=2)
 #: 预估用:每一轮在 system prompt 之外的输入(事实头、问题、工具结果)与每轮输出。宁高勿低。
 EXTRA_INPUT_PER_ROUND = 300
 OUTPUT_PER_ROUND = 400
@@ -90,7 +91,8 @@ def _estimate(conn, cases, prices):
 
 
 def preview(candidates, cases, user) -> dict:
-    """「约 N 条请求、预计花费」;没有问题时发一个确认令牌,开始运行必须带它回来。"""
+    """「约 N 条请求、预计花费」;没有问题时发一个确认令牌,开始运行必须带它回来。
+    `asks` 是所有候选合计;`too_many_asks` 只看用例数(每个候选的条数)是否超过 `MAX_ASKS`。"""
     eff = config.effective()
     base = eff.connection
     conns = [config.candidate(c, base) for c in candidates]
@@ -109,7 +111,7 @@ def preview(candidates, cases, user) -> dict:
     sides = {c.side for c in cases}
     if not cases:
         problems.append("no_cases")
-    if asks > MAX_ASKS:
+    if len(cases) > MAX_ASKS:
         problems.append("too_many_asks")
     if "unpriced_model" not in problems and total_cost > eff.eval_spend_cap:
         problems.append("over_spend_cap")
