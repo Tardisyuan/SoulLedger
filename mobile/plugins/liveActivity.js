@@ -28,18 +28,20 @@ const widgetBundleId = (appBundleId) => {
  * ground liveTint checks 3:1 against (liveActivity.test holds both).
  */
 const CARD = {
-  light: { ground: "#F8F8F6", main: "#16171A", secondary: "#54575C", track: "#DCDCD8", tag: "#EAEAE6" },
-  dark: { ground: "#1C1D20", main: "#F3F3F1", secondary: "#B4B6BA", track: "#3A3B40", tag: "#2E2F34" },
+  light: { ground: "#F8F8F6", main: "#16171A", secondary: "#54575C", track: "#DCDCD8", tag: "#EAEAE6", neg: "#A81E3C" },
+  dark: { ground: "#1C1D20", main: "#F3F3F1", secondary: "#B4B6BA", track: "#3A3B40", tag: "#2E2F34", neg: "#F2849B" },
 };
 
 const cardSwift = (c) =>
-  `Card(ground: Color(hex: "${c.ground}"), main: Color(hex: "${c.main}"), secondary: Color(hex: "${c.secondary}"), track: Color(hex: "${c.track}"), tag: Color(hex: "${c.tag}"))`;
+  `Card(ground: Color(hex: "${c.ground}"), main: Color(hex: "${c.main}"), secondary: Color(hex: "${c.secondary}"), track: Color(hex: "${c.track}"), tag: Color(hex: "${c.tag}"), neg: Color(hex: "${c.neg}"))`;
 
 /**
  * The lock screen and the Dynamic Island (V4Batch07 05 App「锁屏 · 实时活动」「灵动岛三种状态」): the title and the
  * road's name, the headline and the count, the progress, and start · here · end under it. Compact: the mark and
- * 「10/11」; minimal: the mark; expanded: the place over the soul and the step. A road that ends (湮灭, 永罚) draws
- * its progress in v4's pale red (dark --neg #F2849B), never in the civilization's colour.
+ * 「10/11」; minimal: the mark; expanded: the place over the soul and the step.
+ * Design 第五十二批 E1: a road that has ended (湮灭, 永罚 — both bad endings) draws its bar full in civT like any
+ * walked road; the tag says the ended state, its words in --neg per scheme (`CARD.neg`: #A81E3C light, #F2849B dark),
+ * its ground unchanged; the end's name is in the main colour and bold, the start and the middle secondary.
  * Design 第五十一批: the card's ground, text, track and tag are fixed neutrals per scheme (`CARD`), never the system's
  * `.primary` / `.secondary` (those take the wallpaper's vibrancy over our ground); the mark is the seal per scheme and
  * the walked bar civT per scheme. The Dynamic Island's ground is the system's black: it takes the dark column.
@@ -60,7 +62,6 @@ private extension Color {
     let value = UInt64(hex.trimmingCharacters(in: CharacterSet(charactersIn: "#")), radix: 16) ?? 0x8A8D92
     self.init(red: Double((value >> 16) & 0xFF) / 255, green: Double((value >> 8) & 0xFF) / 255, blue: Double(value & 0xFF) / 255)
   }
-  static let ended = Color(red: 0xF2 / 255, green: 0x84 / 255, blue: 0x9B / 255)
 }
 
 /// The card's neutrals (Design 第五十一批 D1–D6), one pair for every civilization.
@@ -70,6 +71,7 @@ private struct Card {
   let secondary: Color
   let track: Color
   let tag: Color
+  let neg: Color
   static let light = ${cardSwift(CARD.light)}
   static let dark = ${cardSwift(CARD.dark)}
   static func of(_ scheme: ColorScheme) -> Card { scheme == .dark ? dark : light }
@@ -131,7 +133,7 @@ private struct LockScreenLive: View {
         Text(title).font(.caption).foregroundStyle(card.secondary).lineLimit(1)
         Spacer(minLength: 4)
         if !state.tag.isEmpty {
-          Text(state.tag).font(.system(size: 11.5, weight: .medium)).foregroundStyle(card.main)
+          Text(state.tag).font(.system(size: 11.5, weight: .medium)).foregroundStyle(state.ended ? card.neg : card.main)
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(card.tag).clipShape(Capsule())
         }
@@ -141,13 +143,13 @@ private struct LockScreenLive: View {
         Spacer(minLength: 8)
         Text(state.count).font(.system(size: 13, weight: .medium).monospacedDigit()).foregroundStyle(card.main)
       }
-      Bar(progress: state.progress, fill: state.ended ? Color.ended : tints.bar(scheme), track: card.track)
+      Bar(progress: state.ended ? 1 : state.progress, fill: tints.bar(scheme), track: card.track)
       HStack {
         Text(state.first).foregroundStyle(card.secondary)
         Spacer(minLength: 4)
-        Text(state.current).fontWeight(.semibold).foregroundStyle(card.main)
+        Text(state.current).fontWeight(state.ended ? .regular : .semibold).foregroundStyle(state.ended ? card.secondary : card.main)
         Spacer(minLength: 4)
-        Text(state.last).foregroundStyle(card.secondary)
+        Text(state.last).fontWeight(state.ended ? .semibold : .regular).foregroundStyle(state.ended ? card.main : card.secondary)
       }
       .font(.caption2).lineLimit(1)
     }

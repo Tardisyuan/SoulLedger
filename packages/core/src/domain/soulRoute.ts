@@ -24,7 +24,11 @@ export interface RouteStep {
   label: string;
   /** The line under the current step (第五殿 · 阎罗, 第三百年 …). */
   sub?: string;
-  /** A road that ends here (湮灭, 永罚的塔尔塔罗斯): v4 draws it in a pale red, not the metal. */
+  /**
+   * A road that ends here (湮灭, 永罚的塔尔塔罗斯). Both are bad endings, and so is every `end` today: the live card
+   * (Design 第五十二批 E1) draws the bar full in civT and only the tag's words in --neg. A good ending, if one is
+   * ever drawn, needs its own flag before it may set this.
+   */
   end?: boolean;
 }
 
@@ -36,7 +40,7 @@ export interface SoulRoute {
   place: string;
   /** The sentence under it (soul.here.*), when v4 has one for this place. */
   line?: string;
-  /** The road's name once the verdict has chosen one (live tag: 下行 / 上行 / 经至福岛 / 千年循环 / 通过 / 不过). */
+  /** The road's name once the verdict has chosen one (live tag: 下行 / 上行 / 经至福岛 / 千年循环 / 通过; an ended road: its state, 已湮灭 / 永罚 · 不可医). */
   path?: string;
   /** 地府 only: the station's number (1–13) and the trunk's count, for 「第 10 站」 and 「10 / 11」. */
   station?: { n: number; pos: number; total: number };
@@ -119,7 +123,8 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
     const r = realmOf(plan);
     if (r?.code === "EG_ANNIHILATION") {
       const steps = [...common, step("EG_ANNIHILATION", realm("EG_ANNIHILATION"), { end: true })];
-      return { civ, steps, at: weighing + 1, place: steps[weighing + 1].label, path: tr("judgment.verdicts.failed") };
+      // Design 第五十二批 E1: an ended road's tag says the ended state (the plan's own words), not the verdict.
+      return { civ, steps, at: weighing + 1, place: steps[weighing + 1].label, path: tr("sentence_plan.node_states_by_civ.eg.ANNIHILATION.ETERNAL") };
     }
     const at = r ? passed.findIndex((s) => s.id === r.code) : -1;
     return at < 0 ? null : { civ, steps: passed, at, place: passed[at].label, path: tr("judgment.verdicts.passed") };
@@ -168,7 +173,7 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
     }
     if (r?.code === "GR_TARTARUS" && r.station.is_eternal) {
       const steps = [...base, step(r.code, realm(r.code), { end: true })];
-      return { civ, steps, at: 3, place: steps[3].label, path: steps[3].label };
+      return { civ, steps, at: 3, place: steps[3].label, path: tr("sentence_plan.node_states_by_civ.gr.HELL.ETERNAL") };
     }
     if (r?.code === "GR_TARTARUS" || r?.code === "GR_ISLES_OF_THE_BLESSED") {
       // Both roads are a thousand years (Rep. 615a; docs/02 §4.3; `default_terms.py` gives each 1000 — audit
@@ -218,7 +223,7 @@ export interface LiveContent {
   last: string;
   /** 0–1 along the road. */
   progress: number;
-  /** The road ends here (湮灭, 永罚): drawn in the pale red. */
+  /** The road ends here, badly (湮灭, 永罚): the bar full in civT, the tag's words in --neg (Design 第五十二批 E1). */
   ended: boolean;
 }
 
@@ -241,7 +246,7 @@ export function liveContent(route: SoulRoute, soul: string, tr: Tr): LiveContent
     first: route.steps[0].label,
     current: here.label,
     last: route.steps[route.steps.length - 1].label,
-    progress: total > 1 ? (n - 1) / (total - 1) : 1,
+    progress: here.end ? 1 : total > 1 ? (n - 1) / (total - 1) : 1,
     ended: !!here.end,
   };
 }

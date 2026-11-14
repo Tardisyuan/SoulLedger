@@ -46,7 +46,10 @@ describe("soulRoute", () => {
     expect([island.place, island.island]).toEqual(["两真之殿 · 称心", "QA·称心者"]);
     const gone = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "eg", plan: plan("EG_ANNIHILATION"), hall: "", now: NOW }, tr)!;
     expect(gone.steps[gone.at]).toMatchObject({ id: "EG_ANNIHILATION", end: true });
-    expect(liveContent(gone, "Nebamun", tr).ended).toBe(true);
+    // Design 第五十二批 E1: the ended road's tag is its state, not the verdict; the bar is full.
+    const goneLive = liveContent(gone, "Nebamun", tr);
+    expect([goneLive.ended, goneLive.tag, goneLive.progress, goneLive.count]).toEqual([true, "已湮灭", 1, "第 4 / 4 步"]);
+    expect(goneLive.tag).not.toBe("不过");
     // The seven approaches are passed through, not a stop (Design batch 34): no step on either road.
     expect(judging.steps.map((s) => s.id)).toEqual(["EMBALMING", "EG_DUAT_ENTRY", "WEIGHING", "EG_TWENTYONE_SEBKHET", "EG_AARU"]);
     expect(gone.steps.map((s) => s.id)).not.toContain("EG_SEVEN_ARRWT");
@@ -86,6 +89,8 @@ describe("soulRoute", () => {
     expect(r.path).toBe("千年循环");
     const eternal = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_TARTARUS", { is_eternal: true, status: "eternal" }), hall: "", now: NOW }, tr)!;
     expect(eternal.steps[eternal.at]).toMatchObject({ id: "GR_TARTARUS", end: true });
+    const eternalLive = liveContent(eternal, "Glaukos", tr);
+    expect([eternalLive.ended, eternalLive.tag, eternalLive.progress]).toEqual([true, "永罚 · 不可医", 1]);
   });
 
   it("希腊: the Isles of the Blessed are the same thousand years, with the same count (audit 2026-11-13 GR-2)", () => {
