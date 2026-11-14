@@ -3259,6 +3259,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dossiers/desk/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 案台一屏,一个请求:此前是四个 `GET /judgment/?group=…`、`queue-counts`(筛与不筛各一)和 `hall-stats`。
+         *     范围、筛选、计数都调 `/judgment/` 的同一组函数(`JudgmentFilter`、`group_q`、`queue_counts_of`、
+         *     `hall_stats.overview`),所以三处的数不会对不上;四组出自同一个快照,服务端互斥,不用前端再去重。
+         */
+        get: operations["v1_dossiers_desk_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events/": {
         parameters: {
             query?: never;
@@ -12745,6 +12766,11 @@ export interface components {
          * @enum {string}
          */
         DesiredRebirthFormEnum: "DIVINE" | "HUMAN" | "ASURA" | "ANIMAL" | "HUNGRY_GHOST" | "HELL_BEING";
+        DeskGroup: {
+            group: components["schemas"]["GroupEnum"];
+            total: number;
+            rows: components["schemas"]["DossierRow"][];
+        };
         /** @description `{"detail": "..."}` — a success/notice body. Error bodies are `apps.core.problems.ProblemSerializer`. */
         DetailResponse: {
             detail: string;
@@ -12989,6 +13015,12 @@ export interface components {
             /** @description How this article applies to this case. */
             note?: string;
         };
+        /** @description `GET /dossiers/desk/`:案台一屏 —— 四组各头几件 + 不筛的计数(概览、来源 chip)+ 本月已结的百分比。 */
+        DossierDesk: {
+            groups: components["schemas"]["DeskGroup"][];
+            counts: components["schemas"]["JudgmentQueueCounts"];
+            month_done_pct: number | null;
+        };
         /** @description 案台一行(be-scale 的 `DeskRowSerializer`):列表的字段规则,只带一行要显示的这些。 */
         DossierRow: {
             /** Format: uuid */
@@ -13011,6 +13043,16 @@ export interface components {
             readonly deferred_at: string | null;
             /** Format: date-time */
             readonly stale_since: string | null;
+            /** @description 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。 */
+            readonly deadline_remaining_seconds: number | null;
+            /** Format: uuid */
+            readonly retrial_of: string | null;
+            readonly is_final: boolean;
+            readonly duat_stage: components["schemas"]["DuatStageEnum"];
+            /** Format: date */
+            readonly held_until: string | null;
+            readonly conclude_refusal: string;
+            readonly untimely: boolean;
         };
         /**
          * @description 卷宗里的灵魂:`SoulSerializer` 的子集,字段规则(VIEWER 底线、FieldPermission、记录权重遮蔽)原样继承。
@@ -13864,6 +13906,14 @@ export interface components {
          * @enum {string}
          */
         GrievanceStatusEnum: "FILED" | "UPHELD" | "UPHELD_LATE" | "DELIVERED" | "REJECTED";
+        /**
+         * @description * `mine` - 我认领
+         *     * `unclaimed` - 待认领
+         *     * `others` - 他人认领
+         *     * `deferred` - 暂缓
+         * @enum {string}
+         */
+        GroupEnum: "mine" | "unclaimed" | "others" | "deferred";
         /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
@@ -20381,8 +20431,11 @@ export interface components {
             target_realm: string;
             rebirth_form?: components["schemas"]["RebirthFormEnum"];
             rebirth_continent?: components["schemas"]["ContinentEnum"] | components["schemas"]["BlankEnum"];
-            /** @description Which turn of the wheel this is; the first rebirth is 1. */
-            cycle_count?: number;
+            /**
+             * @description Which turn of the wheel this is; the first rebirth is 1.
+             * @default 1
+             */
+            cycle_count: number;
             previous_realm?: string;
             /** @description Name in new life */
             new_identity?: string;
@@ -29397,6 +29450,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    v1_dossiers_desk_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 只摞这一个来源的案子;组数跟着收窄,`counts` 不随它变(概览与来源 chip 用不筛的数)。 */
+                source?: "city_god" | "cross" | "queue";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DossierDesk"];
+                };
             };
         };
     };

@@ -7128,6 +7128,34 @@ paths:
           description: ''
         '304':
           description: No response body
+  /api/v1/dossiers/desk/:
+    get:
+      operationId: v1_dossiers_desk_retrieve
+      description: |-
+        案台一屏,一个请求:此前是四个 `GET /judgment/?group=…`、`queue-counts`(筛与不筛各一)和 `hall-stats`。
+        范围、筛选、计数都调 `/judgment/` 的同一组函数(`JudgmentFilter`、`group_q`、`queue_counts_of`、
+        `hall_stats.overview`),所以三处的数不会对不上;四组出自同一个快照,服务端互斥,不用前端再去重。
+      parameters:
+      - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - city_god
+          - cross
+          - queue
+        description: 只摞这一个来源的案子;组数跟着收窄,`counts` 不随它变(概览与来源 chip 用不筛的数)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DossierDesk'
+          description: ''
   /api/v1/events/:
     get:
       operationId: v1_events_list
@@ -28313,6 +28341,21 @@ components:
         * `ANIMAL` - Animal (Beast Path)
         * `HUNGRY_GHOST` - Hungry Ghost
         * `HELL_BEING` - Hell Being
+    DeskGroup:
+      type: object
+      properties:
+        group:
+          $ref: '#/components/schemas/GroupEnum'
+        total:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/DossierRow'
+      required:
+      - group
+      - rows
+      - total
     DetailResponse:
       type: object
       description: '`{"detail": "..."}` — a success/notice body. Error bodies are
@@ -28886,6 +28929,23 @@ components:
       - id
       - statute
       - title
+    DossierDesk:
+      type: object
+      description: '`GET /dossiers/desk/`:案台一屏 —— 四组各头几件 + 不筛的计数(概览、来源 chip)+ 本月已结的百分比。'
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskGroup'
+        counts:
+          $ref: '#/components/schemas/JudgmentQueueCounts'
+        month_done_pct:
+          type: integer
+          nullable: true
+      required:
+      - counts
+      - groups
+      - month_done_pct
     DossierRow:
       type: object
       description: 案台一行(be-scale 的 `DeskRowSerializer`):列表的字段规则,只带一行要显示的这些。
@@ -28942,19 +29002,54 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        deadline_remaining_seconds:
+          type: integer
+          nullable: true
+          description: 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。
+          readOnly: true
+        retrial_of:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        is_final:
+          type: boolean
+          readOnly: true
+        duat_stage:
+          allOf:
+          - $ref: '#/components/schemas/DuatStageEnum'
+          readOnly: true
+        held_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        conclude_refusal:
+          type: string
+          readOnly: true
+        untimely:
+          type: boolean
+          readOnly: true
       required:
       - case_number
       - civilization
       - claimed_by
       - claimed_by_name
+      - conclude_refusal
       - deadline_at
+      - deadline_remaining_seconds
       - deferred_at
+      - duat_stage
+      - held_until
       - id
+      - is_final
       - is_overdue
+      - retrial_of
       - soul
       - soul_name
       - source
       - stale_since
+      - untimely
     DossierSoul:
       type: object
       description: |-
@@ -30756,6 +30851,18 @@ components:
         * `UPHELD_LATE` - 属实 · 期满出城
         * `DELIVERED` - 属实 · 超度
         * `REJECTED` - 不属实
+    GroupEnum:
+      enum:
+      - mine
+      - unclaimed
+      - others
+      - deferred
+      type: string
+      description: |-
+        * `mine` - 我认领
+        * `unclaimed` - 待认领
+        * `others` - 他人认领
+        * `deferred` - 暂缓
     GuiltAndPenaltyReading:
       type: object
       description: |-
@@ -44810,6 +44917,7 @@ components:
         cycle_count:
           type: integer
           minimum: 1
+          default: 1
           description: Which turn of the wheel this is; the first rebirth is 1.
         previous_realm:
           type: string
