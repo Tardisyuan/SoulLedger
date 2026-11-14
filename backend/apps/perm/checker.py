@@ -55,7 +55,7 @@ def capability_conflicts(requested, held=()):
 
 
 #: Codenames that change configuration shared by every hall. Held only by the hall-less ADMIN.
-GLOBAL_ONLY_CODENAMES = frozenset({"menu.manage"})
+GLOBAL_ONLY_CODENAMES = frozenset({"menu.manage", "system.cross_civilization"})
 
 
 def check_permission(user, codename):
@@ -83,8 +83,8 @@ def check_permission(user, codename):
         from apps.core.tenant import is_tenant_exempt
 
         return is_tenant_exempt(user)
-    # ADMIN bypasses all permission checks
-    if role == 'ADMIN':
+    # ADMIN (and SYSTEM_ADMIN, which passes every ADMIN gate) bypasses all permission checks
+    if role in ('ADMIN', 'SYSTEM_ADMIN'):
         return True
     # 灵魂不持有任何官员权限,也不能经权限矩阵被授予 —— 即使有人建了一行叫
     # SOUL 的 Role 并挂上 RolePermission。
@@ -124,7 +124,7 @@ def live_extra_roles(user):
     a user with extras paid one Role query even when every grant was a cache hit.
     Deleting a role calls `invalidate_role_permissions`, which clears this key.
     """
-    extras = {r for r in (getattr(user, 'extra_roles', None) or ()) if r not in ('ADMIN', 'SOUL')}
+    extras = {r for r in (getattr(user, 'extra_roles', None) or ()) if r not in ('ADMIN', 'SYSTEM_ADMIN', 'SOUL')}
     if not extras:
         return []
     live = {name: _permission_cache.get(name, _ROLE_LIVE_KEY) for name in extras}

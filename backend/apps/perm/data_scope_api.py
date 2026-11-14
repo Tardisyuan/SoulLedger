@@ -24,7 +24,7 @@ from apps.core.locale import locale_from_request
 from apps.core.problems import ProblemSerializer, problem
 from apps.events.realtime import push_permission_refresh
 from apps.perm import data_scope
-from apps.perm.matrix import ADMIN_ROLE_NAME
+from apps.perm.matrix import ADMIN_ROLE_NAMES
 
 from .models import Role, RoleDataScope
 from .views import CanWriteGlobalSettings, HasSystemSettings
@@ -162,7 +162,7 @@ def role_data_scope(request, pk):
     if request.method == "GET":
         return Response(role_config(role))
 
-    if role.name == ADMIN_ROLE_NAME:
+    if role.name in ADMIN_ROLE_NAMES:
         return problem(status.HTTP_400_BAD_REQUEST, "admin_role",
                        "ADMIN always sees everything; its data scope is fixed.")
     serializer = RoleDataScopeConfigSerializer(data=request.data)

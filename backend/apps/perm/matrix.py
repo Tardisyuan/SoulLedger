@@ -94,25 +94,27 @@ CONFLICT_UNACKNOWLEDGED = "conflict_unacknowledged"
 ROLE_FORBIDDEN_PERMISSION = "role_forbidden_permission"
 
 ADMIN_ROLE_NAME = "ADMIN"
+#: ADMIN and SYSTEM_ADMIN: both hold everything by the checker's short-circuit, so the matrix protects both alike.
+ADMIN_ROLE_NAMES = frozenset({ADMIN_ROLE_NAME, "SYSTEM_ADMIN"})
 # ADMIN_ONLY_CODENAMES lives in apps/perm/checker.py (the checker enforces it too); re-exported here.
 
 
 def admin_only_violations(role_name, codenames):
     """The codenames in `codenames` that `role_name` may not be granted."""
-    return set() if role_name == ADMIN_ROLE_NAME else ADMIN_ONLY_CODENAMES & set(codenames)
+    return set() if role_name in ADMIN_ROLE_NAMES else ADMIN_ONLY_CODENAMES & set(codenames)
 
 
 def admin_always_all_violations(role_name, removed_codenames):
     """The codenames in `removed_codenames` that may not be taken from
     `role_name`: all of them for ADMIN (``admin_always_all``), none otherwise."""
-    return set(removed_codenames) if role_name == ADMIN_ROLE_NAME else set()
+    return set(removed_codenames) if role_name in ADMIN_ROLE_NAMES else set()
 
 
 def role_forbidden_violations(role_name, codenames, held=()):
     """The codenames in `codenames` that `role_name` may not be granted: its name-keyed forbidden list, and
     the design / approve rule against `held`, the role's other grants (`capability_conflicts`). ADMIN is
     exempt from both — it holds everything by the checker's short-circuit."""
-    if role_name == ADMIN_ROLE_NAME:
+    if role_name in ADMIN_ROLE_NAMES:
         return set()
     return (ROLE_FORBIDDEN_CODENAMES.get(role_name, frozenset()) & set(codenames)) | capability_conflicts(
         codenames, held
@@ -415,7 +417,7 @@ def impact_of_changes(changes):
         if (role, codename) not in before_cache:
             before_cache[(role, codename)] = check_permission(RoleHolder(role), codename)
         held = before_cache[(role, codename)]
-        if not after or role in ("ADMIN", "SOUL"):
+        if not after or role in ("ADMIN", "SYSTEM_ADMIN", "SOUL"):
             # check_permission short-circuits these two before reading any
             # grant, so no change to their rows moves the answer.
             return held

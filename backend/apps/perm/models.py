@@ -293,6 +293,9 @@ DEFAULT_PERMISSIONS = [
     ("org.manage", "管理组织", "org"),
     # system 权限
     ("system.settings", "系统设置", "system"),
+    # 跨文明(2026-11-15,§7.5):看、管每一个文明的殿与无殿行。只 SYSTEM_ADMIN 持有,任何角色都不能经授予拿到
+    # (`apps/perm/checker.py::GLOBAL_ONLY_CODENAMES`,由 `is_tenant_exempt` 回答)。perm 迁移 0038 播种。
+    ("system.cross_civilization", "跨文明管理", "system"),
     ("user.manage", "用户管理", "system"),
     # menu.read 是导航本身，不是菜单管理。它授予全部五个角色：能登录就得
     # 看得见左侧导航，否则 apps/menus/views.py 的 list/tree/list-public 一旦
@@ -440,6 +443,9 @@ ROLE_PERMISSIONS = {
     ],
 }
 
+# 系统管理员(§7.5):ADMIN 的全部,加跨文明那一个码。与 perm/0038 的授予一致。
+ROLE_PERMISSIONS["SYSTEM_ADMIN"] = [*ROLE_PERMISSIONS["ADMIN"], "system.cross_civilization"]
+
 # 默认角色列表
 # 这份清单必须和 ROLE_PERMISSIONS 的键一一对应，由
 # apps/perm/test_checker_grants.py 断言。MODERATOR 曾经只存在于
@@ -448,6 +454,7 @@ ROLE_PERMISSIONS = {
 # 跳过——地区主宰在新装环境里是个有权限矩阵却没有实体的角色。
 DEFAULT_ROLES = [
     ("ADMIN", "Administrator"),
+    ("SYSTEM_ADMIN", "System Administrator"),  # 2026-11-15 §7.5;perm/0038 播种
     ("MODERATOR", "Circle Moderator"),  # 朋友圈审核员;2026-11-07 之前是 Realm Lead(殿主),perm/0037 改已入库的那行
     ("JUDGE", "Judge"),
     ("GUARDIAN", "Guardian"),
