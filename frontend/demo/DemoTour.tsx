@@ -18,6 +18,7 @@ import { OverreachProbe } from "./OverreachProbe";
 import { AssistGuardCard } from "./AssistGuardCard";
 import { DEMO_USERNAMES } from "./store";
 import type { Tour } from "./tour";
+import { NO_SPOT, type Spot, inView, keep, spotNow, spotStyle } from "./tourSpot";
 
 /** Where the visitor is in the tour. In the tab, so a refresh keeps it and a new tab starts fresh, like the rest of the demo. */
 type State = { step: number; collapsed: boolean; finished: boolean; skipped: boolean; closed: boolean };
@@ -93,13 +94,6 @@ function revealIfCovered(target: Element): void {
   if (covered(target)) target.scrollIntoView({ block: "start", behavior: "auto" });
 }
 
-/** How far the card sits up: above the verdict bar when the page has one at its foot. */
-function liftNow(): number {
-  const bar = document.querySelector("[class*='bottom-(--bottom-bar)'], [data-testid='verdict-bar']");
-  const box = bar?.getBoundingClientRect();
-  return box && box.top < window.innerHeight && box.bottom > window.innerHeight * 0.5 ? window.innerHeight - box.top + 12 : 0;
-}
-
 /** When the cover may start to close: after the seal has come to the centre, and once the page under it is drawn. */
 const LANDED_MS = 450;
 /** Never hold the cover longer than this: a sign-in that went nowhere (an error) still lets the page show. */
@@ -113,11 +107,6 @@ const MARK = 96;
 const ms = (d: keyof typeof MOTION_DURATIONS) => MOTION_DURATIONS[d] * 1000;
 const curve = (e: keyof typeof MOTION_EASINGS) => `cubic-bezier(${MOTION_EASINGS[e].join(",")})`;
 
-/** On screen and in the viewport: a sidebar slid off a phone's edge, or a page kept alive behind this one, is not. */
-function inView(el: Element | null | undefined): el is Element {
-  const b = el?.getBoundingClientRect();
-  return !!b && b.width > 0 && b.right > 0 && b.bottom > 0 && b.left < window.innerWidth && b.top < window.innerHeight;
-}
 const firstInView = (css: string) => Array.from(document.querySelectorAll(css)).find(inView) ?? null;
 
 /**
@@ -373,7 +362,7 @@ export default function DemoTour() {
   const router = useRouter();
   const [tour, setTour] = useState<Tour | null>(null);
   const [state, setState] = useState<State>(START);
-  const [lift, setLift] = useState(0);
+  const [lift, setLift] = useState<Spot>(NO_SPOT);
   // 窄屏(< 768,与面板的 `max-md:` 同一条线)默认只是一行「2 / 6 · 步名 ▴  下一步 →」,点开才是全文(fe-mobile 3.1):
   // 全文 225 px 高时正文只剩一半。不存进 sessionStorage:这是看的方式,不是导览走到哪儿。
   const narrow = !useWideViewport(768);
@@ -435,7 +424,7 @@ export default function DemoTour() {
         found.classList.add("demo-tour-target");
         // The card where it will sit first, then one scroll. It used to scroll, let the card move up (lift was
         // measured every 300 ms) and scroll again 350 ms later: the page jumped twice.
-        flushSync(() => setLift(liftNow()));
+        flushSync(() => setLift(keep(spotNow())));
         reveal(found);
       }
       if (lit.current || tries > 25) clearInterval(timer);
@@ -447,31 +436,37 @@ export default function DemoTour() {
     };
   }, [here, step, showing, t]);
 
-  // The verdict keys are what the page is for: the card sits above the bar that holds them. Measured when the page
-  // changes (the bar mounts, a tab opens), coalesced to a frame, instead of on a 300 ms poll that moved the card late.
+  // The verdict keys are what the page is for: the card sits beside their rail, or above the bar that holds them
+  // (`tourSpot.ts`). Measured when the page changes (the bar mounts, a tab opens), coalesced to a frame, instead of on a
+  // 300 ms poll that moved the card late.
   useEffect(() => {
     if (!showing) {
-      setLift(0);
+      setLift(NO_SPOT);
       return;
     }
     let frame = 0;
     const measure = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setLift(liftNow()));
+      frame = requestAnimationFrame(() => setLift(keep(spotNow())));
     };
     measure();
     const watcher = new MutationObserver(measure);
     watcher.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("resize", measure);
+    // ≥ 768 also on scroll (any scroller, hence capture): a page scrolled to the verdict rail changes no node, and the
+    // card stayed where the top of the page had put it — over the rail. Not on a phone: there the strip would ride the
+    // keys up and down with every scroll.
+    if (!narrow) document.addEventListener("scroll", measure, { capture: true, passive: true });
     return () => {
       cancelAnimationFrame(frame);
       watcher.disconnect();
       window.removeEventListener("resize", measure);
+      document.removeEventListener("scroll", measure, { capture: true });
     };
-  }, [showing, pathname]);
+  }, [showing, pathname, narrow]);
 
   useEffect(() => {
-    if (lit.current && lift) revealIfCovered(lit.current);
+    if (lit.current && lift !== NO_SPOT) revealIfCovered(lit.current);
   }, [lift]);
 
   // Whatever panel is up publishes how much of the viewport bottom it takes (`--demo-tour-h` on :root), so a fixed-bottom
@@ -575,7 +570,7 @@ export default function DemoTour() {
         </button>
       );
       card = foldable && !open ? (
-        <aside ref={panelRef} data-testid="demo-tour" data-folded="" data-civ={guard ? undefined : tour.skin} data-tour={tour.skin} className={`${panel} max-md:py-0`} style={lift ? { bottom: lift } : undefined}>
+        <aside ref={panelRef} data-testid="demo-tour" data-folded="" data-civ={guard ? undefined : tour.skin} data-tour={tour.skin} className={`${panel} max-md:py-0`} style={spotStyle(lift)}>
           <div className="flex h-11 items-center gap-2">
             <button
               type="button"
@@ -592,7 +587,7 @@ export default function DemoTour() {
           </div>
         </aside>
       ) : (
-        <aside ref={panelRef} data-testid="demo-tour" data-civ={guard ? undefined : tour.skin} data-tour={tour.skin} className={panel} style={lift ? { bottom: lift } : undefined}>
+        <aside ref={panelRef} data-testid="demo-tour" data-civ={guard ? undefined : tour.skin} data-tour={tour.skin} className={panel} style={spotStyle(lift)}>
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-xs text-[oklch(var(--color-ink-muted))]">{guard ? t("demo.tour.guard.title") : t("demo.tour.title_civ", { civ })}</span>
             <span className="flex shrink-0 items-center gap-2">

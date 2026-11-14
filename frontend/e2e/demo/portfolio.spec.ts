@@ -5,8 +5,14 @@ import { clean, enter, recording, rows, watch } from "./support";
 test("the home page shows how it was built: architecture, test counts, the two app recordings", async ({ page, context }) => {
   const seen = watch(context, page);
   await page.goto("/");
+  // The section was found and then replaced before the scroll (detached, twice in one run, 2026-11-14; cause not found:
+  // nothing in DemoHome keys or swaps it). Once the lazy chunks are in, the page holds still; and if it is replaced
+  // anyway, the failure says what the console said, which is where a hydration mismatch would show.
+  await page.waitForLoadState("networkidle");
   const section = page.locator("#how-built");
-  await section.scrollIntoViewIfNeeded();
+  await section.scrollIntoViewIfNeeded().catch((e: Error) => {
+    throw new Error(`${e.message}\nconsole errors: ${seen.errors.join(" | ") || "none"}`);
+  });
   await expect(section.getByTestId("landing-architecture")).toBeVisible();
   await expect(section.getByTestId("landing-numbers").locator("dd")).toHaveCount(5);
   await expect(section.locator("video")).toHaveCount(2);
