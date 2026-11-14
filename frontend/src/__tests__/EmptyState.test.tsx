@@ -51,7 +51,7 @@ describe("EmptyState · 内容", () => {
 });
 
 describe("EmptyState · 记号", () => {
-  it("G 天体仪 96、12%,在标题上方,对读屏隐藏;v3 的 □ 不在了", () => {
+  it("G 天体仪 96、墨 10%(第四十六批),在标题上方,对读屏隐藏;v3 的 □ 不在了", () => {
     const { container } = render(<EmptyState title="尚无判决" />);
     const mark = container.querySelector<HTMLElement>("[data-civ-mark]")!;
     expect(mark).toHaveAttribute("aria-hidden", "true");

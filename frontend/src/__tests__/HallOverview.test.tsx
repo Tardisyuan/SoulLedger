@@ -185,6 +185,11 @@ describe("近 12 周结案", () => {
     });
     expect(card).toHaveTextContent("本周31");
     expect(card).toHaveTextContent("上季同期21");
+    // 第四十六批第二节:「本周已结」的数字是墨,不是文明色。
+    const week = card.querySelector("[data-overview-week-concluded]") as HTMLElement;
+    expect(week).toHaveTextContent(/^31$/);
+    expect(week).toHaveClass("text-[oklch(var(--color-ink))]");
+    expect(week.className).not.toMatch(/main-ink/);
     const tip = card.querySelector("[data-trend-tip]") as HTMLElement;
     expect(tip).toHaveTextContent(`第 12 周 · ${weeks[11].week_start.slice(5)}`);
     expect(tip).toHaveTextContent("本季 31");
@@ -226,6 +231,13 @@ describe("待经手", () => {
     ]);
     expect(rows[3]).toHaveAttribute("href", "/judgment/appeals/a1");
     expect(rows[4]).toHaveAttribute("href", "/cross-judgments/c1");
+    // 第四十六批第二节:「◆」是墨;要强调只靠形状和位置。
+    const marks = card.querySelectorAll("[data-overview-todo-mark]");
+    expect(marks).toHaveLength(5);
+    for (const m of Array.from(marks)) {
+      expect(m).toHaveClass("text-[oklch(var(--color-ink))]");
+      expect(m.className).not.toMatch(/main-ink/);
+    }
   });
 
   it("没有会审权限不取、不画会审邀请", async () => {

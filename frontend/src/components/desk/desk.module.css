@@ -459,7 +459,7 @@
 }
 .colName {
   font-size: var(--tai-size);
-  color: oklch(var(--color-main-ink));
+  color: oklch(var(--color-faint-text));
   margin: 0;
   font-weight: 600;
 }

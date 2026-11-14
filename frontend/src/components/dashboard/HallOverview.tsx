@@ -256,7 +256,7 @@ function TrendCard({ stats, loading }: { stats?: JudgmentHallStats; loading: boo
           <div className="mt-2 mb-2 flex gap-6">
             <div>
               <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t("overview.trend.this_week")}</div>
-              <div className="font-mono text-xl font-semibold tabular-nums text-[oklch(var(--color-main-ink))]">{weeks[last].concluded}</div>
+              <div data-overview-week-concluded="" className="font-mono text-xl font-semibold tabular-nums text-[oklch(var(--color-ink))]">{weeks[last].concluded}</div>
             </div>
             <div>
               <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t("overview.trend.last_quarter_same")}</div>
@@ -409,7 +409,7 @@ function TodoCard() {
               {rows.map((row, k) => (
                 <li key={row.key} className={k ? "border-t border-[oklch(var(--color-line))]" : undefined}>
                   <Link href={row.href} className="flex min-h-11 items-center gap-3 text-sm text-[oklch(var(--color-ink))] hover:underline">
-                    <span aria-hidden="true" className="text-xs text-[oklch(var(--color-main-ink))]">◆</span>
+                    <span aria-hidden="true" data-overview-todo-mark="" className="text-xs text-[oklch(var(--color-ink))]">◆</span>
                     <span title={row.text} className="min-w-0 flex-1 truncate">{row.text}</span>
                     {row.aside && <span className="shrink-0 text-xs text-[oklch(var(--color-ink-muted))]">{row.aside}</span>}
                   </Link>

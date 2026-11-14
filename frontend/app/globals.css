@@ -517,7 +517,10 @@
      主按钮五处用」):照 v4,每个文明 5 个值,按 <html data-civ="…"> 选,两套主题各一档 ——
        --color-main       v4 solid:主按钮、身份带等实底,上面只放 on-main 白字
        --color-main-ink   v4 civT:文明色的**字**,同时是 focus(焦点环)。accent / accent-ink(链接、选中)不随文明,
-                          一律是墨(用户 2026-11-14)
+                          一律是墨(用户 2026-11-14)。
+                          规则(Design 第四十六批第二节):文明色只在顶线、印、行程脊、焦点环四处,另有一类例外:
+                          落地页与演示首页上选文明的卡片(颜色本身就是内容;登录后已身在某一殿,不靠颜色说在哪家)。
+                          用到它的选择器与文件逐个列在 src/__tests__/civInkWhitelist.test.ts,不在名单上的一出现就红。
        --color-glow       v4 glow:顶部光晕、当前项与选中行的底色混入(两主题同值,透明度由 --glow-alpha 管)
        --color-metal      v4 metal:当前项的 3px 标、角饰
        --color-side       v4 sideD / sideL:侧栏底
@@ -2331,10 +2334,11 @@ html.theme-switching *::after {
   }
 }
 
-/* 空态的 G 天体仪记号(第三十批第 1 步第 5 条,EmptyState):96,文明字色,12% 不透明。装饰,aria-hidden。 */
+/* 空态的 G 天体仪记号(第三十批第 1 步第 5 条,EmptyState):96,墨 10%(第四十六批第二节:改墨,形状不变,
+   去色时本来就靠形状认)。装饰,aria-hidden。 */
 .empty-mark {
-  color: oklch(var(--color-main-ink));
-  opacity: 0.12;
+  color: oklch(var(--color-ink));
+  opacity: 0.1;
 }
 
 /* 主视觉深浅两份:按 :root.light 只显示一份(不等主题上下文挂好,首帧就对)。
@@ -2611,9 +2615,10 @@ li:last-child > .route-row {
   line-height: 1.2;
   animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.3s backwards;
 }
+/* 第四十六批第二节:告别页的字全是墨;徽记照旧(印属于四处之一)。倒计时细线也是墨:它不在四处里。 */
 .goodbye-line {
   font-size: 1rem;
-  color: oklch(var(--color-main-ink));
+  color: oklch(var(--color-ink));
   animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.6s backwards;
 }
 .goodbye-status {
@@ -2630,7 +2635,7 @@ li:last-child > .route-row {
 .goodbye-timer > span {
   display: block;
   height: 100%;
-  background: oklch(var(--color-main-ink));
+  background: oklch(var(--color-ink));
   transform-origin: left;
   animation: goodbye-timer linear forwards;
 }
@@ -2747,10 +2752,11 @@ li:last-child > .route-row {
   border-radius: var(--radius-control);
   text-align: center;
 }
+/* 已过:墨(第四十六批第二节,十三站卡在登录后的灵魂详情页里,不是选文明的卡片)。 */
 .diyu-card--passed {
   flex: 0 1 30px;
-  background: oklch(var(--color-main-ink) / 0.18);
-  color: oklch(var(--color-main-ink));
+  background: oklch(var(--color-ink) / 0.18);
+  color: oklch(var(--color-ink));
 }
 .diyu-card--current {
   flex: 0 1 168px;
