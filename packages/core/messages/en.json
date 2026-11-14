@@ -10152,6 +10152,7 @@
       "me_glyph": "M"
     },
     "sources_label": "By source",
+    "more_sources": "More sources",
     "search_placeholder": "Search name or case number",
     "search_none": "No case matches.",
     "triage": "Triage",

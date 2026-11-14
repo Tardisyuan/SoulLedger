@@ -42,10 +42,34 @@
 .neg {
   color: oklch(var(--color-danger));
 }
+/* 来源一行(用户 2026-11-14):不折行。就地筛的 chip 一行横滑(右缘有没露出来的才渐隐:`useOverflowEnd` 挂
+   `data-overflow-end`,globals.css 画),不画滚动条;带 › 的在桌面收进右端的「更多来源 ▾」。 */
+.sources {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 .chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  /* overflow-x 让 y 轴也裁切:留 2px,焦点框不被裁掉。 */
+  padding: 2px 0;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+.more {
+  flex: none;
+}
+/* 去别的页的 chip:桌面在「更多来源」菜单里,393 才排进这一行。 */
+.linkChip {
+  display: none;
 }
 .chip {
   display: inline-flex;
@@ -62,6 +86,8 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
+  scroll-snap-align: start;
 }
 .chip[aria-pressed="true"] {
   border-color: oklch(var(--color-ink));
@@ -461,10 +487,12 @@
     height: 48px;
     font-size: var(--tai-touch-size);
   }
-  .chips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    mask-image: linear-gradient(to right, black calc(100% - 40px), transparent);
+  /* 393:一行横滑放下全部 chip,去别的页的也在里面;菜单不画。 */
+  .linkChip {
+    display: inline-flex;
+  }
+  .more {
+    display: none;
   }
   .chip {
     min-height: 44px;

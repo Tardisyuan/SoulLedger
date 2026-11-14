@@ -326,6 +326,33 @@ describe("CaseDesk", () => {
     expect(screen.getByTestId("desk-source-queue")).toHaveTextContent("2");
   });
 
+  it("keeps the in-place chips in one group and puts the › destinations behind 更多来源, same href and count", async () => {
+    renderWithProviders(<CaseDesk />);
+    const group = await screen.findByTestId("desk-sources");
+    // The in-place filters are the pressed-state group; the menu trigger is not one of them.
+    expect(within(group).getAllByRole("button").map((b) => b.getAttribute("data-testid"))).toEqual([
+      "desk-source-all",
+      "desk-source-queue",
+      "desk-source-city_god",
+      "desk-source-cross",
+    ]);
+    expect(screen.getByTestId("desk-source-all")).toHaveAttribute("aria-pressed", "true");
+    // The phone row's link (CSS hides it at >= 769) and the desktop menu say the same thing.
+    expect(screen.getByTestId("desk-source-appeal")).toHaveAttribute("href", "/judgment/appeals");
+    const more = screen.getByTestId("desk-sources-more");
+    expect(group).not.toContainElement(more);
+    expect(more).toHaveTextContent("更多来源");
+    expect(more).toHaveAttribute("aria-haspopup", "menu");
+    fireEvent.click(more);
+    const items = within(screen.getByRole("menu")).getAllByRole("menuitem");
+    // appeal is the only elsewhere count above zero; the null and 0 ones are not listed.
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent("申诉");
+    expect(items[0]).toHaveTextContent("1");
+    fireEvent.click(items[0]);
+    expect(mockPush).toHaveBeenCalledWith("/judgment/appeals");
+  });
+
   it("draws the spine's 「now」 from the dossier's whereabouts, not from the court's text", async () => {
     mockDossier.mockImplementation((id: string) =>
       Promise.resolve({
