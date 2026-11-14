@@ -3,7 +3,7 @@
  * (`OverreachProbe` 的 lateral:中国殿的判官要欧洲殿的灵魂),按下即问,答的是录下的 404。四殿与「系统怎么保护自己」都有;
  * 只出横向那一张,不是四连。HowBuilt 底部的联系方式按语言链到两份 README。
  */
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import en from "@soulledger/core/messages/en.json";
 
@@ -88,9 +88,10 @@ it("the tour's own steps do not carry it", async () => {
 it.each([
   ["zh-Hans", "https://github.com/Tardisyuan/SoulLedger/blob/main/README.zh-CN.md#联系", zh.demo.build.contact],
   ["en", "https://github.com/Tardisyuan/SoulLedger#contact", en.demo.build.contact],
-] as const)("HowBuilt (%s) ends with a link to the README's contact section", (locale, href, text) => {
+] as const)("HowBuilt (%s) ends with a link to the README's contact section", async (locale, href, text) => {
   render(<I18nProvider initialLocale={locale}><HowBuilt /></I18nProvider>);
   const link = screen.getByTestId("how-built-contact");
   expect(link).toHaveAttribute("href", href);
-  expect(link).toHaveTextContent(text);
+  // A non-Chinese pack loads after the first render.
+  await waitFor(() => expect(link).toHaveTextContent(text));
 });
