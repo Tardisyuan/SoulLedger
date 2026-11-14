@@ -44,7 +44,7 @@ existing is to be cross-tenant. That fact was recorded and never carried over
 to the object layer.
 """
 from apps.core.permissions import TenantPermission
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import is_hall_less_admin, reaches_hall
 
 
 class DispatchPartyPermission(TenantPermission):
@@ -65,8 +65,8 @@ class DispatchPartyPermission(TenantPermission):
     def has_object_permission(self, request, view, obj):
         if not request.user or not request.user.is_authenticated:
             return False
-        if is_tenant_exempt(request.user):
-            return True
+        if is_hall_less_admin(request.user):  # SYSTEM_ADMIN; a civilization ADMIN when either party is its civilization's
+            return reaches_hall(request.user, obj.source_tenant_id, obj.target_tenant_id)
         tenant = getattr(request, "tenant", None)
         if tenant is None:
             return False
@@ -84,8 +84,9 @@ class CrossJudgmentPartyPermission(TenantPermission):
     def has_object_permission(self, request, view, obj):
         if not request.user or not request.user.is_authenticated:
             return False
-        if is_tenant_exempt(request.user):
-            return True
+        if is_hall_less_admin(request.user):
+            return reaches_hall(request.user, obj.initiating_tenant_id,
+                                *obj.participants.values_list("participant_tenant_id", flat=True))
         tenant = getattr(request, "tenant", None)
         if tenant is None:
             return False

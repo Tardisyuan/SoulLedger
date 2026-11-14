@@ -77,10 +77,13 @@ def roles_that_can(codename):
     """能持有这个码的角色(按硬规则与授予算,与 `check_permission` 同一套)。全局专属的只有无殿 ADMIN。"""
     from apps.perm.models import Role
 
-    if codename in checker.GLOBAL_ONLY_CODENAMES or codename in checker.ADMIN_ONLY_CODENAMES:
-        return ["ADMIN"]
+    if codename in checker.GLOBAL_ONLY_CODENAMES:
+        return ["SYSTEM_ADMIN"]
+    if codename in checker.ADMIN_ONLY_CODENAMES:
+        return ["ADMIN", "SYSTEM_ADMIN"]
     names = Role.objects.filter(is_deleted=False).order_by("name").values_list("name", flat=True)
-    return ["ADMIN", *(n for n in names if n not in ("ADMIN", "SOUL") and checker._role_allows(n, codename))]
+    return ["ADMIN", "SYSTEM_ADMIN",
+            *(n for n in names if n not in ("ADMIN", "SYSTEM_ADMIN", "SOUL") and checker._role_allows(n, codename))]
 
 
 def _denial(user, codename):

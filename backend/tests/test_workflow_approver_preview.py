@@ -128,7 +128,7 @@ def test_the_preview_reads_the_draft_the_editor_is_showing(seeded):
 @pytest.mark.django_db
 def test_admin_previews_another_civilization_in_its_own_tenant(seeded):
     cn = Tenant.objects.get(code=CIVILIZATION_TENANT[Civilization.CHINESE])
-    admin = User.objects.create_user(username="pv_admin3", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="pv_admin3", password="x", role="SYSTEM_ADMIN", tenant=None)
     template = _published(cn, [{"id": "o", "node_name": "Osiris · 称重", "node_order": 1}])
 
     res = _bearer(admin).get(

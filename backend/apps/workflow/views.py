@@ -147,7 +147,7 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     )
     @action(detail=True, methods=["get"], url_path="approver-preview")
     def approver_preview(self, request, pk=None):
-        from apps.core.tenant import is_tenant_exempt
+        from apps.core.tenant import is_hall_less_admin, reaches_hall
         from apps.souls.models import CIVILIZATION_TENANT, Civilization
         from apps.tenants.models import Tenant
         from apps.workflow import preview, versioning
@@ -168,9 +168,11 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         own = request_tenant(request)
         code = request.query_params.get("tenant")
-        if is_tenant_exempt(request.user):
+        if is_hall_less_admin(request.user):
             code = code or CIVILIZATION_TENANT.get(civilization)
             tenant = Tenant.objects.filter(code=code).first() if code else own
+            if tenant is not None and not reaches_hall(request.user, tenant.pk):  # 别文明的殿:同不存在
+                tenant = None
         elif code and (own is None or code != own.code):
             return problem(status.HTTP_403_FORBIDDEN, "tenant_forbidden")
         else:

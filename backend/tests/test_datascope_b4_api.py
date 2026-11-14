@@ -28,7 +28,7 @@ def w(cn_tenant, eu_tenant):
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
     a = org(cn_tenant, "甲司")
     e = org(eu_tenant, "欧司")
-    admin = User.objects.create_user(username="b4_admin", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="b4_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     hall_admin = User.objects.create_user(username="b4_hall_admin", password="x", role="ADMIN", tenant=cn_tenant)
     judge = User.objects.create_user(username="b4_judge", password="x", role="JUDGE", tenant=cn_tenant, organization=a)
     return type("W", (), dict(a=a, e=e, admin=admin, hall_admin=hall_admin, judge=judge,

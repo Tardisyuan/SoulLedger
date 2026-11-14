@@ -20,7 +20,7 @@ from apps.core.field_permissions import hidden_fields
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
-from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
+from apps.core.tenant import is_hall_less_admin, request_tenant, scope_to_tenant, within_reach
 from apps.disposition.models import Disposition
 from apps.ledger.journal import JournalParamError, build_journal, journal_records, rows_in_data_scope
 from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot
@@ -396,15 +396,11 @@ class LedgerOverviewStatsView(APIView):
     @extend_schema(responses={200: LedgerOverviewStatsSerializer, 403: LedgerErrorSerializer})
     def get(self, request):
         user = request.user
-        exempt = is_tenant_exempt(user)
-        tenant = None if exempt else request_tenant(request)
 
-        # The hall-less ADMIN: all souls. Anyone else: their hall's, and none without one (fail closed).
-        # Then narrowed by the caller's data scope (user 2026-11-08): the same souls the list and the export show.
-        if exempt:
-            hall_souls = Soul.objects.all()
-        else:
-            hall_souls = Soul.objects.filter(tenant=tenant) if tenant is not None else Soul.objects.none()
+        # SYSTEM_ADMIN: all souls. A civilization ADMIN: its civilization's halls. Anyone else: their hall's, and
+        # none without one (fail closed) — `within_reach`. Then narrowed by the caller's data scope (user
+        # 2026-11-08): the same souls the list and the export show.
+        hall_souls = within_reach(Soul.objects.all(), request)
         soul_qs = DataScopeFilter.filter_queryset(request, hall_souls, Soul)
         # `filter_queryset` hands back the same object when the scope does not narrow (apps/perm/filters.py).
         narrowed = soul_qs is not hall_souls
@@ -441,9 +437,7 @@ class LedgerOverviewStatsView(APIView):
         # 较上月:上个月的快照(apps/ledger/snapshots.py),与上面的 soul_qs 同一个划界 ——
         # 不带租户的 ADMIN 看全部,带租户的只看这个租户。没有上月快照就是 null,前端隐藏。
         # 快照是全殿的和,数据范围收窄时没有可比的上月值 → null(前端隐藏「较上月」)。
-        snapshots = BalanceSnapshot.objects.none() if narrowed else BalanceSnapshot.objects.all()
-        if not exempt:
-            snapshots = snapshots.filter(tenant=tenant) if tenant is not None else snapshots.none()
+        snapshots = within_reach(BalanceSnapshot.objects.none() if narrowed else BalanceSnapshot.objects.all(), request)
         prev_raw = previous_month_average(snapshots)
         average_balance_delta = (
             None if prev_raw is None or average_raw is None
@@ -480,9 +474,7 @@ class LedgerOverviewStatsView(APIView):
         tenant_stats = [v for v in tenant_map.values() if v['total_souls'] > 0]
         # 还没有灵魂的启用殿也要列出(0 条):发起移交页的目标殿单选只读这张表,管理员刚建的殿
         # 没有灵魂,不补就永远选不到。范围同 soul_qs:不带租户看全部,带租户只看自己。
-        halls = Tenant.objects.filter(is_active=True)
-        if not exempt:
-            halls = halls.filter(pk=tenant.pk) if tenant is not None else halls.none()
+        halls = within_reach(Tenant.objects.filter(is_active=True), request, field="pk")
         listed = {v['tenant_id'] for v in tenant_stats}
         empty_halls = [
             {
@@ -556,7 +548,7 @@ class LedgerOverviewStatsView(APIView):
         if not check_permission(user, "audit.read"):
             audit_qs = AuditLog.objects.none()
         else:
-            audit_qs = AuditLog.objects.all() if exempt else AuditLog.objects.filter(tenant=tenant) if tenant else AuditLog.objects.none()
+            audit_qs = within_reach(AuditLog.objects.all(), request)
         recent_logs = audit_qs.select_related("user").order_by("-timestamp")[:10]
         recent_activity = [
             {
@@ -583,12 +575,7 @@ class LedgerOverviewStatsView(APIView):
         # took off the list (`apps/core/archive.py`), and it was still being
         # counted here while `LedgerService._term_start_for` excludes it — two
         # numbers on the same screen disagreeing about what counts.
-        disp_qs = (
-            Disposition.objects.all()
-            if exempt
-            else Disposition.objects.filter(tenant=tenant) if tenant is not None
-            else Disposition.objects.none()
-        )
+        disp_qs = within_reach(Disposition.objects.all(), request)
         if narrowed:
             disp_qs = disp_qs.filter(soul__in=soul_qs)
         # All four name columns, resolved per row, rather than `name_en`.
@@ -788,7 +775,7 @@ class LedgerTrendsView(APIView):
         # Narrowed by the caller's data scope (audit 2026-11-11 P-09), the overview's rule: a snapshot is the
         # whole hall's sum, so a caller limited to their organisation or themselves has no line of their own in
         # it — no points, rather than the hall's totals and distributions the overview already withholds.
-        if not is_tenant_exempt(request.user):
+        if not is_hall_less_admin(request.user):
             tenant = request_tenant(request)
             hall_souls = Soul.objects.filter(tenant=tenant) if tenant is not None else Soul.objects.none()
             if DataScopeFilter.filter_queryset(request, hall_souls, Soul) is not hall_souls:

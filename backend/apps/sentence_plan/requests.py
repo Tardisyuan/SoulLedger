@@ -285,12 +285,16 @@ def decide(plan, request_id, *, accept, reason, user):
 
 
 def withdraw(plan, request_id, *, tenant, exempt, user):
-    """请求方撤回(§4.2)。只有提出方租户(或 ADMIN)。"""
+    """请求方撤回(§4.2)。只有提出方租户(或 ADMIN)。
+
+    `exempt`:True = SYSTEM_ADMIN;一组殿 code = 文明管理员,提出方是其中一殿时可撤;False = 按 `tenant` 判。"""
     with transaction.atomic():
         soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         req = _locked_pending_request(plan, request_id)
-        if not exempt and (tenant is None or tenant.code != req.from_tenant_code):
+        allowed = exempt is True or (bool(exempt) and req.from_tenant_code in exempt) or (
+            tenant is not None and tenant.code == req.from_tenant_code)
+        if not allowed:
             raise PlanChangeRefusedError("Only the tenant that filed the request may withdraw it", "not_requester",
                                     status=403)
         req.status = SentenceRequestStatus.WITHDRAWN

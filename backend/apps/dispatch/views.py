@@ -15,7 +15,15 @@ from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission
 from apps.core.problems import problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
-from apps.core.tenant import is_tenant_exempt, request_tenant
+from apps.core.tenant import (
+    civilization_halls,
+    is_civilization_admin,
+    is_hall_less_admin,
+    is_tenant_exempt,
+    reaches_hall,
+    request_civilization,
+    request_tenant,
+)
 from apps.core.tenant_fields import same_tenant_or_404_message
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import CrossTenantJudgmentFilter, DispatchFilter
@@ -188,6 +196,9 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         user = self.request.user
         if is_tenant_exempt(user):
             return qs
+        if is_civilization_admin(user):  # §7.5: either party in its civilization; others' drafts hidden as for a hall
+            halls = civilization_halls(request_civilization(self.request))
+            return hide_others_drafts(qs.filter(Q(source_tenant__in=halls) | Q(target_tenant__in=halls)), user)
         tenant = getattr(self.request, "tenant", None)
         if not tenant:
             return qs.none()
@@ -234,9 +245,13 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         # and the soul was theirs. A transfer is proposed by the tenant that
         # holds the soul; ADMIN keeps the global exemption. 403 like the party
         # checks on approve/reject/execute below, which this is one of.
-        if not is_tenant_exempt(request.user):
+        source = validated.get("source_tenant")
+        if is_civilization_admin(request.user):  # §7.5: the soul's hall is one of its civilization's
+            if source is None or not reaches_hall(request.user, source.pk):
+                return problem(status.HTTP_403_FORBIDDEN, None,
+                               "Only the tenant that holds the soul may propose its dispatch")
+        elif not is_tenant_exempt(request.user):
             requester_tenant = request_tenant(request)
-            source = validated.get("source_tenant")
             if requester_tenant is None or source is None or source.pk != requester_tenant.pk:
                 return problem(status.HTTP_403_FORBIDDEN, None,
                                "Only the tenant that holds the soul may propose its dispatch")
@@ -288,7 +303,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     # `partial_update` 经由这里。ADMIN 照 `create` 豁免。注释而非 docstring:见上。
     def update(self, request, *args, **kwargs):
         record = self.get_object()
-        if not is_tenant_exempt(request.user):
+        if not reaches_hall(request.user, record.source_tenant_id):
             tenant = self._requester_tenant(request)
             if tenant is None or record.source_tenant_id != tenant.pk:
                 return problem(status.HTTP_403_FORBIDDEN, None, "Only the proposing tenant may edit this dispatch")
@@ -307,8 +322,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     def _not_target_or_403(request, record, verb):
         """批准 / 驳回 / 执行只给目标殿。无殿 ADMIN 视为满足(决定 25,与 `cancel`、`create` 一致)。"""
         # 绑殿 ADMIN 不算:它在别殿的提案上仍是第三方,不能借 ADMIN 身份替目标殿拍板。
-        if is_tenant_exempt(request.user) and getattr(request.user, "tenant_id", None) is None:
+        if reaches_hall(request.user, record.target_tenant_id):  # SYSTEM_ADMIN; civilization ADMIN of the target
             return None
+        if is_hall_less_admin(request.user):
+            return problem(403, None, f"Only target tenant can {verb} dispatch")
         tenant = getattr(request, "tenant", None)
         if record.source_tenant != tenant and record.target_tenant != tenant:
             return problem(403, None, "Not authorized to modify this dispatch")
@@ -595,7 +612,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         APPROVED be cancelled (a cancelled sentence plan needs that), this endpoint does not.
         """
         dispatch_record = self.get_object()
-        if not is_tenant_exempt(request.user):
+        if not reaches_hall(request.user, dispatch_record.source_tenant_id):
             tenant = self._requester_tenant(request)
             if tenant is None or tenant.pk != dispatch_record.source_tenant_id:
                 return problem(status.HTTP_403_FORBIDDEN, None, "Only the sending tenant may cancel this dispatch")
@@ -659,7 +676,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """
         dispatch_record = self.get_object()
         soul = dispatch_record.soul
-        if not is_tenant_exempt(request.user):
+        if not reaches_hall(request.user, soul.home_tenant_id):
             requester_tenant = request_tenant(request)
             if requester_tenant is None or requester_tenant.pk != soul.home_tenant_id:
                 return problem(status.HTTP_403_FORBIDDEN, None, "Only the soul's home tenant may end its residence")
@@ -801,6 +818,9 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         user = self.request.user
         if is_tenant_exempt(user):
             return qs
+        if is_civilization_admin(user):
+            halls = civilization_halls(request_civilization(self.request))
+            return qs.filter(Q(initiating_tenant__in=halls) | Q(participants__participant_tenant__in=halls)).distinct()
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             # `.distinct()`: the right-hand `Q` joins `participants`, and a row

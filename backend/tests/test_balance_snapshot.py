@@ -146,7 +146,7 @@ class TestComparedWithLastMonth:
 
     def test_admin_without_a_tenant_gets_the_weighted_mean_of_all_tenants(self, world):
         cn, eu, _ = world
-        root = User.objects.create_user(username="snap-root", password="x", role=UserRole.ADMIN, tenant=None)
+        root = User.objects.create_user(username="snap-root", password="x", role=UserRole.SYSTEM_ADMIN, tenant=None)
         _soul(cn, 10, 0)
         _prev(cn, count=1, total=100)   # 100
         _prev(eu, count=3, total=0)     # 0

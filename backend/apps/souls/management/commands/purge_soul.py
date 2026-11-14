@@ -38,8 +38,11 @@ class Command(BaseCommand):
             raise CommandError(f"没有代码为 {tenant!r} 的殿。")
 
         user = get_user_model().objects.filter(username=actor, is_active=True).first()
-        if (user is None or hasattr(user, "soul_account") or user.role != UserRole.ADMIN
-                or user.tenant_id not in (None, hall.pk)):
+        from apps.core.tenant import is_hall_less_admin, reaches_hall
+
+        if (user is None or hasattr(user, "soul_account") or user.role not in (UserRole.ADMIN, UserRole.SYSTEM_ADMIN)
+                or user.tenant_id not in (None, hall.pk)
+                or (is_hall_less_admin(user) and not reaches_hall(user, hall.pk))):
             raise CommandError(f"{actor!r} 不是能管理 {tenant} 回收站的管理员(在职 ADMIN,不绑殿或绑本殿)。")
 
         try:

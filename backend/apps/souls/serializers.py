@@ -10,7 +10,7 @@ from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.csv_safe import csv_safe
 from apps.core.field_permissions import DROP, FieldPermissionMixin, hidden_fields, withhold
 from apps.core.problems import ProblemSerializer
-from apps.core.tenant import is_tenant_exempt, request_tenant
+from apps.core.tenant import is_civilization_admin, is_hall_less_admin, request_civilization, request_tenant
 from apps.org.ownership import check_owner_org, owner_org_field
 from apps.souls import acheron
 from apps.souls.dates import ERROR, WARNING, check_birth_date, check_record_date, check_soul_dates, format_death_date
@@ -763,10 +763,11 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         return check_owner_org(value, self.context, "soul", self.instance, "soul.update")
 
     def _creates_for_any_hall(self) -> bool:
-        """A global administrator outside any hall: the one caller whose new soul goes where `civilization` says."""
+        """An administrator outside any hall (SYSTEM_ADMIN, or a civilization ADMIN for its own civilization): the
+        callers whose new soul goes where `civilization` says."""
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        return getattr(request, "tenant", None) is None and is_tenant_exempt(user)
+        return getattr(request, "tenant", None) is None and is_hall_less_admin(user)
 
     def _settle_hall(self, attrs) -> None:
         """Take `civilization` out of `attrs`, and on create file the soul under the hall it names (user 2026-11-06).
@@ -786,6 +787,9 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             if asked not in Civilization.values:
                 raise SoulCivilizationRefusedError("invalid_civilization", "Unknown civilization.")
             if any_hall:
+                confined = request_civilization(self.context.get("request"))
+                if is_civilization_admin(getattr(self.context.get("request"), "user", None)) and asked != confined:
+                    raise SoulCivilizationRefusedError("civilization_mismatch", "This hall is of another civilization.")
                 hall = Tenant.objects.filter(code=CIVILIZATION_TENANT.get(asked)).first()
                 if hall is None:
                     raise SoulCivilizationRefusedError("invalid_civilization", "This civilization has no hall.")

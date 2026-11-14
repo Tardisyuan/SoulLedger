@@ -40,7 +40,15 @@ from apps.core.exports import record_export
 from apps.core.permissions import CodenamePermission, IsAdminPermission, TenantPermission
 from apps.core.problems import ProblemSerializer, problem
 from apps.core.schema import DetailResponseSerializer
-from apps.core.tenant import is_tenant_exempt, scope_to_tenant
+from apps.core.tenant import (
+    is_admin,
+    is_civilization_admin,
+    is_hall_less_admin,
+    is_tenant_exempt,
+    reaches_hall,
+    scope_to_tenant,
+    user_civilization_halls,
+)
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.events.realtime import close_user_sockets, push_permission_refresh
 from apps.notifications import categories as notification_categories
@@ -143,9 +151,12 @@ def _admin_target_refusal(request, target):
     from . import mfa
     from .mfa_views import _refuse_outcome
 
-    if target.role != UserRole.ADMIN or target.pk == request.user.pk:
+    if not is_admin(target) or target.pk == request.user.pk:
         return None
-    if request.user.role != UserRole.ADMIN or request.user.tenant_id is not None:
+    # SYSTEM_ADMIN on any administrator; a civilization ADMIN on a hall's ADMIN of its civilization (§7.5).
+    if not (is_tenant_exempt(request.user) or (
+            is_civilization_admin(request.user) and target.tenant_id is not None
+            and reaches_hall(request.user, target.tenant_id))):
         return problem(status.HTTP_403_FORBIDDEN, 'admin_target_global_only',
                        'Only the hall-less administrator may act on another administrator.')
     row = mfa.get_mfa(request.user)
@@ -339,8 +350,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         qs = scope_to_tenant(qs, self.request)
         # A non-ADMIN holder of `user.manage` never sees — so never edits, resets, deactivates or deletes — an
         # ADMIN account (2026-10-29: the codename is grantable now; ADMIN-on-ADMIN rules live with ADMIN).
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
-            qs = qs.exclude(role='ADMIN')
+        if not is_admin(self.request.user):
+            qs = qs.exclude(role__in=('ADMIN', 'SYSTEM_ADMIN'))
         # 数据范围(B5):按人的机构收窄,本人恒可见;范围外的人列表里没有,按 id 访问 404。
         qs = DataScopeFilter.filter_queryset(self.request, qs, User)
 
@@ -382,7 +393,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             from apps.authentication.mfa import MFA_REQUIRED_ROLES_SETTING
             from apps.tenants.models import Tenant
 
-            required = Q(role='ADMIN')
+            required = Q(role__in=('ADMIN', 'SYSTEM_ADMIN'))
             for tenant in Tenant.objects.exclude(settings={}):
                 roles = (tenant.settings or {}).get(MFA_REQUIRED_ROLES_SETTING) or []
                 if roles:
@@ -554,12 +565,12 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         """
         qs = (
             User.objects.filter(pk__in=self.get_queryset().filter(id__in=user_ids).values('pk'))
-            .exclude(role='ADMIN')
+            .exclude(role__in=('ADMIN', 'SYSTEM_ADMIN'))
             .exclude(pk=self.request.user.pk)
         )
         # Nor anyone holding a codename the caller lacks (P-05); ADMIN holds everything, so only non-ADMIN
         # callers pay for the look. ponytail: one checker pass per selected user, fine for a page of them.
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
+        if not is_admin(self.request.user):
             qs = qs.exclude(pk__in=[u.pk for u in qs if not may_manage_user(self.request.user, u)])
         return qs
 
@@ -655,7 +666,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         tenant = getattr(request, 'tenant', None)
         # 指定殿只给没绑殿的全局管理员用;绑殿的 ADMIN 只能邀请进本殿(2026-10-29),别殿的 code 与不存在的同样答。
         if data.get('tenant') and not (tenant is not None and data['tenant'] == tenant.code):
-            tenant = Tenant.objects.filter(code=data['tenant']).first() if is_tenant_exempt(request.user) else None
+            tenant = Tenant.objects.filter(code=data['tenant']).first() if is_hall_less_admin(request.user) else None
+            if tenant is not None and not reaches_hall(request.user, tenant.pk):  # 别文明的殿:同不存在
+                tenant = None
         if tenant is None:
             return problem(status.HTTP_400_BAD_REQUEST, 'no_tenant', 'No tenant found')
         try:
@@ -902,10 +915,14 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         from .models import LoginLog
         qs = LoginLog.objects.select_related('user').all()
         user = self.request.user
-        if getattr(user, 'role', None) != 'ADMIN':
+        if not is_admin(user):
             return qs.none()
         if is_tenant_exempt(user):
             return qs
+        if is_civilization_admin(user):  # §7.5: its civilization's halls' users
+            from django.contrib.auth import get_user_model
+            return qs.filter(user_id__in=get_user_model().objects.filter(
+                tenant__in=user_civilization_halls(user)).values('id'))
         # An ADMIN bound to a hall: that hall's users only, nothing when no hall resolves (fail closed).
         tenant = getattr(self.request, 'tenant', None)
         if tenant is None:

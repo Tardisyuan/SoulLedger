@@ -806,7 +806,7 @@ class TestOfficerReset:
         from apps.perm.models import ROLE_PERMISSIONS
 
         holders = [role for role, codes in ROLE_PERMISSIONS.items() if "souls.mfa_reset" in codes]
-        assert holders == ["ADMIN"]
+        assert holders == ["ADMIN", "SYSTEM_ADMIN"]
 
     def test_only_the_home_hall_may(self, soul, eu_admin_user, django_user_model, cn_tenant, eu_tenant):
         _enable(soul)
@@ -823,7 +823,7 @@ class TestOfficerReset:
 
     def test_a_tenantless_admin_is_not_a_home_hall_officer(self, soul, django_user_model):
         _enable(soul)
-        root = django_user_model.objects.create_user(username="root", password="x", role="ADMIN", tenant=None)
+        root = django_user_model.objects.create_user(username="root", password="x", role="SYSTEM_ADMIN", tenant=None)
         response = officer_client(root).post(self._url(soul), {"reason": "全局管理员"}, format="json")
         assert response.status_code == 403 and response.data["code"] == "not_home_hall"
 

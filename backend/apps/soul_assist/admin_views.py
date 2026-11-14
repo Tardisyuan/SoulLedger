@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.problems import problem
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import admin_hall_ids, is_admin, is_hall_less_admin, is_tenant_exempt
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_assist import config, corpus, eval_identities, evals, failover, platforms, service, sse, usage, vectors
 from apps.soul_assist.admin_serializers import (
@@ -57,8 +57,8 @@ from apps.soul_assist.serializers import AssistErrorSerializer, stream_event_ser
 
 
 class IsAdminRole(permissions.BasePermission):
-    """The hall-less ADMIN only: provider, keys and every hall's switch are not one hall's settings
-    (user, 2026-10-29 — an ADMIN bound to a hall reads and writes that hall only)."""
+    """SYSTEM_ADMIN only: provider and keys are not one hall's settings (user, 2026-10-29 — an ADMIN bound to a
+    hall reads and writes that hall only; 2026-11-15 — a civilization ADMIN its civilization's halls' switches)."""
 
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and is_tenant_exempt(request.user))
@@ -69,8 +69,7 @@ class IsAnyAdmin(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        return bool(user and user.is_authenticated and getattr(user, "role", None) == "ADMIN"
-                    and not getattr(user, "hall_view", None))
+        return bool(user and user.is_authenticated and is_admin(user) and not getattr(user, "hall_view", None))
 
 
 class AdminView(APIView):
@@ -79,8 +78,10 @@ class AdminView(APIView):
 
 
 def _own_hall_id(request):
-    """None for the hall-less ADMIN (every hall); the hall's id for an ADMIN bound to one."""
-    return None if is_tenant_exempt(request.user) else request.user.tenant_id
+    """None for SYSTEM_ADMIN (every hall); else the hall pks the caller's switches reach — its civilization's halls
+    for a civilization ADMIN, its own hall for an ADMIN bound to one."""
+    user = request.user
+    return admin_hall_ids(user) if is_hall_less_admin(user) else frozenset({user.tenant_id})
 
 
 def _error(detail, code, http=status.HTTP_400_BAD_REQUEST):
@@ -218,7 +219,7 @@ def _halls(only=None):
 
     halls = Tenant.objects.order_by("code")
     if only is not None:
-        halls = halls.filter(pk=only)
+        halls = halls.filter(pk__in=only)
     homed = dict(Soul.objects.order_by().values_list("home_tenant").annotate(n=Count("id")))
     return [{"id": t.pk, "code": t.code, "display_name": t.display_name, "souls_homed": homed.get(t.pk, 0),
              "assistant_enabled": (t.settings or {}).get("assistant_enabled") is True}
@@ -247,7 +248,7 @@ class HallDetailView(AdminView):
         from apps.tenants.models import Tenant
 
         own = _own_hall_id(request)
-        if own is not None and own != tenant_id:
+        if own is not None and tenant_id not in own:
             return _error("没有这个殿。", "not_found", status.HTTP_404_NOT_FOUND)
         body = HallUpdateSerializer(data=request.data)
         body.is_valid(raise_exception=True)

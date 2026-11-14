@@ -43,7 +43,7 @@ def halls(db):
 
 @pytest.fixture
 def global_admin(db):
-    return _client(User.objects.create_user(username="aud_admin", password="x", role="ADMIN", tenant=None))
+    return _client(User.objects.create_user(username="aud_admin", password="x", role="SYSTEM_ADMIN", tenant=None))
 
 
 @pytest.fixture

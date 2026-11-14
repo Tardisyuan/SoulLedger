@@ -10,6 +10,7 @@
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -156,7 +157,7 @@ def test_without_synapse_the_scheduled_reconcile_is_a_quiet_success(cn_tenant, s
     from apps.notifications.models import UserNotification
 
     settings.MATRIX_ENABLED = False
-    User.objects.create_user(username="sched_admin", password="x", role="ADMIN", is_active=True)
+    User.objects.create_user(username="sched_admin", password="x", role="SYSTEM_ADMIN", is_active=True)
 
     result, run = _scheduled_run("chat-reconcile-off")
     assert result.get() == {"skipped": "chat_not_configured"}
@@ -170,7 +171,7 @@ def test_an_unreadable_room_fails_the_scheduled_reconcile_and_alerts(cn_tenant, 
 
     _, soul = ready_soul(cn_tenant, name="甲")
     _write(soul)
-    User.objects.create_user(username="sched_admin", password="x", role="ADMIN", is_active=True)
+    User.objects.create_user(username="sched_admin", password="x", role="SYSTEM_ADMIN", is_active=True)
 
     def boom(self, room_id, *, limit=50):
         raise MatrixError("connection refused")
@@ -179,7 +180,9 @@ def test_an_unreadable_room_fails_the_scheduled_reconcile_and_alerts(cn_tenant, 
     result, run = _scheduled_run("chat-reconcile-down")
     assert result.failed()
     assert run.status == "FAILURE" and "1 of 1 inbox room(s) unreadable" in run.error
-    assert UserNotification.objects.filter(related_resource="scheduler").count() == 1
+    # Every SYSTEM_ADMIN is told: this one and the control database's own (authentication/0030).
+    assert sorted(UserNotification.objects.filter(related_resource="scheduler").values_list(
+        "user__username", flat=True)) == sorted(["sched_admin", settings.SYSTEM_ADMIN_USERNAME])
 
 
 # ── 每位官员自己的状态 ─────────────────────────────────────────────────────

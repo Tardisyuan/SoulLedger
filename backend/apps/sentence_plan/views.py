@@ -18,7 +18,15 @@ from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
-from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
+from apps.core.tenant import (
+    civilization_halls,
+    is_civilization_admin,
+    is_tenant_exempt,
+    reaches_hall,
+    request_civilization,
+    request_tenant,
+    scope_to_tenant,
+)
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.perm.filters import DataScopeFilter
 from apps.sentence_plan import requests as plan_requests
@@ -46,12 +54,20 @@ class SentencePlanPartyPermission(TenantPermission):
             return False
         if is_tenant_exempt(request.user):
             return True
+        if is_civilization_admin(request.user):
+            return reaches_hall(request.user, obj.tenant_id) or obj.nodes.filter(
+                is_deleted=False, tenant_code__in=_civ_codes(request)).exists()
         tenant = getattr(request, "tenant", None)
         if tenant is None:
             return False
         if obj.tenant_id == tenant.pk:
             return True
         return obj.nodes.filter(is_deleted=False, tenant_code=tenant.code).exists()
+
+
+def _civ_codes(request):
+    """文明管理员本文明各殿的 code(节点按 `tenant_code` 记殿)。"""
+    return civilization_halls(request_civilization(request)).values("code")
 
 
 def _ordered_children():
@@ -82,9 +98,7 @@ class SentencePlanFilter(filters.FilterSet):
         fields = ["soul", "status", "cycle"]
 
     def _awaiting_redispatch(self, queryset, name, value):
-        tenant = getattr(self.request, "tenant", None)
-        if not is_tenant_exempt(self.request.user):
-            queryset = queryset.filter(tenant=tenant) if tenant is not None else queryset.none()
+        queryset = scope_to_tenant(queryset, self.request)  # SYSTEM_ADMIN 不限;文明管理员本文明;其余本殿
         ids = awaiting_redispatch_plan_ids(queryset)
         return queryset.filter(pk__in=ids) if value else queryset.exclude(pk__in=ids)
 
@@ -134,10 +148,12 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
         tenant = getattr(self.request, "tenant", None)
         if tenant is not None and not is_tenant_exempt(self.request.user):
             home = (home | qs.filter(nodes__tenant_code=tenant.code, nodes__is_deleted=False)).distinct()
+        elif is_civilization_admin(self.request.user):
+            home = (home | qs.filter(nodes__tenant_code__in=_civ_codes(self.request), nodes__is_deleted=False)).distinct()
         return DataScopeFilter.through_soul(self.request, home)
 
     def _home_or_403(self, plan):
-        if is_tenant_exempt(self.request.user):
+        if reaches_hall(self.request.user, plan.tenant_id):
             return None
         tenant = getattr(self.request, "tenant", None)
         if tenant is None or tenant.pk != plan.tenant_id:
@@ -192,7 +208,10 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
         plan = self.get_object()
         try:
             plan_requests.withdraw(plan, request_id, tenant=getattr(request, "tenant", None),
-                                   exempt=is_tenant_exempt(request.user), user=request.user)
+                                   exempt=is_tenant_exempt(request.user) or (
+                                       is_civilization_admin(request.user)
+                                       and frozenset(_civ_codes(request).values_list("code", flat=True))),
+                                   user=request.user)
         except plan_requests.PlanChangeRefusedError as exc:
             return _refused(exc)
         return self._plan_response(plan)

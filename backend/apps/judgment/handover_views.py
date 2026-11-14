@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import is_hall_less_admin, reaches_hall, scope_to_tenant
 from apps.judgment import handover
 from apps.perm.filters import DataScopeFilter
 
@@ -61,10 +61,8 @@ class _HandoverBase(APIView):
     def _people(self, request):
         body = HandoverRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        officers = User.objects.exclude(role="SOUL")
-        if not is_tenant_exempt(request.user):
-            tenant = getattr(request, "tenant", None)
-            officers = officers.filter(tenant=tenant) if tenant else officers.none()
+        # SYSTEM_ADMIN 任一殿;文明管理员本文明各殿;其余本殿(令牌上的殿),没有殿什么都没有。
+        officers = scope_to_tenant(User.objects.exclude(role="SOUL"), request)
         officers = DataScopeFilter.filter_queryset(request, officers, User)  # 范围外的交出人 = 404(B5)
         source = officers.filter(pk=body.validated_data["from"], tenant__isnull=False).first()
         if source is None:
@@ -102,11 +100,13 @@ class HandoverOfficersView(APIView):
     def get(self, request):
         from apps.perm.models import Role
 
-        if is_tenant_exempt(request.user):
+        if is_hall_less_admin(request.user):
             raw = request.query_params.get("tenant", "")
             if not raw.isdigit():
                 raise ValidationError({"tenant": ["Give the hall id."]})
             tenant_id = int(raw)
+            if not reaches_hall(request.user, tenant_id):  # 别文明的殿对文明管理员不存在:空列表,同未知殿
+                return Response([])
         else:
             tenant = getattr(request, "tenant", None)
             if tenant is None:

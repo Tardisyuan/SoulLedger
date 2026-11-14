@@ -30,3 +30,10 @@ class SoulsConfig(AppConfig):
             "soul", Soul, "domain", lambda soul: soul.name,
             location=lambda soul: {"kind": "civilization", "value": soul.civilization},
         )
+
+        # Derive the placement table now (every model is loaded before any `ready()`): a tenant-path tie
+        # raises here, at startup, instead of on the first request or migration that asks where a model lives
+        # (VERIFY-stage0 open item 4). Cached, so the router's later lookups are free.
+        from apps.core.sharding import _by_label
+
+        _by_label()

@@ -8,7 +8,7 @@ import json
 from django.db import transaction
 from django.http import HttpResponse
 
-from apps.perm.matrix import ADMIN_ROLE_NAME, admin_only_violations, role_forbidden_violations
+from apps.perm.matrix import ADMIN_ROLE_NAMES, admin_only_violations, role_forbidden_violations
 from apps.perm.models import FieldPermission, Permission, Role, RoleDataScope, RolePermission
 
 
@@ -128,7 +128,7 @@ def _caller_role_names(user):
     empty. Everyone else: the primary role plus live extra roles.
     """
     role = getattr(user, 'role', None)
-    if not role or role == ADMIN_ROLE_NAME:
+    if not role or role in ADMIN_ROLE_NAMES:
         return set()
     from apps.perm.checker import live_extra_roles
 
@@ -223,7 +223,7 @@ def _merge(data, overwrite, made, skip, role_labels_updated):
         RoleDataScope.objects.all().delete()
         # ADMIN always has everything (`admin_always_all`, 2026-09-25): an
         # overwrite import whose file lacks an ADMIN row must not strip it.
-        RolePermission.objects.exclude(role__name=ADMIN_ROLE_NAME).delete()
+        RolePermission.objects.exclude(role__name__in=ADMIN_ROLE_NAMES).delete()
 
     # Import permissions. `revive_or_create`, not `get_or_create`: a binned
     # row with the same natural key comes back rather than gaining a twin.
@@ -317,7 +317,7 @@ def _merge(data, overwrite, made, skip, role_labels_updated):
         resource = ds_data.get('resource', '')
         key = f"{ds_data['role']} / {resource or '*'}"
         codes = sorted(set(ds_data.get('orgs') or []))
-        if ds_data['role'] == ADMIN_ROLE_NAME or (resource and resource not in resources) \
+        if ds_data['role'] in ADMIN_ROLE_NAMES or (resource and resource not in resources) \
                 or ds_data['scope'] not in SCOPES or (ds_data['scope'] == DEFINE and not codes):
             skip('role_data_scopes', key, SKIP_INVALID)
             continue

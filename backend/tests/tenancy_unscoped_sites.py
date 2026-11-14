@@ -43,7 +43,8 @@ TAGS = {"LOCK", "PK", "FILTERED", "CODE", "GLOBAL", "FANOUT", "CROSS", "CLI"}
 SITES = [
     ('apps/org/ownership.py', 'Organization.all_objects', 1, 'FILTERED', "revives the hall's own deleted root: filtered by tenant and the root code"),
     ('apps/authentication/views.py', 'User.all_objects', 1, 'GLOBAL', 'existence probe of a username, which is unique across the whole table; nothing is read back'),
-    ('apps/authentication/views.py', 'Tenant.objects', 1, 'FANOUT', 'only the hall-less ADMIN (is_tenant_exempt) names a hall by its globally unique code; a hall-bound ADMIN never reaches this lookup and invites into its own hall only (2026-10-29)'),
+    ('apps/authentication/views.py', 'Tenant.objects', 1, 'FANOUT', 'only a hall-less admin (is_hall_less_admin) names a hall by its globally unique code, then reaches_hall refuses another civilization\'s; a hall-bound ADMIN never reaches this lookup and invites into its own hall only (2026-10-29, 2026-11-15)'),
+    ('apps/core/tenant.py', 'Tenant._base_manager', 3, 'FANOUT', "civilization_halls: the Tenant table itself, the halls of one civilization (soft-deleted halls included: their rows are still that civilization's) ‖ civilization_halls: the empty answer for an unknown civilization ‖ hall_less_admins_q: resolves one hall by pk to read its civilization"),
     ('apps/judgment/ai_statutes.py', 'Statute.all_objects', 1, 'FILTERED', 'the articles an AI may suggest for one case: filtered by judgment.tenant_id, its civilization and is_deleted=False (the same rule as StatuteCitationService.resolve)'),
     ('apps/judgment/confessions.py', 'Statute.all_objects', 3, 'FILTERED', "clauses: the 42 articles of the case's own hall: filtered by judgment.tenant_id ‖ tally: counts the articles of the case's own hall: filtered by judgment.tenant_id ‖ record: one article of the locked case's own hall: filtered by its tenant_id"),
     ('apps/judgment/confessions.py', 'NegativeConfession.all_objects', 4, 'PK', 'heard, tally, untruthful_ordinals: the rows of one case, by its FK ‖ record: the row of the locked case for that article, by the two FKs'),
@@ -67,7 +68,6 @@ SITES = [
     ('apps/sentence_plan/soul_view.py', 'Tenant.objects', 1, 'CODE', "halls named by the soul's own plan nodes, by globally unique code; only civilization is read"),
     ('apps/tenants/serializers.py', 'Tenant.objects', 1, 'GLOBAL', 'uniqueness check of a new hall code (Tenant has no tenant column; ADMIN only)'),
     ('apps/tenants/views.py', 'Tenant.objects', 1, 'LOCK', 'locks the one hall get_object() already resolved through the scoped queryset, by its pk'),
-    ('apps/tenants/views.py', 'Tenant.objects', 1, 'FANOUT', 'cross-hall overview, gated by IsGlobalAdminPermission (hall-less ADMIN only; a hall-bound ADMIN gets 403, 2026-10-29): one row per hall'),
     ('apps/ledger/views.py', 'Tenant.objects', 1, 'FANOUT', 'lists active halls with no souls yet (ADMIN only); narrowed to the request hall when there is one, same scope as soul_qs'),
     ('apps/actors/management/commands/consolidate_eu_pantheon.py', 'Actor.all_objects', 1, 'CLI', 'operator cleanup command, filtered by the two tenant codes it merges'),
     ('apps/actors/management/commands/fix_actor_civilization.py', 'Actor.all_objects', 1, 'CLI', 'operator repair command; probes for a soft-deleted twin by name+civilization'),

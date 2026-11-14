@@ -12,10 +12,11 @@ three files failed in setup. These helpers make such a test own its rows.
 from importlib import import_module
 
 from apps.perm.cache import invalidate_all_permissions
-from apps.perm.models import DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, Permission, Role, RolePermission
+from apps.perm.models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
 from tests.migration_schema_editor import SCHEMA_EDITOR
 
-_ROLE_NAMES = dict(import_module("apps.perm.migrations.0017_seed_roles_and_grants").ROLES)
+# 0017 seeded five; SYSTEM_ADMIN came with perm/0038 (2026-11-15) and is in DEFAULT_ROLES.
+_ROLE_NAMES = {**dict(DEFAULT_ROLES), **dict(import_module("apps.perm.migrations.0017_seed_roles_and_grants").ROLES)}
 _PERMISSIONS = {codename: (name, category) for codename, name, category in DEFAULT_PERMISSIONS}
 
 

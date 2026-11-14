@@ -48,9 +48,10 @@ def context(request):
     resources = sorted(set(_hall_scope(AuditLog.objects.all(), request).values_list("resource", flat=True)) | {"tenant"})
     halls = []
     if is_global_admin(request.user):
+        from apps.core.tenant import within_reach
         from apps.tenants.models import Tenant
 
-        halls = sorted(Tenant.objects.values_list("code", flat=True))
+        halls = sorted(within_reach(Tenant.objects.all(), request, field="pk").values_list("code", flat=True))
     return {"actions": [a for a, _ in AuditAction.choices], "resources": resources, "halls": halls}
 
 

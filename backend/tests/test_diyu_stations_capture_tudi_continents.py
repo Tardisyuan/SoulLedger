@@ -266,7 +266,7 @@ def test_an_admin_without_a_tenant_can_issue_what_due_lists(cn_tenant):
     """发牒与 `due/` 同一个范围(scope_to_tenant):此前按请求的租户过滤,没有租户的 ADMIN 列得出、发不了(404)。"""
     from django.contrib.auth import get_user_model
 
-    admin = get_user_model().objects.create_user(username="cap_admin", role="ADMIN", tenant=None)
+    admin = get_user_model().objects.create_user(username="cap_admin", role="SYSTEM_ADMIN", tenant=None)
     client = officer_client(admin)
     soul = _due(cn_tenant)
     assert [row["id"] for row in client.get(WARRANTS + "due/").data["results"]] == [soul.pk]

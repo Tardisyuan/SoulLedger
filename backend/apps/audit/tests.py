@@ -274,7 +274,7 @@ class TestAuditLogActions:
         # is therefore the hall-less ADMIN, which is what "no tenant_code" means in production.
         forced = APIClient()
         forced.force_authenticate(user=User.objects.create_user(
-            username="aud_global", password="test123", role="ADMIN", tenant=None))
+            username="aud_global", password="test123", role="SYSTEM_ADMIN", tenant=None))
         for client in (self.admin_client, forced):
             resp = client.get(f"{BASE}/stats/")
             assert resp.status_code == status.HTTP_200_OK

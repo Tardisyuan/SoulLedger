@@ -146,7 +146,7 @@ def test_login_and_profile_carry_civilization_and_glyphs(api_client, django_user
 
 
 def test_a_user_without_tenant_gets_null(api_client, django_user_model, db):
-    django_user_model.objects.create_user(username="global_admin", password="pw-123456", role="ADMIN")
+    django_user_model.objects.create_user(username="global_admin", password="pw-123456", role="SYSTEM_ADMIN")
     resp = api_client.post("/api/v1/auth/login/", {"username": "global_admin", "password": "pw-123456"}, format="json")
     assert resp.status_code == 200
     assert resp.json()["user"]["tenant"] is None

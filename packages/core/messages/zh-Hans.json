@@ -3657,6 +3657,7 @@
     "last_name_placeholder": "姓",
     "roles": {
       "ADMIN": "管理员",
+      "SYSTEM_ADMIN": "系统管理员",
       "MODERATOR": "朋友圈审核员",
       "JUDGE": "判官",
       "GUARDIAN": "守护者",

@@ -80,7 +80,7 @@ class PermissionAPITest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.admin = User.objects.create_user(username="admin", password="admin123", role="ADMIN")
+        self.admin = User.objects.create_user(username="admin", password="admin123", role="SYSTEM_ADMIN")
         self.viewer = User.objects.create_user(username="viewer", password="viewer123", role="VIEWER")
         # Every catalogue Permission with the grants ROLE_PERMISSIONS promises, and the
         # roles: a coherent deployment, not the half of one that a test running after a
@@ -141,7 +141,7 @@ class PermissionAPITest(TestCase):
         response = self.client.get("/api/v1/perm/role-permissions/", {"role": "ADMIN"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
-        self.assertEqual(data["role"], "ADMIN")
+        self.assertEqual(data["role"], self.admin.role)  # the caller's own role: the global admin is SYSTEM_ADMIN
         self.assertIn("soul.read", data["permissions"])
         self.assertIn("system.settings", data["permissions"])
 
@@ -377,6 +377,8 @@ class WorkflowPermissionMigrationTest(TestCase):
         self._forward()
         read_perm = Permission.objects.get(codename="workflow.read")
         RolePermission.objects.get_or_create(role=moderator, permission=read_perm)
+        # SYSTEM_ADMIN's copies of ADMIN's grants come from perm/0038; nothing stands in for that reverse either.
+        RolePermission.objects.filter(role__name="SYSTEM_ADMIN").delete()
 
         self._backward()
 
@@ -739,7 +741,7 @@ class RoleAPITest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.admin = User.objects.create_user(username="admin2", password="admin123", role="ADMIN")
+        self.admin = User.objects.create_user(username="admin2", password="admin123", role="SYSTEM_ADMIN")
         self.viewer = User.objects.create_user(username="viewer2", password="viewer123", role="VIEWER")
 
     # test_list_roles / test_create_role: merged into tests/test_perm_api.py
@@ -800,7 +802,7 @@ class RoleUserCountAndStaleWriteGuardTest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.admin = User.objects.create_user(username="admin3", password="x", role="ADMIN")
+        self.admin = User.objects.create_user(username="admin3", password="x", role="SYSTEM_ADMIN")
         self.role = Role.objects.create(name="COUNTED", display_name="Counted")
         self.perm, _ = Permission.objects.get_or_create(
             codename="soul.read", defaults={"name": "查看灵魂", "category": "soul"}

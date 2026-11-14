@@ -35,7 +35,7 @@ def assistant_on(settings):
 
 @pytest.fixture
 def api(cn_tenant):
-    return officer_client(User.objects.create_user(username="yama", password="x", role="ADMIN", tenant=None))
+    return officer_client(User.objects.create_user(username="yama", password="x", role="SYSTEM_ADMIN", tenant=None))
 
 
 class Resp:

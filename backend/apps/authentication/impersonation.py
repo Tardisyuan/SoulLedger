@@ -155,7 +155,7 @@ def enforce(request, user, token):
     if timezone.now() >= record.expires_at:
         end(record, "expired")
         raise refuse("impersonation_expired", "代看已到时。")
-    if not (record.actor.is_active and record.actor.role == "ADMIN") or _actor_signed_out(record.actor, token):
+    if not (record.actor.is_active and record.actor.role in ("ADMIN", "SYSTEM_ADMIN")) or _actor_signed_out(record.actor, token):
         end(record, "manual")
         raise refuse("impersonation_ended", "代看已结束。")
 

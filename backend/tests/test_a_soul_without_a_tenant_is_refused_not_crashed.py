@@ -21,7 +21,7 @@ URL = "/api/v1/souls/"
 
 @pytest.mark.django_db
 def test_an_admin_with_no_tenant_gets_a_400_and_no_row(db):
-    admin = User.objects.create_user(username="untenanted_admin", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="untenanted_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     client = APIClient()
     # Surface a 500 as a response instead of re-raising it into the test, so
     # the assertion below can name the status the client would have seen.
@@ -62,7 +62,7 @@ def halls(db):
 
 @pytest.fixture
 def global_admin(db):
-    return _client(User.objects.create_user(username="global_admin", password="x", role="ADMIN", tenant=None))
+    return _client(User.objects.create_user(username="global_admin", password="x", role="SYSTEM_ADMIN", tenant=None))
 
 
 def test_a_global_admin_creates_in_the_hall_of_the_civilization_named(halls, global_admin):

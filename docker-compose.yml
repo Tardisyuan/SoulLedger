@@ -33,6 +33,11 @@ x-django-env: &django-env
   SENTRY_DSN: ${SENTRY_DSN:-}
   # Scheduler failure / overdue alerts, also POSTed outside the app (settings.py).
   OPS_ALERT_WEBHOOK_URL: ${OPS_ALERT_WEBHOOK_URL:-}
+  # The control database's system administrator (authentication/0030 seeds it; `bootstrap_system_admin`
+  # gives it a password after migrate). Prefer the _FILE form: a mounted secret, not an environment value.
+  SYSTEM_ADMIN_USERNAME: ${SYSTEM_ADMIN_USERNAME:-}
+  SYSTEM_ADMIN_PASSWORD_FILE: ${SYSTEM_ADMIN_PASSWORD_FILE:-}
+  SYSTEM_ADMIN_PASSWORD: ${SYSTEM_ADMIN_PASSWORD:-}
   # Logging, /metrics/ access, key rotation and retention (docs/DEPLOYMENT.md, 2026-10-30).
   # Empty LOG_FORMAT = DEBUG decides; the retention defaults equal settings.py's (an empty value there means 0 = keep all).
   LOG_FORMAT: ${LOG_FORMAT:-}
@@ -157,6 +162,7 @@ services:
     command: >
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate &&
+             python manage.py bootstrap_system_admin &&
              python manage.py seed_mythology &&
              python manage.py setup_scheduled_tasks &&
              daphne -b 0.0.0.0 -p 8000 config.asgi:application"

@@ -60,7 +60,7 @@ def test_trace_id_filters_the_list(world):
 
 def test_detail_user_tenant_is_the_users_own(world):
     """A row logged under the EG hall but acted by a CN user (a global admin works across halls)."""
-    admin = User.objects.create_user(username="au_admin", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="au_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     admin.tenant = world["cn"]  # the user's own hall
     admin.save()
     log = AuditLog.objects.create(tenant=world["eg"], user=admin, action=AuditAction.UPDATE, resource="soul")

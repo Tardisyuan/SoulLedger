@@ -130,12 +130,12 @@ def eu_tenant(db):
 
 @pytest.fixture
 def admin_user(db, django_user_model, cn_tenant):
-    """The global administrator: ADMIN with no hall (2026-10-29: only a hall-less ADMIN reads and writes
-    across halls; an ADMIN bound to a hall is scoped to it — that one is `eu_admin_user`). `cn_tenant` is
-    still requested so the CN hall exists for the tests that use this fixture."""
+    """The global administrator: SYSTEM_ADMIN (2026-11-15, §7.5: only SYSTEM_ADMIN reads and writes across every
+    hall; a hall-less ADMIN is a civilization administrator, an ADMIN bound to a hall is scoped to it — that one is
+    `eu_admin_user`). `cn_tenant` is still requested so the CN hall exists for the tests that use this fixture."""
     user, _ = django_user_model.objects.get_or_create(
         username="admin",
-        defaults={"role": "ADMIN", "tenant": None},
+        defaults={"role": "SYSTEM_ADMIN", "tenant": None},
     )
     if not user.check_password("admin123"):
         user.set_password("admin123")

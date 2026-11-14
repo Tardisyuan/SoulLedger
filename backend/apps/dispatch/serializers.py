@@ -7,7 +7,7 @@ from rest_framework import serializers
 from apps.core.field_permissions import SoulFieldRulesMixin
 from apps.core.tenant import request_tenant
 from apps.core.tenant_fields import tenant_scoped
-from apps.core.viewer import SEE_ALL, viewer_tenant_id
+from apps.core.viewer import SEE_ALL, sees, viewer_tenant_id
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, JudgmentStatus
 from apps.judgment.models import Judgment
 from apps.workflow.serializers import CrossJudgmentWorkflowSummarySerializer
@@ -124,7 +124,7 @@ class DispatchRecordSerializer(SoulFieldRulesMixin, serializers.ModelSerializer)
             return data
         for field in ("dispatched_by", "decided_by"):
             person = getattr(instance, field)
-            if person is not None and person.tenant_id != viewer:
+            if person is not None and not sees(viewer, person.tenant_id):
                 data.update({field: None, f"{field}_name": None})
         return data
 
@@ -357,7 +357,7 @@ class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
         看全部(与受刑计划同口径:备注就是计划里那一站的 reason,召集殿在计划上本来看得到)。"""
         data = super().to_representation(seat)
         viewer = viewer_tenant_id(self.context.get("request"))
-        if viewer is not SEE_ALL and viewer not in (seat.participant_tenant_id, seat.judgment.initiating_tenant_id):
+        if not sees(viewer, seat.participant_tenant_id, seat.judgment.initiating_tenant_id):
             data["sentence_notes"] = ""
         return data
 

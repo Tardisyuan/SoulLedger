@@ -221,7 +221,9 @@ def _hall_admins(tenant_id, exclude=None, codename="city_god.manage") -> list:
 
     people = User.objects.filter(is_active=True).exclude(pk=exclude).exclude(role="SOUL").order_by("pk")
     mine = [u.pk for u in people.filter(tenant_id=tenant_id) if check_permission(u, codename)]
-    return mine or list(people.filter(role="ADMIN", tenant__isnull=True).values_list("pk", flat=True))
+    from apps.core.tenant import hall_less_admins_q
+
+    return mine or list(people.filter(hall_less_admins_q(tenant_id)).values_list("pk", flat=True))
 
 
 def _notify_after_commit(user_ids, notification_type, judgment, **params) -> None:

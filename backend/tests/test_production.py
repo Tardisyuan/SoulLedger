@@ -93,7 +93,7 @@ class TestHealthEndpoints:
 
         # Admin should get 200 or 503
         admin = django_user_model.objects.create_user(
-            username="test_admin", password="admin123", role="ADMIN"
+            username="test_admin", password="admin123", role="SYSTEM_ADMIN"
         )
         client.force_login(admin)
         resp = client.get('/health/detailed/')
@@ -110,7 +110,7 @@ class TestHealthEndpoints:
             return {"HTTP_AUTHORIZATION": f"Bearer {AccessToken.for_user(user)}"}
 
         admin = django_user_model.objects.create_user(
-            username="bp16_admin", password="x", role="ADMIN"
+            username="bp16_admin", password="x", role="SYSTEM_ADMIN"
         )
         viewer = django_user_model.objects.create_user(
             username="bp16_viewer", password="x", role="VIEWER"

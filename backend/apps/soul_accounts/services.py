@@ -724,9 +724,12 @@ def _tell_officers_provisioning_failed(soul):
     from apps.core.request_local import get_current_user
 
     User = get_user_model()
-    admins = User.objects.filter(role="ADMIN", is_active=True).order_by("pk")
+    from apps.core.tenant import hall_less_admins_q
+
+    active = User.objects.filter(is_active=True).order_by("pk")
     home = soul.home_tenant_id or soul.tenant_id
-    recipient_ids = {u.pk for u in (admins.filter(tenant_id=home) or admins.filter(tenant__isnull=True))}
+    recipient_ids = {u.pk for u in (active.filter(role="ADMIN", tenant_id=home)
+                                    or active.filter(hall_less_admins_q(home)))}
     actor = get_current_user()
     if actor is not None and getattr(actor, "is_authenticated", False) and actor.role != SOUL_ROLE:
         recipient_ids.add(actor.pk)

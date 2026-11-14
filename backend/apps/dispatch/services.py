@@ -1297,14 +1297,14 @@ class CrossTenantJudgmentService:
             return False
         if judgment.create_user_id is not None and judgment.create_user_id == user.pk:
             return True
-        from apps.core.tenant import is_tenant_exempt
+        from apps.core.tenant import reaches_hall
         from apps.perm.checker import check_permission
 
         # 按码,不按角色名(fix-queue「fix-be1 遗留」/ 第 21 条):与「管流程」同一个码 workflow.update,
         # 自建角色被授了它也算;此前只认 ADMIN / MODERATOR 两个名字。
         if not check_permission(user, "workflow.update"):
             return False
-        if is_tenant_exempt(user):
+        if reaches_hall(user, judgment.initiating_tenant_id):  # SYSTEM_ADMIN;文明管理员限召集殿在本文明
             return True
         tenant = request_tenant or getattr(user, "tenant", None)
         return tenant is not None and tenant.pk == judgment.initiating_tenant_id

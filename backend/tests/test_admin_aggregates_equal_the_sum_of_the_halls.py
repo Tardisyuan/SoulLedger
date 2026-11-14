@@ -1,9 +1,12 @@
-"""Guard G6 (docs/ARCHITECTURE-tenant-sharding.md 4.1): the global ADMIN's aggregates equal the halls' summed.
+"""Guard G6 (docs/ARCHITECTURE-tenant-sharding.md 4.1): the global administrator's aggregates equal the halls' summed.
+
+Since 2026-11-15 (§7.5) the global principal is SYSTEM_ADMIN; a hall-less ADMIN is a civilization administrator,
+and its aggregates equal its own civilization's halls summed (the last test).
 
 Why. Today the global overview is one query over one database. After a split it is a fan-out: ask every hall's
 database, merge. The merge is new code, and a merge can drop a hall, double-count a shared realm, or truncate a
 "top 10" per hall instead of globally. This file states what the merged answer must equal, using only the real
-endpoints: the global number (an ADMIN with no hall) against the same endpoint asked as each hall's own ADMIN.
+endpoints: the global number (SYSTEM_ADMIN) against the same endpoint asked as each hall's own ADMIN.
 Today the per-hall side is the same database filtered by tenant; after a split it comes from the tenant databases
 and these assertions stay as they are.
 
@@ -128,12 +131,17 @@ def world():
 
     admins = {code: User.objects.create_user(username=f"admin-{code}", password="x", role=UserRole.ADMIN, tenant=t)
               for code, t in halls.items()}
-    global_admin = User.objects.create_user(username="admin-global", password="x", role=UserRole.ADMIN, tenant=None)
+    global_admin = User.objects.create_user(username="admin-global", password="x", role=UserRole.SYSTEM_ADMIN,
+                                            tenant=None)
+    civ_admins = {civ: User.objects.create_user(username=f"admin-{civ}", password="x", role=UserRole.ADMIN,
+                                                tenant=None, civilization=civ)
+                  for civ in ("CHINESE", "EGYPTIAN", "GREEK")}
     assert not AuditLog.objects.filter(tenant__isnull=True).exists(), "fixture must start with no hall-less audit rows"
     return {
         "halls": halls,
         "global": _client(global_admin),
         "per_hall": {code: _client(admins[code], halls[code]) for code in HALLS},
+        "per_civilization": {civ: _client(user) for civ, user in civ_admins.items()},
     }
 
 
@@ -300,3 +308,37 @@ def test_rows_that_belong_to_no_hall_are_in_the_global_answer_only(world):
     assert whole["total_souls"] - sum(h["total_souls"] for h in halls.values()) == 1
     assert audit["total_logs"] - sum(h["total_logs"] for h in audit_halls.values()) == 1
     assert None in {row["tenant_code"] for row in whole["tenants"]}
+
+
+# ── a civilization administrator (§7.5, 2026-11-15) ────────────────────────
+
+
+CIVILIZATION_OF = {"CHINESE": "CN_DIYU", "EGYPTIAN": "EG_DUAT", "GREEK": "GR_HADES"}  # one seeded hall each here
+
+
+@pytest.mark.parametrize("url", [OVERVIEW, f"{TRENDS}?range=90d", AUDIT_STATS])
+def test_a_civilization_admin_aggregates_its_own_halls_and_nothing_else(world, url):
+    """A hall-less ADMIN is no longer global: each of its answers is its civilization's halls' answer (here one
+    hall each, so the two must be equal field by field -- the empty GREEK hall included), never the whole."""
+    whole = _get(world["global"], url)
+    for civ, code in CIVILIZATION_OF.items():
+        mine = _get(world["per_civilization"][civ], url)
+        hall = _get(world["per_hall"][code], url)
+        mine.pop("as_of", None), hall.pop("as_of", None)
+        assert mine == hall, civ
+    total = "total_logs" if url == AUDIT_STATS else "total_souls" if url == OVERVIEW else None
+    if total:
+        assert _get(world["per_civilization"]["CHINESE"], url)[total] < whole[total]
+
+
+def test_rows_of_no_hall_are_not_a_civilization_admins(world):
+    orphan = Soul.objects.create(name="无殿", tenant=plan.tenant("CN_DIYU"), merit_score=1,
+                                 current_state=SoulState.ALIVE)
+    Soul.all_objects.filter(pk=orphan.pk).update(tenant=None)
+    AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="x")
+    for civ, code in CIVILIZATION_OF.items():
+        mine, hall = _get(world["per_civilization"][civ], OVERVIEW), _get(world["per_hall"][code], OVERVIEW)
+        assert mine["total_souls"] == hall["total_souls"]
+        assert None not in {row["tenant_code"] for row in mine["tenants"]}
+        assert _get(world["per_civilization"][civ], AUDIT_STATS)["total_logs"] == _get(
+            world["per_hall"][code], AUDIT_STATS)["total_logs"]

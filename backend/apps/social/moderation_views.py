@@ -367,7 +367,7 @@ class SensitiveWordViewSet(
         from apps.tenants.models import Tenant
 
         user = request.user
-        if getattr(user, "role", None) != "ADMIN" or getattr(user, "hall_view", None):
+        if getattr(user, "role", None) not in ("ADMIN", "SYSTEM_ADMIN") or getattr(user, "hall_view", None):
             raise SocialError("只有管理员可以跨文明复制词表。", "admin_only", 403)
         if not is_tenant_exempt(user):
             raise SocialError("殿管理员只能从全站共享词表复制,不能从别的殿复制。", "shared_source_only", 403)
