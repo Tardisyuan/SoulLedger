@@ -267,7 +267,7 @@ describe("import: the three steps", () => {
   });
 
   it("shows the backend's reason when the preview is refused, and stays on step 1", async () => {
-    importConfig.mockRejectedValue({ response: { data: { detail: "Body must be a JSON object" } } });
+    importConfig.mockRejectedValue({ response: { status: 400, data: { code: "invalid", status: 400, detail: "Body must be a JSON object" } } });
     setup();
     openImport();
     pick(JSON.stringify(DOC));
@@ -277,14 +277,16 @@ describe("import: the three steps", () => {
     expect(screen.getByRole("dialog").textContent).toContain("permissions.config.import_title:1");
   });
 
-  it("flattens a serializer-style 400", async () => {
-    importConfig.mockRejectedValue({ response: { data: { permissions: [{ name: ["required"] }] } } });
+  it("flattens a validation problem's errors, dotted field first", async () => {
+    importConfig.mockRejectedValue({
+      response: { status: 400, data: { code: "invalid", status: 400, errors: [{ field: "permissions.0.name", code: "required", detail: "required" }] } },
+    });
     setup();
     openImport();
     pick(JSON.stringify(DOC));
     await waitFor(() => expect(nextButton()).toBeEnabled());
     fireEvent.click(nextButton());
-    expect((await screen.findByRole("alert")).textContent).toContain("permissions:");
+    expect((await screen.findByRole("alert")).textContent).toContain("permissions.0.name: required");
   });
 });
 

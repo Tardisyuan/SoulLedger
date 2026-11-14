@@ -76,18 +76,18 @@ function rating(name: VitalName, value: number): "good" | "needs_improvement" | 
 }
 
 /** 名称、目标与 `docs/SLO.md` 同行同值;旅程与「好事件」两列的字面量就是语言包键。 */
-const SLO_ROWS: { id: string; journey: string; good: string; ms?: string; target: string }[] = [
-  { id: "A1", journey: "about.system_journey_open_desk", good: "about.system_good_availability", target: "99.5%" },
-  { id: "A2", journey: "about.system_journey_open_desk", good: "about.system_good_latency", ms: "400", target: "95%" },
-  { id: "B1", journey: "about.system_journey_seal", good: "about.system_good_availability", target: "99.5%" },
-  { id: "B2", journey: "about.system_journey_seal", good: "about.system_good_latency", ms: "800", target: "95%" },
-  { id: "B3", journey: "about.system_journey_seal", good: "about.system_good_correctness", target: "100%" },
-  { id: "C1", journey: "about.system_journey_timeline", good: "about.system_good_availability", target: "99.5%" },
-  { id: "C2", journey: "about.system_journey_timeline", good: "about.system_good_latency", ms: "500", target: "95%" },
-  { id: "C3", journey: "about.system_journey_timeline", good: "about.system_good_freshness", target: "99%" },
-  { id: "D1", journey: "about.system_journey_realtime", good: "about.system_good_delivery", target: "99%" },
-  { id: "E1", journey: "about.system_journey_tasks", good: "about.system_good_on_time", target: "99%" },
-  { id: "E2", journey: "about.system_journey_webhook", good: "about.system_good_webhook", target: "99%" },
+const SLO_ROWS: { slo: string; journey: string; good: string; ms?: string; target: string }[] = [
+  { slo: "A1", journey: "about.system_journey_open_desk", good: "about.system_good_availability", target: "99.5%" },
+  { slo: "A2", journey: "about.system_journey_open_desk", good: "about.system_good_latency", ms: "400", target: "95%" },
+  { slo: "B1", journey: "about.system_journey_seal", good: "about.system_good_availability", target: "99.5%" },
+  { slo: "B2", journey: "about.system_journey_seal", good: "about.system_good_latency", ms: "800", target: "95%" },
+  { slo: "B3", journey: "about.system_journey_seal", good: "about.system_good_correctness", target: "100%" },
+  { slo: "C1", journey: "about.system_journey_timeline", good: "about.system_good_availability", target: "99.5%" },
+  { slo: "C2", journey: "about.system_journey_timeline", good: "about.system_good_latency", ms: "500", target: "95%" },
+  { slo: "C3", journey: "about.system_journey_timeline", good: "about.system_good_freshness", target: "99%" },
+  { slo: "D1", journey: "about.system_journey_realtime", good: "about.system_good_delivery", target: "99%" },
+  { slo: "E1", journey: "about.system_journey_tasks", good: "about.system_good_on_time", target: "99%" },
+  { slo: "E2", journey: "about.system_journey_webhook", good: "about.system_good_webhook", target: "99%" },
 ];
 
 function Block({ id, stem, title, source, children }: { id: string; stem: string; title: string; source: string; children: ReactNode }) {
@@ -151,8 +151,8 @@ function Targets() {
         </thead>
         <tbody>
           {SLO_ROWS.map((r) => (
-            <tr key={r.id} data-testid="slo-row" className={`border-b ${RULE}`}>
-              <td className="py-1 pr-3 font-mono text-xs">{r.id}</td>
+            <tr key={r.slo} data-testid="slo-row" className={`border-b ${RULE}`}>
+              <td className="py-1 pr-3 font-mono text-xs">{r.slo}</td>
               <td className="py-1 pr-3">{t(r.journey)}</td>
               <td className="py-1 pr-3">{t(r.good, r.ms ? { ms: r.ms } : undefined)}</td>
               <td className="py-1 text-right font-mono tabular-nums">{r.target}</td>

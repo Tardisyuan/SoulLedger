@@ -45,7 +45,7 @@ function renderPage() {
   return renderWithProviders(<WorkflowDetailPage />, { i18n: false });
 }
 
-const refused = (code: string, error: string) => Promise.reject({ response: { status: 400, data: { code, error } } });
+const refused = (code: string, detail: string) => Promise.reject({ response: { status: 400, data: { code, status: 400, detail } } });
 
 async function escalate() {
   renderPage();
