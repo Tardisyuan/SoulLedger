@@ -68,6 +68,7 @@ const EXPECTED = [
   "fonts.ts",
   "i18n.tsx",
   "layout.ts",
+  "lockView.tsx",
   "network.tsx",
   "online.ts",
   "passwordRulesView.tsx",

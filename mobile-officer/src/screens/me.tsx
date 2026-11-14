@@ -14,7 +14,7 @@ import { permission, registerDevice, requestPermission, unregisterDevice, hasReg
 import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { SignOutButton } from "./signOut";
-import { Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
+import { Notice, OneLine, Screen, SectionLabel, SmallButton, SwitchMark, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
 
 export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name" | "stats";
 
@@ -84,15 +84,16 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
           <Row testID="me-mfa" minHeight={56} title={mfaLine} onPress={() => onOpen("mfa")} right={<Txt variant="nav">›</Txt>} />
         </Block>
 
-        <Block label={t("profile.change_password")}>
+        {/* 第五十批 C5: 我 › 账号安全 -- 用指纹登录, 落印前先确认, 密码. */}
+        <Block label={t("officer_app.me.security")}>
+          <BioLoginBlock />
+          <SealReadbackRow />
           <Row testID="me-password" minHeight={56} title={t("profile.change_password")} onPress={() => onOpen("password")} right={<Txt variant="nav">›</Txt>} />
         </Block>
 
         <Block label={t("profile.devices.title")}>
           <Row testID="me-devices" minHeight={56} title={t("profile.devices.title")} onPress={() => onOpen("devices")} right={<Txt variant="nav">›</Txt>} />
         </Block>
-
-        <BioLoginBlock />
 
         <Block label={t("officer_app.me.language")}>
           <Segmented
@@ -130,8 +131,6 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
         </Block>
 
         <ConfirmBlock />
-
-        <SealReadbackBlock />
 
         <Block label={t("officer_app.me.about")}>
           <Txt variant="bodyLg">{`${t("officer_app.name")} · ${t("officer_app.me.version", { version })}`}</Txt>
@@ -253,23 +252,21 @@ function PushBlock() {
  * Turning it off asks the phone first (A8); a check that does not pass leaves it on and says so.
  */
 /** 「落印前先确认」:滑卡审判右滑通过时先回读、不计时(`prefs.tsx`)。 */
-function SealReadbackBlock() {
+function SealReadbackRow() {
   const { t } = useI18n();
   const [on, setOn] = useState(sealReadbackWished);
   return (
-    <Block label={t("judgment.seal_readback.pref")}>
-      <Row
-        testID="me-seal-readback"
-        minHeight={56}
-        title={t("judgment.seal_readback.pref")}
-        lines={[t("judgment.seal_readback.pref_hint_app")]}
-        onPress={() => {
-          setSealReadbackWished(!on);
-          setOn(!on);
-        }}
-        right={<Txt variant="nav">{on ? "✓" : "○"}</Txt>}
-      />
-    </Block>
+    <Row
+      testID="me-seal-readback"
+      minHeight={56}
+      title={t("judgment.seal_readback.pref")}
+      lines={[t("judgment.seal_readback.pref_hint_app")]}
+      onPress={() => {
+        setSealReadbackWished(!on);
+        setOn(!on);
+      }}
+      right={<SwitchMark on={on} />}
+    />
   );
 }
 
