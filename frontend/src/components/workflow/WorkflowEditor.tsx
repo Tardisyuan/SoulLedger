@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, useEffect, useId, useMemo, useRef, type CSSProperties, type DragEvent } from "react";
+import { useUnsavedGuard } from "@/src/hooks/useUnsavedGuard";
 import { flushSync } from "react-dom";
 import { responseCode } from "@soulledger/core/api/client";
 /**
@@ -387,6 +388,10 @@ export default function WorkflowEditor({
   const [templateCaseType, setTemplateCaseType] = useState("ROUTINE");
   // 0=普通 by default, the same floor the model column has.
   const [templatePriority, setTemplatePriority] = useState(0);
+  // 有没改动没存(设计参照 2026-11-15 §9):关标签页时让浏览器先问。改画布的入口都先调 `stopLayoutTravel`,
+  // 拖动走 `onNodesChangeHandler`,模板栏的字段走它那一行的 onChangeCapture;存草稿 / 发布后清掉。
+  const [dirty, setDirty] = useState(false);
+  useUnsavedGuard(dirty);
 
   // Load existing template if editing
   //
@@ -496,6 +501,7 @@ export default function WorkflowEditor({
    * at coordinates the mutation is about to invalidate anyway.
    */
   const stopLayoutTravel = useCallback(() => {
+    setDirty(true);
     layoutFlipRef.current?.kill();
     layoutFlipRef.current = null;
     setRelayouting(false);
@@ -677,6 +683,7 @@ export default function WorkflowEditor({
     return res.data;
   }, [templateId]);
   const finish = useCallback(() => {
+    setDirty(false);
     onSave?.({
       name: templateName,
       name_en: templateNameEn.trim(),
@@ -1414,6 +1421,7 @@ export default function WorkflowEditor({
   const onNodesChangeHandler = useCallback(
     (changes: NodeChange<Node>[]) => {
       onNodesChange(changes);
+      if (changes.some((c) => (c.type === "position" && c.dragging) || c.type === "remove")) setDirty(true);
       // Track selection — from ALL the select changes in the batch. Clicking a
       // card while another is selected arrives as [old: false, new: true], and
       // this used to read only the first one, so it cleared the selection the
@@ -1756,7 +1764,7 @@ export default function WorkflowEditor({
        * 输入区被压到不可用 —— 2026-09-05 在 mobile-chrome(393px)的失败截图里,
        * 「中国地府」是从「删除选中」底下透出来的。所以这里**没有** `min-w-0`:
        * 每个控件保持可用的尺寸,行真的超出时真的滚。 */}
-      <div className="flex items-center gap-2 h-12 pointer-coarse:h-14 shrink-0 px-3 border-b border-[oklch(var(--color-line))] overflow-x-auto">
+      <div onChangeCapture={() => setDirty(true)} className="flex items-center gap-2 h-12 pointer-coarse:h-14 shrink-0 px-3 border-b border-[oklch(var(--color-line))] overflow-x-auto">
         <input
           type="text"
           value={templateName}
@@ -1845,12 +1853,16 @@ export default function WorkflowEditor({
                 aria-label={opt.label}
                 title={opt.label}
                 tabIndex={on ? 0 : -1}
-                onClick={() => setTemplatePriority(opt.value)}
+                onClick={() => {
+                  setDirty(true);
+                  setTemplatePriority(opt.value);
+                }}
                 onKeyDown={(e) => {
                   const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
                   if (!step) return;
                   e.preventDefault();
                   const next = (templatePriority + step + priorityOptions.length) % priorityOptions.length;
+                  setDirty(true);
                   setTemplatePriority(next);
                   (e.currentTarget.parentElement?.children[next] as HTMLElement | undefined)?.focus();
                 }}

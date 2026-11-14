@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useUnsavedGuard } from "@/src/hooks/useUnsavedGuard";
 import { assistAdminErrorCode, type AssistAdminConfig } from "@soulledger/core/api/assist-admin";
 import {
   useAssistAdminConfig,
@@ -110,6 +111,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
   const nEmbedding = Object.keys(edraft).length;
   const nBackup = bRemoving ? 1 : bOpen ? Object.keys(bdraft).length : 0;
   const n = nConfig + nEmbedding + nBackup;
+  useUnsavedGuard(n > 0); // 关标签页前先问(设计参照 2026-11-15 §9)
   const block =
     saveBlock(draft, config, testedFp, invalidDraft(draft) || (bOpen && invalidDraft(bdraft))) ??
     (bOpen ? backupSaveBlock(bdraft, config, bSaved, bTested) : null) ??
