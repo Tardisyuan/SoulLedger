@@ -5,6 +5,7 @@
 误授给别人。MODERATOR 与其余一律 403。官员令牌(`OfficerJWTAuthentication`)。
 每次保存(配置、每殿开关)写一条 `resource="assistant_config"` 的审计;API key 只记「已更换 / 已清除」。
 """
+import os
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -336,7 +337,8 @@ class TryThrottle(throttling.UserRateThrottle):
     (评测由单次条数上限与花费上限挡着;试问一次一条,挡的是连点。)"""
 
     scope = "assist_admin_try"
-    rate = "60/hour"
+    # ASSIST_ADMIN_TRY_RATE lifts it for a deliberate batch, such as scripts/demo-record-assist.py.
+    rate = os.getenv("ASSIST_ADMIN_TRY_RATE", "60/hour")
 
 
 class TryView(AdminView):
