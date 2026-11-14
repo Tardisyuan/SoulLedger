@@ -67,3 +67,36 @@ def test_pk_pages_visit_every_soul_once_in_order():
     souls = [Soul.objects.create(name=f"页{i}", tenant=tenant) for i in range(5)]
     seen = [s.pk for s in _souls_in_pk_pages(Soul.objects.filter(tenant=tenant), size=2)]
     assert seen == sorted(s.pk for s in souls)
+
+
+@pytest.mark.django_db
+def test_a_run_cut_off_by_the_soft_limit_saves_a_cursor_and_the_next_run_resumes_after_it(monkeypatch):
+    """Regression (2026-11-14): the 7200 s limit plus a restart from the first pk skipped the tail every night,
+    and the per-soul `except Exception` swallowed SoftTimeLimitExceeded."""
+    from celery.exceptions import SoftTimeLimitExceeded
+
+    tenant = Tenant.objects.create(code="LDG_CURSOR", display_name="Cursor")
+    pks = sorted(Soul.objects.create(name=f"游{i}", tenant=tenant).pk for i in range(5))
+    seen = []
+
+    def cut_at_third(soul):
+        if len(seen) == 2 and not hasattr(cut_at_third, "fired"):
+            cut_at_third.fired = True
+            raise SoftTimeLimitExceeded()
+        seen.append(soul.pk)
+
+    monkeypatch.setattr(LedgerService, "recalculate_soul_ledger", staticmethod(cut_at_third))
+    with pytest.raises(SoftTimeLimitExceeded):
+        recalculate_tenant_ledgers(str(tenant.pk))
+    assert seen == pks[:2]
+
+    seen.clear()
+    result = recalculate_tenant_ledgers(str(tenant.pk))
+    # Tail first, from just after the cursor, then wrap round to the head; every soul exactly once.
+    assert seen == pks[2:] + pks[:2]
+    assert result["updated"] == 5 and result["failed"] == []
+
+    # A run that finished clears the cursor: the next one starts at the head again.
+    seen.clear()
+    recalculate_tenant_ledgers(str(tenant.pk))
+    assert seen == pks
