@@ -335,7 +335,9 @@ describe("落印前先确认(用户 2026-11-14,WCAG 2.2.1 的「可关」):通�
     expect(screen.getByTestId("readback-cancel")).not.toHaveTextContent("取消");
     const order = screen.root.findAll((n) => n.props.testID === "readback-cancel" || n.props.testID === "readback-confirm").map((n) => n.props.testID);
     expect(order.indexOf("readback-cancel")).toBeLessThan(order.indexOf("readback-confirm"));
-    await settled();
+    // `settled()` waits for a sealed card to leave; nothing is sealed here, so close the sheet and let the card settle back.
+    await act(async () => fireEvent.press(screen.getByTestId("readback-cancel")));
+    await enabled("swipe-pass");
   });
 
   it("回读层上取消:不发,卡片回原位,还能再判", async () => {
