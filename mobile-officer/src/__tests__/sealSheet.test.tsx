@@ -165,14 +165,16 @@ describe("what the seal note promises (用户 2026-11-14)", () => {
   const flow = zh.officer_app.seal.hold_note_flow;
   const final = zh.officer_app.seal.hold_note;
 
-  it("an original case goes to approval after the seal; it does not claim the seal cannot be undone", () => {
+  // FAILED opens RejectFields, which settles asynchronously: flush it before the test ends.
+  it("an original case goes to approval after the seal; it does not claim the seal cannot be undone", async () => {
     open({ kind: "ORIGINAL" });
     fireEvent.press(screen.getByTestId("seal-option-FAILED"));
+    await act(async () => {});
     expect(screen.getByText(flow)).toBeTruthy();
     expect(screen.queryByText(final)).toBeNull();
   });
 
-  it("a rehearing verdict (重审 anywhere, 存疑 in 地府) and a reopened case are final at once", () => {
+  it("a rehearing verdict (重审 anywhere, 存疑 in 地府) and a reopened case are final at once", async () => {
     open({ kind: "ORIGINAL" });
     fireEvent.press(screen.getByTestId("seal-option-RETRY"));
     expect(screen.getByText(final)).toBeTruthy();
@@ -182,6 +184,7 @@ describe("what the seal note promises (用户 2026-11-14)", () => {
     screen.unmount();
     open({ kind: "REOPEN" });
     fireEvent.press(screen.getByTestId("seal-option-FAILED"));
+    await act(async () => {});
     expect(screen.getByText(final)).toBeTruthy();
     expect(screen.queryByText(flow)).toBeNull();
   });
