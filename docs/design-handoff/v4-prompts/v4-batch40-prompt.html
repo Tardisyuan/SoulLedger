@@ -1,0 +1,24 @@
+<article>
+<h2>第四十批 · 网页与 App 各留一个值的三处颜色(请各定一个)<span class="tag new">待回 · 2026-11-14</span></h2>
+<p>颜色令牌现在只有一份来源:<code>packages/core/tokens/*.tokens.json</code>。网页的 <code>globals.css</code> 和 App 的主题都由它生成。导出时核对了网页与 App 的全部颜色:36 个文明色两边一致，只有下面三处两边各有一个值。这三处都是 v4 定稿里没有印出、两边各自补的值。现在照旧两个值都留着，在令牌里标了「待 Design」。<strong>请每处定一个值</strong>,我们照你的定稿改，两边一起生效。</p>
+<p>对比度是 WCAG 2.x,按 sRGB 现算。底色:深 canvas #111113 / surface-1 #1A1B1E / surface-2 #222327;浅 canvas #F8F8F6 / surface-1 #FFFFFF / surface-2 #F1F1EE。</p>
+<ol>
+<li><strong>警示字色</strong>(警示框里的字、「审判中」、炼狱去向)。
+<table>
+<tr><th></th><th>深</th><th>对 canvas / s1 / s2 / 警示底</th><th>浅</th><th>对 canvas / s1 / s2 / 警示底</th></tr>
+<tr><td>网页 <code>--color-warning</code></td><td>#E07A23</td><td>6.27 / 5.72 / 5.22 / 5.51</td><td>#A65000</td><td>5.24 / 5.57 / 4.92 / 5.02</td></tr>
+<tr><td>App <code>warn</code></td><td>#FF9A3C</td><td>8.93 / 8.15 / 7.43 / 7.85</td><td>#9F4A00</td><td>5.72 / 6.08 / 5.37 / 5.48</td></tr>
+</table>
+警示底两边相同:深 #301904,浅 #FFF1E2。两组都过 4.5。网页浅色在 surface-2 上 4.92,是余量最小的一格。</li>
+<li><strong>成功底色</strong>(成功提示条、「通过」标签的底;上面的字是成功色本身：深 #8AD3A1,浅 #1F6B3F)。
+<table>
+<tr><th></th><th>深</th><th>浅</th><th>成功色字在上面(深 / 浅)</th><th>与 canvas 的区分(深 / 浅)</th></tr>
+<tr><td>网页 <code>--color-success-tint</code>(Design D2)</td><td>#102515</td><td>#E4FBE7</td><td>9.18 / 5.95</td><td>1.17 / 1.03</td></tr>
+<tr><td>App <code>posBg</code>(第三十批 <code>--pos-tint</code>)</td><td>#16261C</td><td>#EAF6EE</td><td>8.97 / 5.85</td><td>1.19 / 1.04</td></tr>
+</table>
+两组的字都过 4.5。底与 canvas 本来就只靠明度差一点点来区分(提示条另有图标和文字,不只靠底色)。</li>
+<li><strong><code>warn</code> 一个名字两种意思，建议网页改名 <code>amber</code></strong>。网页的 <code>--color-warn</code>(第八批 <code>--warn</code>,深 #E8B45A / 浅 #9A6400)只给连接状态的点和顶栏下沿那条 2px 线用，<strong>不当字色</strong>(对 canvas:深 9.98,浅 4.71)。App 的 <code>warn</code> 却是警示<strong>字色</strong>,即上面第 1 条。同一个名字在两端指不同的东西，迟早有人拿错。我们建议把网页这一档改名为 <code>--color-amber</code>,只改名不改值(样式表外现有 2 处引用,都在 <code>connection-status.tsx</code>)。<code>warn</code> / <code>warning</code> 这个名字只留给警示字色。<strong>请确认改名</strong>,或者给别的名字。</li>
+</ol>
+<p>另告知:语域字号(「卷」记录 / 「台」控件)已经进了令牌(<code>--juan-*</code> / <code>--tai-*</code>),值照代码现状，一个没改。三个 <code>.module.css</code> 里写死的 px 字号全部改读这些令牌。具体档位以后要调，再单独给你。</p>
+<p>交付：三处各一个值(深 / 浅 hex),第 3 条一句确认即可。不需要语言包。</p>
+</article>
