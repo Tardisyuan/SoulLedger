@@ -12,7 +12,8 @@ const ask = (rec: Recording) => read(rec, "/perm/permissions/", new URLSearchPar
 it.each(["zh", "en"] as DemoLang[])("the judge's %s recording holds the server's 403 for the permission catalogue", async (lang) => {
   const answer = ask(await recording("judge", lang));
   expect(answer.status).toBe(403);
-  expect(answer.data).toEqual({ detail: expect.any(String) });
+  // The RFC 9457 problem envelope (2026-11-14), as the server sends every refusal.
+  expect(answer.data).toEqual(expect.objectContaining({ status: 403, code: "permission_denied", detail: expect.any(String) }));
 });
 
 it("the administrator's recording reads the same endpoint, so the 403 is the judge's and not the path's", async () => {
