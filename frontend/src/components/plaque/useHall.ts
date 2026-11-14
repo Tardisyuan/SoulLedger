@@ -66,7 +66,7 @@ function useHallCode(): string | null {
  */
 export function useHallName(): string | undefined {
   const { locale } = useI18n();
-  const viewed = useImpersonation()?.target.hall;
+  const viewed = useImpersonation()?.target?.hall;
   const own = useTenant().user?.tenant?.hall_names;
   const names = viewed ?? own;
   if (!names) return undefined;

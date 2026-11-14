@@ -42786,6 +42786,7 @@ components:
       - application_open
       - approval_flow_required
       - approval_in_progress
+      - approval_started
       - assigned_to_other
       - assignee_out_of_scope
       - assistant_busy
@@ -42808,6 +42809,7 @@ components:
       - cannot_delete_self
       - cannot_enter_judgment
       - cannot_reopen
+      - cannot_withdraw
       - capture_refused
       - case_full
       - case_type_not_for_civilization
@@ -42844,6 +42846,7 @@ components:
       - cross_civilization_target_unknown
       - cross_judgment_incomplete
       - cross_judgment_invalid
+      - cross_judgment_merged
       - cross_judgment_open
       - curability_required
       - current_session
@@ -42998,6 +43001,7 @@ components:
       - no_grievance_filed
       - no_mortal_sin
       - no_nodes
+      - no_pending_flow
       - no_pending_node
       - no_realm
       - no_rows
@@ -43061,6 +43065,8 @@ components:
       - not_uploader
       - not_verified
       - not_weighed
+      - not_withdrawable
+      - not_your_seal
       - note_required
       - nothing_to_change
       - officer_has_open_work
@@ -43283,6 +43289,7 @@ components:
         * `application_open` - application_open
         * `approval_flow_required` - approval_flow_required
         * `approval_in_progress` - approval_in_progress
+        * `approval_started` - approval_started
         * `assigned_to_other` - assigned_to_other
         * `assignee_out_of_scope` - assignee_out_of_scope
         * `assistant_busy` - assistant_busy
@@ -43305,6 +43312,7 @@ components:
         * `cannot_delete_self` - cannot_delete_self
         * `cannot_enter_judgment` - cannot_enter_judgment
         * `cannot_reopen` - cannot_reopen
+        * `cannot_withdraw` - cannot_withdraw
         * `capture_refused` - capture_refused
         * `case_full` - case_full
         * `case_type_not_for_civilization` - case_type_not_for_civilization
@@ -43341,6 +43349,7 @@ components:
         * `cross_civilization_target_unknown` - cross_civilization_target_unknown
         * `cross_judgment_incomplete` - cross_judgment_incomplete
         * `cross_judgment_invalid` - cross_judgment_invalid
+        * `cross_judgment_merged` - cross_judgment_merged
         * `cross_judgment_open` - cross_judgment_open
         * `curability_required` - curability_required
         * `current_session` - current_session
@@ -43495,6 +43504,7 @@ components:
         * `no_grievance_filed` - no_grievance_filed
         * `no_mortal_sin` - no_mortal_sin
         * `no_nodes` - no_nodes
+        * `no_pending_flow` - no_pending_flow
         * `no_pending_node` - no_pending_node
         * `no_realm` - no_realm
         * `no_rows` - no_rows
@@ -43558,6 +43568,8 @@ components:
         * `not_uploader` - not_uploader
         * `not_verified` - not_verified
         * `not_weighed` - not_weighed
+        * `not_withdrawable` - not_withdrawable
+        * `not_your_seal` - not_your_seal
         * `note_required` - note_required
         * `nothing_to_change` - nothing_to_change
         * `officer_has_open_work` - officer_has_open_work

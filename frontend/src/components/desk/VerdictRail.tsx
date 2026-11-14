@@ -71,7 +71,9 @@ export default function VerdictRail({
   onOpen: () => void;
 }) {
   const { t } = useI18n();
-  const { data } = useQuery({ queryKey: judgmentKeys.dossier(row.id), queryFn: async () => (await dossiersApi.get(row.id)).data });
+  // OpenCase already fetched this dossier; the rail mounts later (lazy), so it reads the cache instead of
+  // refetching on mount (caseDeskRequests: one cold open = two requests).
+  const { data } = useQuery({ queryKey: judgmentKeys.dossier(row.id), queryFn: async () => (await dossiersApi.get(row.id)).data, staleTime: 30_000 });
   const [selected, setSelected] = useState<VerdictCode | null>(draft?.verdict ?? null);
   const [notes, setNotes] = useState(draft?.notes ?? "");
   const civ = spineCivOf(row.civilization);

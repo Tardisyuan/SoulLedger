@@ -996,10 +996,7 @@
   /* 顶线的形状(第四十五批第一节):文明皮一律 3px,四家四种形状,去色以后近看也分得清;中性皮(上面那条)2px 实线不变。
      地府 实线 · 欧洲 1 + 间 1 + 1 · 埃及 每 48px 一个 6px 缺口 · 希腊 1px 底线 + 2px 方齿(齿宽 4、周期 8)。
      写在加载态前面:选择器一样重,加载中的底(line)照旧盖过形状。 */
-  [data-civ="cn"] .page-head-topline,
-  [data-civ="eu"] .page-head-topline,
-  [data-civ="eg"] .page-head-topline,
-  [data-civ="gr"] .page-head-topline {
+  :is([data-civ="cn"], [data-civ="eu"], [data-civ="eg"], [data-civ="gr"]) .page-head-topline {
     --tl: oklch(var(--color-main-ink));
     height: 3px;
   }
