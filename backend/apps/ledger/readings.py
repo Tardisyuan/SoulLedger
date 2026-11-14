@@ -98,6 +98,7 @@ full set is readable in one place instead of being reconstructed out of a
 paragraph.
 """
 from apps.ledger.fungibility import offset_within_classes
+from apps.realms.cosmology import COSMOLOGY
 from apps.souls.dates import whole_years_between
 from apps.souls.models import Civilization
 
@@ -525,12 +526,9 @@ def _greek_reading(merit: int, demerit: int, merit_count: int,
     }
 
 
-CIVILIZATION_READING = {
-    Civilization.CHINESE: _chinese_reading,
-    Civilization.EGYPTIAN: _egyptian_reading,
-    Civilization.EUROPEAN: _european_reading,
-    Civilization.GREEK: _greek_reading,
-}
+# The builder each cosmology reads its ledger with: `reading` in `apps.realms.cosmology.COSMOLOGY`
+# (2026-11-14), which points back at the four builders above by name.
+CIVILIZATION_READING = {civilization: policy.reading for civilization, policy in COSMOLOGY.items()}
 
 
 #: Why a ledger got no reading, as a code rather than a sentence.

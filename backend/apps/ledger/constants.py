@@ -9,6 +9,7 @@
 
 `services.py` 重导出这里的每一个名字,既有 import 一处不用改。
 """
+from apps.realms.cosmology import COSMOLOGY
 from apps.souls.models import Civilization
 
 LEDGER_CACHE_TTL = 60 * 5  # 5 minutes
@@ -131,7 +132,10 @@ INHERITANCE_DEMERIT = 1.0
 # GREEK stays absent from TERMINAL_COSMOLOGY_REASON below: a cosmology cannot
 # be in both, the norm is rebirth, and the incurable are stopped by their own
 # eternal disposition, not by a rule about the whole cosmology.
-REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE, Civilization.GREEK})
+#
+# Since 2026-11-14 the set is derived from `rebirth_capable` in `apps.realms.cosmology.COSMOLOGY`, the one
+# place a civilization's rules are registered; the reasons above stay here, with the name.
+REBIRTH_CAPABLE_CIVILIZATIONS = frozenset(c for c, policy in COSMOLOGY.items() if policy.rebirth_capable)
 
 # Cosmologies whose routing is bound by 「功過有不可折者」.
 #
