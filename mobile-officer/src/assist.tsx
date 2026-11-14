@@ -26,7 +26,7 @@ import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDi
 
 import { ActionButton, type TabKey } from "./kit";
 import { useSession } from "./session";
-import { Button, HeadMark, HeadTexture, Icon, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, markFits, radius, space, useI18n, useTheme } from "./shared";
+import { Button, HeadMark, HeadTexture, Icon, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, markFits, radius, space, useI18n, useTheme, Press } from "./shared";
 
 /**
  * Each tab as a page the backend knows (`OFFICER_SCREENS`). 待办 → `workflow`: its first and main
@@ -170,9 +170,9 @@ export function TabHead({ tab, onAsk, onSearch }: { tab: TabKey; onAsk: () => vo
       </Txt>
       <View testID="tab-head-end" onLayout={(e) => measure("end")(e.nativeEvent.layout.width)} style={styles.headEnd}>
         {onSearch ? (
-          <Pressable testID="desk-search" accessibilityRole="button" accessibilityLabel={t("officer_app.desk.search")} onPress={onSearch} style={styles.headButton}>
+          <Press testID="desk-search" accessibilityRole="button" accessibilityLabel={t("officer_app.desk.search")} onPress={onSearch} style={styles.headButton}>
             <Icon name="search" size={18} color={theme.ink} />
-          </Pressable>
+          </Press>
         ) : null}
         <Pressable
           testID="assist-entry"
@@ -207,9 +207,9 @@ export function AssistSheet({ assist, tab }: { assist: OfficerAssist; tab: TabKe
 
 function HeadButton({ label, onPress, testID, accessibilityLabel }: { label: string; onPress: () => void; testID: string; accessibilityLabel?: string }) {
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} onPress={onPress} style={styles.headButton}>
+    <Press testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} onPress={onPress} style={styles.headButton}>
       <Txt variant="nav">{label}</Txt>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -435,17 +435,17 @@ function History({ assist }: { assist: OfficerAssist }) {
     const when = isToday(c.last_active_at) ? t("officer_app.assist.time_today", { time: hhmm(at) }) : `${mmdd(at)} ${hhmm(at)}`;
     return (
       <View key={c.id} testID={`assist-row-${c.id}`} style={[styles.historyRow, { borderBottomColor: theme.hair }]}>
-        <Pressable accessibilityRole="button" onPress={() => openOne(c.id)} style={[styles.grow, { gap: space[1], paddingVertical: space[3] }]}>
+        <Press accessibilityRole="button" onPress={() => openOne(c.id)} style={[styles.grow, { gap: space[1], paddingVertical: space[3] }]}>
           <OneLine variant="caption" tone="muted" onPress={() => openOne(c.id)}>{`${pageName(c.screen)} · ${when}`}</OneLine>
           <Txt variant="body" numberOfLines={2}>
             {c.first_question}
           </Txt>
-        </Pressable>
-        <Pressable testID={`assist-delete-${c.id}`} accessibilityRole="button" accessibilityLabel={t("officer_assist.delete_label")} onPress={() => setDoomed(c)} style={styles.headButton}>
+        </Press>
+        <Press testID={`assist-delete-${c.id}`} accessibilityRole="button" accessibilityLabel={t("officer_assist.delete_label")} onPress={() => setDoomed(c)} style={styles.headButton}>
           <Txt variant="nav" tone="muted">
             ×
           </Txt>
-        </Pressable>
+        </Press>
       </View>
     );
   };

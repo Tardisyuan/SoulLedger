@@ -60,6 +60,7 @@ import {
   useRemote,
   useTheme,
   shade,
+  Press,
 } from "../ui";
 import { invalidateSocialStatus, mutedReasonOf, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
@@ -212,9 +213,9 @@ export function PostCard({
   const body = (
     <>
       <View style={styles.cardHead}>
-        <Pressable testID={`author-${post.id}`} accessibilityRole="button" accessibilityLabel={post.author.display_name} disabled={!onAuthor} onPress={onAuthor} hitSlop={8}>
+        <Press testID={`author-${post.id}`} accessibilityRole="button" accessibilityLabel={post.author.display_name} disabled={!onAuthor} onPress={onAuthor} hitSlop={8}>
           <Glyph text={post.author.display_name} tone={reborn ? "subtle" : "muted"} dotted={reborn} size={36} />
-        </Pressable>
+        </Press>
         <View style={styles.fill}>
           <View style={styles.line}>
             <OneLine style={[styles.name, { color: reborn ? t.inkSubtle : t.ink }]} onPress={onAuthor ?? onPress}>
@@ -377,7 +378,7 @@ export function CircleScreen() {
         {([true, false] as const).map((f) => {
           const on = f === following;
           return (
-            <Pressable
+            <Press
               key={String(f)}
               testID={f ? "circle-following" : "circle-tenant"}
               accessibilityRole="tab"
@@ -388,22 +389,22 @@ export function CircleScreen() {
               <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.subTabText}>
                 {tr(f ? "soul_app.circle.feed.following" : "soul_app.circle.feed.tenant")}
               </Txt>
-            </Pressable>
+            </Press>
           );
         })}
       </View>
-      <Pressable
+      <Press
         testID="compose-entry"
         accessibilityRole="button"
         onPress={write}
         style={[styles.entry, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}
       >
-        <View style={[styles.entryBox, { borderColor: t.hair, backgroundColor: t.s1 }]}>
+        <View style={[styles.entryBox, { borderColor: t.inkSubtle, backgroundColor: t.s1 }]}>
           <Txt style={[styles.entryText, { color: t.inkSubtle, fontFamily: quoteFamily(tr("soul_app.circle.feed.compose_hint")) }]}>
             {tr("soul_app.circle.feed.compose_hint")}
           </Txt>
         </View>
-      </Pressable>
+      </Press>
       {justPending ? (
         <View testID="pending-banner" style={[styles.banner, { paddingHorizontal: gutter, borderBottomColor: t.hair, borderLeftColor: t.ink, backgroundColor: t.s1 }]}>
           <Txt variant="bodyLg">{tr("soul_app.circle.compose.pending_title")}</Txt>
@@ -578,7 +579,7 @@ export function ComposePostScreen() {
           placeholderTextColor={t.inkSubtle}
           multiline
           maxLength={POST_MAX}
-          style={[styles.postInput, { borderColor: t.hair2, backgroundColor: t.s1, color: t.ink, fontFamily: quoteFamily(draft || tr("soul_app.circle.feed.compose_hint")) }]}
+          style={[styles.postInput, { borderColor: t.inkSubtle, backgroundColor: t.s1, color: t.ink, fontFamily: quoteFamily(draft || tr("soul_app.circle.feed.compose_hint")) }]}
         />
         <View style={styles.counter}>
           <Mono>{`${draft.length} / ${POST_MAX}`}</Mono>
@@ -591,7 +592,7 @@ export function ComposePostScreen() {
           {VISIBILITY.map((o) => {
             const on = o.value === visibility;
             return (
-              <Pressable
+              <Press
                 key={o.value}
                 testID={`vis-${o.value}`}
                 accessibilityRole="radio"
@@ -608,7 +609,7 @@ export function ComposePostScreen() {
                     {tr(o.hint)}
                   </Txt>
                 </View>
-              </Pressable>
+              </Press>
             );
           })}
         </View>
@@ -657,7 +658,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
           const on = post.my_reaction === r.type;
           const color = on ? (lamp ? t.lamp : t.ink) : t.inkSubtle;
           return (
-            <Pressable
+            <Press
               key={r.type}
               testID={`react-${r.type}`}
               accessibilityRole="button"
@@ -678,7 +679,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
               <Txt variant="label" style={[styles.noSpacing, { color }]}>
                 {tr(r.key)}
               </Txt>
-            </Pressable>
+            </Press>
           );
         })}
       </View>
@@ -740,9 +741,9 @@ function CommentRow({
   const { gutter } = useLayout();
   return (
     <View testID={`comment-${c.id}`} style={[styles.comment, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={c.author.display_name} onPress={onAuthor} hitSlop={8}>
+      <Press accessibilityRole="button" accessibilityLabel={c.author.display_name} onPress={onAuthor} hitSlop={8}>
         <Glyph text={c.author.display_name} tone={c.author.is_active ? "muted" : "subtle"} dotted={!c.author.is_active} size={28} />
-      </Pressable>
+      </Press>
       <View style={styles.fill}>
         <View style={styles.line}>
           <OneLine style={styles.commentName} onPress={onAuthor}>
@@ -765,7 +766,7 @@ function CommentRow({
           </Txt>
         ) : null}
       </View>
-      <Pressable
+      <Press
         testID={`comment-more-${c.id}`}
         accessibilityRole="button"
         accessibilityLabel={tr(c.is_mine ? "soul_app.circle.delete.action" : "soul_app.circle.report.comment")}
@@ -775,7 +776,7 @@ function CommentRow({
         style={styles.commentMore}
       >
         <Icon name="more" size={14} color={t.inkSubtle} strokeWidth={2} />
-      </Pressable>
+      </Press>
     </View>
   );
 }
@@ -826,16 +827,16 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
           </View>
         ) : (
           <View testID="delete-menu" accessibilityViewIsModal style={[styles.menu, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
-            <Pressable testID="delete-row" accessibilityRole="button" onPress={() => setAsking(true)} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+            <Press testID="delete-row" accessibilityRole="button" onPress={() => setAsking(true)} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.circle.delete.action")}
               </Txt>
-            </Pressable>
-            <Pressable testID="delete-menu-cancel" accessibilityRole="button" onPress={close} style={styles.menuCancel}>
+            </Press>
+            <Press testID="delete-menu-cancel" accessibilityRole="button" onPress={close} style={styles.menuCancel}>
               <Txt variant="body" tone="muted">
                 {tr("soul_app.common.cancel")}
               </Txt>
-            </Pressable>
+            </Press>
           </View>
         )}
       </View>
@@ -1059,7 +1060,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
                   placeholderTextColor={t.inkSubtle}
                   multiline
                   maxLength={COMMENT_MAX}
-                  style={[styles.commentInput, { borderColor: t.hair2, backgroundColor: t.s0, color: t.ink, fontFamily: quoteFamily(draft || tr("soul_app.circle.comment.hint")) }]}
+                  style={[styles.commentInput, { borderColor: t.inkSubtle, backgroundColor: t.s0, color: t.ink, fontFamily: quoteFamily(draft || tr("soul_app.circle.comment.hint")) }]}
                 />
                 <Pressable
                   testID="comment-send"
@@ -1122,7 +1123,7 @@ const styles = StyleSheet.create({
   lockUntil: { marginTop: 8 },
   bar: { paddingVertical: 12, borderBottomWidth: 1 },
   lampPill: { borderWidth: 2, borderRadius: radius.pill },
-  reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
+  reaction: { minWidth: 44, minHeight: 44, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
   lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   scrim: { flex: 1 },
   sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
@@ -1145,7 +1146,7 @@ const styles = StyleSheet.create({
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   dock: { borderTopWidth: 1, paddingTop: 12 },
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
-  commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15 },
-  send: { minHeight: 42, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
+  commentInput: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15 },
+  send: { minHeight: 44, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontSize: 13, letterSpacing: 0.6 },
 });

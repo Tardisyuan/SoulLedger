@@ -5,10 +5,10 @@
  */
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import { useState } from "react";
-import { Linking, Pressable, View } from "react-native";
+import { Linking, View } from "react-native";
 
 import { LetterImageViewer } from "./screens/letterImages";
-import { OneLine, Txt, space, useI18n, useOnline, useTheme, useToast } from "./shared";
+import { OneLine, Txt, space, useI18n, useOnline, useTheme, useToast, Press } from "./shared";
 import { isPdf, sizeText } from "./todoFacts";
 
 export type AttachmentItem = {
@@ -61,7 +61,7 @@ export function AttachmentList({ items, resolve }: { items: readonly AttachmentI
         const blocked = pdf && offline;
         const second = [pdf ? "PDF" : "IMG", sizeText(a.byte_size), a.meta, blocked ? t("officer_app.detail.attachment_offline") : pdf ? t("officer_app.detail.open_system") : null].filter(Boolean).join(" · ");
         return (
-          <Pressable
+          <Press
             key={a.id}
             testID={`attachment-${a.id}`}
             accessibilityRole="button"
@@ -75,7 +75,7 @@ export function AttachmentList({ items, resolve }: { items: readonly AttachmentI
               <OneLine variant="caption" tone="muted" onPress={blocked ? undefined : () => open(a)}>{second}</OneLine>
             </View>
             <Txt variant="nav">{pdf ? "↗︎" : "›"}</Txt>
-          </Pressable>
+          </Press>
         );
       })}
       <LetterImageViewer images={shown?.images ?? []} index={shown ? shown.index : null} onClose={() => setShown(null)} />

@@ -19,7 +19,7 @@ import {
 import { NODE_STATES, REALM_SHOWN_TYPE, civKey, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useContext, useEffect, useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
 import { AppHeader } from "../chrome";
@@ -44,6 +44,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
+  Press,
 } from "../ui";
 import type { SentenceLanding } from "../sentenceKinds";
 import type { AppStackParams } from "../navTypes";
@@ -367,9 +368,9 @@ export function SentenceSection({
           {landing ? <NewTag testID="sentence-landing-tag" /> : null}
           <View style={styles.fill} />
           {hasPlan ? (
-            <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={13} onPress={() => navigation.navigate("Sentence", { landing })}>
+            <Press testID="sentence-all" accessibilityRole="button" hitSlop={13} onPress={() => navigation.navigate("Sentence", { landing })}>
               <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.all")} →`}</Txt>
-            </Pressable>
+            </Press>
           ) : null}
         </View>
       ) : null}
@@ -586,9 +587,9 @@ export function SentenceBlocked() {
           ) : null}
         </View>
       ) : null}
-      <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
+      <Press testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
         <Txt variant="caption" tone="ink" style={styles.link}>{`${t(word("soul_app.sentence.blocked_link"))} →`}</Txt>
-      </Pressable>
+      </Press>
     </View>
   );
 }

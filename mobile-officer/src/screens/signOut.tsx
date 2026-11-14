@@ -5,13 +5,13 @@
  * `ask` decides: 我的 still asks (push stops on this device), the other two sign out at once as before.
  */
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 
 import { draftIds } from "../drafts";
 import { ActionButton } from "../kit";
 import { retryAll, useOutbox } from "../outbox";
 import { useSession } from "../session";
-import { Notice, Txt, space, useI18n, useOnline } from "../shared";
+import { Notice, Txt, space, useI18n, useOnline, Press } from "../shared";
 
 export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: string; kind: "outline" | "ink-outline"; ask?: boolean; onAsk?: () => void }) {
   const { t } = useI18n();
@@ -58,11 +58,11 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
       {pending ? (
         <>
           <ActionButton testID={`${testID}-cancel`} kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
-          <Pressable testID={`${testID}-confirm`} accessibilityRole="button" onPress={() => signOut()} hitSlop={8} style={{ alignSelf: "center", paddingVertical: space[2] }}>
+          <Press testID={`${testID}-confirm`} accessibilityRole="button" onPress={() => signOut()} hitSlop={8} style={{ alignSelf: "center", paddingVertical: space[2] }}>
             <Txt variant="caption" style={{ textDecorationLine: "underline" }}>
               {t("officer_app.me.logout_anyway")}
             </Txt>
-          </Pressable>
+          </Press>
         </>
       ) : (
         <View style={{ flexDirection: "row", gap: space[3] }}>

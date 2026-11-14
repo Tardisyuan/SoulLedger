@@ -12,7 +12,7 @@
  */
 import { authApi } from "@soulledger/core/api/auth";
 import { useEffect, useState, type ReactNode, type Ref } from "react";
-import { BackHandler, Linking, Pressable, View, type ScrollView } from "react-native";
+import { BackHandler, Linking, View, type ScrollView } from "react-native";
 
 import { ActionButton } from "../kit";
 import { registeredToken } from "../push";
@@ -21,7 +21,7 @@ import { passwordMinLength } from "@soulledger/core/domain/passwordRules";
 
 import { useSession } from "../session";
 import { SignOutButton } from "./signOut";
-import { Button, FieldError, Icon, Input, Notice, PasswordMatch, PasswordRules, Screen, Txt, space, useI18n, usePasswordForm, useTheme, useToast } from "../shared";
+import { Button, FieldError, Icon, Input, Notice, PasswordMatch, PasswordRules, Screen, Txt, space, useI18n, usePasswordForm, useTheme, useToast, Press } from "../shared";
 
 /** A back row over a screen. `locked`: leaving is not allowed now (the Android back key is swallowed too). */
 export function AccountFrame({
@@ -50,7 +50,7 @@ export function AccountFrame({
   return (
     <View testID={testID} style={{ flex: 1, backgroundColor: theme.s0 }}>
       {locked ? null : (
-        <Pressable
+        <Press
           testID={`${testID}-back`}
           accessibilityRole="button"
           accessibilityLabel={t("officer_app.back")}
@@ -59,7 +59,7 @@ export function AccountFrame({
         >
           <Icon name="back" size={16} color={theme.ink} />
           <Txt variant="nav">{t("officer_app.back")}</Txt>
-        </Pressable>
+        </Press>
       )}
       <Screen edges={["left", "right"]} belowHeader scrollRef={scrollRef}>
         <View style={{ padding: space[5], gap: space[4] }}>{children}</View>

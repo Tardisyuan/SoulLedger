@@ -21,13 +21,13 @@ import { Image, type ImageSource } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Modal, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { fileField } from "../platform";
-import { AlertTxt, Txt, useLayout, useReducedMotion, useTheme } from "../ui";
+import { AlertTxt, Txt, useLayout, useReducedMotion, useTheme, Press } from "../ui";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
@@ -53,7 +53,8 @@ function Tile({ source, size, label, testID, fade, onPress }: { source: ImageSou
   const { t: tr } = useI18n();
   const [broken, setBroken] = useState(false);
   return (
-    <Pressable
+    <Press
+      dim
       testID={testID}
       accessibilityRole={onPress ? "imagebutton" : "image"}
       accessibilityLabel={label}
@@ -68,7 +69,7 @@ function Tile({ source, size, label, testID, fade, onPress }: { source: ImageSou
       ) : (
         <Image source={source} style={styles.fill} contentFit="cover" cachePolicy="memory-disk" transition={fade} onError={() => setBroken(true)} />
       )}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -121,9 +122,9 @@ function ViewerPages({ media, start, onClose }: { media: PostMedia[]; start: num
         <Txt testID="media-viewer-counter" variant="value" tone="muted">
           {tr("soul_app.circle.media.viewer", { i: String(current + 1), n: String(media.length) })}
         </Txt>
-        <Pressable testID="media-viewer-close" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.media.close")} onPress={onClose} hitSlop={10}>
+        <Press testID="media-viewer-close" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.media.close")} onPress={onClose} hitSlop={10}>
           <Icon name="close" size={18} color={t.ink} />
-        </Pressable>
+        </Press>
       </View>
       <ScrollView
         testID="media-viewer-pages"
@@ -283,16 +284,16 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
                     {tr("soul_app.circle.media.failed")}
                   </AlertTxt>
                   <View style={styles.actions}>
-                    <Pressable testID={`upload-${i}-retry`} accessibilityRole="button" onPress={() => uploads.retry(it.key)} hitSlop={11} style={[styles.action, { borderColor: t.hair2 }]}>
+                    <Press testID={`upload-${i}-retry`} accessibilityRole="button" onPress={() => uploads.retry(it.key)} hitSlop={11} style={[styles.action, { borderColor: t.hair2 }]}>
                       <Txt variant="label">{tr("soul_app.circle.media.retry")}</Txt>
-                    </Pressable>
-                    <Pressable testID={`upload-${i}-remove`} accessibilityRole="button" onPress={() => uploads.remove(it.key)} hitSlop={11} style={[styles.action, { borderColor: t.hair2 }]}>
+                    </Press>
+                    <Press testID={`upload-${i}-remove`} accessibilityRole="button" onPress={() => uploads.remove(it.key)} hitSlop={11} style={[styles.action, { borderColor: t.hair2 }]}>
                       <Txt variant="label">{tr("soul_app.circle.media.remove")}</Txt>
-                    </Pressable>
+                    </Press>
                   </View>
                 </View>
               ) : (
-                <Pressable
+                <Press
                   testID={`upload-${i}-remove`}
                   accessibilityRole="button"
                   accessibilityLabel={tr("soul_app.circle.media.remove")}
@@ -302,13 +303,13 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
                   style={[styles.corner, { backgroundColor: t.s0, borderColor: t.hair2 }]}
                 >
                   <Icon name="close" size={12} color={t.ink} />
-                </Pressable>
+                </Press>
               )}
             </View>
           );
         })}
         {uploads.room > 0 ? (
-          <Pressable
+          <Press
             testID="media-add"
             accessibilityRole="button"
             accessibilityLabel={tr("soul_app.circle.media.add")}
@@ -319,7 +320,7 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
             <Txt variant="caption" tone="muted">
               {tr("soul_app.circle.media.add")}
             </Txt>
-          </Pressable>
+          </Press>
         ) : null}
       </View>
       <Txt testID="media-count" variant="value" tone="subtle" style={styles.count}>

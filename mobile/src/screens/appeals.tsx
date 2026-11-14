@@ -43,7 +43,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { useDay } from "./lifeProgress";
-import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme } from "../ui";
+import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { useDiscardGuard } from "./discardGuard";
 import { ButtonPair, MfaSheet } from "./mfaParts";
@@ -371,7 +371,7 @@ export function AppealLine({
         )}
       </View>
       {latest ? (
-        <Pressable
+        <Press
           testID={`appeal-rounds-${row.judgment_id}`}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
@@ -390,7 +390,7 @@ export function AppealLine({
           <Txt variant="caption" tone="subtle">
             {open ? "▲" : "▼"}
           </Txt>
-        </Pressable>
+        </Press>
       ) : null}
       {open
         ? rounds.map((r) => (

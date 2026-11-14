@@ -6,7 +6,7 @@
  */
 import { platform } from "@soulledger/core/platform";
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 
 import { BIO_ASKED_PREFIX, officerDevice } from "./deviceLogin";
 import { Row } from "./kit";
@@ -25,6 +25,7 @@ import {
   useTheme,
   useToast,
   type Biometry,
+  Press,
 } from "./shared";
 
 /**
@@ -201,11 +202,11 @@ export function BioAsk({ username }: { username: string }) {
         </Txt>
         {/* 第五十批 C5: 「开启」 in ink, 「以后再说」 a ghost button under it. */}
         <Button testID="bio-ask-ok" title={t("officer_app.bio_login.enable_ok")} onPress={() => void turnOn()} busy={busy} />
-        <Pressable testID="bio-ask-later" accessibilityRole="button" disabled={busy} onPress={finish} style={{ minHeight: 48, alignItems: "center", justifyContent: "center" }}>
+        <Press testID="bio-ask-later" accessibilityRole="button" disabled={busy} onPress={finish} style={{ minHeight: 48, alignItems: "center", justifyContent: "center" }}>
           <Txt variant="bodyLg" tone="muted">
             {t("officer_app.bio_login.ask_later")}
           </Txt>
-        </Pressable>
+        </Press>
       </View>
     </Sheet>
   );

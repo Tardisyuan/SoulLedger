@@ -10,12 +10,12 @@
 import { localName } from "@soulledger/core/domain/localName";
 import type { FactAttachment, FactHistory, FactSoul, TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 
 import { AttachmentList } from "../attachments";
 import { formatWhen } from "../format";
 import { hallLabel } from "../rules";
-import { OneLine, SectionLabel, Txt, radius, space, useI18n, useTheme } from "../shared";
+import { OneLine, SectionLabel, Txt, radius, space, useI18n, useTheme, Press } from "../shared";
 import { historyView, soulsView } from "../todoFacts";
 import { SoulLink } from "./soulDetail";
 
@@ -143,9 +143,9 @@ function Souls({ f, onOpenSoul }: { f: TodoFacts; onOpenSoul: OpenSoul }) {
         <SoulName key={s.soul_code} soul={s} onOpenSoul={onOpenSoul} variant="body" />
       ))}
       {more > 0 ? (
-        <Pressable testID="facts-souls-more" accessibilityRole="button" onPress={() => setOpen(true)} style={{ minHeight: 44, justifyContent: "center" }}>
+        <Press testID="facts-souls-more" accessibilityRole="button" onPress={() => setOpen(true)} style={{ minHeight: 44, justifyContent: "center" }}>
           <Txt variant="nav">{`${t("officer_app.detail.souls_more", { n: String(more) })} ›`}</Txt>
-        </Pressable>
+        </Press>
       ) : null}
     </View>
   );
@@ -181,9 +181,9 @@ function History({ steps }: { steps: FactHistory[] }) {
       {shown.map((s, i) => (
         <View key={`${s.kind}-${i}`}>
           {i === foldAt && hidden.length > 0 ? (
-            <Pressable testID="facts-history-more" accessibilityRole="button" onPress={() => setExpanded(true)} style={{ minHeight: 44, justifyContent: "center", paddingLeft: 16 + space[3] }}>
+            <Press testID="facts-history-more" accessibilityRole="button" onPress={() => setExpanded(true)} style={{ minHeight: 44, justifyContent: "center", paddingLeft: 16 + space[3] }}>
               <Txt variant="nav">{`${t("officer_app.detail.history_more", { n: String(hidden.length) })} ›`}</Txt>
-            </Pressable>
+            </Press>
           ) : null}
           {row(s, i)}
         </View>

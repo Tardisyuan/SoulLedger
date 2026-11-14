@@ -25,7 +25,7 @@ import { bubbleStamp } from "../chatRules";
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { ON_PLAQUE } from "../theme";
-import { AlertTxt, Loader, OneLine, Txt, useTheme } from "../ui";
+import { AlertTxt, Loader, OneLine, Txt, useTheme, Press } from "../ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
 export const CHAT_IMAGE_MAX = 4;
@@ -100,18 +100,18 @@ function Picture({ image, width, onPress, testID }: { image: ChatImageRef; width
   const { source, failed, reload } = useChatImageSource(image.id);
   const frame = [styles.frame, { width, aspectRatio: ratio(image.width, image.height), borderColor: t.hair2, backgroundColor: t.s2 }];
   return (
-    <Pressable testID={testID} accessibilityRole="imagebutton" accessibilityLabel={tr("soul_app.circle.media.image", { i: "1" })} onPress={onPress} style={frame}>
+    <Press dim testID={testID} accessibilityRole="imagebutton" accessibilityLabel={tr("soul_app.circle.media.image", { i: "1" })} onPress={onPress} style={frame}>
       {failed && !source ? (
-        <Pressable testID={`${testID}-broken`} accessibilityRole="button" onPress={reload} style={styles.center}>
+        <Press testID={`${testID}-broken`} accessibilityRole="button" onPress={reload} style={styles.center}>
           <Txt variant="caption" tone="subtle" style={styles.centered}>
             {tr("soul_app.circle.media.load_failed")}
           </Txt>
-        </Pressable>
+        </Press>
       ) : source ? (
         // 已缓存的图过期后照样显示;缓存里没有、地址又过期了才会落到 onError → 重新要一个地址。
         <Image source={source} style={styles.fill} contentFit="cover" cachePolicy="memory-disk" transition={0} onError={reload} />
       ) : null}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -194,17 +194,17 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
               {`! ${tr("soul_app.chat.image.failed")}`}
             </AlertTxt>
             {retryable(o) ? (
-              <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
+              <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
                 <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                   {` · ${tr("soul_app.circle.media.retry")}`}
                 </Txt>
-              </Pressable>
+              </Press>
             ) : null}
-            <Pressable testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
+            <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
               <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                 {` · ${tr("soul_app.chat.receipt.delete")}`}
               </Txt>
-            </Pressable>
+            </Press>
           </View>
         ) : null}
         {failed && reason ? (

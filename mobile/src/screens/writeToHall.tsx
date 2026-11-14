@@ -14,14 +14,14 @@
 import { soulChatErrorCode, type SoulConversation, type SoulFeedbackTag } from "@soulledger/core/api/soul-chat";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 
 import { type Outgoing, useChat } from "../chat";
 import { chatSections } from "../chatRules";
 import { Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { Button, Input, Notice, Screen, Txt, useLayout, useTheme } from "../ui";
+import { Button, Input, Notice, Screen, Txt, useLayout, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { compressWithSize, pickImages } from "./circleMedia";
 import { useDiscardGuard } from "./discardGuard";
@@ -53,7 +53,7 @@ function receiptOf(items: Outgoing[]): "sending" | "sent" | "queued" | "failed" 
 function Chip({ tag, label, on, onPress }: { tag: string; label: string; on: boolean; onPress: () => void }) {
   const theme = useTheme();
   return (
-    <Pressable
+    <Press
       testID={`kind-${tag}`}
       accessibilityRole="radio"
       accessibilityState={{ checked: on }}
@@ -63,7 +63,7 @@ function Chip({ tag, label, on, onPress }: { tag: string; label: string; on: boo
       <Txt variant="body" style={{ color: on ? theme.s1 : theme.ink }}>
         {label}
       </Txt>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -213,7 +213,7 @@ export function FeedbackScreen() {
             {shots.map((shot, i) => (
               <View key={shot.id} testID={`shot-${i}`} style={[styles.shot, { borderColor: theme.hair }]}>
                 <Image source={{ uri: shot.uri }} style={styles.shotImage} accessibilityIgnoresInvertColors />
-                <Pressable
+                <Press
                   testID={`shot-remove-${i}`}
                   accessibilityRole="button"
                   accessibilityLabel={t("soul_app.feedback.shots_remove")}
@@ -222,11 +222,11 @@ export function FeedbackScreen() {
                   style={[styles.shotRemove, { backgroundColor: theme.s1, borderColor: theme.inkSubtle }]}
                 >
                   <Icon name="close" size={12} color={theme.ink} />
-                </Pressable>
+                </Press>
               </View>
             ))}
             {shots.length < FEEDBACK_SHOT_MAX ? (
-              <Pressable
+              <Press
                 testID="shot-add"
                 accessibilityRole="button"
                 accessibilityLabel={t("soul_app.feedback.shots_add")}
@@ -234,7 +234,7 @@ export function FeedbackScreen() {
                 style={[styles.shot, styles.add, { borderColor: theme.inkSubtle }]}
               >
                 <Icon name="plus" size={20} color={theme.inkMuted} />
-              </Pressable>
+              </Press>
             ) : null}
           </View>
         </View>
@@ -247,7 +247,7 @@ export function FeedbackScreen() {
               {t("soul_app.feedback.appeal_hint")}
             </Txt>
             {/* 「请走申诉」 says where: the life tab, 审判 opened (review 2026-11-01). */}
-            <Pressable
+            <Press
               testID="feedback-appeal-link"
               accessibilityRole="link"
               onPress={() => navigation.navigate("Tabs", { screen: "Life", params: { lifeFocus: { appeals: true } } })}
@@ -256,7 +256,7 @@ export function FeedbackScreen() {
               <Txt variant="body" style={styles.underline}>
                 {t("soul_app.feedback.appeal_link")}
               </Txt>
-            </Pressable>
+            </Press>
           </View>
         ) : null}
         {failed ? (
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   underline: { textDecorationLine: "underline" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 40, paddingHorizontal: 12, borderWidth: 1, justifyContent: "center" },
+  chip: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, justifyContent: "center" },
   shots: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   shot: { width: 88, height: 88, borderWidth: 1 },
   shotImage: { width: "100%", height: "100%" },

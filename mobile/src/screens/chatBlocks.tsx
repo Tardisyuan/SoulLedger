@@ -5,12 +5,12 @@
  */
 import { soulChatApi, type SoulChatBlock } from "@soulledger/core/api/soul-chat";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useChat } from "../chat";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { Empty, Screen, SectionError, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Empty, Screen, SectionError, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
 
 function BlockRow({ block, busy, onUnblock }: { block: SoulChatBlock; busy: boolean; onUnblock: () => void }) {
   const theme = useTheme();
@@ -21,7 +21,7 @@ function BlockRow({ block, busy, onUnblock }: { block: SoulChatBlock; busy: bool
       <Txt variant="bodyLg" style={styles.fill}>
         {block.peer_name}
       </Txt>
-      <Pressable
+      <Press
         testID={`unblock-${block.id}`}
         accessibilityRole="button"
         accessibilityLabel={`${t("soul_app.chat.blocks.unblock")} ${block.peer_name}`}
@@ -32,7 +32,7 @@ function BlockRow({ block, busy, onUnblock }: { block: SoulChatBlock; busy: bool
         <Txt variant="bodyLg" style={styles.underline}>
           {t("soul_app.chat.blocks.unblock")}
         </Txt>
-      </Pressable>
+      </Press>
     </View>
   );
 }

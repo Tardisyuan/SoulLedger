@@ -25,7 +25,7 @@ import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote, useOnBump } from "../readCache";
 import { goneKey, isDenied } from "../rules";
 import { useCan, useSession } from "../session";
-import { GUTTER, OneLine, Screen, Txt, family, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useTheme, useToast } from "../shared";
+import { GUTTER, OneLine, Screen, Txt, family, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useTheme, useToast, Press } from "../shared";
 import { deadlineText, heldBeforeClaim } from "../verdict";
 
 type DeskGroup = JudgmentQueueGroup;
@@ -253,9 +253,9 @@ export function QueueTab({
                 </Txt>
                 <View style={styles.groupRight}>
                   {group === "mine" && canClaim && onSwipe ? (
-                    <Pressable testID="queue-open-swipe" accessibilityRole="button" disabled={offline} onPress={onSwipe} hitSlop={12}>
+                    <Press testID="queue-open-swipe" accessibilityRole="button" disabled={offline} onPress={onSwipe} hitSlop={12}>
                       <Txt variant="caption" style={{ color: offline ? theme.faint : theme.ink }}>{`${t("officer_app.queue.open_swipe")} ›`}</Txt>
-                    </Pressable>
+                    </Press>
                   ) : null}
                   <Txt variant="value" style={{ color: theme.faintText }}>
                     {String((source === "all" ? c?.[group] : null) ?? rows.length)}
@@ -343,7 +343,7 @@ function DeskRow({
       overshootRight={false}
       friction={2}
       renderRightActions={() => (
-        <Pressable
+        <Press
           testID={action.testID}
           accessibilityRole="button"
           accessibilityLabel={action.label}
@@ -355,7 +355,7 @@ function DeskRow({
           <Txt variant="nav" style={{ color: action.disabled ? theme.inkSubtle : theme.s0 }}>
             {action.label}
           </Txt>
-        </Pressable>
+        </Press>
       )}
     >
       {body}

@@ -43,6 +43,7 @@ import {
   TextInput,
   View,
   type LayoutChangeEvent,
+  type PressableProps,
   type ScrollViewProps,
   type StyleProp,
   type TextInputProps,
@@ -816,6 +817,34 @@ export function shade(hex: string, amount = 0.24): string {
   return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** What `Press` lays over a target's own face while the finger is down (A1 "按下"). */
+export function pressedFace(t: Theme, ground: unknown): ViewStyle {
+  if (ground == null || ground === "transparent") return { backgroundColor: t.hair };
+  if (typeof ground === "string" && /^#[0-9a-f]{6}$/i.test(ground)) return { backgroundColor: shade(ground) };
+  return styles.pressed;
+}
+
+/**
+ * A `Pressable` that answers the finger (App 手感, 2026-11-15; HIG "immediate feedback", M3 state layer): while it is
+ * down its ground darkens -- a solid fill 24% toward black (`shade`), no fill to `hair`, any other fill to 0.8 opacity.
+ * Nothing moves, nothing ripples; the face returns as the finger lifts. Every tappable thing in both apps is a `Press`
+ * or a `Pressable` whose style already reads `pressed`; the few plain ones (scrims, full-screen skips, holds that fill
+ * themselves) are counted in `__tests__/pressedState.test.tsx`.
+ */
+export function Press({ style, dim, ...rest }: PressableProps & { ref?: Ref<View>; /** An image covers the ground: dim the whole target instead. */ dim?: boolean }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      {...rest}
+      style={(state) => {
+        const own = typeof style === "function" ? style(state) : style;
+        if (!state.pressed) return own;
+        return [own, dim ? styles.pressed : pressedFace(t, StyleSheet.flatten(own)?.backgroundColor)];
+      }}
+    />
+  );
+}
+
 /**
  * The checked mark of a radio (a circle — A2's exception) or a switch (square),
  * per A1: checked is solid ink, unchecked an ink3 outline; disabled is s2 with a
@@ -916,7 +945,7 @@ export function Input({
   // Handoff 2d: at ≥ 1.7× text the reveal leaves the field's right edge for a full-width row under it.
   const { stack } = useLayout();
   const reveal = secureToggle ? (
-    <Pressable
+    <Press
       testID={rest.testID ? `${rest.testID}-reveal` : undefined}
       accessibilityRole="button"
       onPress={() => setRevealed((v) => !v)}
@@ -925,7 +954,7 @@ export function Input({
       <Txt variant="label" tone="muted" style={styles.noSpacing}>
         {revealed ? secureToggle.hide : secureToggle.show}
       </Txt>
-    </Pressable>
+    </Press>
   ) : null;
   return (
     <View style={styles.field}>

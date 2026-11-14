@@ -30,7 +30,7 @@ import { formatWhen } from "../format";
 import { ActionButton, StateView, detailStateOf } from "../kit";
 import { deskUrl } from "../rules";
 import { useSession } from "../session";
-import { Notice, Screen, SectionLabel, SmallButton, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
+import { Notice, Screen, SectionLabel, SmallButton, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, useToast, Press } from "../shared";
 
 type T = (key: string, vars?: Record<string, string>) => string;
 
@@ -325,7 +325,7 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
         const head = `${circled(s.order)} ${segmentRealm(t, s)}${mine ? ` · ${t("workflow.segment.local")}` : ""}`;
         return (
           <View key={s.order} testID={`segment-${s.order}`}>
-            <Pressable
+            <Press
               testID={`segment-head-${s.order}`}
               accessibilityRole={s.state === "DONE" ? "button" : "header"}
               accessibilityState={s.state === "DONE" ? { expanded: !folded } : undefined}
@@ -342,7 +342,7 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
             >
               <Txt variant="label" style={{ flex: 1 }}>{head}</Txt>
               <Txt variant="caption" tone="muted" testID={`segment-meta-${s.order}`}>{meta(s)}</Txt>
-            </Pressable>
+            </Press>
             {s.state === "AWAITING_PICK" ? (
               <View testID={`segment-awaiting-${s.order}`} style={[styles.node, { borderBottomColor: theme.hair }]}>
                 <Txt variant="body" tone="muted" style={styles.glyph}>◌</Txt>

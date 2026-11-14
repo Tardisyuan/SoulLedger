@@ -17,7 +17,7 @@
 import { soulMfaFailure } from "@soulledger/core/api/soul";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from "react-native";
 
 import { BrandMark } from "../brandMarkView";
 import { Icon } from "../emblems";
@@ -26,7 +26,7 @@ import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { recoveryOf, stateOfFailure, type StepState } from "../mfa";
 import { useSession, type MfaChallenge } from "../session";
-import { Button, Input, Screen, Txt, useTheme } from "../ui";
+import { Button, Input, Screen, Txt, useTheme, Press } from "../ui";
 import { CheckRow, CoverRule, DigitField, Heading, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 
@@ -129,7 +129,7 @@ export function LoginSecondStep({
     <View testID="login-second-step" style={styles.fill}>
       <CoverRule />
       <View style={styles.bar}>
-        <Pressable
+        <Press
           testID="mfa-change-account"
           accessibilityRole="button"
           accessibilityLabel={t("soul_app.change_password.back_to_login")}
@@ -137,7 +137,7 @@ export function LoginSecondStep({
           style={styles.backHit}
         >
           <Icon name="back" size={18} color={theme.ink} strokeWidth={1.4} />
-        </Pressable>
+        </Press>
         <BrandMark size={24} color={theme.ink} />
         <Txt style={styles.brand}>{t("soul_app.app_name")}</Txt>
       </View>

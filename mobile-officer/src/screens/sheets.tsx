@@ -212,14 +212,14 @@ export function DecisionSheet({
                 accessibilityLabel={t("officer_app.confirm.recent_aria", { text: r })}
                 onPress={() => setReason((reason.trim() ? `${reason}\n${r}` : r).slice(0, maxReason))}
                 style={({ pressed }) => ({
-                  height: 40,
+                  minHeight: 44,
                   flexDirection: "row",
                   alignItems: "center",
                   gap: space[2],
                   paddingHorizontal: space[3],
                   borderWidth: 1,
                   borderColor: theme.hair2,
-                  borderRadius: 8,
+                  borderRadius: radius.control,
                   backgroundColor: pressed ? theme.hair : undefined,
                 })}
               >

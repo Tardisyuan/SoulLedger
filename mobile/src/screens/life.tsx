@@ -66,6 +66,7 @@ import {
   useRemote,
   useLayout,
   useTheme,
+  Press,
 } from "../ui";
 import type { AppStackParams, LifeFocus, LifeParams } from "../navTypes";
 import { realmName, useResidence } from "../residence";
@@ -492,7 +493,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
                 </Txt>
               ) : null}
             </View>
-            <Pressable
+            <Press
               testID="copy-soul-code"
               accessibilityRole="button"
               accessibilityLabel={`${tr("soul_app.life.soul_code")} ${spellSoulCode(me.soul_code)}`}
@@ -510,7 +511,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
                 {formatSoulCode(me.soul_code)}
               </Txt>
               <Icon name="copy" size={13} color={on} strokeWidth={1.2} />
-            </Pressable>
+            </Press>
           </View>
           <Pressable
             testID="header-account"

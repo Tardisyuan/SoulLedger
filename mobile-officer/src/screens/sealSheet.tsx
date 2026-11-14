@@ -17,7 +17,7 @@ import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
 import { submitVerdict } from "../decisions";
 import { DECISION_TOAST, confirmedDecision, decisionFailureKind } from "../deviceCheck";
 import { DossierSeal } from "../dossierSeal";
-import { Input, Sheet, Txt, family, radius, space, useI18n, useOnline, useReducedMotion, useTheme, useToast } from "../shared";
+import { Input, Sheet, Txt, family, radius, space, useI18n, useOnline, useReducedMotion, useTheme, useToast, Press } from "../shared";
 import { GR_ACCOUNTS, NO_SEAL, SEAL_VERDICTS, blockedSide, passBarredBy, sealPayload, sealReady, type SealChoice, type SealVerdict } from "../verdict";
 import { Choice, RejectFields } from "./rejectSheet";
 import { verdictFailure } from "./swipe";
@@ -73,7 +73,7 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
         {options.map((o, i) => {
           const on = c.verdict === o.verdict;
           return (
-            <Pressable
+            <Press
               key={o.verdict}
               testID={`seal-option-${o.verdict}`}
               accessibilityRole="radio"
@@ -95,7 +95,7 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
                   </Txt>
                 ) : null}
               </View>
-            </Pressable>
+            </Press>
           );
         })}
         <Txt variant="caption" tone="muted">

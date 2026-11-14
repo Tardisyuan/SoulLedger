@@ -10,13 +10,13 @@
  */
 import { SOUL_CODE_LENGTH, formatSoulCode, groupSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 import { useRef, useState, type Ref } from "react";
-import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Platform, StyleSheet, TextInput, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { family } from "./fonts";
 import { useI18n } from "./i18n";
 import { SOUL_CODE_PROBLEM_KEY, isEmailEntry, soulCodeStep } from "./loginRules";
-import { FocusRing, LATIN_KEYBOARD, Txt, useTheme } from "./ui";
+import { FocusRing, LATIN_KEYBOARD, Txt, useTheme, Press } from "./ui";
 import type { SoulCodeProblem } from "@soulledger/core/domain/soulCode";
 
 export function useSpelled() {
@@ -180,7 +180,7 @@ export function SoulCodeField({
               />
             </View>
           )}
-          <Pressable
+          <Press
             testID="login-scan"
             accessibilityRole="button"
             accessibilityLabel={t("soul_app.login.scan")}
@@ -192,7 +192,7 @@ export function SoulCodeField({
             <Txt variant="label" style={styles.scanText}>
               {t("soul_app.login.scan")}
             </Txt>
-          </Pressable>
+          </Press>
         </View>
       </FocusRing>
       {problem ? (
@@ -215,11 +215,11 @@ export function SoulCodeField({
           {t(email ? "soul_app.login.email_hint" : "soul_app.login.soul_code_hint")}
         </Txt>
       )}
-      <Pressable testID="login-switch-entry" accessibilityRole="button" disabled={off} onPress={() => switchTo(!email)} style={styles.switch}>
+      <Press testID="login-switch-entry" accessibilityRole="button" disabled={off} onPress={() => switchTo(!email)} style={styles.switch}>
         <Txt variant="caption" tone="ink" style={styles.switchText}>
           {t(email ? "soul_app.login.use_code" : "soul_app.login.use_email")}
         </Txt>
-      </Pressable>
+      </Press>
     </View>
   );
 }

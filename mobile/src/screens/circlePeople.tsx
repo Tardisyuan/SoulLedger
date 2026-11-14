@@ -31,7 +31,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import { radius } from "../theme";
-import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
 import { fetchSocialStatus, invalidateSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PostList } from "./circle";
@@ -231,14 +231,14 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
           <View testID="profile-menu" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
             {chat.availability !== "not_configured" && p ? (
               <>
-                <Pressable testID="menu-letter" accessibilityRole="button" onPress={() => void letter()} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+                <Press testID="menu-letter" accessibilityRole="button" onPress={() => void letter()} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
                   <Txt variant="bodyLg" style={styles.fill}>
                     {tr("soul_app.circle.profile.menu.letter")}
                   </Txt>
                   <Txt variant="caption" tone="subtle">
                     {tr(p.is_mutual ? "soul_app.circle.profile.menu.letter_mutual" : "soul_app.circle.profile.menu.letter_request")}
                   </Txt>
-                </Pressable>
+                </Press>
                 {p.is_mutual ? null : (
                   <Txt testID="menu-letter-rule" variant="caption" tone="subtle" style={[styles.menuNote, { borderBottomColor: t.hair }]}>
                     {tr("soul_app.circle.profile.menu.letter_rule")}
@@ -246,7 +246,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
                 )}
               </>
             ) : null}
-            <Pressable
+            <Press
               testID="menu-report"
               accessibilityRole="button"
               onPress={() => {
@@ -258,12 +258,12 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.circle.profile.menu.report")}
               </Txt>
-            </Pressable>
-            <Pressable testID="menu-cancel" accessibilityRole="button" onPress={() => setMenu(false)} style={styles.menuCancel}>
+            </Press>
+            <Press testID="menu-cancel" accessibilityRole="button" onPress={() => setMenu(false)} style={styles.menuCancel}>
               <Txt variant="body" tone="muted">
                 {tr("soul_app.common.cancel")}
               </Txt>
-            </Pressable>
+            </Press>
           </View>
         </View>
       </Modal>
@@ -319,7 +319,7 @@ function RenameField({ value, onChange, onDone, onCancel }: { value: string; onC
         onEndEditing={onEndEditing}
         autoFocus
         maxLength={20}
-        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.hair2, backgroundColor: t.s1, color: t.ink, fontFamily: nameFace(value) }]}
+        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.inkSubtle, backgroundColor: t.s1, color: t.ink, fontFamily: nameFace(value) }]}
       />
       {refusal ? (
         <Txt testID="name-refusal" variant="caption" tone="negInk" accessibilityRole="alert">
@@ -374,7 +374,7 @@ export function MyCircleScreen() {
             <View style={[styles.head, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
               <View style={styles.row}>
                 <Glyph text={me.data.display_name} tone="muted" size={60} />
-                <Pressable
+                <Press
                   testID="edit-name"
                   accessibilityRole="button"
                   accessibilityLabel={`${tr("soul_app.circle.me.display_name")} · ${tr("soul_app.circle.me.edit_name")}`}
@@ -387,7 +387,7 @@ export function MyCircleScreen() {
                     {tr("soul_app.circle.me.display_name")}
                     {name === null ? ` · ${tr("soul_app.circle.me.edit_name")}` : ""}
                   </Txt>
-                </Pressable>
+                </Press>
               </View>
               {name !== null ? <RenameField value={name} onChange={setName} onDone={() => { setName(null); void me.reload(); }} onCancel={() => setName(null)} /> : null}
               <View style={[styles.countBox, { borderColor: t.hair }]}>
@@ -549,7 +549,7 @@ export function CircleSearchScreen() {
   return (
     <Screen edges={["left", "right", "bottom"]} testID="circle-search">
       <View style={[styles.searchBar, { paddingHorizontal: 16, borderBottomColor: t.hair }]}>
-        <View style={[styles.searchBox, { borderColor: asked ? t.ink : t.hair2, backgroundColor: t.s1 }]}>
+        <View style={[styles.searchBox, { borderColor: asked ? t.ink : t.inkSubtle, backgroundColor: t.s1 }]}>
           <Icon name="search" size={15} color={t.inkSubtle} />
           <TextInput
             testID="search-input"
@@ -688,7 +688,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
               {REASONS.map((r) => {
                 const on = r === reason;
                 return (
-                  <Pressable
+                  <Press
                     key={r}
                     testID={`reason-${r}`}
                     accessibilityRole="radio"
@@ -698,7 +698,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
                   >
                     <RadioMark on={on} />
                     <Txt variant="bodyLg">{tr(`social_moderation.reason.${r}`)}</Txt>
-                  </Pressable>
+                  </Press>
                 );
               })}
             </View>
@@ -716,7 +716,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
               placeholderTextColor={t.inkSubtle}
               multiline
               maxLength={500}
-              style={[styles.detail, { borderColor: t.hair, backgroundColor: t.s1, color: t.ink, fontFamily: quoteFamily(detail || tr("soul_app.circle.report.detail_hint")) }]}
+              style={[styles.detail, { borderColor: t.inkSubtle, backgroundColor: t.s1, color: t.ink, fontFamily: quoteFamily(detail || tr("soul_app.circle.report.detail_hint")) }]}
             />
             <Button testID="report-submit" title={tr("soul_app.circle.report.submit")} onPress={send} busy={busy} disabled={!reason} style={styles.submit} />
           </View>

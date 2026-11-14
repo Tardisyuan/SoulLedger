@@ -7,10 +7,10 @@ import { verdictText } from "@soulledger/core/domain/verdictNames";
 import { soulsApi } from "@soulledger/core/api/souls";
 import { OFFENCES_BY_COURT, offenceCourt } from "@soulledger/core/domain/diyuCase";
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { ActionButton } from "../kit";
-import { Icon, Input, Sheet, Txt, family, radius, space, titleFamily, useI18n, useRemote, useTheme } from "../shared";
+import { Icon, Input, Sheet, Txt, family, radius, space, titleFamily, useI18n, useRemote, useTheme, Press } from "../shared";
 import {
   CN_TOP,
   DENIED_IMMORTALITY_CIRCLE,
@@ -51,7 +51,7 @@ export function Choice({
 }) {
   const theme = useTheme();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole={multi ? "checkbox" : "radio"}
       accessibilityState={{ checked: on, disabled: !!disabled }}
@@ -77,7 +77,7 @@ export function Choice({
           {aside}
         </Txt>
       ) : null}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -171,11 +171,11 @@ export function RejectFields({ open, judgment, choice, onChange }: { open: boole
               {CN_TOP.map((code) => (
                 <Choice key={code} testID={`reject-${code}`} label={t(`judgment.offences.${code}`)} aside={courtName(code)} on={has(code)} onPress={() => pick(code)} />
               ))}
-              <Pressable testID="reject-more" accessibilityRole="button" onPress={() => setMore(true)} style={[styles.choice, { borderColor: theme.hair2 }]}>
+              <Press testID="reject-more" accessibilityRole="button" onPress={() => setMore(true)} style={[styles.choice, { borderColor: theme.hair2 }]}>
                 <Txt variant="body" style={{ flex: 1 }}>{t("nav.more")}</Txt>
                 <Txt variant="caption" tone="muted">{t("reject.sheet.cn_more_sub", { n: String(offenceCount) })}</Txt>
                 <Icon name="chevron" size={12} color={theme.inkMuted} />
-              </Pressable>
+              </Press>
             </>
           )
         ) : null}

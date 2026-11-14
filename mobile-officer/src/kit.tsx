@@ -9,12 +9,13 @@
 import { fetchFailureOf } from "@soulledger/core/api/client";
 import { DOOR_ICON, officerDoors, type OfficerDoorKey, type OfficerPage } from "@soulledger/core/domain/doors";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
+import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
+import { Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -359,7 +360,7 @@ export function Segmented<K extends string>({
       {options.map(({ key, label }) => {
         const on = key === value;
         return (
-          <Pressable
+          <Press
             key={key}
             testID={testID ? `${testID}-${key}` : undefined}
             accessibilityRole={radio ? "radio" : "tab"}
@@ -374,7 +375,7 @@ export function Segmented<K extends string>({
             <Txt variant="nav" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[{ color: on ? t.s0 : t.ink, letterSpacing: 0 }, options.length > 3 && styles.segmentTight]}>
               {label}
             </Txt>
-          </Pressable>
+          </Press>
         );
       })}
     </View>
@@ -388,7 +389,7 @@ export function Segmented<K extends string>({
 export function Chip({ label, count, on = false, size = "md", onPress, testID }: { label: string; count?: number; on?: boolean; size?: "md" | "lg"; onPress: () => void; testID?: string }) {
   const t = useTheme();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={count == null ? label : `${label} · ${count}`}
@@ -405,7 +406,7 @@ export function Chip({ label, count, on = false, size = "md", onPress, testID }:
           {count}
         </Txt>
       )}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -527,7 +528,14 @@ export function roleName(enumLabel: ReturnType<typeof useI18n>["enumLabel"], rol
 }
 
 /**
- * 56 high plus the safe area, equal parts (each at least 64 wide), surface-1 with a 1px top line: one cell per door that
+ * How far the bar's glyph and name grow with the system text size (App 手感, 2026-11-15): 18 / 11 reach 23.4 / 14.3 and
+ * the cell (`minHeight` 56) grows past 56 only beyond that; the app's own cap (2.35x) would put a 42pt glyph over a 26pt
+ * name in a 56-high bar. The name is also the cell's `accessibilityLabel`, so a reader hears it at any size.
+ */
+export const TAB_FONT_SCALE = 1.3;
+
+/**
+ * At least 56 high plus the safe area, equal parts (each at least 64 wide), surface-1 with a 1px top line: one cell per door that
  * has a page this officer gets (第三十八批 四). In zh each cell is the door's glyph in the serif (18 / 22) over its name;
  * in en / egy it is the shared 24px line icon (`DOOR_ICON`, the web's set) over its name (`officer_app.doors.*.label`,
  * Geist 500 11 / 14) -- `.glyph` is drawn only in zh. The current door in ink (the icon's stroke 1.8), with a 14 x 2
@@ -549,7 +557,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
         const colour = selected ? t.ink : t.inkMuted;
         const dot = door === "me" && unread;
         return (
-          <Pressable
+          <Press
             key={door}
             testID={`door-${door}`}
             accessibilityRole="tab"
@@ -561,7 +569,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
           >
             <View style={styles.mark}>
               {zh ? (
-                <Txt style={{ color: colour, fontFamily: family.title, fontSize: 18, lineHeight: 22 }}>{tr(`officer_app.doors.${door}.glyph`)}</Txt>
+                <Txt maxFontSizeMultiplier={TAB_FONT_SCALE} style={{ color: colour, fontFamily: family.title, fontSize: 18, lineHeight: 22 }}>{tr(`officer_app.doors.${door}.glyph`)}</Txt>
               ) : (
                 <Svg testID={`door-${door}-icon`} width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colour} strokeWidth={selected ? 1.8 : 1.6} strokeLinecap="round" strokeLinejoin="round">
                   {DOOR_ICON[door].map((d) => (
@@ -572,13 +580,53 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
               {selected ? <View testID={`door-${door}-current`} style={[styles.currentLine, { backgroundColor: t.ink }]} /> : null}
               {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.neg, borderColor: t.s1 }]} /> : null}
             </View>
-            <Txt variant="caption" numberOfLines={1} style={{ color: colour, fontSize: 11, lineHeight: 14, fontFamily: family.ui[zh ? 400 : 500] }}>
+            <Txt variant="caption" numberOfLines={1} maxFontSizeMultiplier={TAB_FONT_SCALE} style={{ color: colour, fontSize: 11, lineHeight: 14, fontFamily: family.ui[zh ? 400 : 500] }}>
               {tr(`officer_app.doors.${door}.label`)}
             </Txt>
-          </Pressable>
+          </Press>
         );
       })}
     </View>
+  );
+}
+
+/** The left-edge strip an iOS back swipe starts in (pt). */
+export const EDGE_BACK_PT = 20;
+
+/**
+ * iOS's back swipe for a screen drawn over the tabs (App 手感, 2026-11-15): this app has no navigator (`b3aeab110` took
+ * `react-native-screens` out on purpose), so the system gesture is not there, and the 「‹ 返回」 row sits in the corner a
+ * thumb reaches last. A pan that starts within `EDGE_BACK_PT` of the left edge carries the page with the finger; let go
+ * past a third of the width (or flung faster than 800 pt/s) it calls `onBack`, short of that it slides back. Under reduce
+ * motion the page does not follow -- past the line it just closes. Android has its own back gesture (and `BackHandler`),
+ * so there this is only its children. No `onBack` (a screen that must not be left yet): no gesture.
+ */
+export function EdgeBack({ onBack, children }: { onBack?: () => void; children: ReactNode }) {
+  const { width } = useWindowDimensions();
+  const reduced = useReducedMotion();
+  const durations = useReducedMotionDurations();
+  const [x] = useState(() => new Animated.Value(0));
+  if (Platform.OS !== "ios") return <>{children}</>;
+  const pan = Gesture.Pan()
+    .withTestId("edge-back")
+    .runOnJS(true)
+    .enabled(!!onBack)
+    .hitSlop({ left: 0, width: EDGE_BACK_PT })
+    .activeOffsetX(12)
+    .failOffsetY([-16, 16])
+    .onUpdate((e) => {
+      if (!reduced) x.setValue(Math.max(0, e.translationX));
+    })
+    .onEnd((e, ok) => {
+      if (ok && (e.translationX > width / 3 || e.velocityX > 800)) {
+        x.setValue(0);
+        onBack?.();
+      } else Animated.timing(x, { toValue: 0, duration: durations.sheetOut, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: false }).start();
+    });
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View style={{ flex: 1, transform: [{ translateX: x }] }}>{children}</Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -614,7 +662,7 @@ export function StandingBanner({ children, testID, action }: { children: string;
   // The whole band is the target (>= 44 high) and reads as ONE button: its text plus the action. The
   // action is a plain trailing label at the far right, not drawn as a button.
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={`${children} ${action.label}`}
@@ -623,7 +671,7 @@ export function StandingBanner({ children, testID, action }: { children: string;
     >
       {text}
       <Txt testID={testID ? `${testID}-action` : undefined} variant="nav" style={{ color: t.warn }}>{`${action.label} ›`}</Txt>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -682,9 +730,10 @@ const styles = StyleSheet.create({
   bandHall: { flexShrink: 1 },
   bandName: { flexShrink: 1 },
   tabBar: { flexDirection: "row", borderTopWidth: 1 },
-  tab: { flex: 1, minWidth: 64, height: 56, alignItems: "center", justifyContent: "center" },
+  // `minHeight`, not `height`: at large text the cell grows with its glyph and name instead of spilling over the page.
+  tab: { flex: 1, minWidth: 64, minHeight: 56, paddingVertical: space[1], alignItems: "center", justifyContent: "center" },
   // The glyph box: 24 high. The current line sits 3 under it; the dot (8 plus its 2px ring) 4 past its right edge, 1 above it.
-  mark: { height: 24, minWidth: 24, alignItems: "center", justifyContent: "center" },
+  mark: { minHeight: 24, minWidth: 24, alignItems: "center", justifyContent: "center" },
   // No percentage `left`: on Android it resolved against the wrong box and the line sat ~50 dp right of its glyph
   // (TAS-AL00, 2026-11-14). An absolute child with no left/right is centred by `mark`'s alignItems instead.
   currentLine: { position: "absolute", bottom: -1, width: 14, height: 2, borderRadius: 1 },

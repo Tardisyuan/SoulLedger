@@ -52,7 +52,7 @@ import { family } from "../fonts";
 import { radius } from "../theme";
 import { useI18n } from "../i18n";
 import { RESEND_AFTER_SECONDS, RESET_CODE, RESET_CODE_TTL_SECONDS, formatCountdown, isPlausibleEmail } from "../rules";
-import { Button, GUTTER, Input, Screen, Txt, useTheme } from "../ui";
+import { Button, GUTTER, Input, Screen, Txt, useTheme, Press } from "../ui";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
 
 /**
@@ -266,11 +266,11 @@ function EmailStep({ onSent, onNoEmail }: { onSent: (sent: Sent) => void; onNoEm
           disabled={attempt.blocked}
           style={styles.primary}
         />
-        <Pressable testID="forgot-no-email" accessibilityRole="link" onPress={onNoEmail} style={styles.link}>
+        <Press testID="forgot-no-email" accessibilityRole="link" onPress={onNoEmail} style={styles.link}>
           <Txt variant="caption" style={[styles.underline, { color: theme.inkMuted }]}>
             {t("soul_app.forgot_password.no_email_link")}
           </Txt>
-        </Pressable>
+        </Press>
       </View>
     </Screen>
   );
@@ -563,7 +563,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
           disabled={attempt.blocked}
           style={styles.primary}
         />
-        <Pressable
+        <Press
           testID="forgot-resend"
           accessibilityRole="button"
           accessibilityState={{ disabled: resendIn > 0 || busy || resending, busy: resending }}
@@ -580,7 +580,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
               ? t("soul_app.forgot_password.resend_wait", { n: String(Math.ceil(resendIn)) })
               : t("soul_app.forgot_password.resend")}
           </Txt>
-        </Pressable>
+        </Press>
       </View>
     </Screen>
   );
