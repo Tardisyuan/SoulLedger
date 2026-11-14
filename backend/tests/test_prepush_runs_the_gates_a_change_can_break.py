@@ -886,6 +886,9 @@ class TestJestSelection:
             # 2026-11-14: the tokens JSON's reader (designTokensAreGenerated) is always-run; its outputs are read or traced.
             ["packages/core/tokens/semantic.tokens.json"],
             ["packages/core/tokens/primitive.tokens.json", "frontend/app/globals.css", "mobile/src/theme.generated.ts"],
+            # 2026-11-15: middleware and Next's runtime hooks are code at frontend/'s top level, not config.
+            ["frontend/proxy.ts"],
+            ["frontend/instrumentation.ts", "frontend/instrumentation-client.ts"],
         ],
     )
     def test_an_ordinary_source_change_is_selective(self, hook, changed):
@@ -898,6 +901,9 @@ class TestJestSelection:
         [
             ["frontend/jest.config.js"],
             ["frontend/tsconfig.json"],
+            # The 2026-11-15 exemption is those two names, not every .ts beside them.
+            ["frontend/sentry.server.config.ts"],
+            ["frontend/proxy.ts", "frontend/next.config.js"],
             ["packages/core/package.json"],
             ["package-lock.json"],
             # The 2026-11-12 exemption is those three names, not every data file next to them.
@@ -922,6 +928,17 @@ class TestJestSelection:
 
     def test_gates_full_forces_it(self, hook):
         assert _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="1")[0] == 1
+
+    def test_nothing_jest_sets_up_loads_the_middleware_or_the_instrumentation(self):
+        """Why frontend/proxy.ts and instrumentation*.ts may be selective (2026-11-15): a module the setup file
+        loads runs before every test and no test imports it for that (frontend/lib/platform/web is a full-run
+        rule for exactly this). If jest's setup ever loads one of these, the exemption is wrong."""
+        config = (REPO_ROOT / "frontend" / "jest.config.js").read_text(encoding="utf-8")
+        setups = re.findall(r"<rootDir>/(frontend/[\w./-]+)", config.split("setupFiles", 1)[1].split("]", 1)[0])
+        assert setups == ["frontend/jest.setup.js"], setups
+        for f in setups:
+            loaded = re.findall(r"""(?:require\(|from\s+)['"]([^'"]+)['"]""", (REPO_ROOT / f).read_text(encoding="utf-8"))
+            assert loaded and not [m for m in loaded if re.search(r"proxy|instrumentation", m)], loaded
 
     def test_a_module_the_setup_file_runs_before_every_test_forces_it(self, hook):
         """2026-11-13: jest.setup.js requires it, so every test runs it and no import edge says so."""
@@ -1490,9 +1507,11 @@ class TestASelectivePassIsNotRunAgain:
         run = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--base", "HEAD~1"], cwd=main,
                              env=self._env(stamp, fake_backend), capture_output=True, text=True, timeout=120)
         assert run.returncode == 0, run.stdout + run.stderr
-        assert "recorded a selective pass" in run.stdout, run.stdout
-        line = (tmp_path / "passed-selective").read_text()
-        assert line.startswith(self._head(main, "HEAD^{tree}") + "\t") and line.rstrip().endswith("\tbackend/x.py"), line
+        assert "recorded a selective pass (backend)" in run.stdout and "recorded a selective pass (js)" in run.stdout, run.stdout
+        for side in ("backend", "js"):
+            line = (tmp_path / f"passed-{side}").read_text()
+            assert line.startswith(self._head(main, "HEAD^{tree}") + "\t") and line.rstrip().endswith("\tbackend/x.py"), line
+        assert not (tmp_path / "passed-selective").exists(), "the whole-tree ledger is read, no longer written"
         push = self._push(hook, main, stamp, ["backend/x.py"])
         assert push.returncode == 0, push.stdout + push.stderr
         assert "for these changes" in push.stdout, push.stdout
@@ -1597,8 +1616,8 @@ class TestTheBaseIsTheLastTreeThatPassed:
                                             REDIS_URL=os.environ.get("REDIS_URL", "")),
                              capture_output=True, text=True, timeout=120)
         assert run.returncode == 0, run.stdout + run.stderr
-        assert "recorded a selective pass" in run.stdout, run.stdout
-        line = (tmp_path / "passed-selective").read_text().rstrip().split("\t")
+        assert "recorded a selective pass (backend)" in run.stdout, run.stdout
+        line = (tmp_path / "passed-backend").read_text().rstrip().split("\t")
         assert line[0] == self._tree(main, "HEAD"), line
         assert line[2].split("|") == sorted(["backend/apps/souls/migrations/0002_x.py", "backend/a.py",
                                              "backend/b.py"]), line
@@ -1606,7 +1625,8 @@ class TestTheBaseIsTheLastTreeThatPassed:
         (main / "backend" / "c.py").write_text("")
         _git(main, "add", "-A")
         _git(main, "commit", "-q", "-m", "c")
-        assert "(last tree that passed, selective) — 1 commits since" in self._gates(main, tmp_path)
+        out = self._gates(main, tmp_path)
+        assert out.count("(last tree that passed, selective) — 1 commits since") == 2, out
 
     def test_full_and_an_explicit_base_ignore_the_ledger(self, checkouts, tmp_path):
         main, sha = self._repo(checkouts)
@@ -1624,8 +1644,11 @@ class TestStaticChecksRunBeforeAnyTests:
     instead, over stand-in tools that write down each invocation, and reads the order from that.
 
     On this machine: every type check and linter of every area, then the tests. In the remote run the two
-    sides overlap, each beginning with its own static checks — the order holds inside a side, and a red
-    static check ends its side before that side's tests and fails the run."""
+    sides overlap, each beginning with its own static checks — the order holds inside a side.
+
+    FAIL LATE (2026-11-15, user decision): a red static check no longer ends its side. The side's other checks
+    and its tests run, every red step is listed at the end, and the run exits non-zero. Until then r31–r38
+    took eight rounds, each showing only the first red tsc of a side."""
 
     CHANGED = ["packages/core/src/a.ts", "frontend/app.tsx", "mobile/src/a.ts", "mobile-officer/src/b.ts", "backend/x.py"]
     JS_STATIC = [
@@ -1654,16 +1677,17 @@ class TestStaticChecksRunBeforeAnyTests:
         b = tmp_path / "bin"
         b.mkdir()
         log = tmp_path / "calls"
-        # FAIL_ON: the invocation that exits 1. One `echo >>` per call: the two sides append to the same file.
-        tool = ('#!/bin/bash\ncall="{name} $*"\necho "$call" >> "{log}"\n'
-                'if [ -n "$FAIL_ON" ] && [[ "$call " == "$FAIL_ON "* ]]; then exit 1; fi\nexit 0\n')
+        # FAIL_ON: the invocations that exit 1, `|`-separated. One `echo >>` per call: the two sides append to
+        # the same file.
+        red = ('IFS="|"; for r in $FAIL_ON; do '
+               '[[ "$call " == "$r "* ]] && exit 1; done; unset IFS; ')
+        tool = '#!/bin/bash\ncall="{name} $*"\necho "$call" >> "{log}"\n' + red + 'exit 0\n'
         for name in ("npm", "npx", "ruff"):
             (b / name).write_text(tool.format(name=name, log=log))
         (b / "fake-python").write_text(
             "#!/bin/bash\n"
             f'if [ "$1" = manage.py ] || [ "$1 $2" = "-m pytest" ]; then call="python $1 $2 $3 $4"; call="${{call%% -q*}}"; '
-            f'call="$(echo $call)"; echo "$call" >> "{log}"; '
-            'if [ -n "$FAIL_ON" ] && [[ "$call " == "$FAIL_ON "* ]]; then exit 1; fi; exit 0; fi\n'
+            f'call="$(echo $call)"; echo "$call" >> "{log}"; ' + red + 'exit 0; fi\n'
             'exec python3 "$@"\n')
         for f in b.iterdir():
             f.chmod(0o755)
@@ -1713,31 +1737,44 @@ class TestStaticChecksRunBeforeAnyTests:
         ("npm run --workspace packages/core typecheck", "@soulledger/core typecheck failed"),
         ("npm run --workspace mobile-officer lint", "officer lint failed"),
     ])
-    def test_a_red_js_check_there_ends_the_js_side_before_its_tests_and_fails_the_run(
+    def test_a_red_js_check_there_does_not_stop_the_js_side_and_fails_the_run(
             self, checkouts, tmp_path, fake_backend, failing, said):
         proc, calls = self._gates(checkouts, tmp_path, remote=True, fail_on=failing)
         assert proc.returncode != 0, proc.stdout
-        assert not self._at(calls, self.JS_TESTS), "a JS test runner started after a red static check:\n" + "\n".join(calls)
-        assert self._at(calls, self.BE_TESTS), "the backend side did not run to its end"
+        self._every_check_ran_once(calls)  # every other check, and every test runner, of both sides
         assert said in proc.stdout and "backend exit 0, JS exit 1" in proc.stdout, proc.stdout
+        assert f"  JS:      {said}" in proc.stdout, "the summary does not name the red check:\n" + proc.stdout
 
     @pytest.mark.parametrize("failing, said", [
         ("ruff check .", "ruff failed"),
         ("python manage.py makemigrations", "makemigrations --check could not run"),
     ])
-    def test_a_red_backend_check_there_ends_the_backend_side_before_pytest_and_fails_the_run(
+    def test_a_red_backend_check_there_does_not_stop_pytest_and_fails_the_run(
             self, checkouts, tmp_path, fake_backend, failing, said):
         proc, calls = self._gates(checkouts, tmp_path, remote=True, fail_on=failing)
         assert proc.returncode != 0, proc.stdout
-        assert not self._at(calls, self.BE_TESTS), "pytest started after a red static check:\n" + "\n".join(calls)
-        assert len(self._at(calls, self.JS_TESTS)) >= 4, "the JS side did not run to its end:\n" + "\n".join(calls)
+        self._every_check_ran_once(calls)
         assert said in proc.stdout and "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
+        assert f"  backend: {said}" in proc.stdout, proc.stdout
 
-    def test_here_a_red_check_stops_the_run_before_any_test(self, checkouts, tmp_path, fake_backend):
+    def test_here_a_red_check_fails_the_run_after_every_check_and_test_ran(self, checkouts, tmp_path, fake_backend):
         proc, calls = self._gates(checkouts, tmp_path, remote=False, fail_on="ruff check .")
         assert proc.returncode != 0 and "ruff failed" in proc.stdout, proc.stdout
-        assert len(self._at(calls, self.JS_STATIC)) == 8, "\n".join(calls)
-        assert not self._at(calls, self.JS_TESTS + self.BE_TESTS), "\n".join(calls)
+        self._every_check_ran_once(calls)
+        last_static = max(self._at(calls, self.JS_STATIC + self.BE_STATIC))
+        assert last_static < min(self._at(calls, self.JS_TESTS + self.BE_TESTS)), "\n".join(calls)
+        assert "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
+
+    def test_every_red_check_of_a_side_is_listed_at_the_end(self, checkouts, tmp_path, fake_backend):
+        """Mutation: `|| fail "tsc failed"` back in static_js → the side stops there, mobile lint never runs."""
+        proc, calls = self._gates(checkouts, tmp_path, remote=True,
+                                  fail_on="npx tsc --noEmit|npm run --workspace mobile lint|ruff check .")
+        assert proc.returncode != 0, proc.stdout
+        self._every_check_ran_once(calls)
+        summary = proc.stdout.rsplit("  ── JS (exit", 1)[1]
+        for line in ("  JS:      tsc failed", "  JS:      mobile lint failed", "  backend: ruff failed"):
+            assert line in summary, summary
+        assert "backend exit 1, JS exit 1" in summary, summary
 
 
 class TestJestReadersFollowWhatChanged:
@@ -1889,7 +1926,7 @@ class TestTheWholeRunOnAnotherMachine:
         env = _clean_env(GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@sl-pg-test:5432/s",
                          GATES_STAMP_FILE=str(tmp_path / "passed"), **kw)
         if prepush:
-            env["PREPUSH_CHANGED"] = "backend/apps/souls/views.py"
+            env.setdefault("PREPUSH_CHANGED", "backend/apps/souls/views.py")
         env["PATH"] = f"{b}:{env['PATH']}"
         cmd = ["bash", str(repo / "scripts" / "run-gates.sh"), *(["--prepush"] if prepush else []), *args]
         return subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True, timeout=120)
@@ -1926,6 +1963,33 @@ class TestTheWholeRunOnAnotherMachine:
         assert proc.returncode != 0
         assert "the gates failed on fake-host" in proc.stdout, proc.stdout
 
+    def test_a_side_green_there_is_recorded_here_when_the_other_is_red(self, checkouts, tmp_path):
+        """2026-11-15: the run there ends with `gates-sides: backend=… js=…`; this machine records each green side.
+        Mutation: drop `record_side backend "$BE_RC"` from the delegated branch → nothing recorded, red."""
+        main, _ = checkouts
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "x")
+        b = self._bin(tmp_path, remote_status=1)
+        ssh = (b / "ssh").read_text().replace('echo "pre-push: ok (remote)"', 'echo "gates-sides: backend=0 js=1"')
+        (b / "ssh").write_text(ssh)
+        env = _clean_env(GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@h:5432/s",
+                         GATES_STAMP_FILE=str(tmp_path / "passed"))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--base", "HEAD~1"], cwd=main, env=env,
+                              capture_output=True, text=True, timeout=120)
+        assert proc.returncode != 0 and "the gates failed on fake-host" in proc.stdout, proc.stdout
+        assert "recorded a selective pass (backend)" in proc.stdout, proc.stdout
+        assert (tmp_path / "passed-backend").read_text().rstrip().endswith("\tbackend/x.py")
+        assert not (tmp_path / "passed-js").exists(), "the red side was recorded"
+
+    def test_each_sides_change_list_is_handed_over(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._run(main, tmp_path)
+        remote = (tmp_path / "remote-run").read_text()
+        assert 'PREPUSH_CHANGED_BACKEND="$(cat .sl-changed-backend)"' in remote, remote
+        assert 'PREPUSH_CHANGED_JS="$(cat .sl-changed-js)"' in remote, remote
+
     def test_a_green_run_there_is_recorded_here(self, checkouts, tmp_path):
         main, _ = checkouts
         (main / "backend" / "x.py").write_text("X = 1\n")
@@ -1933,8 +1997,9 @@ class TestTheWholeRunOnAnotherMachine:
         _git(main, "commit", "-q", "-m", "x")
         proc = self._run(main, tmp_path, "--base", "HEAD~1", prepush=False)
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        assert "recorded a selective pass" in proc.stdout, proc.stdout
-        assert (tmp_path / "passed-selective").read_text().rstrip().endswith("\tbackend/x.py")
+        assert "recorded a selective pass (backend)" in proc.stdout, proc.stdout
+        assert (tmp_path / "passed-backend").read_text().rstrip().endswith("\tbackend/x.py")
+        assert (tmp_path / "passed-js").read_text().rstrip().endswith("\tbackend/x.py")
 
 
 class TestEndToEndOnAnotherMachine:
@@ -2019,11 +2084,20 @@ class TestRemoteTimeLimits:
         tail = remote.split(inner_end, 1)[1]
         assert f"docker rm -f {name}" in tail and tail.index("docker rm -f") < re.search(r"\) [89]>", tail).start(), tail
 
+    @staticmethod
+    def _with_the_selector(main: Path) -> Path:
+        """The backend selection decides the limit (2026-11-15), so the checkout needs the selector and an app."""
+        shutil.copy(REPO_ROOT / "scripts" / "select-backend-tests.py", main / "scripts" / "select-backend-tests.py")
+        (main / "backend" / "apps" / "souls").mkdir(parents=True)
+        (main / "backend" / "apps" / "souls" / "views.py").write_text("")
+        return main
+
     def test_a_selective_gate_run_has_30_minutes(self, checkouts, tmp_path):
-        main, _ = checkouts
-        self.gates._run(main, tmp_path)
+        main = self._with_the_selector(checkouts[0])
+        proc = self.gates._run(main, tmp_path)
         remote = (tmp_path / "remote-run").read_text()
         assert "sl-gates-all:1 timeout -k 60 30m bash -c" in remote, remote
+        assert "whole suite" not in proc.stdout, proc.stdout
         self._locked_then_removed(remote, "exec bash scripts/run-gates.sh --prepush'", "run.lock", "sl-gates-")
 
     def test_a_full_run_has_90_minutes(self, checkouts, tmp_path):
@@ -2031,8 +2105,20 @@ class TestRemoteTimeLimits:
         self.gates._run(main, tmp_path, "--full")
         assert "timeout -k 60 90m bash -c" in (tmp_path / "remote-run").read_text()
 
+    @pytest.mark.parametrize("changed, why", [
+        ("backend/config/settings.py", "backend settings / URLconf changed"),
+        ("backend/apps/core/models.py", "apps/core changed"),
+    ])
+    def test_a_backend_that_resolves_to_its_whole_suite_has_90_minutes_too(self, checkouts, tmp_path, changed, why):
+        """2026-11-15 (user decision): a run whose backend resolves to the whole suite (a forced-full rule in
+        select-backend-tests.py) gets the full run's limit. Mutation: limit by FULL_RUN alone again → 30m here, red."""
+        main = self._with_the_selector(checkouts[0])
+        proc = self.gates._run(main, tmp_path, PREPUSH_CHANGED=changed)
+        assert "timeout -k 60 90m bash -c" in (tmp_path / "remote-run").read_text(), proc.stdout
+        assert f"time limit 90m: the backend runs its whole suite — {why}" in proc.stdout, proc.stdout
+
     def test_the_limits_can_be_overridden_but_not_with_anything(self, checkouts, tmp_path):
-        main, _ = checkouts
+        main = self._with_the_selector(checkouts[0])
         self.gates._run(main, tmp_path, GATES_REMOTE_TIMEOUT="45m")
         assert "timeout -k 60 45m bash -c" in (tmp_path / "remote-run").read_text()
         (tmp_path / "remote-run").unlink()
@@ -2041,7 +2127,7 @@ class TestRemoteTimeLimits:
         assert not (tmp_path / "remote-run").exists()
 
     def test_a_run_that_hit_the_limit_is_red_and_says_so(self, checkouts, tmp_path):
-        main, _ = checkouts
+        main = self._with_the_selector(checkouts[0])
         proc = self.gates._run(main, tmp_path, remote_status=124)
         assert proc.returncode != 0
         assert "TIMED OUT" in proc.stdout and "GATES_REMOTE_TIMEOUT" in proc.stdout, proc.stdout
@@ -2597,12 +2683,14 @@ class TestTwoSidesAtOnce:
         assert "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
         assert "Tests: 6 passed" in proc.stdout, "the JS log was not printed"
 
-    def test_here_it_stays_serial_and_stops_at_the_first_red(self, checkouts, tmp_path, fake_backend):
+    def test_here_it_stays_serial_and_a_red_side_does_not_stop_the_other(self, checkouts, tmp_path, fake_backend):
+        """2026-11-15: so that each side can be recorded on its own here too (TestEachSideKeepsItsOwnLedger)."""
         repo, b, py = self._repo(checkouts, tmp_path)
         proc = self._run(repo, b, py, remote=False)
         assert proc.returncode != 0 and "pytest failed" in proc.stdout, proc.stdout
         assert "side by side" not in proc.stdout
-        assert not (tmp_path / "js-finished").exists(), "the serial run went on past a red pytest"
+        assert (tmp_path / "js-finished").exists(), "the serial run stopped at a red pytest:\n" + proc.stdout
+        assert "backend exit 1, JS exit 0" in proc.stdout and "  backend: pytest failed" in proc.stdout, proc.stdout
 
     def test_the_container_splits_its_cpus_between_the_sides(self):
         text = RUNNER.read_text(encoding="utf-8")
@@ -2785,10 +2873,188 @@ class TestAPassVouchesOnlyForTheTreeItTested:
     into the ledger — six files no test had seen became "passed". The tree is read when the run starts and a pass is
     recorded only if HEAD still has it."""
 
-    def test_record_pass_compares_against_the_tree_read_at_start(self):
+    def test_record_side_compares_against_the_tree_read_at_start(self):
         script = (REPO_ROOT / "scripts" / "run-gates.sh").read_text()
         start = script.index('START_TREE="$(git rev-parse HEAD^{tree}')
-        assert start < script.index("record_pass() {"), "the tree must be read before any test runs"
-        body = script[script.index("record_pass() {"):]
+        assert start < script.index("record_side() {"), "the tree must be read before any test runs"
+        body = script[script.index("record_side() {"):]
         body = body[: body.index("\n}\n")]
         assert '[ "$tree" = "$START_TREE" ]' in body
+
+
+class TestEachSideKeepsItsOwnLedger:
+    """2026-11-15 (user decision): backend (ruff, makemigrations, pytest) and JS (tsc, eslint, vitest, jest)
+    record their passes and pick their bases each on their own. r31/r34/r35 re-ran 20–40 minutes of a green
+    backend because the JS side of the same run was red. origin/main = init; then backend/a.py, then backend/b.py."""
+
+    def _repo(self, main: Path) -> dict[str, str]:
+        _git(main, "update-ref", "refs/remotes/origin/main", "HEAD")
+        sha = {"init": self._rev(main, "HEAD")}
+        for name in ("a", "b"):
+            (main / "backend" / f"{name}.py").write_text("X = 1\n")
+            _git(main, "add", "-A")
+            _git(main, "commit", "-q", "-m", name)
+            sha[name] = self._rev(main, "HEAD")
+        return sha
+
+    @staticmethod
+    def _rev(main: Path, rev: str) -> str:
+        return subprocess.run(["git", "rev-parse", rev], cwd=main, env=_clean_env(),
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    def _classify(self, main: Path, tmp_path: Path, **extra) -> str:
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh")], cwd=main,
+                              env=_clean_env(GATES_STAMP_FILE=str(tmp_path / "passed"), PREPUSH_CLASSIFY_ONLY="1", **extra),
+                              capture_output=True, text=True, timeout=60)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        return proc.stdout
+
+    def test_each_side_takes_its_own_base_and_says_why(self, checkouts, tmp_path):
+        """Mutation: side_base reads only the whole-tree ledgers (drop "$STAMP-$1") → backend on the merge-base, red."""
+        main, _ = checkouts
+        sha = self._repo(main)
+        (tmp_path / "passed-backend").write_text(f"{self._rev(main, sha['a'] + '^{tree}')}\t2026-11-15 09:00, x\tbackend/a.py\n")
+        out = self._classify(main, tmp_path)
+        assert f"backend base: {sha['a'][:7]} (last tree that passed, selective) — 1 commits since" in out, out
+        assert f"js base: {sha['init'][:7]} (merge-base with origin/main; no pass recorded)" in out, out
+        assert f"gates: backend {sha['a'][:7]}.., JS {sha['init'][:7]}..(working tree) — " in out, out
+        # The backend decides from its own changes: backend/b.py only, so the round trips etc. follow that.
+        assert "classify: core=0 frontend=0 backend=1" in out, out
+
+    def test_a_backend_base_does_not_shrink_the_js_change_list(self, checkouts, tmp_path):
+        """The JS side's readers of backend files follow the JS side's own (longer) change list.
+        Mutation: compute CHANGED_JS from the backend's base → no reader, red."""
+        main, _ = checkouts
+        (main / "frontend").mkdir()
+        (main / "frontend" / "jest.always-run.txt").write_text("src/__tests__/readsBackend.test.ts backend\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "a web test that reads backend/")
+        self._repo(main)
+        (tmp_path / "passed-backend").write_text(f"{self._rev(main, 'HEAD^{tree}')}\t2026-11-15 09:00, x\t*\n")
+        out = self._classify(main, tmp_path)
+        assert "backend base: " + self._rev(main, "HEAD")[:7] + " (last tree that passed, full) — 0 commits since" in out, out
+        # Nothing changed for the backend since its full pass; the JS side still sees backend/a.py and b.py.
+        assert "classify: core=0 frontend=0 backend=0" in out, out
+        assert "classify-jest-readers: 1" in out and "jest reader: src/__tests__/readsBackend.test.ts" in out, out
+
+    def _run_red_backend(self, main: Path, tmp_path: Path) -> subprocess.CompletedProcess:
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "npm").write_text("#!/bin/bash\necho 'Tests: 1 passed'\n")
+        (b / "npm").chmod(0o755)
+        py = tmp_path / "fake-python"
+        py.write_text("#!/bin/bash\n"
+                      'case "$1" in manage.py) exit 0 ;; -m) [ "$2" = pytest ] && { echo "1 failed"; exit 1; } ;; esac\n'
+                      'exec python3 "$@"\n')
+        py.chmod(0o755)
+        env = _clean_env(PYTHON_BIN=str(py), RUFF_BIN=shutil.which("true"), DATABASE_URL="sqlite:///:memory:",
+                         REDIS_URL=os.environ.get("REDIS_URL", ""), GATES_STAMP_FILE=str(tmp_path / "passed"))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--base", "HEAD~1"], cwd=main, env=env,
+                              capture_output=True, text=True, timeout=120)
+
+    def test_a_green_side_is_recorded_when_the_other_is_red(self, checkouts, tmp_path, fake_backend):
+        """Mutation: drop `record_side js "$JS_RC"` at the end of the run → no JS record, red."""
+        main, _ = checkouts
+        (main / "mobile" / "src").mkdir(parents=True)
+        (main / "mobile" / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('../../backend/x.py');\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "a mobile test that reads backend/")
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "a backend change: its tests red, the JS side (the reader) green")
+        proc = self._run_red_backend(main, tmp_path)
+        assert proc.returncode != 0 and "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
+        assert "recorded a selective pass (js)" in proc.stdout, proc.stdout
+        line = (tmp_path / "passed-js").read_text().rstrip().split("\t")
+        assert line[0] == self._rev(main, "HEAD^{tree}") and line[2] == "backend/x.py", line
+        assert not (tmp_path / "passed-backend").exists(), "the red side was recorded"
+        # ... and the next run takes that tree as the JS side's base while the backend's stays behind.
+        _git(main, "update-ref", "refs/remotes/origin/main", "HEAD~1")
+        out = self._classify(main, tmp_path)
+        assert "js base: " + self._rev(main, "HEAD")[:7] + " (last tree that passed, selective)" in out, out
+        assert "backend base: " + self._rev(main, "HEAD~1")[:7] + " (merge-base with origin/main; no pass recorded)" in out, out
+
+    def _push(self, main: Path, tmp_path: Path, changed: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main,
+                              env=_clean_env(PREPUSH_CHANGED=changed, PREPUSH_RANGE=f"{'0' * 40}..{self._rev(main, 'HEAD')}",
+                                             GATES_STAMP_FILE=str(tmp_path / "passed"), PREPUSH_CLASSIFY_ONLY="1"),
+                              capture_output=True, text=True, timeout=60)
+
+    def test_a_push_passes_when_each_side_was_proven_in_a_run_of_its_own(self, checkouts, tmp_path):
+        """No SKIP_PREPUSH needed when the backend went green in one run and the JS side in the next.
+        Mutation: accept the push on the backend's ledger alone → the second half goes red."""
+        main, _ = checkouts
+        tree = self._rev(main, "HEAD^{tree}")
+        (tmp_path / "passed-backend").write_text(f"{tree}\t2026-11-15 09:00, x\tbackend/a.py|frontend/p.tsx\n")
+        (tmp_path / "passed-js").write_text(f"{tree}\t2026-11-15 10:00, x\tfrontend/p.tsx\n"
+                                           f"{tree}\t2026-11-15 11:00, x\tbackend/a.py\n")
+        push = self._push(main, tmp_path, "backend/a.py\nfrontend/p.tsx")
+        assert push.returncode == 0 and "already passed `scripts/run-gates.sh` for these changes (backend selective, JS selective)" in push.stdout, push.stdout
+        assert "classify:" not in push.stdout
+        # A file only the backend's run covered: the JS side has not vouched for it, so the push runs.
+        (tmp_path / "passed-js").write_text(f"{tree}\t2026-11-15 10:00, x\tfrontend/p.tsx\n")
+        push = self._push(main, tmp_path, "backend/a.py\nfrontend/p.tsx")
+        assert "already passed" not in push.stdout and re.search(r"^classify: ", push.stdout, re.M), push.stdout
+
+    def test_a_full_pass_of_each_side_lets_any_push_of_the_tree_through(self, checkouts, tmp_path):
+        main, _ = checkouts
+        tree = self._rev(main, "HEAD^{tree}")
+        for side in ("backend", "js"):
+            (tmp_path / f"passed-{side}").write_text(f"{tree}\t2026-11-15 09:00, x\t*\n")
+        push = self._push(main, tmp_path, "backend/anything.py\nfrontend/else.tsx")
+        assert "already passed `scripts/run-gates.sh --full`" in push.stdout, push.stdout
+
+
+class TestPytestProgressNamesTheFailures:
+    """2026-11-15 (user decision): the progress line said "failed so far: 3" for twenty minutes and named them
+    only at the end — or never, when the time limit ended the run first. Now each new failure is named by node
+    id as it appears. Mutation: drop the line that prints `new` → no FAILED names until the end, red."""
+
+    def test_new_failures_are_named_once_as_they_appear(self, hook, checkouts, tmp_path, fake_backend):
+        main, _ = checkouts
+        py = tmp_path / "slow-python"
+        py.write_text(
+            "#!/bin/bash\n"
+            'case "$1" in\n'
+            "  manage.py) exit 0 ;;\n"
+            '  -m) if [ "$2" = pytest ]; then\n'
+            '        echo "tests/test_a.py::test_one PASSED [ 25%]"; echo "tests/test_a.py::test_two FAILED [ 50%]"; sleep 3\n'
+            '        echo "[gw1] [ 75%] ERROR tests/test_b.py::test_three[x-y]"; echo "[gw0] [100%] PASSED tests/test_b.py::test_failed_name"; sleep 3\n'
+            '        echo "FAILED tests/test_a.py::test_two - AssertionError"; exit 1; fi ;;\n'
+            "esac\n"
+            'exec python3 "$@"\n')
+        py.chmod(0o755)
+        proc = _run(hook, main, ["backend/x.py"], PYTHON_BIN=str(py), RUFF_BIN=shutil.which("true"),
+                    REDIS_URL=os.environ.get("REDIS_URL", ""), GATES_PROGRESS_EVERY="2")
+        assert proc.returncode != 0, proc.stdout
+        out = proc.stdout
+        assert "failed so far: 1" in out and "failed so far: 2" in out, out
+        first = out.index("        FAILED tests/test_a.py::test_two")
+        assert first < out.index("failed so far: 2") < out.index("        FAILED tests/test_b.py::test_three[x-y]"), out
+        assert out.count("        FAILED tests/test_a.py::test_two") == 1, "a failure is named once, not on every line"
+        assert "FAILED tests/test_b.py::test_failed_name" not in out, "a PASSED test was named"
+
+    def test_pytest_runs_with_one_line_per_test(self, hook, checkouts, fake_backend):
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert "-v" in args and "-q" not in args, args
+
+
+class TestHelpSaysWhatTheScriptDoes:
+    """2026-11-15: --help still said the backend pytest always runs whole and that a push to main forces a full
+    run — both untrue for weeks. Mutation: restore the old header → red."""
+
+    def test_help_describes_the_sides_their_ledgers_and_the_selection(self, checkouts):
+        main, _ = checkouts
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--help"], cwd=main, env=_clean_env(),
+                              capture_output=True, text=True, timeout=30)
+        assert proc.returncode == 0, proc.stderr
+        out = proc.stdout
+        for said in ("soulledger-gates-passed-backend", "Each side picks its own base", "FAIL LATE",
+                     "select-backend-tests.py", "A push to main is NOT full", "90 when --full or when the backend"):
+            assert said in out, said
+        for stale in ("pytest-testmon", "a push to\nrefs/heads/main", "EVERYTHING ELSE RUNS IN FULL"):
+            assert stale not in out, stale
+        assert not out.startswith("#!") and "set -u" not in out
+

@@ -1,40 +1,41 @@
 #!/bin/bash
 # scripts/run-gates.sh — the gates `.git/hooks/pre-push` runs, runnable by hand.
 #
-#   scripts/run-gates.sh [--full|--affected] [--base <ref>]
+#   scripts/run-gates.sh [--full|--affected] [--base <ref>]   the gates for what changed
+#   scripts/run-gates.sh --real-pg [--full]                    backend pytest on real PostgreSQL
+#   scripts/run-gates.sh --e2e[=auto|all|<project>,...]        Playwright, on GATES_REMOTE only
 #
-# Outside a push the changed files are `git diff <base>` (committed, staged and
-# unstaged) plus untracked files; <base> defaults to the latest of HEAD's last 300
-# commits whose tree passed the gates (full, or selective covering it), else the
-# merge-base with origin/main; one line names it. The pre-push hook (scripts/install-hooks.sh) calls this with
-# `--prepush` and the pushed range's files in PREPUSH_CHANGED; there is one copy
-# of the logic, and it is this file.
+# TWO SIDES, EACH WITH ITS OWN LEDGER (2026-11-15, user decision). backend = ruff, makemigrations, pytest;
+# JS = tsc and eslint of core / web / mobile / officer, then core vitest and the web, mobile and officer jest.
+#   - A side that goes green is recorded - the tree and the files it covered - even when the other side
+#     failed: <git common dir>/soulledger-gates-passed-backend and ...-js (a --full pass covers `*`).
+#   - Each side picks its own base. With no --base: the latest of HEAD's last 300 commits whose tree that
+#     side passed (a full pass, or selective passes covering that commit's changes against the merge-base
+#     with origin/main), else the merge-base. The first lines say which base each side took and why.
+#   - A push (the hook passes --prepush, and the pushed files in PREPUSH_CHANGED) is let through when both
+#     sides' ledgers vouch for the pushed tree and its files. The older whole-tree ledgers
+#     (soulledger-gates-passed, ...-selective) are still read, for both sides.
 #
-# WHAT RUNS. Which areas run (core / frontend / mobile / officer / backend) is decided
-# from the changed paths, as it always was. Inside the frontend area, jest runs
-# SELECTIVELY unless something forces it FULL: the tests `jest
-# --findRelatedTests` reaches from the changed files, plus every test in
-# frontend/jest.always-run.txt — the tests that read files (fs, child_process,
-# git) instead of importing them, which the import graph cannot see.
-# src/__tests__/jestAlwaysRunList.test.ts keeps that list exact.
+# WHAT RUNS. Each side decides from its own changed files (the diff from its base, plus untracked files).
+#   - backend: pytest by app (scripts/select-backend-tests.py) plus the tests listed in
+#     backend/tests/reads-outside-backend.txt that read what changed; the whole suite when the selector says
+#     so (settings, a conftest, dependencies, apps/core ...). The migration round trips
+#     only when a migration or their harness changed.
+#   - JS: the web jest by `--findRelatedTests` plus frontend/jest.always-run.txt (the tests that read files,
+#     which the import graph cannot see); the two apps' jest the same way; tsc / eslint / vitest for each
+#     area that changed. A rule in FULL_RULES below sends the web jest to a full run and says which.
+#   Readers of the other side's files follow the changes in the side's own change set.
+# FULL: `--full` or GATES_FULL=1 - everything, with the coverage floors. A push to main is NOT full
+# (2026-10-24). `--affected` is the default spelled out; nothing forces selective (GATES_FULL=0 does not).
 #
-# FULL, and the run prints which rule said so: `--full`, GATES_FULL=1, a push to
-# refs/heads/main, or a changed path matching FULL_RULES below. `--affected` is
-# the default spelled out; it cannot override a rule, and neither can
-# GATES_FULL=0 — there is deliberately no way to force selective.
+# FAIL LATE (2026-11-15). Static checks run before a side's tests, but a red tsc / eslint / ruff /
+# makemigrations no longer stops the side: its remaining steps run, every red step is listed at the end,
+# and the run exits non-zero. One side failing never stops the other.
 #
-# EVERYTHING ELSE RUNS IN FULL: tsc, eslint, core, mobile, officer, ruff,
-# makemigrations — and the backend pytest. Selective backend runs with
-# pytest-testmon were built and measured on 2026-09-30 and not adopted, because
-# the safe version is slower than a full run (numbers in CLAUDE.md, Build &
-# Test): testmon attributes to a test only the lines that ran during it, so
-# anything Django evaluates at import time (model fields, serializer Meta,
-# viewset attributes, urls, constant tables) is invisible to it — changing the
-# souls router prefix failed 72 of 177 apps/souls tests and testmon selected 4;
-# guarding that sends ~75% of historical backend commits to a full run anyway,
-# the backend tests that read files have to run every time (1145 tests, 101 s
-# with nothing changed), and recording costs 277 s per full run against 130 s
-# without it.
+# WHERE. With GATES_REMOTE (.prepush.env) the whole run happens on that machine, the two sides side by
+# side, under a time limit: 30 minutes, 90 when --full or when the backend resolves to its whole suite
+# (GATES_REMOTE_TIMEOUT / GATES_REMOTE_FULL_TIMEOUT). This machine syncs, waits, and records the ledgers.
+# Without GATES_REMOTE everything runs here, one step after another.
 #
 # WHY THIS EXISTS. CI runs daily, on v* tags and by hand (2026-10-30; it was
 # `workflow_dispatch` only before), never on a push. The contract tests that
@@ -83,7 +84,7 @@ while [ $# -gt 0 ]; do
         --e2e=*)    E2E="${1#--e2e=}"; [ "$E2E" = all ] && E2E="chromium,firefox,mobile-chrome" ;;
         --affected) MODE=auto ;;
         --base)     BASE="${2:?--base needs a ref}"; shift ;;
-        -h|--help)  sed -n '2,37p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        -h|--help)  awk 'NR == 1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"; exit 0 ;;
         *)          echo "run-gates: unknown argument $1 (see --help)"; exit 2 ;;
     esac
     shift
@@ -91,7 +92,7 @@ done
 P="gates"; [ "$PREPUSH" = 1 ] && P="pre-push"
 
 ROOT="$(git rev-parse --show-toplevel)"
-# The tree this run tests, read now: record_pass at the end must not vouch for a HEAD that moved while the
+# The tree this run tests, read now: record_side at the end must not vouch for a HEAD that moved while the
 # tests ran (2026-11-14: a run that tested 4323bdd5f recorded a6ca4d74e, six files it never saw).
 START_TREE="$(git rev-parse HEAD^{tree} 2>/dev/null)"
 cd "$ROOT" || exit 1
@@ -317,7 +318,7 @@ REMOTE_DEPS='
 # projects that tree already passed — in one run or several — prints "already passed" and exits 0.
 # A dirty checkout neither skips nor records (what runs there is not HEAD's tree). FORCE=1 runs anyway.
 # tree_is_clean — tracked files equal HEAD, and no untracked file where the sync sends it (remote_sync's
-# directories) or a gate reads it. Sets CLEAN_WHY when not. Shared with record_pass below.
+# directories) or a gate reads it. Sets CLEAN_WHY when not. Shared with record_side below.
 tree_is_clean() {
     CLEAN_WHY=""
     if ! git -C "$ROOT" diff --quiet HEAD --; then CLEAN_WHY="tracked files differ from HEAD"; return 1; fi
@@ -325,78 +326,117 @@ tree_is_clean() {
     stray="$(git -C "$ROOT" ls-files --others --exclude-standard -- backend frontend packages mobile mobile-officer scripts | head -3)"
     [ -z "$stray" ] || { CLEAN_WHY="untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 1; }
 }
-# The pass ledgers (record_pass at the end writes STAMP / SEL_STAMP; GATES_STAMP_FILE is the test seam).
+# The pass ledgers. GATES_STAMP_FILE is the test seam.
+#   $STAMP-backend, $STAMP-js   (2026-11-15) one per side, written by record_side at the end:
+#                               <tree> TAB <date, commit> TAB <covered files, |-separated, or * for --full>
+#   $STAMP, $STAMP-selective    the whole-tree ledgers before 2026-11-15 (a full pass; a selective pass and the
+#                               files it covered). No longer written; an entry still counts for both sides.
+#   $STAMP-e2e                  the browser suites' (--e2e), unchanged.
 STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}"
 SEL_STAMP="$STAMP-selective"
 E2E_STAMP="$STAMP-e2e"
+
+# side_proves <backend|js> <tree> <files, one per line | "-"> — do the ledgers vouch for this side on <tree>
+# for these changed files? A full pass always does (the old $STAMP, or `*` in the side's own); selective
+# passes do when the files they covered, all the tree's lines in $STAMP-selective and the side's ledger
+# united, include every one of <files>. "-" asks for a full pass only. Sets PROVEN_KIND (full / selective).
+side_proves() {
+    PROVEN_KIND=""
+    grep -qs "^$2	" "$STAMP" && { PROVEN_KIND=full; return 0; }
+    local files=() f
+    for f in "$SEL_STAMP" "$STAMP-$1"; do [ -f "$f" ] && files+=("$f"); done
+    [ "${#files[@]}" -gt 0 ] || return 1
+    PROVEN_KIND="$(FILES="$3" awk -F'\t' -v t="$2" '
+        BEGIN { n = split(ENVIRON["FILES"], want, "\n") }
+        $1 == t { seen = 1; if ($3 == "*") all = 1; m = split($3, r, "|"); for (i = 1; i <= m; i++) have[r[i]] = 1 }
+        END { if (all) { print "full"; exit }
+              if (!seen || ENVIRON["FILES"] == "-") exit
+              for (i = 1; i <= n; i++) if (want[i] != "" && !(want[i] in have)) exit
+              print "selective" }' "${files[@]}")"
+    [ -n "$PROVEN_KIND" ]
+}
 
 # WHAT CHANGED. The hook passes the pushed range's files in PREPUSH_CHANGED (one
 # path per line, `git diff --no-renames`, so a rename shows its old path as
 # deleted). PREPUSH_CHANGED is also the test seam, with PREPUSH_CLASSIFY_ONLY=1,
 # which prints the decisions and exits before running any gate — both exist for
-# `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`.
-# THE BASE IS THE LAST TREE THAT PASSED (2026-11-14, user decision). With no --base, a run compares against the
-# most recent of the last 300 commits reachable from HEAD whose tree the ledgers vouch for, not the
-# merge-base with origin/main. A long branch's diff against main hits a force-full rule (gate scripts,
-# config, a deleted file, a migration) forever, so a one-file follow-up ran the whole suite (~45 minutes on
-# unRAID, mostly migration round trips); now it runs what changed since the last green tree, and the round
-# trips only when a migration changed since then. Which records count:
-#   - a FULL pass (STAMP): always — it tested the whole tree;
-#   - a SELECTIVE pass (SEL_STAMP): only when the files it covered (all records for that tree, united)
-#     include every file that commit changes against the merge-base. A selective pass vouches for the files
-#     it covered and nothing else; without the check, a run with an explicit --base that skipped a stretch
-#     of the branch would become a base and that stretch would never be gated. A run whose base came from
-#     here records diff(merge-base, HEAD) as covered (COVERED, below), so the chain passes its own check.
+# `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`. A delegated run is handed each side's
+# list as well (PREPUSH_CHANGED_BACKEND / PREPUSH_CHANGED_JS, DELEGATED RUNS below).
+# THE BASE IS THE LAST TREE THAT PASSED (2026-11-14, user decision) — PER SIDE (2026-11-15, user decision).
+# With no --base, each side compares against the most recent of the last 300 commits reachable from HEAD whose
+# tree that side's ledgers vouch for, not the merge-base with origin/main. A long branch's diff against main
+# hits a force-full rule (gate scripts, config, a deleted file, a migration) forever, so a one-file follow-up
+# ran the whole suite (~45 minutes on unRAID, mostly migration round trips); now it runs what changed since the
+# last green tree. And per side because one run often greens one side only: r31/r34/r35 (2026-11-15) re-ran
+# 20–40 minutes of a green backend because the JS side of the same run was red. Which records count:
+#   - a FULL pass: always — it tested the whole tree;
+#   - SELECTIVE passes: only when the files they covered (all records for that tree, united) include every
+#     file that commit changes against the merge-base. A selective pass vouches for the files it covered and
+#     nothing else; without the check, a run with an explicit --base that skipped a stretch of the branch
+#     would become a base and that stretch would never be gated. A side whose base came from here records
+#     diff(merge-base, HEAD) as covered (COVERED_*, below), so the chain passes its own check.
 #     The trade-off left is the selective gating's own, already accepted (CLAUDE.md, Build & Test): a test
 #     is trusted to be unaffected by files outside what selected it.
 # Not for --full / GATES_FULL=1, --real-pg (a SQLite pass says nothing about PostgreSQL) or --e2e (gate
 # passes say nothing about browsers; E2E has its own ledger). A push (PREPUSH_CHANGED) is unchanged: the
 # hook compares with the remote ref being pushed over. No record found: the merge-base, as before.
-# One line says which base was taken and why.
-ledger_base() {
-    local sha tree cov
-    [ -f "$STAMP" ] || [ -f "$SEL_STAMP" ] || { LEDGER_WHY="; no pass recorded"; return 0; }
+# One line per side says which base it took and why.
+side_base() {  # <backend|js> → SIDE_BASE (empty: none) and SIDE_WHY
+    local sha tree
+    SIDE_BASE=""; SIDE_WHY="; no pass recorded"
+    [ -f "$STAMP" ] || [ -f "$SEL_STAMP" ] || [ -f "$STAMP-$1" ] || return 0
     while read -r sha tree; do
-        if [ -f "$STAMP" ] && grep -q "^$tree	" "$STAMP"; then
-            BASE="$sha"; BASE_KIND=full; return 0
-        fi
-        { [ -n "$MB" ] && [ -f "$SEL_STAMP" ]; } || continue
-        cov="$(awk -F'\t' -v t="$tree" '$1 == t { print $3 }' "$SEL_STAMP" | tr '|' '\n' | grep -v '^$')"
-        [ -n "$cov" ] || continue
-        if [ -z "$(git diff --name-only --no-renames "$MB" "$sha" | grep -vxF -e "$cov" | head -1)" ]; then
-            BASE="$sha"; BASE_KIND=selective; return 0
+        grep -qs "^$tree	" "$STAMP" "$SEL_STAMP" "$STAMP-$1" || continue
+        if side_proves "$1" "$tree" "$(if [ -n "$MB" ]; then git diff --name-only --no-renames "$MB" "$sha"; else echo -; fi)"; then
+            SIDE_BASE="$sha"; SIDE_WHY="last tree that passed, $PROVEN_KIND"; return 0
         fi
     done < <(git log --format='%H %T' -n 300 HEAD)
-    LEDGER_WHY="; none of the last 300 commits has a tree that passed"
+    SIDE_WHY="; none of the last 300 commits has a tree that passed"
 }
 changed_since_base() {
     if [ -n "${PREPUSH_CHANGED+x}" ]; then
         CHANGED="$PREPUSH_CHANGED"
+        CHANGED_BE="${PREPUSH_CHANGED_BACKEND-$CHANGED}"; CHANGED_JS="${PREPUSH_CHANGED_JS-$CHANGED}"
+        COVERED_BE="$CHANGED_BE"; COVERED_JS="$CHANGED_JS"
         RANGE="${PREPUSH_RANGE:-(PREPUSH_CHANGED)}"
+        return 0
+    fi
+    local side ledger=0 from_be=0 from_js=0
+    if [ -n "$BASE" ]; then
+        git rev-parse --verify -q "$BASE^{commit}" >/dev/null || { echo "$P: --base $BASE is not a commit"; exit 2; }
+        BASE_BE="$BASE"; BASE_JS="$BASE"; MB=""   # an explicit base: nothing to extend the coverage with
     else
-        local from_ledger=0
-        if [ -z "$BASE" ]; then
-            MB="$(git merge-base HEAD origin/main 2>/dev/null || true)"
-            [ -z "$E2E" ] && [ "$REAL_PG" = 0 ] && [ "$MODE" != full ] && [ "${GATES_FULL:-}" != 1 ] && ledger_base
-            if [ -n "$BASE" ]; then
-                from_ledger=1
-                echo "$P: base: $(git rev-parse --short "$BASE") (last tree that passed, $BASE_KIND) — $(git rev-list --count "$BASE..HEAD") commits since"
+        MB="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+        [ -z "$E2E" ] && [ "$REAL_PG" = 0 ] && [ "$MODE" != full ] && [ "${GATES_FULL:-}" != 1 ] && ledger=1
+        for side in backend js; do
+            SIDE_BASE=""; SIDE_WHY=""
+            [ "$ledger" = 1 ] && side_base "$side"
+            if [ -n "$SIDE_BASE" ]; then
+                echo "$P: $side base: $(git rev-parse --short "$SIDE_BASE") ($SIDE_WHY) — $(git rev-list --count "$SIDE_BASE..HEAD") commits since"
+                [ "$side" = backend ] && from_be=1 || from_js=1
             else
                 [ -n "$MB" ] || { echo "$P: no merge-base with origin/main; pass --base <ref>"; exit 2; }
-                BASE="$MB"
-                echo "$P: base: $(git rev-parse --short "$BASE") (merge-base with origin/main${LEDGER_WHY:-})"
+                SIDE_BASE="$MB"
+                echo "$P: $side base: $(git rev-parse --short "$MB") (merge-base with origin/main${SIDE_WHY})"
             fi
-        fi
-        git rev-parse --verify -q "$BASE^{commit}" >/dev/null || { echo "$P: --base $BASE is not a commit"; exit 2; }
-        CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
-        RANGE="$(git rev-parse --short "$BASE")..(working tree)"
-        # What a pass of this run vouches for (record_pass): the base vouched for diff(MB, base), this run
-        # tests diff(base, HEAD), and diff(MB, HEAD) lies within the two.
-        COVERED="$CHANGED"
-        if [ "$from_ledger" = 1 ] && [ -n "$MB" ]; then
-            COVERED="$( { echo "$CHANGED"; git diff --name-only --no-renames "$MB" HEAD; } | grep -v '^$' | sort -u)"
-        fi
+            [ "$side" = backend ] && BASE_BE="$SIDE_BASE" || BASE_JS="$SIDE_BASE"
+        done
     fi
+    CHANGED_BE="$( { git diff --name-only --no-renames "$BASE_BE"; git ls-files --others --exclude-standard; } | sort -u)"
+    CHANGED_JS="$CHANGED_BE"
+    [ "$BASE_JS" = "$BASE_BE" ] \
+        || CHANGED_JS="$( { git diff --name-only --no-renames "$BASE_JS"; git ls-files --others --exclude-standard; } | sort -u)"
+    CHANGED="$(printf '%s\n%s\n' "$CHANGED_BE" "$CHANGED_JS" | grep -v '^$' | sort -u)"
+    if [ "$BASE_JS" = "$BASE_BE" ]; then RANGE="$(git rev-parse --short "$BASE_BE")..(working tree)"
+    else RANGE="backend $(git rev-parse --short "$BASE_BE").., JS $(git rev-parse --short "$BASE_JS")..(working tree)"; fi
+    # What a side's pass vouches for (record_side): its base vouched for diff(MB, base), this run tests
+    # diff(base, HEAD), and diff(MB, HEAD) lies within the two.
+    COVERED_BE="$CHANGED_BE"; COVERED_JS="$CHANGED_JS"
+    local branch=""
+    [ -n "$MB" ] && branch="$(git diff --name-only --no-renames "$MB" HEAD)"
+    [ "$from_be" = 1 ] && [ -n "$MB" ] && COVERED_BE="$(printf '%s\n%s\n' "$CHANGED_BE" "$branch" | grep -v '^$' | sort -u)"
+    [ "$from_js" = 1 ] && [ -n "$MB" ] && COVERED_JS="$(printf '%s\n%s\n' "$CHANGED_JS" "$branch" | grep -v '^$' | sort -u)"
+    return 0
 }
 # Root-level files that change nothing a gate measures (documentation, deployment). Used by the root-level
 # rules further down (where the list is explained) and by --e2e=auto.
@@ -520,69 +560,64 @@ fi
 
 # WHAT CHANGED: changed_since_base, defined above the E2E block (which uses it for --e2e=auto).
 changed_since_base
-# A TREE THAT ALREADY PASSED `--full` IS NOT RUN AGAIN (2026-10-19, user decision).
-# A push to main runs the full set, which is exactly what `scripts/run-gates.sh --full`
-# runs; doing it twice for the same files cost ~22 minutes a push. A full run that
-# passes on a clean checkout records HEAD's tree in this file (see record_pass
-# at the end); a push whose pushed commit has that very tree is let through. Any
-# change at all — one byte in any tracked file — is a different tree and runs as before.
-# The real-PostgreSQL run and E2E were never part of this script; they are unaffected.
-# GATES_STAMP_FILE is the test seam.
-# (STAMP and SEL_STAMP are defined with E2E_STAMP, above changed_since_base, which reads them.)
+# A PUSH OF A TREE BOTH SIDES ALREADY PASSED IS NOT RUN AGAIN.
+#   - 2026-10-19: a tree that passed `--full` (any push of it); 2026-10-27: a tree that passed selectively,
+#     when every file the push changes is among the files that pass covered — a session ran the gates and
+#     then pushed, and the hook ran the same tests a second time. A larger change set never selects less:
+#     each rule only adds tests or forces a full run.
+#   - 2026-11-15 (user decision): per side. The push passes when the backend's ledgers and the JS side's
+#     each vouch for the pushed tree (side_proves) — whether the two were green in one run or in two. The
+#     whole-tree ledgers written before that day count for both sides.
+# --full / GATES_FULL=1 at push time accept only a full pass. Any change at all — one byte in any tracked
+# file — is a different tree and runs as before. The real-PostgreSQL run and E2E were never part of this.
 PUSHED_SHA=""
 case "${PREPUSH_RANGE:-}" in *..*) PUSHED_SHA="${PREPUSH_RANGE##*..}" ;; esac
 PUSHED_TREE=""
 [ -n "$PUSHED_SHA" ] && PUSHED_TREE="$(git rev-parse -q --verify "$PUSHED_SHA^{tree}" 2>/dev/null || true)"
-if [ "$PREPUSH" = 1 ] && [ -n "$PUSHED_TREE" ] && [ -f "$STAMP" ]; then
-    HIT="$(grep -m1 "^$PUSHED_TREE	" "$STAMP" || true)"
-    if [ -n "$HIT" ]; then
-        echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` (${HIT#*	}) — not running it again"
-        exit 0
-    fi
-fi
-# A SELECTIVE PASS COUNTS TOO (2026-10-27, user decision). A session runs `scripts/run-gates.sh`
-# and then pushes, and the hook ran the same tests a second time. A selective run that passes on a
-# clean checkout records HEAD's tree and the files it treated as changed (SEL_STAMP); a push is let
-# through when its commit has that very tree and every file the push changes is among the recorded
-# ones. A larger change set never selects less: each rule only adds tests or forces a full run.
-# --full / GATES_FULL=1 at push time still run.
-if [ "$PREPUSH" = 1 ] && [ -n "${PUSHED_TREE:-}" ] && [ -f "$SEL_STAMP" ] \
-    && [ "$MODE" != full ] && [ "${GATES_FULL:-}" != 1 ] && [ -n "$CHANGED" ]; then
-    HIT="$(CHANGED="$CHANGED" awk -F'\t' -v t="$PUSHED_TREE" '
-        BEGIN { n = split(ENVIRON["CHANGED"], c, "\n") }
-        $1 == t { m = split($3, r, "|"); delete have; for (i = 1; i <= m; i++) have[r[i]] = 1
-                  ok = 1; for (i = 1; i <= n; i++) if (c[i] != "" && !(c[i] in have)) { ok = 0; break }
-                  if (ok) { print $2; exit } }' "$SEL_STAMP")"
-    if [ -n "$HIT" ]; then
-        echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh\` for these changes ($HIT) — not running it again"
-        exit 0
+if [ "$PREPUSH" = 1 ] && [ -n "$PUSHED_TREE" ]; then
+    WANT="$CHANGED"; { [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ]; } && WANT=-
+    if side_proves backend "$PUSHED_TREE" "$WANT"; then
+        BE_KIND="$PROVEN_KIND"
+        if side_proves js "$PUSHED_TREE" "$WANT"; then
+            if [ "$BE_KIND" = full ] && [ "$PROVEN_KIND" = full ]; then
+                echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` — not running it again"
+            else
+                echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh\` for these changes (backend $BE_KIND, JS $PROVEN_KIND) — not running it again"
+            fi
+            exit 0
+        fi
     fi
 fi
 
-# record_pass: after a green run outside a push, on a clean checkout. --full goes to STAMP (any push
-# of the tree passes); a selective run goes to SEL_STAMP with the files it covered.
-record_pass() {
-    [ "$PREPUSH" = 0 ] && [ "$REAL_PG" = 0 ] || return 0
+# record_side <backend|js> <that side's exit status>: after a run outside a push, on a clean checkout, a
+# green side is recorded in its own ledger whatever the other side did. --full covers `*` (any push of the
+# tree); a selective run, the files the side covered (COVERED_BE / COVERED_JS).
+record_side() {
+    [ "$PREPUSH" = 0 ] && [ "$REAL_PG" = 0 ] && [ "$2" = 0 ] || return 0
     cd "$ROOT" || return 0
-    tree_is_clean || { echo "$P: not recording this pass — $CLEAN_WHY"; return 0; }
-    local tree file; tree="$(git rev-parse HEAD^{tree})"
-    [ "$tree" = "$START_TREE" ] || { echo "$P: not recording this pass — HEAD moved during the run (tested ${START_TREE:0:10}, now ${tree:0:10})"; return 0; }
+    tree_is_clean || { echo "$P: not recording the $1 pass — $CLEAN_WHY"; return 0; }
+    local tree file="$STAMP-$1" cov kind=selective
+    tree="$(git rev-parse HEAD^{tree})"
+    [ "$tree" = "$START_TREE" ] || { echo "$P: not recording the $1 pass — HEAD moved during the run (tested ${START_TREE:0:10}, now ${tree:0:10})"; return 0; }
     if [ "$FULL_RUN" = 1 ]; then
-        file="$STAMP"
-        printf '%s\t%s, %s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$file"
-        echo "$P: recorded a full pass for tree ${tree:0:10} — a push of this exact tree will not re-run the gates"
+        cov='*'; kind=full
+    elif [ "$1" = backend ]; then
+        cov="$(echo "$COVERED_BE" | grep -v '^$' | paste -sd'|' -)"
     else
-        file="$SEL_STAMP"
-        printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" \
-            "$(echo "${COVERED-$CHANGED}" | grep -v '^$' | paste -sd'|' -)" >>"$file"
-        echo "$P: recorded a selective pass for tree ${tree:0:10} — a push of this tree changing only these files will not re-run the gates"
+        cov="$(echo "$COVERED_JS" | grep -v '^$' | paste -sd'|' -)"
     fi
+    printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" "$cov" >>"$file"
     tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+    echo "$P: recorded a $kind pass ($1) for tree ${tree:0:10}"
 }
 # Consumed: nothing below (pytest included) should inherit the hand-off.
-unset PREPUSH_CHANGED PREPUSH_RANGE
+unset PREPUSH_CHANGED PREPUSH_CHANGED_BACKEND PREPUSH_CHANGED_JS PREPUSH_RANGE
 [ -z "$CHANGED" ] && { echo "$P: no file changes in $RANGE"; exit 0; }
 
+# classify <changed files> — every decision below, from one change list. Called once per side when the two
+# sides' lists differ (EACH SIDE DECIDES FROM ITS OWN CHANGES, after it).
+classify() {
+local CHANGED="$1"
 TOUCHES_FRONTEND=$(echo "$CHANGED" | grep -cE '^frontend/' || true)
 # The gate machinery counts as backend: its only tests are in the backend suite
 # (test_prepush_runs_the_gates_a_change_can_break.py), which reads these files
@@ -667,10 +702,12 @@ UNKNOWN_ROOT=$(echo "$ROOT_LEVEL" | grep -vE "$JS_ROOT_RE" | grep -vE "$BACKEND_
 
 TOUCHES_CORE=$((TOUCHES_CORE + JS_ROOT))
 TOUCHES_BACKEND=$((TOUCHES_BACKEND + BACKEND_ROOT))
-if [ -n "$UNKNOWN_ROOT" ]; then
+if [ -n "$UNKNOWN_ROOT" ] && [ -z "${CLASSIFY_QUIET:-}" ]; then
     echo "$P: root-level file(s) this hook does not recognise — running every gate:"
     echo "$UNKNOWN_ROOT" | sed 's/^/    /'
     echo "$P: if one of these cannot affect a gate, add it to INERT_ROOT_RE in scripts/run-gates.sh."
+fi
+if [ -n "$UNKNOWN_ROOT" ]; then
     TOUCHES_CORE=$((TOUCHES_CORE + 1))
     TOUCHES_BACKEND=$((TOUCHES_BACKEND + 1))
 fi
@@ -934,8 +971,15 @@ unset PREPUSH_TO_MAIN
 # tests, theme.generated.ts as code that jest follows. Other JSON under packages/core (creditsOss.json …)
 # still forces a full run.
 JEST_TRACED_DATA_RE='^(packages/core/messages/|packages/core/tokens/[^/]+\.tokens\.json$|packages/core/openapi/schema\.yml$|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/.+\.json$)'
+# AND TWO TOP-LEVEL FILES THAT ARE CODE, NOT CONFIG (2026-11-15, user decision). frontend/proxy.ts (the
+# middleware) and frontend/instrumentation*.ts (Next's runtime hooks) sit at frontend/'s top level, so the
+# config rule sent every change to them to a full jest. Nothing in jest's setup loads them (jest.setup.js
+# requires lib/platform/web only, and jest.config.js names proxy.ts for coverage alone): their tests import
+# them (proxyAuthGate.test.ts imports @/proxy, and reads proxy.ts, so it is in jest.always-run.txt too), and
+# --findRelatedTests follows that.
+JEST_TRACED_CODE_RE='^frontend/(proxy|instrumentation[^/]*)\.ts$'
 while IFS=$'\t' read -r re name; do
-    hit=$(echo "$CHANGED" | grep -vE "$JEST_TRACED_DATA_RE" | grep -E "$re" | head -1)
+    hit=$(echo "$CHANGED" | grep -vE "$JEST_TRACED_DATA_RE" | grep -vE "$JEST_TRACED_CODE_RE" | grep -E "$re" | head -1)
     [ -n "$hit" ] && full "$name: $hit"
 done <<<"$FULL_RULES"
 # A deleted or renamed file cannot be traced: the import edge to it is gone
@@ -966,6 +1010,20 @@ hit=$(echo "$CHANGED" | grep -E '^(mobile/src/platform|mobile-officer/src/keptTe
 while IFS= read -r f; do
     case "$f" in mobile/*|mobile-officer/*) [ ! -e "$ROOT/$f" ] && { APP_FULL_F="${APP_FULL_F}an app file was deleted or renamed: $f"$'\n'; break; } ;; esac
 done <<<"$CHANGED"
+}  # classify
+
+# EACH SIDE DECIDES FROM ITS OWN CHANGES (2026-11-15, user decision). The backend's decisions come from
+# CHANGED_BE (the diff from the backend's base), the JS side's from CHANGED_JS. Each list holds every file
+# that changed since that side's base, the other side's included, so a side's readers of the other side's
+# files (reads-outside-backend.txt, jest.always-run.txt, the app readers) follow those changes as before.
+# One list (a push, an explicit --base, both sides on one base): classify once.
+BE_VARS="TOUCHES_BACKEND BACKEND_ROOT RUN_BACKEND BACKEND_READERS TOUCHES_MIGRATION RUN_MIGRATION RUN_META RUN_SCOPE META_SKIP TOPS"
+classify "$CHANGED_BE"
+if [ "$CHANGED_JS" != "$CHANGED_BE" ]; then
+    for v in $BE_VARS; do eval "SAVED_$v=\"\$$v\""; done
+    CLASSIFY_QUIET=1 classify "$CHANGED_JS"
+    for v in $BE_VARS; do eval "$v=\"\$SAVED_$v\""; done
+fi
 
 echo "$P: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files (root: js $JS_ROOT, backend $BACKEND_ROOT)"
 
@@ -981,7 +1039,7 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     echo "classify-meta: meta=$RUN_META"
     echo "classify-collection-scope: scope=$RUN_SCOPE"
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ -f "$HERE/select-backend-tests.py" ]; then
-        SEL=$(echo "$CHANGED" | python3 -I "$HERE/select-backend-tests.py")
+        SEL=$(echo "$CHANGED_BE" | python3 -I "$HERE/select-backend-tests.py")
         case "$SEL" in FULL*) echo "classify-backend-select: whole suite (${SEL#FULL	})" ;;
                        *) echo "classify-backend-select: $(echo "$SEL" | grep -c . || true) test files" ;; esac
     fi
@@ -996,11 +1054,23 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     exit 0
 fi
 
-if [ "$PREPUSH" = 1 ]; then
-    fail() { echo ""; echo "pre-push: $1"; echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."; exit 1; }
-else
-    fail() { echo ""; echo "$P: $1"; echo "$P: FAILED"; exit 1; }
-fi
+# fail <why>: stop. Inside a side (IN_SIDE, set by the subshells at the end) it ends that side only: the
+# reason goes to the side's notes ($NOTES) for the summary, and the other side runs on.
+fail() {
+    echo ""; echo "$P: $1"
+    if [ -n "${IN_SIDE:-}" ]; then printf '%s\n' "$1" >>"$NOTES"; exit 1; fi
+    if [ "$PREPUSH" = 1 ]; then echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."
+    else echo "$P: FAILED"; fi
+    exit 1
+}
+# static_fail <why>: a red type check or linter (FAIL LATE, 2026-11-15, user decision). Said now, noted for
+# the summary, and the side goes on: before, the first red tsc ended the side, the run was re-pushed for the
+# next red one, and r31–r38 took eight rounds where two or three would have shown every failure.
+static_fail() {
+    echo "$P: $1"
+    [ -n "${NOTES:-}" ] && printf '%s\n' "$1" >>"$NOTES"
+    STATIC_RED=1
+}
 
 # ── DELEGATED RUNS: THE WHOLE RUN ON ANOTHER MACHINE (2026-10-28, user decision) ──
 #
@@ -1024,13 +1094,32 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     echo "$P: on $GATES_REMOTE ($RWORK) — this machine only syncs and waits"
     T_SYNC=$(date +%s)
     remote_sync || fail "could not rsync this tree to $GATES_REMOTE:$RWORK"
-    printf '%s\n' "$CHANGED" | ssh -o BatchMode=yes "$GATES_REMOTE" "cat > $RWORK/.sl-changed" || fail "could not hand the change list to $GATES_REMOTE"
+    # Each side's change list (its own base) and their union.
+    { printf '%s\n' "$CHANGED_BE" | ssh -o BatchMode=yes "$GATES_REMOTE" "cat > $RWORK/.sl-changed-backend" \
+        && printf '%s\n' "$CHANGED_JS" | ssh -o BatchMode=yes "$GATES_REMOTE" "cat > $RWORK/.sl-changed-js" \
+        && printf '%s\n' "$CHANGED" | ssh -o BatchMode=yes "$GATES_REMOTE" "cat > $RWORK/.sl-changed"; } \
+        || fail "could not hand the change list to $GATES_REMOTE"
     echo "    (synced in $(( $(date +%s) - T_SYNC ))s)"
     RFLAGS="--prepush"; [ "$MODE" = full ] && RFLAGS="$RFLAGS --full"; [ "$REAL_PG" = 1 ] && RFLAGS="$RFLAGS --real-pg"
     RNAME="sl-gates-$RID-$$"
-    if [ "$FULL_RUN" = 1 ]; then RLIMIT="${GATES_REMOTE_FULL_TIMEOUT:-90m}"; RLIMIT_VAR=GATES_REMOTE_FULL_TIMEOUT
+    # THE LIMIT FOLLOWS THE REAL SIZE (2026-11-15, user decision): not only --full but any run whose backend
+    # resolves to the whole suite (a forced-full rule in select-backend-tests.py: settings, a conftest,
+    # dependencies, apps/core ...) gets the full run's 90 minutes: the whole suite under the selective
+    # 30 minutes is a run cut off by its limit, not one that found anything.
+    BE_WHOLE=""
+    if [ "$FULL_RUN" = 1 ]; then
+        BE_WHOLE="--full"
+    elif [ "$RUN_BACKEND" = 1 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
+        BE_WHOLE="no select-backend-tests.py next to this script"
+    elif [ "$RUN_BACKEND" = 1 ]; then
+        SEL=$(echo "$CHANGED_BE" | python3 -I "$HERE/select-backend-tests.py" 2>/dev/null) || SEL="FULL	select-backend-tests.py failed"
+        case "$SEL" in FULL*) BE_WHOLE="${SEL#FULL	}" ;; esac
+    fi
+    if [ -n "$BE_WHOLE" ]; then RLIMIT="${GATES_REMOTE_FULL_TIMEOUT:-90m}"; RLIMIT_VAR=GATES_REMOTE_FULL_TIMEOUT
+        echo "    (time limit $RLIMIT: the backend runs its whole suite — $BE_WHOLE)"
     else RLIMIT="${GATES_REMOTE_TIMEOUT:-30m}"; RLIMIT_VAR=GATES_REMOTE_TIMEOUT; fi
     remote_limit "$RLIMIT" "$RLIMIT_VAR"
+    RLOG=$(mktemp "${TMPDIR:-/tmp}/gates-remote.XXXXXX")
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $RNAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
     # TMPDIR is OUTSIDE the tree (/sl-tmp): under /app, test_testdb_name's child pytest found the tree's
@@ -1051,14 +1140,21 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
         -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $RLIMIT bash -c '
           find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
           $REMOTE_DEPS
-          export PREPUSH_CHANGED=\"\$(cat .sl-changed)\"
-          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/run.lock"
-    RSTATUS=$?
+          export PREPUSH_CHANGED=\"\$(cat .sl-changed)\" PREPUSH_CHANGED_BACKEND=\"\$(cat .sl-changed-backend)\" PREPUSH_CHANGED_JS=\"\$(cat .sl-changed-js)\"
+          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/run.lock" | tee "$RLOG"
+    RSTATUS=${PIPESTATUS[0]}
     trap - EXIT
     remote_verdict "$RSTATUS" "$RLIMIT" "$RLIMIT_VAR"
+    # Each side's verdict, from the line the run there ends with (TWO SIDES AT ONCE). No such line (it stopped
+    # before the sides, or hit the time limit): both sides take the run's status.
+    SIDES_LINE="$(grep -E '^gates-sides: backend=[0-9]+ js=[0-9]+$' "$RLOG" | tail -1)"
+    rm -f "$RLOG"
+    BE_RC="$RSTATUS"; JS_RC="$RSTATUS"
+    if [ -n "$SIDES_LINE" ]; then BE_RC="${SIDES_LINE#*backend=}"; BE_RC="${BE_RC%% *}"; JS_RC="${SIDES_LINE##*js=}"; fi
+    record_side backend "$BE_RC"
+    record_side js "$JS_RC"
     # Logs it names as /sl-tmp/… are kept there: $RDIR/tmp/$RID/ on $GATES_REMOTE (a day).
     [ "$RSTATUS" -eq 0 ] || fail "the gates failed on $GATES_REMOTE (exit $RSTATUS) — see above; a log named /sl-tmp/… is $GATES_REMOTE:$RDIR/tmp/$RID/…"
-    record_pass
     echo "$P: ok on $GATES_REMOTE ($(( $(date +%s) - T_SYNC ))s)"
     exit 0
 fi
@@ -1081,11 +1177,14 @@ need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this chec
 # remote run (2026-11-13, test review 3.5) each side starts with its own static checks — static_js before
 # the JS runners, static_backend before pytest — and the two sides overlap (TWO SIDES AT ONCE, near the end):
 # up to eight tsc / eslint runs and ruff + makemigrations used to run one after another, about one core each
-# of the container's twelve, before either side began. Within a side the rule is unchanged, and a red static
-# check still ends its side before that side's tests and fails the run; the other side runs to its end.
+# of the container's twelve, before either side began. Within a side the order is unchanged.
+# FAIL LATE (2026-11-15, user decision): a red check no longer ends its side. static_fail says it, notes it
+# for the summary and goes on — the side's other checks and its tests still run — and the function returns
+# non-zero, so the side, and the run, end red. A check that cannot run at all (`need`) still stops the side.
 # Functions, so the order is the order of the calls at the end of this file — which is what the test reads
 # (TestStaticChecksRunBeforeAnyTests runs them and compares what was invoked, per side).
 static_js() {
+STATIC_RED=0
 if [ "$RUN_CORE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -1093,34 +1192,35 @@ if [ "$RUN_CORE" = 1 ]; then
     # execution it gets.
     echo "  → core tsc"
     npm run --workspace packages/core typecheck --silent \
-        || fail "@soulledger/core typecheck failed. This compiles under lib:[\"ES2020\"] with no DOM — a \`document\`/\`window\`/\`localStorage\` reference here is a host capability that belongs behind a PlatformAdapter port, not a type error to widen the lib for."
+        || static_fail "@soulledger/core typecheck failed. This compiles under lib:[\"ES2020\"] with no DOM — a \`document\`/\`window\`/\`localStorage\` reference here is a host capability that belongs behind a PlatformAdapter port, not a type error to widen the lib for."
     echo "  → core eslint"
     npm run --workspace packages/core lint --silent \
-        || fail "@soulledger/core lint failed. Note this config refuses \`process.env\` and \`import.meta.env\`: Expo and Tauri define neither of the ones Next does, and the fallback fails silently."
+        || static_fail "@soulledger/core lint failed. Note this config refuses \`process.env\` and \`import.meta.env\`: Expo and Tauri define neither of the ones Next does, and the fallback fails silently."
 fi
 if [ "$RUN_FRONTEND" = 1 ]; then
     need npx
     cd "$ROOT/frontend" || fail "frontend/ missing"
-    echo "  → tsc";   npx tsc --noEmit          || fail "tsc failed"
-    echo "  → eslint"; npm run lint --silent    || fail "eslint failed"
+    echo "  → tsc";   npx tsc --noEmit          || static_fail "tsc failed"
+    echo "  → eslint"; npm run lint --silent    || static_fail "eslint failed"
     cd "$ROOT" || exit 1
 fi
 if [ "$RUN_MOBILE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
     echo "  → mobile tsc"
-    npm run --workspace mobile typecheck --silent || fail "mobile typecheck failed"
+    npm run --workspace mobile typecheck --silent || static_fail "mobile typecheck failed"
     echo "  → mobile eslint"
-    npm run --workspace mobile lint --silent || fail "mobile lint failed"
+    npm run --workspace mobile lint --silent || static_fail "mobile lint failed"
 fi
 if [ "$RUN_OFFICER" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
     echo "  → officer tsc"
-    npm run --workspace mobile-officer typecheck --silent || fail "officer typecheck failed"
+    npm run --workspace mobile-officer typecheck --silent || static_fail "officer typecheck failed"
     echo "  → officer eslint"
-    npm run --workspace mobile-officer lint --silent || fail "officer lint failed"
+    npm run --workspace mobile-officer lint --silent || static_fail "officer lint failed"
 fi
+[ "$STATIC_RED" = 0 ]
 }  # static_js
 
 # The interpreter and ruff are chosen here, in the run's own shell, before either side starts: both
@@ -1167,10 +1267,11 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
 fi
 
 static_backend() {
+STATIC_RED=0
 if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
     if [ "$RUN_BACKEND" = 1 ] && [ "$REAL_PG" = 0 ]; then
-        echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
+        echo "  → ruff";  "$RUFF" check .          || static_fail "ruff failed"
         # `makemigrations --check` BEFORE pytest, because it is the cheap one and
         # because it catches a class the suite does not: a model `choices` list
         # losing a member alters a field, and Django notices while every test that
@@ -1191,9 +1292,10 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
         if [ "$MM_STATUS" -ne 0 ]; then
             echo "$MM_OUT" | tail -15 | sed 's/^/    /'
             if echo "$MM_OUT" | grep -q "^Migrations for '"; then
-                fail "makemigrations --check: a model changed without a migration. Run \`manage.py makemigrations\` and read what it generated before committing it."
+                static_fail "makemigrations --check: a model changed without a migration. Run \`manage.py makemigrations\` and read what it generated before committing it."
+            else
+                static_fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
             fi
-            fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
         fi
     elif [ "$REAL_PG" = 1 ]; then
         echo "  → ruff, makemigrations: skipped — --real-pg runs pytest only"
@@ -1202,21 +1304,30 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     fi
     cd "$ROOT" || exit 1
 fi
+[ "$STATIC_RED" = 0 ]
 }  # static_backend
 
 # pytest_finish — progress every 30 s until pytest (here, or over ssh) exits, then its verdict.
+# Each progress line is followed by the tests that failed since the last one, by node id (2026-11-15, user
+# decision): a long run used to say "failed so far: 3" for twenty minutes and name them only at its end — or
+# never, when the time limit ended it first. pytest runs with -v for this, so every test has a line of its
+# own: `path::name FAILED [ 12%]` serially, `[gw0] [ 12%] FAILED path::name` under xdist.
+# GATES_PROGRESS_EVERY (seconds) is the test seam.
 pytest_finish() {
-    T0=$(date +%s); NEXT=30
+    local every="${GATES_PROGRESS_EVERY:-30}" bad shown="" new
+    T0=$(date +%s); NEXT=$every
     while kill -0 "$PYTEST_PID" 2>/dev/null; do
-        sleep 2
+        sleep 1
         EL=$(( $(date +%s) - T0 ))
         if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
-            NEXT=$(( NEXT + 30 ))
+            NEXT=$(( NEXT + every ))
             PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
-            # Progress lines are `path.py ..F. [ 12%]` serially and bare
-            # `..F. [ 12%]` under xdist: count F/E in the marks, never in a path.
-            NBAD=$(grep -E '\[ *[0-9]+%\]$' "$PYTEST_LOG" | sed -E 's/^[^ ]+\.py //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
-            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $NBAD"
+            bad=$(grep -E '\[ *[0-9]+%\]' "$PYTEST_LOG" | grep -E ' (FAILED|ERROR)( |$)' \
+                | grep -oE '[^ []+::[^ ]+' | awk '!seen[$0]++')
+            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $(printf '%s' "$bad" | grep -c . || true)"
+            new=$(printf '%s\n' "$bad" | grep -vxF -e "$shown" | grep . || true)
+            [ -n "$new" ] && printf '%s\n' "$new" | sed 's/^/        FAILED /'
+            shown="$bad"
         fi
     done
     wait "$PYTEST_PID"; PYTEST_STATUS=$?
@@ -1398,7 +1509,8 @@ PROBE_PY
         # Also stop it when the run is interrupted (Ctrl-C, a killed push): the shutdown
         # below only runs on a normal finish, and one interrupted push on 2026-10-09 left
         # this daemon running for a day. Chains the gate lock's own EXIT trap.
-        trap 'redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1; type gate_unlock >/dev/null 2>&1 && gate_unlock' EXIT
+        # Inside a side's subshell (IN_SIDE) the lock stays: the parent still holds it for the other side.
+        trap 'redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1; [ -z "${IN_SIDE:-}" ] && type gate_unlock >/dev/null 2>&1 && gate_unlock' EXIT
         trap 'exit 130' INT TERM
         export REDIS_URL="redis://127.0.0.1:$RPORT/0"
         export CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1"
@@ -1493,7 +1605,7 @@ PROBE_PY
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
         echo "    (whole suite: no select-backend-tests.py next to this script)"
     elif [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ]; then
-        SELECTED=$(echo "$CHANGED" | "$PY" -I "$HERE/select-backend-tests.py") || fail "select-backend-tests.py failed"
+        SELECTED=$(echo "$CHANGED_BE" | "$PY" -I "$HERE/select-backend-tests.py") || fail "select-backend-tests.py failed"
         case "$SELECTED" in
             FULL*) echo "    (whole suite: ${SELECTED#FULL	})" ;;
             *)
@@ -1538,7 +1650,7 @@ PROBE_PY
     # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
     REAL_PG_ARGS=""
     if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
-    PYARGS=(-q --no-header --no-cov --durations=30 --durations-min=5 $XDIST
+    PYARGS=(-v --no-header --no-cov --durations=30 --durations-min=5 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
     # The multi-database guard (tests/test_multidb_shadow.py) exists only under its own settings, so the
@@ -1609,7 +1721,7 @@ if [ "$RUN_FRONTEND" = 1 ]; then
         # returns nothing for it — no error, just an empty selection. Measured
         # 2026-09-30: packages/core/src/hooks/useSouls.ts → 0 related tests
         # without it, 20 with; the full test list is 196 either way.
-        SRC=$(echo "$CHANGED" | grep -E '^(frontend|packages/core)/' | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
+        SRC=$(echo "$CHANGED_JS" | grep -E '^(frontend|packages/core)/' | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
         RELATED=""
         if [ -n "$SRC" ]; then
             # shellcheck disable=SC2086
@@ -1678,7 +1790,7 @@ app_jest() {
     local dir="$1" re="$2" roots="$3" msg="$4" paths="" related="" readers src log status
     echo "  → $dir jest"
     if [ -z "$APP_FULL_F" ]; then
-        src=$(echo "$CHANGED" | grep -E "$re" | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
+        src=$(echo "$CHANGED_JS" | grep -E "$re" | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
         if [ -n "$src" ]; then
             # shellcheck disable=SC2086
             related=$(cd "$ROOT/$dir" && npx jest --roots '<rootDir>/src' $roots --listTests --findRelatedTests $src 2>/dev/null) \
@@ -1752,17 +1864,20 @@ fi
 #
 # On the gate box the backend pytest and the JS runners (core vitest, web jest, the two app jests) ran one
 # after the other. There they now run side by side, each into its own log, 6 + 6 workers over the
-# container's 12 CPUs (the docker run in DELEGATED RUNS). A side that fails does not stop the other: both
-# finish, then both logs are printed and both exit codes decide. On this Mac they stay serial — memory,
-# not CPU, is what runs out here (TWO WORKERS near the top).
-# Each side begins with its own static checks (STATIC CHECKS FIRST, above): `fail` there exits the side's
-# subshell, so its tests never start and its exit code is the run's.
+# container's 12 CPUs (the docker run in DELEGATED RUNS). On this Mac they stay serial — memory, not CPU, is
+# what runs out here (TWO WORKERS near the top): every static check, then the backend's tests, then the JS
+# side's. Either way each step runs in a subshell marked IN_SIDE, so a `fail` ends only its own side, and a
+# red side never stops the other (2026-11-15: here too, so that each side can be recorded on its own).
+# Each side begins with its own static checks (STATIC CHECKS FIRST, above), which fail late. At the end:
+# one line with both verdicts (`gates-sides:`, which a delegating machine reads to record the sides), the
+# ledgers, and — when either side is red — every red step of both, then the exit.
+NOTES_BE=$(mktemp "${TMPDIR:-/tmp}/gates-notes-backend.XXXXXX"); NOTES_JS=$(mktemp "${TMPDIR:-/tmp}/gates-notes-js.XXXXXX")
 if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     BE_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-backend.XXXXXX"); JS_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-js.XXXXXX")
     echo "  → backend (ruff, makemigrations, pytest) and JS (tsc, eslint, tests) side by side"
-    ( static_backend; run_backend_tests ) >"$BE_LOG" 2>&1 &
+    ( IN_SIDE=1; NOTES="$NOTES_BE"; static_backend; st=$?; run_backend_tests; exit "$st" ) >"$BE_LOG" 2>&1 &
     BE_PID=$!
-    ( static_js; run_js_tests ) >"$JS_LOG" 2>&1 &
+    ( IN_SIDE=1; NOTES="$NOTES_JS"; static_js; st=$?; run_js_tests; exit "$st" ) >"$JS_LOG" 2>&1 &
     JS_PID=$!
     T0=$(date +%s); NEXT=60
     while kill -0 "$BE_PID" 2>/dev/null || kill -0 "$JS_PID" 2>/dev/null; do
@@ -1776,24 +1891,28 @@ if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     wait "$JS_PID"; JS_RC=$?
     echo "  ── backend (exit $BE_RC) ──"; cat "$BE_LOG"
     echo "  ── JS (exit $JS_RC) ──"; cat "$JS_LOG"
-    if [ "$BE_RC" -ne 0 ] || [ "$JS_RC" -ne 0 ]; then
-        echo ""
-        [ "$BE_RC" -ne 0 ] && echo "  backend: $(grep -E "^$P: " "$BE_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
-        [ "$JS_RC" -ne 0 ] && echo "  JS:      $(grep -E "^$P: " "$JS_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
-        fail "checks or tests failed (backend exit $BE_RC, JS exit $JS_RC) — both sides ran to the end, logs above"
-    fi
     rm -f "$BE_LOG" "$JS_LOG"
 else
-    static_js
-    static_backend
-    run_backend_tests
-    run_js_tests
+    ( IN_SIDE=1; NOTES="$NOTES_JS"; static_js ); JS_ST=$?
+    ( IN_SIDE=1; NOTES="$NOTES_BE"; static_backend ); BE_ST=$?
+    ( IN_SIDE=1; NOTES="$NOTES_BE"; run_backend_tests ); BE_RC=$?
+    ( IN_SIDE=1; NOTES="$NOTES_JS"; run_js_tests ); JS_RC=$?
+    [ "$BE_ST" = 0 ] || BE_RC="$BE_ST"
+    [ "$JS_ST" = 0 ] || JS_RC="$JS_ST"
 fi
+echo "gates-sides: backend=$BE_RC js=$JS_RC"
 
-
-# Record the pass (see "A TREE THAT ALREADY PASSED" near the top). Only a full run
-# outside the hook, and only when what was tested IS HEAD's tree: tracked files
-# match HEAD, and no untracked file sits where a gate could have read it — an
-# untracked test or migration ran here but would not be in the pushed commit.
-record_pass
+# Record each green side (A PUSH OF A TREE BOTH SIDES ALREADY PASSED, near the top). Only outside the hook,
+# and only when what was tested IS HEAD's tree: tracked files match HEAD, and no untracked file sits where a
+# gate could have read it — an untracked test or migration ran here but would not be in the pushed commit.
+record_side backend "$BE_RC"
+record_side js "$JS_RC"
+if [ "$BE_RC" -ne 0 ] || [ "$JS_RC" -ne 0 ]; then
+    echo ""
+    sed 's/^/  backend: /' "$NOTES_BE"
+    sed 's/^/  JS:      /' "$NOTES_JS"
+    rm -f "$NOTES_BE" "$NOTES_JS"
+    fail "checks or tests failed (backend exit $BE_RC, JS exit $JS_RC) — both sides ran to the end, logs above"
+fi
+rm -f "$NOTES_BE" "$NOTES_JS"
 echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"

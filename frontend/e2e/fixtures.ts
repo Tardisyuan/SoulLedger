@@ -2,7 +2,28 @@ import { expect as baseExpect, test as base, type Locator, type Page, type Reque
 import type { AssistAdminBackup, AssistAdminConfig, AssistAdminEmbedding } from "@soulledger/core/api/assist-admin";
 import type { AssistStreamEvent } from "@soulledger/core/api/assist-stream";
 import type { JudgmentAnnual } from "@soulledger/core/api/judgment";
+import fs from "node:fs";
+import path from "node:path";
 import { SIGNED_OUT } from "./routes";
+
+/**
+ * zh(key) — the zh-Hans string the app renders for a message key, read from the pack itself.
+ *
+ * The specs that sign in find the fields by their accessible label. Written out by hand ("用户名或邮箱"),
+ * a copy change in the pack broke every one of them while the page was fine (2026-11-15). Taken from the
+ * pack by key, the label still has to exist and still has to be the pack's — that is what is asserted —
+ * but rewording it moves the specs with it. Unknown key → throw, never a silent undefined.
+ */
+const ZH_HANS: unknown = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "..", "..", "packages", "core", "messages", "zh-Hans.json"), "utf8")
+);
+export function zh(key: string): string {
+  const value = key
+    .split(".")
+    .reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), ZH_HANS);
+  if (typeof value !== "string") throw new Error(`zh-Hans.json has no string at ${key}`);
+  return value;
+}
 
 /**
  * Shared E2E setup: authenticated browser state + a route-level mock of the
