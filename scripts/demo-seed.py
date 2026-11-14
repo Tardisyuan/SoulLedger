@@ -123,6 +123,7 @@ SOULS = {
         ("李靖", 64, 22, "due"), ("杨戬", 71, 17, "due"), ("钱塘君", 38, 49, "due"),
         ("周德海", 70, 2, "queue"), ("林秀英", 55, 12, "queue"), ("陈建国", 12, 61, "queue"), ("王桂兰", 48, 9, "claimed"), ("赵志强", 18, 52, "claimed"),
         ("孙玉梅", 40, 35, "flow"), ("马国栋", 30, 44, "flow"), ("胡春花", 45, 20, "citygod"), ("郑立民", 58, 6, "citygod"),
+        ("吴淑芬", 52, 30, "flow"), ("黄德福", 36, 41, "flow"),
     ],
     "EU_HEAVEN_HELL": [
         ("Tristan", 62, 30, "purgatory"), ("Isolde", 64, 28, "passed"), ("Dido", 40, 55, "failed"), ("Francesca da Rimini", 35, 45, "failed"),
@@ -131,6 +132,7 @@ SOULS = {
         ("Marco Bellini", 40, 55, "queue"), ("Anna Keller", 50, 60, "queue"),
         # Concluded this week, the approval half walked: a judge's own recent work on /events (Europe had none).
         ("Lucia Ferri", 58, 36, "flow"), ("Jonas Weber", 46, 52, "flow"),
+        ("Elena Moretti", 63, 27, "flow"), ("Pieter de Vries", 42, 48, "flow"),
     ],
     "EG_DUAT": [
         ("Sinuhe", 72, 18, "passed"), ("Khufu", 44, 40, "passed"), ("Nefertari", 91, 4, "passed"), ("Imhotep", 95, 2, "passed"),
@@ -138,6 +140,7 @@ SOULS = {
         ("Merit-Neith", 68, 14, "alive"), ("Setne", 22, 58, "failed"), ("Bata", 57, 21, "passed"), ("Anpu", 61, 19, "passed"),
         ("Karim Mansour", 72, 18, "claimed"), ("Laila Hassan", 83, 12, "queue"), ("Omar Naguib", 61, 19, "queue"),
         ("Mona Fahmy", 44, 40, "flow"), ("Tarek Sabry", 30, 65, "flow"), ("Hoda Saleh", 57, 21, "flow"),
+        ("Youssef Amin", 66, 20, "flow"), ("Samira Fawzy", 35, 58, "flow"),
     ],
     "GR_HADES": [
         ("Orpheus", 74, 16, "passed"), ("Eurydice", 80, 5, "passed"), ("Sisyphus", 9, 93, "failed"), ("Tantalus", 6, 97, "failed"),
@@ -146,9 +149,14 @@ SOULS = {
         ("Penelope", 94, 2, "served"), ("Penelope", 94, 2, "reborn"),
         ("Antigone", 88, 7, "alive"), ("Hector", 86, 10, "alive"), ("Ixion", 5, 88, "failed"), ("Alcestis", 92, 3, "passed"),
         ("Nikos Pappas", 74, 16, "queue"), ("Eleni Vlachou", 69, 37, "queue"), ("Stavros Kouris", 66, 42, "flow"), ("Katerina Doukas", 92, 3, "queue"),
-        ("Yannis Petrou", 61, 33, "flow"),
+        ("Yannis Petrou", 61, 33, "flow"), ("Dimitra Lazarou", 71, 19, "flow"), ("Giorgos Mavros", 40, 52, "flow"),
     ],
 }
+
+#: "flow" souls left one node short for good: `seed_appeals` walks the other flows to the end to appeal them, so
+#: without these the approval inbox of every underworld would be empty (user 2026-11-14). Never walked, never appealed.
+KEEP_IN_FLOW = {"吴淑芬", "黄德福", "Elena Moretti", "Pieter de Vries", "Youssef Amin", "Samira Fawzy",
+                "Dimitra Lazarou", "Giorgos Mavros"}
 
 BIOS = {
     "屈原": "楚三闾大夫,谏怀王不听,再放逐,自沉汨罗(《史记·屈原贾生列传》)。", "窦娥": "含冤负屈,六月飞雪。", "曹操": "挟天子以令诸侯。", "秦桧": "以莫须有之罪杀岳飞。",
@@ -726,7 +734,7 @@ def seed_appeals():
     made = {}
     for case in Judgment.all_objects.filter(verdict__isnull=False, is_final=True).exclude(civilization="GREEK"):
         account = accounts.current_account_of(case.soul)
-        if account is None or made.get(case.tenant_id, 0) >= 2:
+        if account is None or made.get(case.tenant_id, 0) >= 2 or case.soul.name in KEEP_IN_FLOW:
             continue
         try:
             if origin_flow_open(judgment=case):
