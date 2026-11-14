@@ -507,6 +507,7 @@ CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "360"))
 # apps.audit retention (apps/audit/retention.py). Days to keep AuditLog / LoginLog rows;
 # Defaults (2026-10-10, owner's decision): 365 days of audit log, 180 days of login log.
 # Set the variable to 0 to keep forever, i.e. the scheduled prune deletes nothing.
+# Purge records (`Soul.purge()`'s manifest row, resource `soul_purge`) are kept forever regardless.
 # An empty value (`AUDIT_LOG_RETENTION_DAYS=`) is 0 as well -- it does not fall back to the default.
 AUDIT_LOG_RETENTION_DAYS = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "365") or 0)
 LOGIN_LOG_RETENTION_DAYS = int(os.getenv("LOGIN_LOG_RETENTION_DAYS", "180") or 0)

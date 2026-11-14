@@ -1,5 +1,7 @@
 """Retention for `AuditLog` and `LoginLog`: delete rows older than N days, in batches.
 
+Purge records (`PERMANENT_AUDIT_RESOURCES`) are never pruned, whatever the window.
+
 Both windows default to 0 = keep forever (settings `AUDIT_LOG_RETENTION_DAYS`,
 `LOGIN_LOG_RETENTION_DAYS`), so installing this deletes nothing until someone
 sets a number. Each run that deletes something leaves one `AuditLog` row
@@ -25,6 +27,12 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 5000
+
+#: `AuditLog.resource` of the row `Soul.purge()` writes: the manifest of a permanent delete. Kept forever
+#: whatever AUDIT_LOG_RETENTION_DAYS says (user, 2026-11-14) -- a record of destruction that expired after
+#: 365 days would be outlived by nothing it records.
+SOUL_PURGE_RESOURCE = "soul_purge"
+PERMANENT_AUDIT_RESOURCES = (SOUL_PURGE_RESOURCE,)
 
 
 def retention_days(name: str) -> int:
@@ -58,7 +66,8 @@ def prune_logs(tenant=None, *, now=None, batch_size: int = BATCH_SIZE) -> dict:
     if audit_days:
         cutoff = now - timedelta(days=audit_days)
         result["audit_cutoff"] = cutoff.isoformat()
-        rows = AuditLog.all_objects.filter(timestamp__lt=cutoff, tenant=tenant)
+        rows = AuditLog.all_objects.filter(timestamp__lt=cutoff, tenant=tenant).exclude(
+            resource__in=PERMANENT_AUDIT_RESOURCES)
         result["audit_deleted"] = purge_in_batches(rows, batch_size)
     if login_days:
         cutoff = now - timedelta(days=login_days)

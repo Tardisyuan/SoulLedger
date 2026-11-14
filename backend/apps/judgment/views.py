@@ -22,6 +22,7 @@ from apps.core.exports import export_csv
 from apps.core.idempotency import idempotent
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problem_codes import ProblemCode
 from apps.core.problems import problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import request_tenant, scope_to_tenant
@@ -1574,7 +1575,10 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         """
         judgment = self.get_object()
         if judgment.is_final:
-            return problem(status.HTTP_400_BAD_REQUEST, None, "Judgment already concluded")
+            # 409 `already_concluded`, the same answer the in-lock recheck gives a racing second conclusion
+            # (`services.py`); it was a code-less 400, so a client could not tell "already sealed" from "bad body".
+            return problem(status.HTTP_409_CONFLICT, ProblemCode.ALREADY_CONCLUDED,
+                           "This judgment has already been concluded.")
 
         serializer = JudgmentConcludeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

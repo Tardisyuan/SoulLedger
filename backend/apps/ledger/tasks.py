@@ -8,9 +8,12 @@ nothing answers to, silently. Renaming these is therefore a data change, not
 just a code change; ledger/migrations/0001 rewrites the PeriodicTask rows that
 setup_ledger_tasks wrote.
 """
+import itertools
 import logging
 
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
+from django.core.cache import cache
 from django.utils import timezone
 
 from apps.scheduler.registry import time_limits
@@ -35,6 +38,11 @@ def _souls_in_pk_pages(qs, size: int = 500):
         last = batch[-1].pk
 
 
+def _cursor_key(tenant_id) -> str:
+    """Cache key holding the pk of the last soul a cut-off `recalculate_tenant_ledgers` run finished."""
+    return f"ledger:recalculate_tenant:cursor:{tenant_id}"
+
+
 @shared_task(name="ledger.recalculate_tenant", **time_limits("ledger.recalculate_tenant"))
 def recalculate_tenant_ledgers(tenant_id: str):
     """
@@ -53,22 +61,45 @@ def recalculate_tenant_ledgers(tenant_id: str):
 
     tenant = Tenant.objects.get(id=tenant_id)
     set_current_tenant(tenant)
+    # Resume where the last run was cut off (2026-11-14, regression from the 7200 s hard limit): start after the
+    # saved cursor, run to the end, then wrap round to the head. Starting from the first pk every night meant
+    # a hall too large for one run never reached its tail.
+    # ponytail: cursor lives in the cache; a flushed cache restarts from the head (the pre-fix behaviour, once).
+    cursor_key = _cursor_key(tenant_id)
+    cursor = cache.get(cursor_key)
+    souls = Soul.objects.filter(tenant_id=tenant_id)
+    order = (_souls_in_pk_pages(souls) if cursor is None else
+             itertools.chain(_souls_in_pk_pages(souls.filter(pk__gt=cursor)),
+                             _souls_in_pk_pages(souls.filter(pk__lte=cursor))))
+    last_done = None
     try:
         updated = 0
         failed = []
-        for soul in _souls_in_pk_pages(Soul.objects.filter(tenant_id=tenant_id)):
+        for soul in order:
             # A soul whose recalculation fails (today: its KARMA_RECALCULATED event could not be written, which
             # rolls that soul's new scores back) is logged with the original exception, counted and reported;
             # the other souls still run, and the next run retries it.
+            # The soft limit must not be swallowed as "this soul failed" -- it would leave the loop running into
+            # the hard kill 60 s later, with no cursor saved.
             try:
                 LedgerService.recalculate_soul_ledger(soul)
+            except SoftTimeLimitExceeded:
+                raise
             except Exception:
                 logger.exception("ledger recalculation: soul %s of tenant %s failed", soul.pk, tenant.code)
                 failed.append(str(soul.pk))
-                continue
-            updated += 1
+            else:
+                updated += 1
+            last_done = soul.pk
+        cache.delete(cursor_key)
         return {"tenant": tenant.code, "updated": updated, "failed": failed,
                 "timestamp": timezone.now().isoformat()}
+    except SoftTimeLimitExceeded:
+        if last_done is not None:
+            cache.set(cursor_key, last_done, timeout=None)
+        logger.warning("ledger recalculation of tenant %s hit its soft time limit; next run resumes after %s",
+                       tenant.code, last_done if last_done is not None else cursor)
+        raise
     finally:
         clear_current_tenant()
 

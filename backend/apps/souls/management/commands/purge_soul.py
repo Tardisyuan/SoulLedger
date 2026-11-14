@@ -2,8 +2,8 @@
 
     python manage.py purge_soul <灵魂 id 或灵魂编号> --tenant <殿代码> --actor <用户名> [--yes]
 
-不带 `--yes` 只预演:打印会一起删掉多少条事件、会写下的那条审计,什么都不删。带 `--yes` 才走 `Soul.purge()`
-(事件显式删除、同一事务里写审计,见那里的文档串)。
+不带 `--yes` 只预演:打印会一起删掉的清单(每个模型几行,含级联)与会写下的那条审计,什么都不删。
+带 `--yes` 才走 `Soul.purge()`(事件显式删除、同一事务里把实际删除的清单写进审计,见那里的文档串)。
 
 拒绝:殿不存在;灵魂不存在或不属于 `--tenant`;灵魂不在回收站(没有软删除)。
 `--actor` 的规则与网页回收站相同(`recycle_bin_views._bin_scope`):在职的 ADMIN 官员,
@@ -11,9 +11,12 @@
 """
 import uuid
 
+from django.contrib.admin.utils import NestedObjects
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+from django.db import router
 
+from apps.audit.retention import SOUL_PURGE_RESOURCE
 from apps.authentication.models import UserRole
 from apps.events.models import SoulEvent
 from apps.souls.models import Soul
@@ -21,7 +24,7 @@ from apps.tenants.models import Tenant
 
 
 class Command(BaseCommand):
-    help = "永久删除回收站里的一个灵魂及其全部事件,并留审计。默认只预演,--yes 才执行。"
+    help = "永久删除回收站里的一个灵魂及其全部事件与级联记录,并把清单写进审计。默认只预演,--yes 才执行。"
 
     def add_arguments(self, parser):
         parser.add_argument("soul", help="灵魂 id(uuid)或灵魂编号 soul_code")
@@ -48,11 +51,29 @@ class Command(BaseCommand):
         if not target.is_deleted:
             raise CommandError(f"灵魂 {target.pk} 不在回收站里:先删除(移入回收站)再永久删除。")
 
-        events = SoulEvent.all_objects.filter(soul=target).count()
-        preview = (f"灵魂 {target.pk}({target.name}),殿 {tenant}:连同 {events} 条事件永久删除;"
-                   f"审计 DELETE soul {target.pk},操作人 {actor},changes={{'soul_events': ['{events}', '0']}}")
+        manifest = _preview_manifest(target)
+        preview = (f"灵魂 {target.pk}({target.name}),殿 {tenant}:连同 {manifest.get(_EVENT, 0)} 条事件永久删除;"
+                   f"审计 DELETE {SOUL_PURGE_RESOURCE} {target.pk},操作人 {actor},清单(模型: 行数)={manifest}")
         if not yes:
             self.stdout.write(f"[预演,未删除] {preview}\n加 --yes 执行。")
             return
         deleted = target.purge(user=user)
-        self.stdout.write(self.style.SUCCESS(f"已永久删除:灵魂 {target.pk},事件 {deleted} 条,审计已写。"))
+        self.stdout.write(self.style.SUCCESS(
+            f"已永久删除:灵魂 {target.pk},事件 {deleted.get(_EVENT, 0)} 条,共 {sum(deleted.values())} 行,"
+            f"清单已写进审计:{deleted}"))
+
+
+_EVENT = SoulEvent._meta.label
+
+
+def _preview_manifest(soul) -> dict:
+    """What `Soul.purge()` would delete, by model, without deleting: the admin's own cascade walk.
+
+    `SoulEvent.soul` is PROTECT, so the walk stops at the events (`purge()` deletes them first); they are counted
+    directly. Rows that cascade from an event would show only in the real manifest.
+    """
+    walk = NestedObjects(using=router.db_for_write(Soul))
+    walk.collect([soul])
+    manifest = {m._meta.label: len(objs) for m, objs in walk.model_objs.items() if objs}
+    manifest[_EVENT] = SoulEvent.all_objects.filter(soul=soul).count()
+    return dict(sorted((k, v) for k, v in manifest.items() if v))
