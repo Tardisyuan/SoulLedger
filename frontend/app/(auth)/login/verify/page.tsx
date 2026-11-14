@@ -13,6 +13,7 @@ import { Button } from "@/src/components/ui/Button";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 import { goTo, replaceWith } from "@/src/lib/navigate";
 import { clearMfaPending, readMfaPending, type MfaPending } from "@/src/lib/mfaPending";
+import { takeReturnTo } from "@/src/lib/returnTo";
 import { cn } from "@/lib/utils";
 import { responseCode, responseData, responseStatus, fetchFailureOf } from "@soulledger/core/api/client";
 
@@ -86,10 +87,11 @@ export default function LoginVerifyPage() {
       });
       clearMfaPending();
       setAccessToken(res.data.access);
-      setRefreshToken(res.data.refresh);
+      // 「保持登录」 was ticked (or not) on the first step; it rides along in the hand-over (W2).
+      setRefreshToken(res.data.refresh, pending.remember);
       setUser(res.data.user);
       showToast(t("auth.login_success"), "success");
-      goTo(await defaultViewRoute(res.data.user));
+      goTo(takeReturnTo() ?? (await defaultViewRoute(res.data.user)));
       return;
     } catch (err: unknown) {
       const data = responseData<MfaRefusal>(err);

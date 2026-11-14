@@ -10,6 +10,7 @@ import {
 } from "@soulledger/core/platform";
 import { showToast } from "@/src/components/ui/Toast";
 import { translate } from "@/lib/i18n/activeTranslator";
+import { rememberReturnTo } from "@/src/lib/returnTo";
 
 /**
  * The browser's half of `@soulledger/core`'s platform port.
@@ -56,6 +57,31 @@ const session: KeyValueStore = {
 export const MARKER_MAX_AGE = 30 * 24 * 3600;
 
 /**
+ * Set (to "1") when the last sign-in did NOT tick 「保持登录」: the marker is then a session cookie (W2,
+ * 2026-11-15). A rotation does not know the choice, so it reads this to rewrite the marker the same way —
+ * without it, the first silent refresh would turn a session cookie back into a 30-day one.
+ */
+// Built from the constant, not spelled: `accessTokenNeverBecomesACookie` refuses the token names as literals.
+export const MARKER_SESSION_ONLY_KEY = `${REFRESH_TOKEN_KEY}_session_only`;
+
+function readSessionOnly(): boolean {
+  try {
+    return localStorage.getItem(MARKER_SESSION_ONLY_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeSessionOnly(sessionOnly: boolean): void {
+  try {
+    if (sessionOnly) localStorage.setItem(MARKER_SESSION_ONLY_KEY, "1");
+    else localStorage.removeItem(MARKER_SESSION_ONLY_KEY);
+  } catch {
+    // Storage disabled: a rotation falls back to the 30-day marker, the behaviour before W2.
+  }
+}
+
+/**
  * The persistent half: a cookie, plus `localStorage` on the read path.
  *
  * WHY A COOKIE AND NOT `localStorage`. `frontend/proxy.ts` runs on the
@@ -100,7 +126,7 @@ const persistent: KeyValueStore = {
     }
     return readCookie(key);
   },
-  set(key, value) {
+  set(key, value, options) {
     // Not the refresh token: `localStorage`, and nothing leaves the browser.
     // `get` reads there first, so this round-trips.
     if (key !== REFRESH_TOKEN_KEY) {
@@ -115,19 +141,27 @@ const persistent: KeyValueStore = {
     // origin and cannot see the API's cookie. Whatever value a caller passes, the token is never written:
     // a marker that leaked would say nothing an attacker could use.
     //
-    // 30 days, the longest a session can last: if the real cookie dies first, the next API call's refresh
-    // fails and `endSession` removes this marker. `Secure` wherever `Secure` can work (plain-http dev and
-    // Playwright would drop it).
+    // 30 days with 「保持登录」, the longest a session can last: if the real cookie dies first, the next API
+    // call's refresh fails and `endSession` removes this marker. `Secure` wherever `Secure` can work
+    // (plain-http dev and Playwright would drop it).
     const secure =
       typeof location !== "undefined" && location.protocol === "https:"
         ? "; Secure"
         : "";
+    // 「保持登录」 unticked: no max-age, so the marker dies with the browser and `proxy.ts` sends the next
+    // visit to /login instead of rendering a page whose first API call 401s (W2). `remember` is undefined on a
+    // rotation: keep what the sign-in chose.
     void value;
-    document.cookie = `${key}=1; path=/; max-age=${MARKER_MAX_AGE}; SameSite=Lax${secure}`;
+    const remember = options?.remember;
+    if (remember !== undefined) writeSessionOnly(!remember);
+    const sessionOnly = remember === undefined ? readSessionOnly() : !remember;
+    const maxAge = sessionOnly ? "" : `; max-age=${MARKER_MAX_AGE}`;
+    document.cookie = `${key}=1; path=/${maxAge}; SameSite=Lax${secure}`;
   },
   remove(key) {
     if (typeof document === "undefined") return;
     if (typeof localStorage !== "undefined") localStorage.removeItem(key);
+    if (key === REFRESH_TOKEN_KEY) writeSessionOnly(false);
     document.cookie = `${key}=; path=/; max-age=0`;
   },
 };
@@ -260,6 +294,8 @@ export const webPlatform: PlatformAdapter = {
     // Anywhere under /login (the form, the two-step page) the operator is already on the way in: navigating
     // would reload, drop what they typed, and re-fire this. FL-20 covered /login alone; /login/verify was missed.
     if (window.location.pathname === "/login" || window.location.pathname.startsWith("/login/")) return;
+    // Back here after signing in again (W1); `returnTo.ts` refuses anything that is not a same-origin path.
+    rememberReturnTo(window.location.pathname + window.location.search);
     window.location.href = "/login";
   },
 };

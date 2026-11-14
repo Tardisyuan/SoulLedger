@@ -144,7 +144,9 @@ export function proxy(request: NextRequest) {
   const refreshToken = request.cookies.get("soulledger_refresh")?.value;
   if (!refreshToken && !isPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
+    // With the query: a deep link (`/souls?status=…`) comes back whole. The login page reads this into
+    // sessionStorage (`src/lib/returnTo.ts`), which validates it; nothing here trusts it.
+    loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 

@@ -7,12 +7,13 @@
  * - the web adapter declares `refreshCookie`, so the core client sends credentials + `X-Auth-Cookie: 1`;
  * - `setRefreshToken` never writes the token into a script-readable cookie — only the marker "1", for
  *   `proxy.ts`, which cannot see the API origin's cookie (asserted absent as well as present);
- * - a silent refresh posts no body (the cookie is the credential) and still writes only the marker.
+ * - a silent refresh posts no body (the cookie is the credential) and still writes only the marker;
+ * - 「保持登录」 unticked makes the marker a session cookie, and a later rotation keeps it one (W2).
  */
 import axios from "axios";
 import { rotateRefreshToken } from "@soulledger/core/api/client";
 import { configurePlatform, setRefreshToken, usesRefreshCookie } from "@soulledger/core/platform";
-import { MARKER_MAX_AGE, REFRESH_TOKEN_KEY, webPlatform } from "@/lib/platform/web";
+import { MARKER_MAX_AGE, MARKER_SESSION_ONLY_KEY, REFRESH_TOKEN_KEY, webPlatform } from "@/lib/platform/web";
 
 jest.mock("axios", () => ({
   __esModule: true,
@@ -29,6 +30,7 @@ const cookieDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "co
 
 beforeEach(() => {
   writes = [];
+  localStorage.clear();
   Object.defineProperty(document, "cookie", {
     configurable: true,
     get: () => cookieDescriptor.get!.call(document),
@@ -67,6 +69,36 @@ describe("web refresh token", () => {
   it("a login answer without `refresh` still marks the browser signed in", () => {
     setRefreshToken(undefined);
     expect(refreshWrites()[0]).toMatch(new RegExp(`^${REFRESH_TOKEN_KEY}=1;`));
+  });
+
+  it("「保持登录」 unticked: the marker is a session cookie (no max-age)", () => {
+    setRefreshToken(undefined, false);
+    const [write] = refreshWrites();
+    expect(write).toMatch(new RegExp(`^${REFRESH_TOKEN_KEY}=1;`));
+    expect(write).not.toContain("max-age");
+    expect(write).not.toContain("expires");
+  });
+
+  it("「保持登录」 ticked: the marker lives 30 days", () => {
+    setRefreshToken(undefined, true);
+    expect(refreshWrites()[0]).toContain(`max-age=${MARKER_MAX_AGE}`);
+    expect(localStorage.getItem(MARKER_SESSION_ONLY_KEY)).toBeNull();
+  });
+
+  it("a rotation after an unticked sign-in keeps the marker a session cookie", async () => {
+    setRefreshToken(undefined, false);
+    writes = [];
+    await rotateRefreshToken("1");
+    const [write] = refreshWrites();
+    expect(write).toMatch(new RegExp(`^${REFRESH_TOKEN_KEY}=1;`));
+    expect(write).not.toContain("max-age");
+  });
+
+  it("removing the marker forgets the session-only choice", () => {
+    setRefreshToken(undefined, false);
+    expect(localStorage.getItem(MARKER_SESSION_ONLY_KEY)).toBe("1");
+    webPlatform.secure.remove(REFRESH_TOKEN_KEY);
+    expect(localStorage.getItem(MARKER_SESSION_ONLY_KEY)).toBeNull();
   });
 
   it("a silent refresh sends no token in the body and asks for the cookie", async () => {

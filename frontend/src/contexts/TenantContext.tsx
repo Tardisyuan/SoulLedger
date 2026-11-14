@@ -19,6 +19,7 @@ import {
   platform,
 } from "@soulledger/core/platform";
 import { civSkinOf } from "@/src/lib/civSkin";
+import { clearReturnTo } from "@/src/lib/returnTo";
 import { prefersReducedMotion } from "@/lib/motion";
 
 export { civSkinOf };
@@ -323,6 +324,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     host.persistent.remove(ACCESS_TOKEN_KEY);
     host.persistent.remove(USER_KEY);
     host.secure.remove(REFRESH_TOKEN_KEY);
+    // A page remembered for "back after sign-in" is this operator's, not the next one's (W1).
+    clearReturnTo();
   }, [setUser]);
 
   const value = useMemo(

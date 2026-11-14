@@ -17,6 +17,7 @@ import { LoginShell } from "@/src/components/auth/LoginShell";
 import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 import { storeMfaPending } from "@/src/lib/mfaPending";
+import { rememberReturnTo, takeReturnTo } from "@/src/lib/returnTo";
 import { cn } from "@/lib/utils";
 import { responseCode, responseData, responseStatus, fetchFailureOf } from "@soulledger/core/api/client";
 
@@ -186,6 +187,8 @@ function PasswordLogin() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("help") === "1") setHelpOpen(true);
+    // `proxy.ts` sent the visitor here from a page: back there after sign-in (W1). Validated in `returnTo.ts`.
+    rememberReturnTo(params.get("redirect"));
     // From a landing card: this civilization's colour until a sign-in decides the real one.
     const civ = params.get("civ");
     if (civ && ["cn", "eu", "eg", "gr"].includes(civ)) document.documentElement.dataset.civ = civ;
@@ -243,7 +246,7 @@ function PasswordLogin() {
 
       if (isMfaRequired(res.data)) {
         // 第二步。What was typed is not kept: the pending token is the proof the password was right.
-        storeMfaPending({ pending_token: res.data.pending_token, username: res.data.username });
+        storeMfaPending({ pending_token: res.data.pending_token, username: res.data.username, remember });
         window.location.assign("/login/verify");
         return;
       }
@@ -251,7 +254,8 @@ function PasswordLogin() {
       // Through the ports: `lib/platform/web.ts` is the one place that knows the
       // access token is session-scoped and the refresh token a cookie.
       setAccessToken(tokens.access);
-      setRefreshToken(tokens.refresh);
+      // `remember` decides the signed-in marker's lifetime: unticked, it dies with the browser (W2).
+      setRefreshToken(tokens.refresh, remember);
 
       if (tokens.user) {
         setUser(tokens.user);
@@ -261,7 +265,8 @@ function PasswordLogin() {
       showToast(t("auth.login_success"), "success");
       // The operator's saved 默认视图, asked of the server with the token just
       // stored; when there is none, the role's (officer → 待办队列, admin → /dashboard).
-      window.location.href = await defaultViewRoute(tokens.user);
+      // A page the session expired on comes first (W1).
+      window.location.href = takeReturnTo() ?? (await defaultViewRoute(tokens.user));
       return;
     } catch (err: unknown) {
       const data = responseData<LoginFailedBody & LoginLockedBody>(err);

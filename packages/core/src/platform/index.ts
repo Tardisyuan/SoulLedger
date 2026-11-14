@@ -9,6 +9,7 @@ import type {
   SessionResumeSubscriber,
   SessionSuspendKind,
   SessionSuspendSubscriber,
+  StoreWriteOptions,
   UnauthorizedHandler,
 } from "./types";
 
@@ -22,6 +23,7 @@ export type {
   SessionResumeSubscriber,
   SessionSuspendKind,
   SessionSuspendSubscriber,
+  StoreWriteOptions,
   UnauthorizedHandler,
 };
 
@@ -169,10 +171,14 @@ export function getRefreshToken(): string | null {
   return adapter.secure.get(REFRESH_TOKEN_KEY);
 }
 
-export function setRefreshToken(value: string | undefined): void {
+/**
+ * `remember` is 「保持登录」 at a sign-in; leave it out on a rotation (silent refresh, password change), where
+ * the host keeps what the sign-in chose. See `StoreWriteOptions`.
+ */
+export function setRefreshToken(value: string | undefined, remember?: boolean): void {
   // Cookie mode: the answer carries no token (it is in the httpOnly cookie); the host stores its marker.
   if (adapter.refreshCookie) {
-    adapter.secure.set(REFRESH_TOKEN_KEY, "1");
+    adapter.secure.set(REFRESH_TOKEN_KEY, "1", { remember });
     return;
   }
   if (value) adapter.secure.set(REFRESH_TOKEN_KEY, value);

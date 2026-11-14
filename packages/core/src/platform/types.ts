@@ -59,9 +59,19 @@
  * the background. That is a real obligation on whoever writes it, recorded
  * here rather than discovered there.
  */
+/**
+ * What `setRefreshToken` knows about the session it is storing. `remember` is 「保持登录」:
+ * `true` / `false` at a sign-in, `undefined` on a rotation (the client does not know, and the
+ * host keeps whatever the sign-in chose). Only the web adapter reads it, for its marker cookie's
+ * lifetime (W2, 2026-11-15); a native store has no lifetime to set and ignores it.
+ */
+export interface StoreWriteOptions {
+  remember?: boolean;
+}
+
 export interface KeyValueStore {
   get(key: string): string | null;
-  set(key: string, value: string): void;
+  set(key: string, value: string, options?: StoreWriteOptions): void;
   remove(key: string): void;
 }
 
