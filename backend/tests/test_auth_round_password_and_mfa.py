@@ -16,7 +16,7 @@ from apps.authentication import mfa
 from apps.authentication.models import OfficerMfa, PasswordHistory
 from apps.authentication.passwords import PASSWORD_HISTORY_KEEP, set_officer_password
 from apps.authentication.views import MAX_RESET_CODE_ATTEMPTS
-from apps.core.problems import field_errors
+from apps.core.problems import field_errors, without_instance
 
 REQUEST = "/api/v1/auth/reset-password/"
 SET = "/api/v1/auth/set-new-password/"
@@ -80,10 +80,10 @@ class TestResetIsNotAnAccountOracle:
         _ask(self.UNKNOWN, "198.51.100.2")
         for n in range(1, MAX_RESET_CODE_ATTEMPTS + 1):
             a, b = _set(self.KNOWN), _set(self.UNKNOWN)
-            assert (a.status_code, a.data) == (b.status_code, b.data), n
+            assert (a.status_code, without_instance(a)) == (b.status_code, without_instance(b)), n
             assert a.data["code"] == "reset_code_wrong" and a.data["attempts_left"] == MAX_RESET_CODE_ATTEMPTS - n
         a, b = _set(self.KNOWN), _set(self.UNKNOWN)
-        assert a.data == b.data and a.data["code"] == "reset_code_attempts_exceeded"
+        assert without_instance(a) == without_instance(b) and a.data["code"] == "reset_code_attempts_exceeded"
         # ...and then the code is gone for both.
         assert _set(self.KNOWN).data["code"] == _set(self.UNKNOWN).data["code"] == "reset_code_expired"
 

@@ -9,6 +9,7 @@ import io
 import pytest
 from django.core.management import call_command
 
+from apps.core.problems import field_errors
 from apps.disposition.services import DispositionService
 from apps.judgment.models import Judgment, Verdict
 from apps.judgment.services import EvidenceAdmissionService
@@ -154,9 +155,9 @@ def test_only_a_european_demerit_is_mortal_or_venial(admin_user):
             "sin_gravity": "MORTAL"}
     assert client.post(f"/api/v1/souls/{european.pk}/add_record/", body, format="json").status_code in (200, 201)
     res = client.post(f"/api/v1/souls/{chinese.pk}/add_record/", body, format="json")
-    assert res.status_code == 400 and "sin_gravity" in res.data, res.data
+    assert res.status_code == 400 and "sin_gravity" in field_errors(res), res.data
     res = client.post(f"/api/v1/souls/{european.pk}/add_record/", {**body, "record_type": "MERIT"}, format="json")
-    assert res.status_code == 400 and "sin_gravity" in res.data, res.data
+    assert res.status_code == 400 and "sin_gravity" in field_errors(res), res.data
 
 
 # ── 炼狱七层按罪种 ──────────────────────────────────────────────────────────
@@ -220,7 +221,7 @@ def test_only_a_european_soul_records_a_neutral_life(admin_user):
     res = client.patch(f"/api/v1/souls/{_soul().pk}/", {"neutral_in_life": True}, format="json")
     assert res.status_code == 200 and res.data["neutral_in_life"] is True, res.data
     res = client.patch(f"/api/v1/souls/{_soul(code='CN_DIYU').pk}/", {"neutral_in_life": True}, format="json")
-    assert res.status_code == 400 and "neutral_in_life" in res.data, res.data
+    assert res.status_code == 400 and "neutral_in_life" in field_errors(res), res.data
 
 
 # ── 核对读的文明与路由一致(2026-10-29 审查)─────────────────────────────────

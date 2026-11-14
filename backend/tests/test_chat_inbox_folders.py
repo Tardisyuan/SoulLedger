@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
 from apps.chat.models import Conversation, ConversationKind, InboxOfficerState, InboxReplyTemplate
+from apps.core.problems import field_errors
 from tests.chat_support import deliver_hooks, matrix, mxid  # noqa: F401
 from tests.soul_account_support import dead_soul, officer_client, ready_soul
 
@@ -476,7 +477,7 @@ def test_reply_templates_crud_and_placeholders(cn_tenant, eu_tenant):
     assert InboxReplyTemplate.objects.get(pk=tid).tenant_id == cn_tenant.pk
 
     bad = cn.post(TEMPLATES, {"title": "坏", "body": "{{soul_code}} 你好"}, format="json")
-    assert bad.status_code == 400 and "soul_code" in str(bad.data["body"])
+    assert bad.status_code == 400 and "soul_code" in str(field_errors(bad)["body"])
     assert cn.post(TEMPLATES, {"title": "  ", "body": "x"}, format="json").status_code == 400
     assert cn.post(TEMPLATES, {"title": "长", "body": "x" * 4001}, format="json").status_code == 400
 

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 from django.apps import apps as live_apps
 
+from apps.core.problems import field_errors
 from apps.death_sync.models import TudiGod
 from apps.events.models import SoulEvent
 from apps.judgment import wangsi
@@ -158,6 +159,10 @@ def test_a_rejected_grievance_is_on_the_timeline(cn_tenant, admin_user):
 # ── 土地公的上级只能是县城隍 ────────────────────────────────────────────
 
 
+def _codes(res, field):
+    return [e["code"] for e in res.data["errors"] if e.get("field") == field]
+
+
 def test_a_tudi_god_reports_only_to_a_county_city_god_or_an_unranked_one(cn_tenant):
     lead = sp.officer("tudi_rank", "ADMIN", cn_tenant)
     client = officer_client(lead)
@@ -166,18 +171,18 @@ def test_a_tudi_god_reports_only_to_a_county_city_god_or_an_unranked_one(cn_tena
     unranked = CityGod.objects.create(tenant=cn_tenant, name="未定级城隍")
 
     res = client.post(TUDI, {"name": "青山镇土地", "city_god": str(prefecture.pk)}, format="json")
-    assert res.status_code == 400 and res.data["city_god"]["code"] == "tudi_city_god_not_county", res.data
+    assert res.status_code == 400 and _codes(res, "city_god") == ["tudi_city_god_not_county"], res.data
     assert not TudiGod.objects.filter(name="青山镇土地").exists()
 
     res = client.post(TUDI, {"name": "青山镇土地", "city_god": str(county.pk)}, format="json")
     assert res.status_code == 201, res.data
     res = client.patch(f"{TUDI}{res.data['id']}/", {"city_god": str(prefecture.pk)}, format="json")
-    assert res.status_code == 400 and "city_god" in res.data
+    assert res.status_code == 400 and "city_god" in field_errors(res)
     res = client.post(TUDI, {"name": "白水乡土地", "city_god": str(unranked.pk)}, format="json")
     assert res.status_code == 201, res.data
     # 名下有土地公的城隍不能改成别的级;没有土地公的照改。
     res = client.patch(f"/api/v1/judgment/city-gods/{county.pk}/", {"rank": "PREFECTURE"}, format="json")
-    assert res.status_code == 400 and res.data["rank"]["code"] == "city_god_has_tudi_gods", res.data
+    assert res.status_code == 400 and _codes(res, "rank") == ["city_god_has_tudi_gods"], res.data
     assert CityGod.all_objects.get(pk=county.pk).rank == CityGodRank.COUNTY
     res = client.patch(f"/api/v1/judgment/city-gods/{prefecture.pk}/", {"rank": "DEPARTMENT"}, format="json")
     assert res.status_code == 200, res.data

@@ -95,7 +95,7 @@ class TestDispatchRecordCRUD:
         assert len(reason.encode()) == 57
         resp = self._propose(reason)
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.data["reason"][0].code == "reason_too_short"
+        assert [e["code"] for e in resp.data["errors"] if e.get("field") == "reason"] == ["reason_too_short"]
         assert not DispatchRecord.objects.filter(soul=self.soul).exists()
 
     def test_twenty_characters_pass_and_padding_does_not_count(self):

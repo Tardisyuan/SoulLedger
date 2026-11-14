@@ -19,7 +19,7 @@ from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
 from apps.authentication.models import User
-from apps.core.problems import field_errors
+from apps.core.problems import field_errors, without_instance
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul, SoulState
 from tests.conftest import sign_in
@@ -257,7 +257,7 @@ class TestReassign:
         cross = _post(world.clients["mod"], case, "reassign", {"to": world.users["eu_judge"].pk})
         missing = _post(world.clients["mod"], case, "reassign", {"to": 999_999_999})
         assert cross.status_code == missing.status_code == 400
-        assert cross.data == missing.data
+        assert without_instance(cross) == without_instance(missing)
         assert cross.data["code"] == "invalid_assignee"
         assert _fresh(case).claimed_by_id is None
 

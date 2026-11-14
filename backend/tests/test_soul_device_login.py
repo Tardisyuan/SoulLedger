@@ -12,6 +12,7 @@ from rest_framework.test import APIClient
 
 from apps.audit.models import AuditLog
 from apps.authentication import mfa as core
+from apps.core.problems import without_instance
 from apps.soul_accounts import mfa
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import CredentialStatus, InitialCredential, SoulDeviceLogin
@@ -183,7 +184,8 @@ class TestLogin:
         ghost = APIClient().post("/api/v1/soul-auth/device-login/",
                                  {"soul_code": "ZZZZZZZZZZ", "credential": "not-a-credential"}, format="json")
         assert real.status_code == ghost.status_code == 401
-        assert real.data == ghost.data == {"detail": "灵魂编号或凭据错误。", "code": "device_login_invalid"}
+        assert without_instance(real) == without_instance(ghost)
+        assert (real.data["detail"], real.data["code"]) == ("灵魂编号或凭据错误。", "device_login_invalid")
 
     def test_a_credential_only_works_with_its_own_soul_code(self, soul, cn_tenant):
         other, _ = ready_soul(cn_tenant, name="亡魂乙")

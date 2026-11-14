@@ -106,9 +106,10 @@ class TestRebirthEndpointsRespectTheStateMachine:
         assert response.data["code"] == "invalid_state_transition"
         assert response.data["current_state"] == SoulState.SETTLED
         assert response.data["target_state"] == SoulState.REINCARNATING
-        # No "code"/"civilization" — that shape belongs to the cosmology
-        # refusal, and the two must not be confusable.
-        assert "code" not in response.data
+        # Not the cosmology refusal's code, and none of its "civilization":
+        # the two must not be confusable.
+        assert response.data["code"] != "rebirth_not_applicable"
+        assert "civilization" not in response.data
 
         soul.refresh_from_db()
         assert soul.current_state == SoulState.SETTLED
@@ -250,7 +251,7 @@ class TestRebirthFormIsValidated:
         )
 
         assert response.status_code == 400
-        assert "six paths" in str(response.data["rebirth_form"][0])
+        assert "six paths" in str(field_errors(response)["rebirth_form"][0])
         assert Reincarnation.all_objects.filter(soul=soul).count() == 0
 
     def test_new_identity_longer_than_the_column_is_refused(
