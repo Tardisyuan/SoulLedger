@@ -275,7 +275,8 @@ export function RouteTopology({
 }
 
 function textTone(state: StationState): string {
-  if (state === "current") return "font-semibold text-[oklch(var(--color-main-ink))]";
+  // 当前站:墨色 600(第四十五批第七节)。文明色只在脊上:圆点的 metal 环(`.route-now`)与走过的点。
+  if (state === "current") return "font-semibold text-[oklch(var(--color-ink))]";
   if (state === "travelled") return "text-[oklch(var(--color-ink))]";
   return "text-[oklch(var(--color-ink-muted))]";
 }

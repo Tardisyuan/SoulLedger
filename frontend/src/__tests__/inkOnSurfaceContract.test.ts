@@ -255,6 +255,13 @@ describe("main 的用法与文字透明度(源码扫描)", () => {
     expect(filesMatching(/\bbg-\[oklch\(var\(--color-metal\)\)\]/)).toEqual(METAL_MARKS);
   });
 
+  // 第四十五批第七节:路线图的当前站字是墨 600,文明色只留在脊上(圆点的 metal 环、走过的点)。
+  it("路线图当前站的字是墨、600,不是文明色", () => {
+    const route = SOURCES.find((x) => x.rel === "src/components/realms/RouteTopology.tsx")!.code;
+    expect(route).toContain('if (state === "current") return "font-semibold text-[oklch(var(--color-ink))]";');
+    expect(route).not.toMatch(/state === "current"\) return "[^"]*main-ink/);
+  });
+
   it("规定 1 的扫描抓得到它要抓的写法", () => {
     for (const bad of ['className="text-[oklch(var(--color-main))]"', "className=\"text-[oklch(var(--color-main)/0.8)]\"", ".x { color: oklch(var(--color-main)); }", ".x { color: var(--color-main); }"])
       expect(MAIN_AS_TEXT.test(bad)).toBe(true);
