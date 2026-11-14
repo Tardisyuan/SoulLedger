@@ -28,7 +28,7 @@ differences instead of reskinning one schema.
 on recorded data, and every sign-in starts over. · **[API reference](https://soulledger.tardisyuan.ltd/api-docs)**
 
 **Contact**: open to full-stack roles, and to consulting on multi-tenant / approval-workflow systems.
-Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com).
+Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger). One line is enough.
 
 <p align="center">
   <a href="frontend/public/demo-videos/app-soul.mp4"><img src="frontend/public/demo-videos/app-soul.jpg" width="260" alt="Soul app: a soul reading its own record"></a>
@@ -37,24 +37,34 @@ Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com).
 </p>
 
 **About AI.** Most of the code in this repository was written by Claude Code, not typed by me line by
-line: 3,826 of its 4,630 commits carry a `Co-Authored-By: Claude` line, and 62 more are authored by Claude.
-What I did is the part this project is meant to show:
+line: about four in five commits carry a `Co-Authored-By: Claude` line (`git log` gives the exact count).
+So the code alone says little about what I did. What follows is what I decided, and each item points to a
+record in this repository, so you can check it without taking my word for it:
 
-1. **I set the model.** The four civilizations are not flattened into one karma number
-   ([`ledger/readings.py`](backend/apps/ledger/readings.py)). I don't remember the first draft's details; what I know is
-   that one shared score could not carry four doctrines that measure different things, so the model keeps
-   them apart and the code refuses to merge them.
+1. **I postponed my own first choice once the cost was worked out.** I wanted one database per tenant:
+   four civilizations as four separate worlds. Costed on the code, it meant sagas with compensation for
+   every cross-tenant judgment, giving up foreign keys across tenants, and routing on every query, for a
+   workload that did not exist yet. So the system splits by business domain first. I still want the
+   per-tenant split; it waits for a measured trigger, and new code is already written to its constraints
+   ([ADR 0004](docs/adr/0004-split-by-domain-not-by-tenant.md),
+   [the design notes](docs/ARCHITECTURE-soul-app-and-domain-split.md)).
 2. **I did not trust "done".** On 2026-05-30 a report in this repository declared the code "Production
    Ready". On 2026-08-07 an audit of the same code found four critical tenant-isolation gaps. The report
    is still here, marked superseded ([`PRODUCTION_READINESS_REPORT.md`](docs/PRODUCTION_READINESS_REPORT.md)).
    I started that audit: instead of taking the report's word for it, I had the AI check every view, tenant
    by tenant.
 3. **I turned each lesson into a check that goes red.** Tenant scoping was consolidated behind one
-   function with a contract test over every ViewSet (2026-08-14, ADR 0001). The suite runs on real
-   PostgreSQL as well as SQLite (ADR 0003). The rule "no claim of *fixed* without the command, its exit
+   function with a contract test over every ViewSet (2026-08-14,
+   [ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)). The suite runs on real PostgreSQL as
+   well as SQLite ([ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)). The rule "no claim of *fixed* without the command, its exit
    code and the passed count" is written into the agents' instructions.
 
-If you want to test me, ask about the details of any of these three.
+Three questions I'd like to be asked:
+
+- Why does a merit recalculation that changes nothing write no event, and what would it cost if it did?
+- A judge seals a case and regrets it. When can the seal still be withdrawn, and why does the window
+  close on an event, not on a clock?
+- What did SQLite let through that PostgreSQL caught on the first run?
 
 ## Three things worth a look
 
@@ -147,15 +157,19 @@ Python 3.11 (with `uv`) and Node.js ≥ 20.9 (`.nvmrc`). No Docker, PostgreSQL o
 cd backend && cp .env.example .env
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
-.venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_tenants && .venv/bin/python manage.py seed_mythology  # the four halls
+DEBUG=true .venv/bin/python manage.py seed_dev_users   # one sign-in per role, printed; refuses unless DEBUG
+.venv/bin/python manage.py runserver
 
 # web, from the repository root: http://localhost:3333
 npx -y npm@11 ci && git checkout -- package-lock.json
 npm run dev --workspace frontend
 ```
 
-Seed data, a sign-in account for each role, the two apps, Docker and the full test commands are in the
-[development guide](docs/DEVELOPMENT.md).
+Open <http://localhost:3333> and sign in with any of the five officer accounts `seed_dev_users` printed
+(the sixth is for the soul app). The two apps, Docker
+and the full test commands are in the [development guide](docs/DEVELOPMENT.md).
 
 ## Tests and CI
 
@@ -192,7 +206,8 @@ the exercise. `git log` is the accurate history; [`docs/MILESTONES.md`](docs/MIL
 Pull requests are welcome. Small ones are best: documentation fixes, translations, corrections to the
 mythology research, and bug fixes with a reproduction. Open an issue before anything large.
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the workflow and the rules for AI-assisted PRs. The maintainer
-works alone and usually replies within a week.
+works alone and usually replies within a week. Looking for a place to start? Try a
+[good first issue](https://github.com/Tardisyuan/SoulLedger/labels/good%20first%20issue).
 
 ## Credits
 
@@ -201,7 +216,7 @@ tests and docs were written with [Claude Code](https://claude.com/claude-code), 
 designed with Claude Design. Fonts, libraries, literature and services are listed on the app's About page
 (data in [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)).
 
-Maintainer: [@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)
+Maintainer: [@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
 
 ## License
 

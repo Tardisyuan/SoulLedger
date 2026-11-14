@@ -26,7 +26,7 @@
 
 **[▶ 在线演示](https://soulledger.tardisyuan.ltd)**：不用注册，每个角色一键进入。这是纯前端版本，数据是录好的，每次登录回到原样。· **[API 参考](https://soulledger.tardisyuan.ltd/api-docs)**
 
-**联系**：在找全栈岗位，也接多租户 / 审批流系统的咨询。邮箱 [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)。
+**联系**：在找全栈岗位，也接多租户 / 审批流系统的咨询。邮箱 [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)，一句话就够。
 
 <p align="center">
   <a href="frontend/public/demo-videos/app-soul.mp4"><img src="frontend/public/demo-videos/app-soul.jpg" width="260" alt="灵魂端 App：灵魂看自己的账"></a>
@@ -34,20 +34,26 @@
   <a href="frontend/public/demo-videos/app-officer.mp4"><img src="frontend/public/demo-videos/app-officer.jpg" width="260" alt="官员端 App：判官处理案件队列"></a>
 </p>
 
-**关于 AI。**这个仓库的大部分代码是 Claude Code 写的，不是我逐行手写的。4,630 个提交里，3,826 个带
-`Co-Authored-By: Claude`，另有 62 个的作者就是 Claude。我做的部分，正是这个项目想展示的：
+**关于 AI。**这个仓库的大部分代码是 Claude Code 写的，不是我逐行手写的：大约五个提交里有四个带
+`Co-Authored-By: Claude`（准确数字以 `git log` 为准）。所以光看代码，看不出我做了什么。下面是我做的决定，每一条都指向仓库里的记录，
+不用信我的话也能核对：
 
-1. **定模型。**四种文明不抹平成一个功过数（[`ledger/readings.py`](backend/apps/ledger/readings.py)）。
-   第一版方案的细节我记不清了；能确定的是，一个统一的分数装不下四种量法不同的教义，所以模型把它们分开，
-   代码也拒绝把它们合并。
+1. **算清代价后，我把自己的首选往后放了。**我原本想按租户分库：四种文明，四个独立的世界。在代码上算下来，
+   每次跨殿审判都要变成带补偿的 saga，跨租户外键要拆，每条查询都要路由，而这样的负载当时还不存在。
+   所以先按业务域拆。分库没有取消：等量到触发条件再做，新代码已经按分库的约束写
+   （[ADR 0004](docs/adr/0004-split-by-domain-not-by-tenant.md)、[设计稿](docs/ARCHITECTURE-soul-app-and-domain-split.md)）。
 2. **不信「已完成」。**2026-05-30，仓库里一份报告宣称「Production Ready」。2026-08-07，对同一份代码的审计
-   找出 4 个严重的租户隔离缺口。那份报告还留着，标了「已作废」。那次审计是我发起的：我没有采信那份报告，而是让 AI 按租户逐个视图去查。
+   找出 4 个严重的租户隔离缺口。那份报告还留着，标了「已作废」（[`PRODUCTION_READINESS_REPORT.md`](docs/PRODUCTION_READINESS_REPORT.md)）。那次审计是我发起的：我没有采信那份报告，而是让 AI 按租户逐个视图去查。
 3. **把教训变成会变红的检查。**
-   - 2026-08-14，租户过滤收口成一个函数，并用契约测试逐个检查 ViewSet（ADR 0001）。
-   - 测试同时跑真 PostgreSQL 和 SQLite（ADR 0003）。
+   - 2026-08-14，租户过滤收口成一个函数，并用契约测试逐个检查 ViewSet（[ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)）。
+   - 测试同时跑真 PostgreSQL 和 SQLite（[ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)）。
    - 「没有命令、退出码、通过数，就不许说已修复」写进了给 AI 的规则。
 
-想考我，就问这三件事里任何一件的细节。
+希望被问到的三个问题：
+
+- 功过重算算出来分数没变时，为什么不写事件？要是写了，代价是什么？
+- 判官落了印又后悔了。什么时候还能撤回？为什么撤回窗口按事件关，不按时间关？
+- SQLite 放过了什么，而 PostgreSQL 第一次跑就抓到了？
 
 ## 三个值得看的地方
 
@@ -129,15 +135,17 @@ flowchart LR
 cd backend && cp .env.example .env
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
-.venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_tenants && .venv/bin/python manage.py seed_mythology  # 四个殿
+DEBUG=true .venv/bin/python manage.py seed_dev_users   # 每个角色一个可登录账号，打印出来；不开 DEBUG 不肯跑
+.venv/bin/python manage.py runserver
 
 # 网页，在仓库根目录：http://localhost:3333
 npx -y npm@11 ci && git checkout -- package-lock.json
 npm run dev --workspace frontend
 ```
 
-以下内容见[开发指南](docs/DEVELOPMENT.md)（英文）：
-- 种子数据，以及每个角色各一个可登录账号；
+打开 <http://localhost:3333>，用 `seed_dev_users` 打印的五个官员账号之一登录（第六个是灵魂端 App 的）。以下内容见[开发指南](docs/DEVELOPMENT.md)（英文）：
 - 两个 App 的构建；
 - Docker；
 - 完整的测试命令。
@@ -176,7 +184,7 @@ npm run dev --workspace frontend
 - 神话考据纠错
 - 带复现步骤的缺陷修复
 
-大改动请先开 issue 讨论。流程和 AI 辅助 PR 的规矩见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。维护者一个人，通常一周内回复。
+大改动请先开 issue 讨论。流程和 AI 辅助 PR 的规矩见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。维护者一个人，通常一周内回复。想找个地方上手，可以从 [good first issue](https://github.com/Tardisyuan/SoulLedger/labels/good%20first%20issue) 开始。
 
 ## 致谢
 
@@ -184,7 +192,7 @@ npm run dev --workspace frontend
 - 代码、测试和文档用 [Claude Code](https://claude.com/claude-code) 协作完成，界面用 Claude Design 设计。
 - 字体、开源软件、文献与服务的完整清单在 App 的「关于」页，数据在 [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)。
 
-维护者：[@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)
+维护者：[@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
 
 ## 许可证
 
