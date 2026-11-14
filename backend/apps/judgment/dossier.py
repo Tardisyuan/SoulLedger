@@ -116,7 +116,7 @@ def whereabouts(soul: Soul, court: str, request) -> dict:
 
 
 class DossierPhase(TextChoices):
-    DRAFT = "DRAFT", "未认领"
+    UNCLAIMED = "UNCLAIMED", "未认领"
     HEARING = "HEARING", "已认领"
     DEFERRED = "DEFERRED", "暂缓"
     AT_CITY_GOD = "AT_CITY_GOD", "在城隍"
@@ -140,7 +140,7 @@ def phase_of(judgment) -> str:
         return DossierPhase.BARRED
     if judgment.deferred_at is not None:
         return DossierPhase.DEFERRED
-    return DossierPhase.HEARING if judgment.claimed_by_id else DossierPhase.DRAFT
+    return DossierPhase.HEARING if judgment.claimed_by_id else DossierPhase.UNCLAIMED
 
 
 # ---------------------------------------------------------------------------

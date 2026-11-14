@@ -70,7 +70,7 @@ class TestDossier:
         assert "citations" not in d["judgment"]  # 全文不再内嵌,引用行在顶层
         assert d["citations"] == []
         assert d["soul"]["id"] == str(case.soul_id) and d["soul_redacted"] is False
-        assert d["phase"] == "DRAFT"
+        assert d["phase"] == "UNCLAIMED"
         assert d["whereabouts"]["hall"] == "CN_DIYU"
         assert d["whereabouts"]["spine"] == {"civ": "cn", "at": "hall", "n": 1}
         assert d["actions"]["claim"] is True and d["actions"]["release"] is False

@@ -632,14 +632,20 @@ describe("the decision bar", () => {
       expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
     });
 
-    it("S 也不在:放进待定是写操作", async () => {
+    it("S 只换到下一件:不弹待定、不发请求,本会话跳过(R 放回)", async () => {
       renderConsole();
       await screen.findByText("第一位待判者");
 
       await press({ key: "s" });
 
+      // 放进待定是写操作,只读的人没有;S 对他就是「下一件」(用户 2026-11-14)。
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.getByText("第一位待判者")).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
+      expect(screen.queryByText("第一位待判者")).not.toBeInTheDocument();
+      expect(judgmentApi.defer as jest.Mock).not.toHaveBeenCalled();
+      expect(mockConclude).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenLastCalledWith(expect.objectContaining({ skip: [JUDGMENT.id] }));
+      expect(screen.getByTestId("session-deferred")).toBeInTheDocument();
     });
   });
 });
