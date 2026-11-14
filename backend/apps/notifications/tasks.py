@@ -22,6 +22,8 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
+from apps.scheduler.registry import time_limits
+
 EMAILED_TYPES = ("WORKFLOW_ASSIGNED", "JUDGMENT_REASSIGN_REQUESTED", "PASSWORD_HELP_REQUESTED", "IMPERSONATION_STARTED")
 WINDOW = timedelta(hours=24)
 
@@ -106,7 +108,7 @@ def _recipients(**scope):
     return User.objects.filter(is_active=True, **scope).exclude(email="")
 
 
-@shared_task(name="notifications.email_action_needed_for_tenant")
+@shared_task(name="notifications.email_action_needed_for_tenant", **time_limits("notifications.email_action_needed_for_tenant"))
 def email_action_needed_for_tenant(tenant_id: str):
     from apps.tenants.managers import clear_current_tenant, set_current_tenant
     from apps.tenants.models import Tenant
@@ -120,7 +122,7 @@ def email_action_needed_for_tenant(tenant_id: str):
         clear_current_tenant()
 
 
-@shared_task(name="notifications.email_action_needed_global")
+@shared_task(name="notifications.email_action_needed_global", **time_limits("notifications.email_action_needed_global"))
 def email_action_needed_global():
     """全局管理员(`tenant=None`)不属于任何租户,按租户那一行永远扫不到他们:单独一行。"""
     sent, failed = _email_pending(_recipients(tenant__isnull=True))

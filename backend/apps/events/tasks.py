@@ -12,6 +12,8 @@ import time
 from celery import shared_task
 from django.utils import timezone
 
+from apps.scheduler.registry import time_limits
+
 logger = logging.getLogger(__name__)
 
 #: 一条投递最多试几次。与 `WebhookConfig.max_retries` 取小者 —— 模型上的那个是
@@ -152,7 +154,7 @@ def _deliver_locked(delivery_id):
     return delivery.attempt, ceiling
 
 
-@shared_task(name="events.retry_pending_webhooks")
+@shared_task(name="events.retry_pending_webhooks", **time_limits("events.retry_pending_webhooks"))
 def retry_pending_webhooks(older_than_seconds=300, limit=200):
     """把没人接手的投递捡回来。
 

@@ -93,8 +93,9 @@ class JobSpec:
 
 REGISTRY: tuple[JobSpec, ...] = (
     # ---- tenant-scoped business jobs (one row per active tenant) ----------
-    # Every soul's ledger is recomputed; the largest tenant sets the bound.
-    JobSpec("ledger.recalculate_tenant", TENANT, "0 0 * * *", max_runtime=3600),
+    # Every soul's ledger is recomputed; the largest tenant sets the bound. 7200, not 3600 (2026-11-14):
+    # be-scale 1.2 measures ~5 ms a soul, so one hall of ~720k souls already passes an hour.
+    JobSpec("ledger.recalculate_tenant", TENANT, "0 0 * * *", max_runtime=7200),
     JobSpec(
         "judgment.auto_conclude_stale_for_tenant", TENANT, "0 1 * * *",
         kwargs={"days_threshold": 30}, max_runtime=1800,
@@ -189,6 +190,24 @@ REGISTRY: tuple[JobSpec, ...] = (
 )
 
 _BY_KEY = {spec.key: spec for spec in REGISTRY}
+
+
+#: How long before max_runtime the soft limit fires, so the task can log and clean up before the hard kill.
+SOFT_LIMIT_MARGIN = 60
+
+
+def time_limits(key: str) -> dict:
+    """Celery `soft_time_limit` / `time_limit` for a registered job, derived from its max_runtime (2026-11-14).
+
+    The global limits (config/settings.py CELERY_TASK_*_TIME_LIMIT, 300 / 360 s) would kill a job the registry
+    says may honestly run 600–7200 s, and would let a 240 s job outlive the moment the reaper marks it LOST and
+    its single-flight lock expires. Hard = max_runtime, soft = max_runtime − 60: the task is gone by the time
+    the scheduler stops vouching for it. Used on every registered task's decorator:
+    `@shared_task(name=K, **time_limits(K))`; `tests/test_task_time_limits.py` checks that none is missing.
+    An unknown key raises at import, so a typo cannot silently fall back to the global limits.
+    """
+    runtime = _BY_KEY[key].max_runtime
+    return {"soft_time_limit": runtime - SOFT_LIMIT_MARGIN, "time_limit": runtime}
 
 #: Celery task names whose PeriodicTask rows the sync removes: the fan-out
 #: parents that the per-tenant rows replace. Matched on the row's `task`, not

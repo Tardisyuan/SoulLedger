@@ -12,8 +12,10 @@ TenantMiddleware.
 from celery import shared_task
 from django.utils import timezone
 
+from apps.scheduler.registry import time_limits
 
-@shared_task(name="disposition.expire_due_for_tenant")
+
+@shared_task(name="disposition.expire_due_for_tenant", **time_limits("disposition.expire_due_for_tenant"))
 def expire_due_dispositions_for_tenant(tenant_id: str):
     """Mark every disposition of exactly one tenant whose term has ended.
 

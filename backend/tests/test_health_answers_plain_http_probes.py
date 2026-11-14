@@ -55,6 +55,8 @@ def test_health_answers_plain_http_while_detailed_still_redirects(client):
         SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
     ):
         assert client.get("/health/").status_code == 200
+        # Readiness answers too (200 or 503 — anything but the redirect a probe reads as "down").
+        assert client.get("/health/ready/").status_code in (200, 503)
         assert client.get("/health/detailed/").status_code == 301
 
 

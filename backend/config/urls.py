@@ -17,7 +17,7 @@ from apps.authentication.views import UserViewSet
 from apps.chat import urls as chat_urls
 from apps.chat.image_views import ChatImageFileView
 from apps.core.app_version import AppVersionView
-from apps.core.health import HealthCheck, HealthCheckDetailed
+from apps.core.health import HealthCheck, HealthCheckDetailed, HealthCheckReady
 from apps.core.jwt_fallback import jwks_view
 from apps.core.metrics import metrics_view
 from apps.core.permissions import IsAdminPermission
@@ -62,6 +62,8 @@ def _serve_media(request, path, document_root=None):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", HealthCheck.as_view(), name="health"),
+    # Readiness (DB + Redis reachable; 503 otherwise). Public, cached 5 s, says nothing about which failed.
+    path("health/ready/", HealthCheckReady.as_view(), name="health_ready"),
     # JWT verifying key; 404 unless JWT_SIGNING is asymmetric (config/settings.py).
     path(".well-known/jwks.json", jwks_view, name="jwks"),
     path("api/v1/app-version/", AppVersionView.as_view(), name="app-version"),

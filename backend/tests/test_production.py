@@ -482,6 +482,8 @@ class TestRootComposeShape:
                 continue
             assert 'curl' not in test
             assert '/api/v1/health/' not in ' '.join(test)
+        # Readiness, not liveness: "healthy" has to mean the backend can reach the database and Redis.
+        assert '/health/ready/' in ' '.join(services['backend']['healthcheck']['test'])
 
 
 class TestEnvExample:

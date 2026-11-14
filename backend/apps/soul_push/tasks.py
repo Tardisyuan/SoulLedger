@@ -1,5 +1,6 @@
 from celery import shared_task
 
+from apps.scheduler.registry import time_limits
 from apps.soul_push.services import MAX_ATTEMPTS
 
 
@@ -16,7 +17,7 @@ def send_push(self, delivery_ids):
         raise self.retry(args=[later.delivery_ids], countdown=later.countdown, exc=None) from None
 
 
-@shared_task(name="soul_push.sweep")
+@shared_task(name="soul_push.sweep", **time_limits("soul_push.sweep"))
 def sweep():
     """兜底入队 + 查回执。登记在 apps/scheduler/registry.py。"""
     from apps.soul_push import services

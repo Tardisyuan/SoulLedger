@@ -24,6 +24,8 @@ import logging
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from apps.core import obs
+
 logger = logging.getLogger(__name__)
 
 #: A socket opened without `?token=` must send its `{"type": "auth"}` frame within this many seconds, or it is
@@ -58,6 +60,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.data_scope = await self._resolve_data_scope()
             await self._join_groups()
             await self.accept()
+            self._count_open()
             await self._send_connected()
             logger.info(
                 "WS connected: user=%s tenant=%s",
@@ -67,6 +70,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         else:
             # No token in query — accept and wait for auth message, for AUTH_DEADLINE_SECONDS at most.
             await self.accept()
+            self._count_open()
             self._auth_deadline = asyncio.ensure_future(self._close_unless_authenticated())
 
     async def _close_unless_authenticated(self):
@@ -79,9 +83,20 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if deadline is not None and not deadline.done():
             deadline.cancel()
 
+    def _count_open(self):
+        # `soulledger_ws_connections` on /metrics/ is opened − closed (apps/core/obs.py; memory only here,
+        # flushed by the next HTTP request in this process).
+        # ponytail: a process that dies with sockets open leaves the gauge permanently high by that
+        # many; heartbeat-scored ZADD per connection (be-obs 3.2d) if that drift ever matters.
+        self._ws_counted = True
+        obs.incr("ws", "open")
+
     async def disconnect(self, close_code):
         """Leave all joined groups."""
         self._cancel_auth_deadline()
+        if getattr(self, "_ws_counted", False):
+            self._ws_counted = False
+            obs.incr("ws", "close")
         for group_attr in ("user_group", "tenant_group", "officers_group"):
             if hasattr(self, group_attr):
                 await self.channel_layer.group_discard(

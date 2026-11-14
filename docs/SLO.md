@@ -7,8 +7,9 @@
 
 ## 要真的执行,还缺什么
 
-1. **数据源**:按旅程计的请求计数与耗时直方图(be-obs 实施清单第 2、5 项:`TraceIdMiddleware`
-   写 Redis 小时桶,`/metrics/` 导出)。现在 `/metrics/` 只有队列深度,四个黄金信号里只有「饱和」的一部分。
+1. **数据源**:请求计数与耗时直方图 2026-11-14 起有了(`TraceIdMiddleware` → `backend/apps/core/obs.py`,
+   进程内累加、定时刷进 Redis 小时桶,`/metrics/` 导出),但按「方法 + 路由模板」计,**还不按旅程**;
+   桶边界含下表全部延迟阈值(`tests/test_obs_request_metrics.py` 守着)。没有任何东西在抓它、按窗口算比例。
 2. **旅程映射**:`JOURNEYS = {"<view_name>": "open_desk", …}`,按 `resolver_match.view_name`,不按 URL。
    具体视图名**没有逐个核对**。未列入的请求归 `other`,只计数不设目标。
 3. **告警出口**:燃烧率由一个定时任务算,超线就给 ADMIN 发站内通知(复用 `apps/scheduler` 的

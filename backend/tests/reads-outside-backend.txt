@@ -56,6 +56,7 @@ tests/test_frontend_role_labels.py                               frontend packag
 tests/test_frontend_statute_enums.py                             packages
 tests/test_menu_seed_first_sixteen.py                            *
 tests/test_no_second_copy_of_the_civilization_map.py             *
+tests/test_obs_request_metrics.py                                docs
 tests/test_officer_assist_corpus.py                              frontend
 tests/test_officer_letter_push.py                                config
 tests/test_official_notify_messages_match_the_language_packs.py  frontend packages

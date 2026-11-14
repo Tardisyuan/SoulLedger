@@ -28,6 +28,7 @@ The registry is separate from EventBus to keep concerns decoupled:
 import logging
 from collections import defaultdict
 
+from apps.core import obs
 from apps.events.event_bus import DomainEventHandler, EventEnvelope
 
 logger = logging.getLogger(__name__)
@@ -216,6 +217,9 @@ class DomainEventHandlerRegistry:
         try:
             handler.handle(envelope)
         except Exception:
+            # Counted as well as logged: a best-effort handler (push, webhook, WebSocket) failing every time
+            # is otherwise visible only by reading logs (`soulledger_event_handler_failures_total`, /metrics/).
+            obs.incr("handler_failure", handler.__class__.__name__)
             logger.exception(
                 "HandlerRegistry: %s failed for %s.%s",
                 handler.__class__.__name__,

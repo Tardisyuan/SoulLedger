@@ -1,3 +1,5 @@
+import time
+
 from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
@@ -10,11 +12,54 @@ from apps.core.permissions import IsAdminPermission
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 
 
+def database_ok() -> bool:
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except Exception:
+        return False
+    return True
+
+
+def redis_ok() -> bool:
+    try:
+        import redis
+
+        redis_url = getattr(settings, "REDIS_URL", "redis://localhost:6379/0")
+        # Bounded: a probe that hangs on a dead Redis is a probe that times out instead of answering 503.
+        redis.Redis.from_url(redis_url, socket_timeout=2, socket_connect_timeout=2).ping()
+    except Exception:
+        return False
+    return True
+
+
 class HealthCheck(View):
-    """GET /health/ - Basic health check (public)"""
+    """GET /health/ — liveness (public): the process answers. Constant on purpose; readiness is /health/ready/."""
 
     def get(self, request):
         return JsonResponse({"status": "ok"})
+
+
+#: (monotonic time, ok) of the last readiness check. A public endpoint that queries the database
+#: and Redis on every hit is a free amplifier; 5 seconds bounds it to one pair of checks per process.
+READY_CACHE_SECONDS = 5.0
+_ready_last: list = [float("-inf"), True]
+
+
+class HealthCheckReady(View):
+    """GET /health/ready/ — readiness (public): this process can reach the database and Redis.
+
+    Answers only `{"status": "ok" | "degraded"}` (503 when degraded) — which dependency failed is on
+    `/health/detailed/`, behind ADMIN. Compose's backend healthcheck probes this one, so "healthy" now
+    means "can serve", not merely "daphne is up". Exempt from the https redirect like `/health/`.
+    """
+
+    def get(self, request):
+        now = time.monotonic()
+        if now - _ready_last[0] >= READY_CACHE_SECONDS:
+            _ready_last[:] = [now, database_ok() and redis_ok()]
+        ok = _ready_last[1]
+        return JsonResponse({"status": "ok" if ok else "degraded"}, status=200 if ok else 503)
 
 
 class HealthCheckDetailed(APIView):
@@ -36,22 +81,12 @@ class HealthCheckDetailed(APIView):
         checks = {"database": "ok", "redis": "ok", "status": "ok"}
         status_code = 200
 
-        # DB check (no internal details exposed)
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-        except Exception:
+        # DB and Redis checks (no internal details exposed)
+        if not database_ok():
             checks["database"] = "error"
             checks["status"] = "degraded"
             status_code = 503
-
-        # Redis check (no internal details exposed)
-        try:
-            import redis
-            redis_url = getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0')
-            r = redis.Redis.from_url(redis_url)
-            r.ping()
-        except Exception:
+        if not redis_ok():
             checks["redis"] = "error"
             checks["status"] = "degraded"
             status_code = 503

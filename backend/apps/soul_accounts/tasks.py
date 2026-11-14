@@ -1,6 +1,8 @@
 """灵魂账号的后台任务:个人资料导出的生成,以及它的每日清理。规则在 `data_export.py`。"""
 from celery import shared_task
 
+from apps.scheduler.registry import time_limits
+
 
 @shared_task(name="soul_accounts.build_data_export")
 def build_data_export(export_id):
@@ -12,7 +14,7 @@ def build_data_export(export_id):
     return {"skipped": True} if export is None else {"status": export.status}
 
 
-@shared_task(name="soul_accounts.prune_data_exports")
+@shared_task(name="soul_accounts.prune_data_exports", **time_limits("soul_accounts.prune_data_exports"))
 def prune_data_exports():
     """每日:过期的导出文件删掉、行标 EXPIRED;卡住的重新入队 / 标失败。登记在 apps/scheduler/registry.py。
     GLOBAL:`SoulDataExport` 没有租户列(租户经 `soul__home_tenant`),本来就要扫全部。"""

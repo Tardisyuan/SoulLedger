@@ -548,7 +548,8 @@ backend / celery / celery-beat 共用本机构建的 `soulledger-backend` 镜像
 `DEATH_SYNC_REQUEST_RETENTION_DAYS`(默认 90)。`LOG_FORMAT` 留空时按 `DEBUG` 决定。
 
 - **日志格式**:`LOG_FORMAT=json` 每行一个 JSON 对象(`time` / `level` / `logger` / `message` / `trace_id` /
-  `exc_info`,`backend/config/json_logging.py`),给日志采集按行解析;`LOG_FORMAT=text` 是人读的一行。
+  `tenant` / `user_id` / `exc_info`,`backend/config/json_logging.py`),给日志采集按行解析;每个请求结束时
+  `apps.access` 写一行 `http_request`,另带 `method` / `route`(路由模板,不是原始路径)/ `status` / `duration_ms`。`LOG_FORMAT=text` 是人读的一行。
   默认:`DEBUG` 关时 json,开时 text;其它取值拒绝启动。`trace_id` 就是响应头 `X-Request-ID`,
   同一请求的日志、审计行与它派发的 Celery 任务共用一个(`backend/apps/core/trace.py`)。
   采集:容器日志走 stdout/stderr,用 Docker 的日志驱动或 Promtail / Vector / Fluent Bit 收 `docker logs`,
@@ -560,8 +561,9 @@ backend / celery / celery-beat 共用本机构建的 `soulledger-backend` 镜像
   - nginx **不转发** `/metrics/`(`location /` 指向前端)。Prometheus 在 compose 网络里直接抓 `backend:8000/metrics/`;
     这时 Host 是 `backend`,要加进 `ALLOWED_HOSTS`。生产的 HTTPS 跳转对 `/metrics/` 豁免(同 `/health/`)。
     推荐用 token:compose 网络里的来源地址会随容器重建变化。
-  - 指标都是抓取时现算的 gauge(多个 gunicorn worker 的进程内计数器每次抓到的是不同 worker 的那一份,所以不做;
-    请求量与延迟看 nginx):
+  - 两类值:抓取时现算的 gauge;以及 counter / 直方图 —— 每个进程(daphne、每个 Celery 子进程)在内存里累加,
+    满 100 个请求或每 10 秒刷进 Redis(`REDIS_URL` 那个库的 `obs:total`,另按小时 `obs:h:<yyyymmddHH>` 留 35 天),
+    抓取时读 Redis(`backend/apps/core/obs.py`)。Redis 挂了丢的是最近一批计数,请求不受影响:
 
     | 指标 | 含义 |
     |---|---|
@@ -574,6 +576,13 @@ backend / celery / celery-beat 共用本机构建的 `soulledger-backend` 镜像
     | `soulledger_scheduler_runs_24h{status}` | 近 24 小时定时任务执行记录,按状态 |
     | `soulledger_webhook_deliveries_pending` | 待投递的事件 webhook |
     | `soulledger_push_deliveries_unsent` | 灵魂端推送里排队 / 发送中的 |
+    | `soulledger_webhook_oldest_pending_seconds` / `soulledger_push_oldest_unsent_seconds` | 上两行里最老一条等了多少秒(无则 0) |
+    | `soulledger_counters_up` | 计数存储(Redis)能否读到;为 0 时下面几项不输出 |
+    | `soulledger_http_requests_total{method,route,class}` | 请求数,按路由模板与状态类(2xx / 4xx / 5xx) |
+    | `soulledger_http_request_duration_seconds{method,route}` | 非 5xx 请求的耗时直方图;桶 0.1 / 0.25 / 0.4 / 0.5 / 0.8 / 1.5 / 3 s,含 `docs/SLO.md` 的全部延迟阈值 |
+    | `soulledger_event_handler_failures_total{handler}` | 尽力而为的事件处理器(推送 / webhook / WebSocket)抛错次数 |
+    | `soulledger_celery_tasks_total{task,state}` | 任务结束次数,按任务名与最终状态 |
+    | `soulledger_ws_connections` | 在线 WebSocket 连接(开 − 关;进程崩溃会让它偏高) |
 
     建议告警:`soulledger_celery_queue_length > 100` 持续 10 分钟(worker 跟不上或挂了)、
     `soulledger_scheduler_overdue_jobs > 0`(beat 挂了)、`soulledger_redis_up == 0`、`up == 0`。
