@@ -90,7 +90,7 @@ export function MeritMark({
 
 const WAX =
   "M89.2 48.0L90.6 53.6L88.2 58.8L84.8 63.2L82.1 67.7L78.7 71.6L74.8 74.8L71.7 78.9L69.1 84.5L64.8 88.4L58.6 87.7L52.8 84.8L48.0 84.6L42.8 87.1L37.2 88.3L32.1 86.4L27.5 83.5L23.2 80.4L20.0 76.0L18.4 70.7L15.7 66.7L10.4 63.6L5.6 59.3L5.7 53.6L9.2 48.0L11.3 43.2L10.9 38.1L10.9 32.6L12.8 27.7L15.3 22.9L18.2 18.2L23.0 15.4L29.1 15.3L34.1 14.5L37.9 10.4L42.4 5.5L48.0 4.6L53.3 7.8L57.9 11.0L62.7 12.5L67.5 14.2L71.9 16.9L76.6 19.4L81.9 22.0L85.0 26.7L84.3 33.0L82.9 38.6L85.0 43.1Z";
-/** 方印 reads right to left: 第N殿印, N one Han numeral. */
+/** 方印 reads right to left: 第N殿印, N one Han numeral; court 0 is the civilization's own, 地府之印 (第五十二批 E2). */
 const NUM = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 
 /** The seal's fill per scheme: 地府 vermilion (only the seal wears it), 欧洲 civT, 埃及 / 希腊 their metal (theme's `seal`). */
@@ -101,7 +101,8 @@ const ROTATE = { cn: -3, eu: 4, eg: 0, gr: -6 } as const;
 
 /**
  * 实印, or with `pending` the dashed preview before it is set (22% and a dashed frame); viewBox 96, drawn at
- * `size` (灵魂端 72, 列表 40). `court` is the 1–10 of 地府's 「第N殿印」. A seal is an object: its characters are
+ * `size` (灵魂端 72, 列表 40). `court` is the 1–10 of 地府's 「第N殿印」, or 0 for 「地府之印」 where no hall is
+ * named (the officer app's lock page, Design 第五十二批 E2). A seal is an object: its characters are
  * never translated; `label` is the language pack's spoken name for it.
  */
 export function DossierSeal({
@@ -124,7 +125,7 @@ export function DossierSeal({
   if (civ === "neutral") return null;
   const fill = SEAL_FILL[civ][scheme];
   const cut = CUT[scheme];
-  const n = NUM[Math.min(Math.max(court, 1), 10) - 1];
+  const [r1, r2, l1, l2] = court === 0 ? ["地", "府", "之", "印"] : ["第", NUM[Math.min(Math.max(court, 1), 10) - 1], "殿", "印"];
   const serif = quoteFamily("印");
   const latin = quoteFamily("M");
   const a11y = label
@@ -141,10 +142,10 @@ export function DossierSeal({
       <>
         <Rect x={10} y={10} width={76} height={76} rx={5} fill={fill} />
         <Rect x={16} y={16} width={64} height={64} rx={2} fill="none" stroke={cut} strokeWidth={1.6} strokeOpacity={0.9} />
-        {han(64, 46, "第")}
-        {han(64, 76, n)}
-        {han(34, 46, "殿")}
-        {han(34, 76, "印")}
+        {han(64, 46, r1)}
+        {han(64, 76, r2)}
+        {han(34, 46, l1)}
+        {han(34, 76, l2)}
         <G fill={fill}>
           <Circle cx={24} cy={57} r={1.4} />
           <Circle cx={71} cy={24} r={1.1} />

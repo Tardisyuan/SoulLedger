@@ -281,13 +281,29 @@ describe("the app lock", () => {
     expect(await screen.findByTestId("app-lock-failed")).toBeTruthy();
     // 第五十批 C5: the soul app's lock page -- the hall's seal at 64, 「灵魂簿已锁定」, 「{name} · {hall}」, 「用指纹解锁」.
     expect(screen.getByText("灵魂簿已锁定")).toBeTruthy();
-    expect(await screen.findByTestId("app-lock-seal")).toBeTruthy();
+    const seal = await screen.findByTestId("app-lock-seal");
+    // 第五十二批 E2: the civilization's seal, 「地府之印」 -- no hall on it, never 「第一殿」.
+    const glyphs = seal.findAll((n) => String(n.type) === "Text").map((n) => n.props.children);
+    expect(glyphs).toEqual(["地", "府", "之", "印"]);
+    expect(glyphs).not.toContain("殿");
     expect(screen.getByTestId("app-lock-who")).toHaveTextContent("阎罗 · 酆都");
     expect(screen.getByTestId("app-lock-bio")).toHaveTextContent("用指纹解锁");
     expect(screen.getByTestId("app-lock-use-password")).toHaveTextContent("用密码登录");
     bio.success = true;
     fireEvent.press(screen.getByTestId("app-lock-bio"));
     await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
+  });
+
+  it("第五十二批 E2: a hall that is not known leaves the name alone under the seal, no dangling 「 · 」", async () => {
+    fingerprintOn();
+    platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, tenant: { code: null, display_name: "", civilization: "CHINESE_UNDERWORLD" } }));
+    platform().secure.set(REFRESH_TOKEN_KEY, "R");
+    bio.success = false;
+    withProviders(<AppLock />);
+    expect(await screen.findByTestId("app-lock-failed")).toBeTruthy();
+    expect(screen.getByTestId("app-lock-seal")).toBeTruthy();
+    expect(screen.getByTestId("app-lock-who")).toHaveTextContent(/^阎罗$/);
+    expect(screen.getByTestId("app-lock-who")).not.toHaveTextContent("·");
   });
 
   it("is not there at all while 指纹登录 is off", async () => {
