@@ -3,10 +3,11 @@
  * 这里验的是按钮发出去的东西、被天平挡住的方向、「不过」没选理由时不能落印、待定要理由。
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { AccessibilityInfo, Animated, AppState, type AppStateStatus } from "react-native";
+import { AccessibilityInfo, Animated, AppState, StyleSheet, type AppStateStatus } from "react-native";
 
 import { PASS_UNDO_MS, SwipeScreen } from "../screens/swipe";
 import { sealReadbackWished, setSealReadbackWished } from "../prefs";
+import { READBACK_BUTTON_H, READBACK_SEAL_FLEX } from "../screens/rejectSheet";
 import { ToastProvider } from "../shared";
 import { renderOfficer } from "./harness";
 
@@ -312,6 +313,28 @@ describe("落印前先确认(用户 2026-11-14,WCAG 2.2.1 的「可关」):通�
     await waitFor(() => expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" }));
     // Absence: 落印之后也没有 3 秒窗口。
     expect(screen.queryByTestId("swipe-pass-undo")).toBeNull();
+    await settled();
+  });
+
+  it("第四十六批第 8 条:三行同网页的字号;「返回 / 落印」并排,返回在前,落印宽 1.4 倍,两键高 52", async () => {
+    serve();
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await screen.findByTestId("swipe-readback-sheet");
+    const flat = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style);
+    expect(flat("readback-name")).toMatchObject({ fontSize: 18 });
+    expect(flat("readback-case")).toMatchObject({ fontSize: 16 });
+    expect(flat("readback-verdict")).toMatchObject({ fontSize: 20 });
+    expect(READBACK_SEAL_FLEX).toBe(1.4);
+    expect(READBACK_BUTTON_H).toBe(52);
+    expect(flat("readback-confirm")).toMatchObject({ flex: 1.4, minHeight: 52 });
+    expect(flat("readback-cancel")).toMatchObject({ flex: 1, minHeight: 52 });
+    // 「返回」,不是「取消」;排在「落印」前面(右边是落印)。
+    expect(screen.getByTestId("readback-cancel")).toHaveTextContent("返回");
+    expect(screen.getByTestId("readback-cancel")).not.toHaveTextContent("取消");
+    const order = screen.root.findAll((n) => n.props.testID === "readback-cancel" || n.props.testID === "readback-confirm").map((n) => n.props.testID);
+    expect(order.indexOf("readback-cancel")).toBeLessThan(order.indexOf("readback-confirm"));
     await settled();
   });
 

@@ -2820,7 +2820,8 @@
       "soul": "Soul",
       "case": "Case",
       "verdict": "Verdict",
-      "note": "Seal sends it at once."
+      "note": "Seal sends it at once.",
+      "back": "Back"
     }
   },
   "audit": {
@@ -10324,7 +10325,8 @@
       "undone": "Taken back · {{name}} is on the desk again",
       "commit_error": "The verdict for {{name}} was not sent; the case is back on the desk.",
       "needs_reason": "“{{verdict}}” needs a reason: seal it on the full dossier page.",
-      "to_dossier": "Write the reason on the dossier page →"
+      "to_dossier": "Write the reason on the dossier page →",
+      "reason_hint": "Needs a reason ↗"
     }
   },
   "zongbu": {

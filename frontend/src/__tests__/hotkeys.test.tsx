@@ -93,6 +93,20 @@ describe("hotkeyOf / isTypingTarget", () => {
     expect(hotkeyOf(new KeyboardEvent("keydown", { key: "Q" }))).toBe("q");
     expect(hotkeyOf(new KeyboardEvent("keydown", { key: "Enter", metaKey: true }))).toBe("mod+Enter");
     expect(hotkeyOf(new KeyboardEvent("keydown", { key: "Enter", metaKey: true, shiftKey: true }))).toBeNull();
+    expect(hotkeyOf(new KeyboardEvent("keydown", { key: "z", metaKey: true }))).toBe("mod+z");
+    expect(hotkeyOf(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }))).toBe("mod+z");
+    expect(hotkeyOf(new KeyboardEvent("keydown", { key: "z", metaKey: true, shiftKey: true }))).toBeNull();
+  });
+
+  it("leaves ⌘Z to a text field (undo typing), not to the desk's undo strip", () => {
+    const box = document.createElement("textarea");
+    document.body.appendChild(box);
+    const event = new KeyboardEvent("keydown", { key: "z", metaKey: true, bubbles: true });
+    let name: string | null = "unset";
+    box.addEventListener("keydown", (e) => (name = hotkeyOf(e)));
+    box.dispatchEvent(event);
+    expect(name).toBeNull();
+    box.remove();
   });
 
   it("counts text fields as typing and choice controls as not", () => {

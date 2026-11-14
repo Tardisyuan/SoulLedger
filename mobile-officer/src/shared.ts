@@ -49,7 +49,7 @@ export { clearVoiceNumbers, publishVoiceNumber } from "../../mobile/src/voiceCac
 export { Sheet, ToastProvider, useDismissToast, useToast } from "../../mobile/src/feedback";
 export { NetworkProvider, useOnline } from "../../mobile/src/network";
 export { I18nProvider, useI18n, translate } from "../../mobile/src/i18n";
-export { family, FONT_ASSETS } from "../../mobile/src/fonts";
+export { family, FONT_ASSETS, titleFamily } from "../../mobile/src/fonts";
 export { BandPattern, Emblem, GlowTop, Icon } from "../../mobile/src/emblems";
 export { BrandMark } from "../../mobile/src/brandMarkView";
 export { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "../../mobile/src/brandMark";

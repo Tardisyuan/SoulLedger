@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { dossiersApi, type DeskRow } from "@soulledger/core/api/dossiers";
 import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
@@ -24,8 +23,9 @@ type Action = { busy: boolean; run: () => void } | null;
 /**
  * 摊开的一份(Design 第三十批 第 2 步 · 右):顶线 + 卷宗头(人名 h1 宋体 32/40,上面一行 mono 12 的案号 · 殿 · 入册日期),
  * 三个按钮,脊(第 3 步之前是占位,只定位置与高度 `--spine-h`),卷(本世 · 来源 · 功过 · 供词 · 期限 · 经手 + 最近三条记录,
- * 只读),右栏是判栏(`rail`,CaseDesk 懒加载的 `VerdictRail`;此前是「这一件」「同殿今天」两张小卡,信息已在摞的顶行与页头,
- * fe-ia §3.5 撤掉),底下键位提示。读一个请求:`GET /dossiers/{id}/` —— 案子、灵魂(连最近三条记录,服务端排好)、
+ * 只读),底下键位提示。判栏不在这里:它是案卷台最右一栏(CaseDesk 的 `.side`,第四十六批第一节第 1 条)。
+ * 页头一屏只留一个主按钮(第 2 条):「认领」只在判栏里(393 不画判栏,所以窄屏页头仍有「认领」),
+ * 「打开卷宗 ↗」是幽灵按钮。读一个请求:`GET /dossiers/{id}/` —— 案子、灵魂(连最近三条记录,服务端排好)、
  * 灵魂此刻在脊上的哪一点(`whereabouts.spine`,服务端算;此前前端从 `court` 的自由文本里抠殿号,再另取 `/souls/{id}/path/`)。
  * 看不到灵魂由服务端说(`soul_redacted`),不再由前端按权限猜。
  */
@@ -33,7 +33,6 @@ export function OpenCase({
   row,
   group,
   position,
-  rail,
   onBack,
   onNext,
   onOpen,
@@ -43,8 +42,6 @@ export function OpenCase({
   row: DeskRow;
   group: JudgmentQueueGroup;
   position: { n: number; total: number };
-  /** 判栏(桌面);393 宽 `.side` 不画,窄屏照旧「打开卷宗」。 */
-  rail: ReactNode;
   onBack: () => void;
   onNext: () => void;
   onOpen: () => void;
@@ -113,11 +110,8 @@ export function OpenCase({
               </Button>
             ) : null}
             {claim ? (
-              <Button disabled={claim.busy} onClick={claim.run} data-testid="desk-claim" aria-keyshortcuts="C">
+              <Button className={s.phoneOnly} disabled={claim.busy} onClick={claim.run} data-testid="desk-claim">
                 {t("officer_app.queue.claim")}
-                <span className={s.kbd} aria-hidden="true">
-                  C
-                </span>
               </Button>
             ) : null}
             <Button className={s.hideNarrow} onClick={onNext} disabled={position.n >= position.total} data-testid="desk-next" aria-keyshortcuts="J">
@@ -126,11 +120,8 @@ export function OpenCase({
                 J
               </span>
             </Button>
-            <Button variant="primary" onClick={onOpen} data-testid="desk-open" aria-keyshortcuts="Enter">
-              {t("caseDesk.actions.open")}
-              <span className={s.kbd} aria-hidden="true">
-                ↵
-              </span>
+            <Button variant="ghost" onClick={onOpen} data-testid="desk-open" aria-keyshortcuts="Enter">
+              {`${t("caseDesk.actions.open")} ↗`}
             </Button>
           </>
         }
@@ -191,10 +182,6 @@ export function OpenCase({
             <p className={s.juanKey}>{soulUnread ? t("caseDesk.juan.unreadable") : so ? t("caseDesk.juan.recent_none") : t("common.loading")}</p>
           )}
         </div>
-
-        <aside className={s.side} aria-label={t("caseDesk.verdict.rail")}>
-          {rail}
-        </aside>
       </div>
 
       <p className={s.keys} aria-hidden="true">

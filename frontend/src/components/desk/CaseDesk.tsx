@@ -30,7 +30,7 @@ import type { DeskVerdictDraft } from "./VerdictRail";
 import s from "./desk.module.css";
 
 /**
- * 案卷台(Design 第三十批 第 2 步):门栏(AppLayout 的 `DoorRail`)右边,左是案卷摞(360),右是摊开的一份。
+ * 案卷台(Design 第三十批 第 2 步):门栏(AppLayout 的 `DoorRail`)右边,左是案卷摞(340,第四十六批),中间摊开的一份,右是判栏。
  * 摞:标题、概览行、来源 chip、搜索(`/`)、四组 —— 我认领 / 待定 / 待认领 / 他人手上(最后,只读)。
  * 键:J / K 上下一件、↵ 打开卷宗、C 认领、/ 搜索;打字时不接,单键总开关关掉时也不接(`lib/hotkeys.ts`)。
  * 393:一栏;点开一件是整屏(一次导航,`?case=<id>`,系统返回回到摞),「‹ 案卷台」回来,「第 n / N 件」。
@@ -41,8 +41,8 @@ import s from "./desk.module.css";
  * 四组由服务端出自同一个快照、互斥,不再在前端去重。
  *
  * 就地判(用户 2026-11-14,fe-ia §3.5):右栏是判栏(`VerdictRail`,懒加载)。1–4 选、⌘⏎ 落印 —— 与快审同一个承诺:
- * 落印即这一行划线滑出(600ms,减少动态时立即)、选中到下一件,裁决在 5 秒撤回窗口(`useStagedCommit`)到点、落下一印、
- * 或离开本页时才发 `conclude/`;U 或撤回条收回。偏好「落印前先确认」打开时改走回读层(`SealReadback.tsx`),当场发、不计时。
+ * 落印即这一行划线滑出(440ms,减少动态时 120ms 淡出)、选中到下一件,裁决在 5 秒撤回窗口(`useStagedCommit`)到点、落下一印、
+ * 或离开本页时才发 `conclude/`;⌘Z(U 照旧)或撤回条收回。撤回条在判栏底部,盖住落印区(第四十六批第 4 条)。偏好「落印前先确认」打开时改走回读层(`SealReadback.tsx`),当场发、不计时。
  * 选中一件约 150ms 后预取下一件的卷宗,J 落下时不等。
  */
 const SHORTCUTS = [
@@ -51,7 +51,7 @@ const SHORTCUTS = [
   { key: "C", label: "caseDesk.keys.claim" },
   { key: "1–4", label: "judgment.queue.key_select" },
   { key: "⌘⏎", label: "judgment.queue.key_seal" },
-  { key: "U", label: "judgment.queue.key_undo" },
+  { key: "⌘Z · U", label: "judgment.queue.key_undo" },
   { key: "N", label: "judgment.queue.key_notes" },
   { key: "/", label: "caseDesk.keys.search" },
 ] as const;
@@ -59,8 +59,13 @@ const SHORTCUTS = [
 /** 判栏只在这一页、只在桌面用到:不进案卷台的首屏包(fe-perf:懒加载)。 */
 const VerdictRail = dynamic(() => import("./VerdictRail"), { ssr: false, loading: () => null });
 
-/** 落印后这一行划线滑出的时长:印落下(320ms)之后再走(fe-ia §3.5 的 600ms)。 */
-export const SEAL_LEAVE_MS = 600;
+/**
+ * 落印后这一行离开摞的时长(第四十六批第一节第 3 条):划线 80 → 左移 24px 并淡出 200(ease-out)→ 行高收起 160,共 440。
+ * 印在判栏里落下的同一刻开始划线(第 5 条)。三段的时长写在 desk.module.css 的 `.row[data-leaving]`,改一处要改两处。
+ */
+export const SEAL_LEAVE_MS = 440;
+/** 减少动态时:不移动,划线后 120ms 淡出,行高立即收起。 */
+export const SEAL_LEAVE_REDUCED_MS = 120;
 /** 选中后多久预取下一件的卷宗(fe-ia §6 / fe-perf):按住 J 一路扫过时不为每一件都发。 */
 export const PREFETCH_DELAY_MS = 150;
 
@@ -211,7 +216,7 @@ export function CaseDesk() {
         setLeaving((x) => (x === v.id ? null : x));
         if (currentRef.current === v.id && next) select(next);
       },
-      reducedMotion() ? 0 : SEAL_LEAVE_MS,
+      reducedMotion() ? SEAL_LEAVE_REDUCED_MS : SEAL_LEAVE_MS,
     );
   };
 
@@ -270,7 +275,7 @@ export function CaseDesk() {
     c: () => {
       if (current && claimable && !move.isPending) move.mutate({ id: current.row.id, kind: "claim" });
     },
-    ...(sealWindow.staged ? { u: undo } : {}),
+    ...(sealWindow.staged ? { u: undo, "mod+z": undo } : {}),
     "/": () => searchRef.current?.focus(),
   }, asking === null);
   // ↵ 不走 useHotkeys:它对所有按钮都会 preventDefault,而焦点在 chip、链接上时 ↵ 应当照常按下那个控件。
@@ -460,20 +465,6 @@ export function CaseDesk() {
             row={current.row}
             group={current.group}
             position={position}
-            rail={
-              <VerdictRail
-                key={current.row.id}
-                row={current.row}
-                group={current.group}
-                claim={claimable ? { busy: move.isPending, run: () => move.mutate({ id: current.row.id, kind: "claim" }) } : null}
-                sealed={gone.includes(current.row.id)}
-                stampKey={stamp}
-                draft={restored?.id === current.row.id ? restored : null}
-                paused={asking !== null}
-                onSeal={seal}
-                onOpen={() => open(current.row.id)}
-              />
-            }
             onBack={() => {
               if (pushedCase.current) {
                 pushedCase.current = false;
@@ -488,7 +479,33 @@ export function CaseDesk() {
         ) : (
           <p className={s.empty}>{t("caseDesk.pick")}</p>
         )}
-        {/* 撤回条:贴在右栏底边。人名 · 判决 · 「已落印 · 可撤回 5 秒」· 撤回 U,下沿一条 5 秒走完的细线。 */}
+      </section>
+
+      {/* 判栏(第四十六批第一节):最右一栏,底 surface-1,左边一条 1px 线通到底,不加阴影。栏头一行「判栏 · 1–4 · ⌘⏎」。
+          <1280 收成卷宗下面的判决条(1–4 与落印一行);393 不画(窄屏照旧打开卷宗)。 */}
+      <aside className={s.side} aria-label={t("caseDesk.verdict.rail")} data-testid="desk-side">
+        <h2 id="desk-rail-head" data-h2-role="column" className={s.railHead}>
+          <span>{t("caseDesk.verdict.rail")}</span>
+          <span className={s.railKeys} aria-hidden="true">
+            1–4 · ⌘⏎
+          </span>
+        </h2>
+        {current ? (
+          <VerdictRail
+            key={current.row.id}
+            row={current.row}
+            group={current.group}
+            claim={claimable ? { busy: move.isPending, run: () => move.mutate({ id: current.row.id, kind: "claim" }) } : null}
+            sealed={gone.includes(current.row.id)}
+            stampKey={stamp}
+            draft={restored?.id === current.row.id ? restored : null}
+            paused={asking !== null}
+            onSeal={seal}
+            onOpen={() => open(current.row.id)}
+          />
+        ) : null}
+        {/* 撤回条(第 4 条):判栏底部,盖住落印区,不用全局 toast。两行字 + 描边的「撤回 ⌘Z」;底边 2px、墨 60% 的线 5 秒线性缩完。
+            悬停不暂停:到时提交是真的期限。 */}
         {sealWindow.staged ? (
           <div className={s.undo} data-testid="desk-undo">
             <span className={s.undoWhat}>
@@ -496,16 +513,16 @@ export function CaseDesk() {
               <DomainEnum namespace={verdictNamespace(t, sealWindow.staged.civilization, sealWindow.staged.verdict)} value={sealWindow.staged.verdict} />
             </span>
             <span className={s.undoNote}>{t("judgment.queue.sealed", { n: String(UNDO_MS / 1000) })}</span>
-            <Button size="sm" variant="secondary" onClick={undo} aria-keyshortcuts="U" data-testid="desk-undo-button">
+            <Button size="sm" variant="secondary" className={s.undoButton} onClick={undo} aria-keyshortcuts="Meta+Z Control+Z U" data-testid="desk-undo-button">
               {t("judgment.queue.undo")}
               <span className={s.kbd} aria-hidden="true">
-                U
+                ⌘Z
               </span>
             </Button>
             <span key={sealWindow.staged.id} className={s.undoClock} style={{ animationDuration: `${UNDO_MS}ms` }} aria-hidden="true" />
           </div>
         ) : null}
-      </section>
+      </aside>
 
       <SealReadbackDialog item={asking} onCancel={() => setAsking(null)} onConfirm={confirmAsked} />
       <p className="sr-only" aria-live="polite" data-testid="desk-seal-announce">

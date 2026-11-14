@@ -1,0 +1,67 @@
+/*
+ * 回读层(第四十六批第一节第 8 条,稿 `v4-batch46-desk.html` 第 4 节 `.rb`):居中 440 宽、圆角 12、衬线标题;
+ * 灵魂 / 案号 / 判决三行用卷宗字号(人名 18 衬线、案号 16 等宽、判决 20 衬线,最大)。值全读令牌
+ * (`--readback-*`,源头 packages/core/tokens/component.tokens.json)。
+ */
+.panel {
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  padding: 20px 22px 18px;
+  border-radius: var(--readback-radius);
+  background: oklch(var(--color-surface-1));
+  /* 稿子的 --line2:墨 16%。 */
+  border: 1px solid color-mix(in oklch, oklch(var(--color-ink)) 16%, transparent);
+}
+.title {
+  margin: 0;
+  font: var(--readback-name);
+  color: oklch(var(--color-ink));
+}
+.rows {
+  margin: 0;
+  display: grid;
+}
+.rows > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid oklch(var(--color-line));
+  align-items: baseline;
+}
+.rows dt {
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
+  color: oklch(var(--color-faint-text));
+}
+.rows dd {
+  margin: 0;
+  font: var(--readback-name);
+  color: oklch(var(--color-ink));
+  overflow-wrap: anywhere;
+}
+.rows dd.caseNo {
+  font: var(--readback-case);
+  font-variant-numeric: tabular-nums;
+}
+.rows dd.verdict {
+  font: var(--readback-verdict);
+}
+.note {
+  margin: 0;
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
+  color: oklch(var(--color-ink-muted));
+}
+.buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+/* 「返回」:墨描边;默认焦点在它上面,焦点环是全站那一圈(`--color-focus`)。 */
+.back {
+  border-color: oklch(var(--color-ink));
+}
