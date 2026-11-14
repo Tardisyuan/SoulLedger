@@ -1777,6 +1777,7 @@
       "clear": "Fekh Setep",
       "from": "Hru Iri · Tepy",
       "to": "Hru Iri · Pehwy",
+      "created": "Tera Iri",
       "search": "Hehy Wat, Ba Er Medu Wedja"
     },
     "pick": {
@@ -10086,6 +10087,7 @@
       "me_glyph": "Djes"
     },
     "sources_label": "Maa Mi Tepy",
+    "more_sources": "Tepy Ky",
     "search_placeholder": "Hehy Ren Ba, Ren Sep",
     "search_none": "Nen Gem Sep.",
     "triage": "Setep Sep",
