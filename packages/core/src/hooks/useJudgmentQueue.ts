@@ -181,62 +181,39 @@ export function useJudgmentQueue(options?: { at?: string }) {
   );
 
   // ── The undo window ────────────────────────────────────────────────────
-  const [staged, setStaged] = useState<StagedVerdict | null>(null);
-  const stagedRef = useRef<StagedVerdict | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const takeStaged = useCallback(() => {
-    const s = stagedRef.current;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    stagedRef.current = null;
-    setStaged(null);
-    return s;
-  }, []);
-
-  /** Send the staged verdict now (the strip ran out, or the operator moved on). */
-  const commitStaged = useCallback(() => {
-    const s = takeStaged();
-    if (s) void send(s.id, s);
-  }, [takeStaged, send]);
+  // The window itself is `useStagedCommit` (below), shared with the case desk's on-the-spot seal.
+  const undoWindow = useStagedCommit<StagedVerdict>((s) => void send(s.id, s));
+  const { staged, commit: commitStaged } = undoWindow;
 
   /** Seal the case on screen: advance at once, send in `UNDO_MS` unless undone. */
   const stageVerdict = useCallback(
     (input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
       const judgment = cursor.judgment;
-      if (!judgment || inFlight.current.has(judgment.id) || stagedRef.current?.id === judgment.id) return;
-      commitStaged(); // one window at a time: the previous seal goes out now
+      if (!judgment || inFlight.current.has(judgment.id) || undoWindow.stagedRef.current?.id === judgment.id) return;
       const s: StagedVerdict = {
         id: judgment.id,
         verdict: input.verdict,
         notes: input.notes ?? "",
         createWorkflow: !!input.createWorkflow,
       };
-      stagedRef.current = s;
-      setStaged(s);
+      undoWindow.stage(s); // one window at a time: the previous seal goes out now
       setClaimRefusal(null);
       setHolding((prev) => (prev.includes(s.id) ? prev : [...prev, s.id]));
-      timer.current = setTimeout(commitStaged, UNDO_MS);
     },
-    [cursor.judgment, commitStaged]
+    [cursor.judgment, undoWindow]
   );
 
   /** Take the staged verdict back: nothing is sent, the case returns to the screen. */
   const undoStaged = useCallback(() => {
-    const s = takeStaged();
+    const s = undoWindow.undo();
     if (s) setHolding((prev) => prev.filter((held) => held !== s.id));
     return s;
-  }, [takeStaged]);
+  }, [undoWindow]);
 
-  // Leaving the page, or opening another case by `at`, commits what is staged.
-  const commitRef = useRef(commitStaged);
+  // Opening another case by `at` commits what is staged (leaving the page: `useStagedCommit` itself).
   useEffect(() => {
-    commitRef.current = commitStaged;
-  });
-  useEffect(() => () => commitRef.current(), []);
-  useEffect(() => {
-    commitRef.current();
-  }, [at]);
+    commitStaged();
+  }, [at, commitStaged]);
 
   /**
    * Defer: hide for this sitting only. No request, no state change on the
@@ -308,4 +285,50 @@ export function useJudgmentQueue(options?: { at?: string }) {
     claimRefusal,
     dismissClaimRefusal,
   };
+}
+
+/**
+ * A client-side undo window: `stage` holds one item and sends it when `ms` runs out, when another item is
+ * staged, or when the component unmounts (the page is left); `undo` inside the window sends nothing and hands
+ * the item back; `commit` sends it now. One item at a time.
+ *
+ * The triage queue's five-second seal and the case desk's on-the-spot seal both use it (2026-11-14), so the two
+ * places that say 「已落印 · 可撤回」 keep the same promise. `send` may change between renders; the latest one is used.
+ */
+export function useStagedCommit<S extends { id: string }>(send: (s: S) => void, ms: number = UNDO_MS) {
+  const [staged, setStaged] = useState<S | null>(null);
+  const stagedRef = useRef<S | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+
+  const take = useCallback(() => {
+    const s = stagedRef.current;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    stagedRef.current = null;
+    setStaged(null);
+    return s;
+  }, []);
+
+  const commit = useCallback(() => {
+    const s = take();
+    if (s) sendRef.current(s);
+  }, [take]);
+
+  const stage = useCallback(
+    (s: S) => {
+      commit();
+      stagedRef.current = s;
+      setStaged(s);
+      timer.current = setTimeout(commit, ms);
+    },
+    [commit, ms]
+  );
+
+  useEffect(() => () => commit(), [commit]);
+
+  return useMemo(() => ({ staged, stagedRef, stage, commit, undo: take }), [staged, stage, commit, take]);
 }

@@ -2,7 +2,8 @@
  * 「不过」的理由(v4 S10,Design 第五、六批)与希腊判通过时选文书的底页,给滑卡审判(swipe.tsx)用。
  * 选项、校验与发出的内容在 `verdict.ts`;这里只画。
  */
-import { judgmentApi, type ConcludeJudgmentPayload, type GreekAccount, type JudgmentDetail } from "@soulledger/core/api/judgment";
+import { judgmentApi, type ConcludeJudgmentPayload, type GreekAccount, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
+import { verdictText } from "@soulledger/core/domain/verdictNames";
 import { soulsApi } from "@soulledger/core/api/souls";
 import { OFFENCES_BY_COURT, offenceCourt } from "@soulledger/core/domain/diyuCase";
 import { useCallback, useState } from "react";
@@ -322,6 +323,56 @@ export function AccountSheet({ open, busy, onCancel, onConfirm }: { open: boolea
         <View style={{ flexDirection: "row", gap: space[3] }}>
           <ActionButton testID="pass-cancel" kind="outline" title={t("reject.sheet.cancel")} onPress={onCancel} />
           <ActionButton testID="pass-confirm" kind="primary" busy={busy} disabled={!account} title={t("judgment.greek_account.confirm_pass")} onPress={() => account && onConfirm(account)} style={{ flex: 1 }} />
+        </View>
+      </View>
+    </Sheet>
+  );
+}
+
+/**
+ * 回读底页(偏好「落印前先确认」打开时,`prefs.tsx`):落印之前念一遍人名、案号、判决,没有计时;按「落印」才发。
+ * 「取消」排在前面,读屏从标题读起,不先落在「落印」上。
+ */
+export function SealReadbackSheet({
+  open,
+  judgment,
+  verdict,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  judgment: Pick<Judgment, "soul_name" | "case_number" | "civilization">;
+  verdict: string | null;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const line = (label: string, value: string, testID: string) => (
+    <View style={{ flexDirection: "row", gap: space[3] }}>
+      <Txt variant="body" tone="muted" style={{ minWidth: 56 }}>
+        {label}
+      </Txt>
+      <Txt variant="bodyLg" testID={testID} style={{ flexShrink: 1 }}>
+        {value}
+      </Txt>
+    </View>
+  );
+  return (
+    <Sheet open={open} onClose={onCancel} edge={theme.hair} closeLabel={t("common.cancel")}>
+      <View testID="swipe-readback-sheet" style={{ padding: space[5], gap: space[3] }}>
+        <Txt variant="title">{t("judgment.seal_readback.title")}</Txt>
+        {line(t("judgment.seal_readback.soul"), judgment.soul_name ?? "", "readback-name")}
+        {line(t("judgment.seal_readback.case"), judgment.case_number ?? "", "readback-case")}
+        {line(t("judgment.seal_readback.verdict"), verdict ? verdictText(t, judgment.civilization, verdict) : "", "readback-verdict")}
+        <Txt variant="caption" tone="muted">
+          {t("judgment.seal_readback.note")}
+        </Txt>
+        <View style={{ flexDirection: "row", gap: space[3] }}>
+          <ActionButton testID="readback-cancel" kind="outline" title={t("common.cancel")} onPress={onCancel} />
+          <ActionButton testID="readback-confirm" kind="primary" busy={busy} title={t("caseDesk.dossier.judge.seal")} onPress={onConfirm} style={{ flex: 1 }} />
         </View>
       </View>
     </Sheet>

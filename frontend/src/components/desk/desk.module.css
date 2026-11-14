@@ -175,6 +175,20 @@
   background: color-mix(in oklch, oklch(var(--color-ink)) 7%, transparent);
   box-shadow: inset 3px 0 0 oklch(var(--color-ink));
 }
+/* 落了印的一行:印落下(320ms)之后划线、向左滑出(CaseDesk 的 SEAL_LEAVE_MS = 600 到点后移出摞)。
+   减少动态效果时全站规则把动画压到 1ms,CaseDesk 也不等。 */
+.row[data-leaving] {
+  animation: desk-row-leave 280ms var(--ease-exit, ease-in) 320ms both;
+}
+.row[data-leaving] .rowName {
+  text-decoration: line-through;
+}
+@keyframes desk-row-leave {
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
 .rowName {
   font-family: var(--font-serif);
   font-size: var(--juan-name-size);
@@ -245,7 +259,8 @@
 }
 .body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  /* 右栏是判栏(fe-ia §3.5:320)。`--verdict-rail-w` 待进 globals.css 的布局令牌,这里带回退值。 */
+  grid-template-columns: minmax(0, 1fr) var(--verdict-rail-w, 320px);
   gap: 32px;
   padding: 20px 28px 32px;
   flex: 1;
@@ -294,6 +309,66 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+/* 判栏:贴着 .case 的滚动顶,卷再长,裁决键与落印也在屏上。 */
+.rail {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.railNote {
+  margin: 0;
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
+  color: oklch(var(--color-ink-muted));
+}
+.railLabel {
+  font-size: var(--tai-label-size);
+  color: oklch(var(--color-ink-muted));
+}
+/* 撤回条:贴在右栏底边,全宽 40 高;下沿一条细线在 UNDO_MS 内走完。 */
+.undo {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  min-height: 40px;
+  padding: 6px 28px;
+  border-top: 1px solid oklch(var(--color-line));
+  background: oklch(var(--color-surface-2));
+  font-size: var(--tai-label-size);
+}
+.undoWhat {
+  font-weight: 600;
+}
+.undoNote {
+  flex: 1;
+  color: oklch(var(--color-ink-muted));
+}
+.undoClock {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: oklch(var(--color-ink));
+  transform-origin: left;
+  animation-name: desk-undo-clock;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes desk-undo-clock {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 .card {
   border: 1px solid oklch(var(--color-line));

@@ -20,6 +20,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { QueueMinePanel } from "@/src/components/judgment/QueueMinePanel";
+import { SealReadbackDialog, sealReadbackEnabled, type SealReadbackItem } from "@/src/components/judgment/SealReadback";
 import { Seal } from "@/src/components/plaque/Seal";
 import { Button } from "@/src/components/ui/Button";
 import { usePermissions } from "@/src/hooks/usePermissions";
@@ -90,7 +91,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const [showKeys, setShowKeys] = useState(false);
   const [selected, setSelected] = useState<VerdictCode | null>(null);
 
-  const { cursor, progress, staged, stageVerdict, undoStaged, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
+  const { cursor, progress, staged, stageVerdict, submitVerdict, undoStaged, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
   /* 第四十三批:原审判挂着没结束的跨域审判时,不勾 W 服务端也会生成全站流程(请求里不带 create_workflow)。
      这里把 W 显示成勾上、点不动,下面一句为什么;要选站去整页。与整页同一把缓存键。 */
@@ -138,6 +139,8 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
   /** 每落一次判盖一次印(交互与动效第 2 轮 §三 1:点击或按键即盖印,不按住)。 */
   const [stamp, setStamp] = useState(0);
+  /** 偏好「落印前先确认」打开时,⌘⏎ 先开这一层回读(`SealReadback.tsx`);层里确认才发,不走撤回窗口。 */
+  const [asking, setAsking] = useState<(SealReadbackItem & { id: string; verdict: VerdictCode; notes: string; createWorkflow: boolean }) | null>(null);
 
   const seal = useCallback(
     () => {
@@ -149,11 +152,25 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         router.push(withFrom(`/judgment/${judgment.id}`, "/judgment/queue"));
         return;
       }
+      if (sealReadbackEnabled()) {
+        setAsking({ id: judgment.id, name: judgment.soul_name ?? "", caseNumber: judgment.case_number ?? "", verdict, civilization: judgment.civilization, notes, createWorkflow });
+        return;
+      }
       setStamp((n) => n + 1);
       stageVerdict({ verdict, notes, createWorkflow });
     },
     [judgment, selected, stageVerdict, notes, createWorkflow, router]
   );
+
+  /** 回读层里按了「落印」:当场发(没有撤回窗口 —— 这条路的保证是层,不是计时)。 */
+  const confirmAsked = () => {
+    if (!asking) return;
+    const { id, verdict, notes: n, createWorkflow: w } = asking;
+    setAsking(null);
+    if (judgment?.id !== id) return; // 层开着时眼前换了一件(重取):回读的那一件不在了,什么都不发
+    setStamp((x) => x + 1);
+    void submitVerdict({ verdict, notes: n, createWorkflow: w });
+  };
 
   const undo = useCallback(() => {
     const back = undoStaged();
@@ -277,7 +294,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       // Esc 只关最上面一层;没有层时什么也不做(此前没有层时离开整个队列 —— fe-ia §3.4 删掉了)。
       Escape: () => setShowKeys(false),
     },
-    !holdAsking && reassignFor === null
+    !holdAsking && reassignFor === null && asking === null
   );
   // 文本框里按 Esc:先失焦(`useHotkeys` 在打字时不接任何键,所以这一条单独留着)。
   useEffect(() => {
@@ -560,6 +577,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         onCancel={() => setHoldAsking(false)}
         onConfirm={confirmHold}
       />
+      <SealReadbackDialog item={asking} onCancel={() => setAsking(null)} onConfirm={confirmAsked} />
       <ReassignDialog
         isOpen={reassignFor !== null}
         ids={reassignFor ? [reassignFor.id] : []}

@@ -8,7 +8,7 @@ import { type ScrollView, View } from "react-native";
 
 import { canCheck, confirmWished, deviceCheck, setConfirmWished, useBioWord, type CheckResult } from "../deviceCheck";
 import { Row, Segmented } from "../kit";
-import { type ThemeChoice, usePrefs } from "../prefs";
+import { type ThemeChoice, sealReadbackWished, setSealReadbackWished, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
 import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
@@ -127,6 +127,8 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
         </Block>
 
         <ConfirmBlock />
+
+        <SealReadbackBlock />
 
         <Block label={t("officer_app.me.about")}>
           <Txt variant="bodyLg">{`${t("officer_app.name")} · ${t("officer_app.me.version", { version })}`}</Txt>
@@ -247,6 +249,27 @@ function PushBlock() {
  * 批准、驳回前认面容: a switch, on by default; greyed, with the way out, when the phone has no screen lock.
  * Turning it off asks the phone first (A8); a check that does not pass leaves it on and says so.
  */
+/** 「落印前先确认」:滑卡审判右滑通过时先回读、不计时(`prefs.tsx`)。 */
+function SealReadbackBlock() {
+  const { t } = useI18n();
+  const [on, setOn] = useState(sealReadbackWished);
+  return (
+    <Block label={t("judgment.seal_readback.pref")}>
+      <Row
+        testID="me-seal-readback"
+        minHeight={56}
+        title={t("judgment.seal_readback.pref")}
+        lines={[t("judgment.seal_readback.pref_hint_app")]}
+        onPress={() => {
+          setSealReadbackWished(!on);
+          setOn(!on);
+        }}
+        right={<Txt variant="nav">{on ? "✓" : "○"}</Txt>}
+      />
+    </Block>
+  );
+}
+
 function ConfirmBlock() {
   const { t } = useI18n();
   const bio = useBioWord();
