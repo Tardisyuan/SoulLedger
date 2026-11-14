@@ -55,6 +55,9 @@ END_REASON_BRANCH_SKIPPED = "BRANCH_SKIPPED"
 SYSTEM_END_REASONS = frozenset({END_REASON_BRANCH_SKIPPED, "SOUL_DEVOURED"})
 #: An administrator ended the flow on the record (`ApprovalWorkflow.terminate`). CANCELLED, never REJECTED: see there.
 END_REASON_TERMINATED = "ADMIN_TERMINATED"
+#: The judge who sealed an original case withdrew the seal before any approver acted (`weighing.withdraw_conclusion`,
+#: user 2026-11-14). CANCELLED for the same reason as a termination: nobody refused the case.
+END_REASON_WITHDRAWN = "SEAL_WITHDRAWN"  # end_reason is varchar(20)
 
 
 def judgment_deciding(queryset):
@@ -1117,7 +1120,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             self.save()
         return True
 
-    def terminate(self, user=None, reason: str = "") -> bool:
+    def terminate(self, user=None, reason: str = "", end_reason: str = END_REASON_TERMINATED) -> bool:
         """An administrator ends a running flow on the record (user 2026-11-06). False when it had already ended.
 
         CANCELLED, the state `TERMINAL_WORKFLOW_STATUSES` already gives a flow that ended neither passed nor refused:
@@ -1143,7 +1146,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 decided_at=now)
             self.segments.filter(state=SegmentState.AWAITING_PICK).update(
                 state=SegmentState.SKIPPED, version=models.F("version") + 1)
-            self._finish(ApprovalWorkflowStatus.CANCELLED, now, end_reason=END_REASON_TERMINATED)
+            self._finish(ApprovalWorkflowStatus.CANCELLED, now, end_reason=end_reason)
             if self.case_type == CaseType.APPEAL:
                 from apps.judgment import appeals
 

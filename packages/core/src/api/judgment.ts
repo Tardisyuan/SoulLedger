@@ -133,6 +133,8 @@ export interface Judgment extends ArchiveFields {
   can_edit?: boolean;
   /** 这件案子自己的审批流以 CANCELLED 结束(联审撤销):审判台给「重开一案」(`reopenCancelled`,judgment.assign)。 */
   flow_cancelled?: boolean;
+  /** 调用者此刻能撤回这一印:他落的印、原审流程还没有审批人动过(`withdrawConclusion`;只在详情上有)。 */
+  can_withdraw?: boolean;
   /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
@@ -802,6 +804,8 @@ export const judgmentApi = {
    * 201 是新案;409 `not_cancelled`(流程不是 CANCELLED)/ `cannot_reopen`(灵魂已安置,改走重开或申诉)。
    */
   reopenCancelled: (id: string) => api.post<Judgment>(`/judgment/${id}/reopen-cancelled/`),
+  /** 落印的判官在第一位审批人动手前撤回这一印;回的是另开、由他认领的新案。 */
+  withdrawConclusion: (id: string) => api.post<Judgment>(`/judgment/${id}/withdraw-conclusion/`),
   cite: (id: string, statute: string, note = "") =>
     api.post<JudgmentCitation>(`/judgment/${id}/citations/`, { statute, note }),
   uncite: (id: string, statute: string) =>

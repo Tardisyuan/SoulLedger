@@ -23,6 +23,10 @@ class EventType(models.TextChoices):
     RECORD_ADDED = "RECORD_ADDED"
     JUDGMENT_INITIATED = "JUDGMENT_INITIATED"
     JUDGMENT_CONCLUDED = "JUDGMENT_CONCLUDED"
+    # 落印的判官在第一位审批人动手之前撤回了这一印(2026-11-14,apps/judgment/weighing.py::withdraw_conclusion)。
+    # 与撤回同一事务;随后同一事务里还有 STATE_CHANGED(回到审判中)与新案的 JUDGMENT_INITIATED。
+    # payload:judgment_id、verdict、workflow_id、retrial_id。不推送给灵魂。
+    JUDGMENT_CONCLUSION_WITHDRAWN = "JUDGMENT_CONCLUSION_WITHDRAWN"
     DISPOSITION_CREATED = "DISPOSITION_CREATED"
     # 刑期走完(`Disposition.expired_at` 被写下)。由每日的期满检查发,
     # 记在灵魂自己的时间线上;灵魂状态不变 —— 期满的灵魂在等轮回,不是被推进了一步。

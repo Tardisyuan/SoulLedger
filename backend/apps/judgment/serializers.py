@@ -196,6 +196,8 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
     # 这件案子自己的审批流以 CANCELLED 结束(跨界联审撤销),发落卡在 approval_cancelled:审判台据此给「重开一案」
     # (`reopen-cancelled/`,judgment.assign)。与那个动作的前提同一条:流决定这件案子、状态 CANCELLED。
     flow_cancelled = serializers.SerializerMethodField()
+    # 调用者此刻能撤回这一印(`weighing.withdrawal_refusal` 为空):他落的印、原审流程还没人动过。审判台据此给「撤回落印」。
+    can_withdraw = serializers.SerializerMethodField()
     concluded_at_local = serializers.SerializerMethodField()
     deadline_at = serializers.SerializerMethodField()
     deadline_remaining_seconds = serializers.SerializerMethodField()
@@ -232,7 +234,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
             "court", "realm_id", "evidence_json", "confession", "summary", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at", "untimely", "held_until", "duat_stage", "ferry_barred",
-            "wangsi_held", "conclude_refusal", "can_edit", "flow_cancelled",
+            "wangsi_held", "conclude_refusal", "can_edit", "flow_cancelled", "can_withdraw",
             "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
@@ -383,6 +385,18 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
         from apps.judgment.weighing import has_retrial
 
         return not has_retrial(obj)  # reopened once already (F-JUDG-02): no button
+
+    def get_can_withdraw(self, obj) -> bool:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        # Cheap columns first: only the caller's own sealed original cases go on to read the flow and its nodes.
+        # ponytail: a list of a judge's own pending seals reads each flow's nodes (one query per row); annotate if it shows.
+        if (user is None or not user.is_authenticated or obj.concluded_by_id != user.pk or not obj.is_final
+                or obj.kind != "ORIGINAL"):
+            return False
+        from apps.judgment.weighing import withdrawal_refusal
+
+        return withdrawal_refusal(obj, user) is None
 
     def get_realm_name(self, obj) -> str | None:
         realm = obj.realm
@@ -570,12 +584,14 @@ class JudgmentListSerializer(JudgmentSerializer):
 
     The nested grounds cost the list three prefetches per page, and a concluded case renders and hashes each
     cited article's snapshot. No list screen reads them: the desk reads them from `GET /judgment/{id}/`, and the
-    grounds panel from `/judgment/{id}/citations/`.
+    grounds panel from `/judgment/{id}/citations/`. Nor `can_withdraw` (2026-11-14): it reads the flow's nodes,
+    and only the desk's detail read offers the button.
     """
     citations = None
+    can_withdraw = None
 
     class Meta(JudgmentSerializer.Meta):
-        fields = [f for f in JudgmentSerializer.Meta.fields if f != "citations"]
+        fields = [f for f in JudgmentSerializer.Meta.fields if f not in ("citations", "can_withdraw")]
 
 
 class JudgmentDetailSerializer(JudgmentSerializer):

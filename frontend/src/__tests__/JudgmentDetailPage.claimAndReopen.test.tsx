@@ -4,10 +4,11 @@
  * 1. 别人认领中、自己又不持 judgment.assign(服务端 `can_edit: false`,与 `claims.assert_may_edit` 同一条规则):
  *    判词框、裁决键、落判一概不可用,页头说为什么;持 judgment.assign 越过的人照常可改,页头说「会留痕」。
  * 2. 原审的审批流被撤销(`flow_cancelled`):持 judgment.assign 的人看到「重开一案」,成功去新案,拒绝码走译文。
+ * 3. 落印后、审批人动手前(服务端 `can_withdraw`):落印的判官看到「撤回落印」,确认后发出,成功去新案,拒绝码走译文。
  *
  * 真页面、真 QueryClient,只桩 HTTP 层(同 JudgmentDetailPage.notesDraft.test.tsx)。
  */
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 const ID = "j-1";
 
@@ -38,7 +39,7 @@ import { judgmentApi, soulsApi } from "@soulledger/core/api";
 import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
-  judgmentApi: { get: jest.fn(), conclude: jest.fn(), reopenCancelled: jest.fn() },
+  judgmentApi: { get: jest.fn(), conclude: jest.fn(), reopenCancelled: jest.fn(), withdrawConclusion: jest.fn() },
   soulsApi: { get: jest.fn() },
 }));
 
@@ -63,6 +64,7 @@ jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenan
 
 const mockGet = judgmentApi.get as jest.Mock;
 const mockReopen = judgmentApi.reopenCancelled as jest.Mock;
+const mockWithdraw = judgmentApi.withdrawConclusion as jest.Mock;
 
 function asUser(permissions: string[]) {
   mockTenant.user = { id: 1, username: "me", role: "JUDGE", tenant: { id: 1, code: "CN_DIYU" }, permissions };
@@ -162,5 +164,49 @@ describe("reopening a case whose flow was cancelled", () => {
     renderPage();
     await screen.findByRole("button", { name: "print.button" }, TIMEOUT);
     expect(screen.queryByTestId("reopen-cancelled")).toBeNull();
+  });
+});
+
+describe("withdrawing a seal before any approver acted", () => {
+  const sealed = (over: Record<string, unknown> = {}) =>
+    judgment({ is_final: true, verdict: "FAILED", concluded_at: "2026-10-01T00:00:00Z", ...over });
+
+  async function confirmWithdrawal() {
+    fireEvent.click(await screen.findByTestId("withdraw-conclusion", {}, TIMEOUT));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "judgment.withdraw_conclusion.button" }));
+  }
+
+  it("asks first, then withdraws and goes to the new case", async () => {
+    asUser(JUDGE);
+    mockGet.mockResolvedValue({ data: sealed({ can_withdraw: true }) });
+    mockWithdraw.mockResolvedValue({ data: { id: "j-3", case_number: "J-3" } });
+    renderPage();
+    fireEvent.click(await screen.findByTestId("withdraw-conclusion", {}, TIMEOUT));
+    await screen.findByRole("alertdialog");
+    expect(mockWithdraw).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "judgment.withdraw_conclusion.button" }));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/judgment/j-3"));
+    expect(mockWithdraw).toHaveBeenCalledWith(ID);
+    expect(mockToast).toHaveBeenCalledWith("judgment.withdraw_conclusion.done(J-3)", "success");
+  });
+
+  it("translates a refusal and stays", async () => {
+    asUser(JUDGE);
+    mockGet.mockResolvedValue({ data: sealed({ can_withdraw: true }) });
+    mockWithdraw.mockRejectedValue({ response: { status: 409, data: { code: "approval_started" } } });
+    renderPage();
+    await confirmWithdrawal();
+    await waitFor(() =>
+      expect(mockToast).toHaveBeenCalledWith("judgment.withdraw_conclusion.refusal.approval_started", "error"));
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("is not offered when the server says the seal cannot be withdrawn", async () => {
+    asUser(LEAD);
+    mockGet.mockResolvedValue({ data: sealed({ can_withdraw: false }) });
+    renderPage();
+    await screen.findByRole("button", { name: "print.button" }, TIMEOUT);
+    expect(screen.queryByTestId("withdraw-conclusion")).toBeNull();
   });
 });

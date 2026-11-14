@@ -335,6 +335,7 @@
       "RECORD_ADDED": "Deed recorded",
       "JUDGMENT_INITIATED": "Judgment opened",
       "JUDGMENT_CONCLUDED": "Judgment concluded",
+      "JUDGMENT_CONCLUSION_WITHDRAWN": "Seal withdrawn by the judge",
       "DISPOSITION_CREATED": "Disposition issued",
       "DISPOSITION_EXPIRED": "Disposition expired",
       "REINCARNATION_TRIGGERED": "Reincarnation triggered",
@@ -2755,6 +2756,20 @@
       "refusal": {
         "not_cancelled": "This case's approval flow was not cancelled, so it cannot be reopened this way.",
         "cannot_reopen": "The soul has already been placed; ask for a reopening or an appeal instead."
+      }
+    },
+    "withdraw_conclusion": {
+      "button": "Withdraw the seal",
+      "hint": "No approver has acted yet: withdraw this seal, cancel the approval flow, and judge the case again as a new case.",
+      "confirm": "Withdraw this seal? The approval flow is cancelled, the disposition is voided, and the case comes back to you as a new case.",
+      "done": "Seal withdrawn. New case: {{case_number}}",
+      "refusal": {
+        "not_withdrawable": "Only a sealed original case can have its seal withdrawn.",
+        "not_your_seal": "Only the judge who sealed this case can withdraw the seal.",
+        "no_pending_flow": "This case has no approval flow still waiting, so the seal cannot be withdrawn.",
+        "cross_judgment_merged": "A cross-realm judgment sits on this case's flow; cancel that bench instead.",
+        "approval_started": "An approver has already acted on this case; the seal can no longer be withdrawn.",
+        "cannot_withdraw": "The soul has already left the place this seal put it in; the seal cannot be withdrawn."
       }
     },
     "concluded_filter": {

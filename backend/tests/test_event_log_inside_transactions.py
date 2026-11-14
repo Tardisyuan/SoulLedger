@@ -794,6 +794,20 @@ def _flow_rejected_reopens():
             "JUDGMENT_INITIATED")
 
 
+def _seal_withdrawn():
+    """落印的判官在审批人动手前撤回(`weighing.withdraw_conclusion`):事件与撤回同一事务。写不进去,流程、处置、
+    灵魂状态与新案都不能留下。"""
+    from apps.judgment import weighing
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    _soul, case = plan.open_case(_cn())
+    case.conclude("FAILED", "")
+    flow = ApprovalWorkflow.all_objects.get(judgment=case)
+    return (lambda: weighing.withdraw_conclusion(Judgment.all_objects.get(pk=case.pk)),
+            lambda: ApprovalWorkflow.all_objects.get(pk=flow.pk).status == ApprovalWorkflowStatus.CANCELLED,
+            "JUDGMENT_CONCLUSION_WITHDRAWN")
+
+
 PATHS = {
     "appeal_file/JUDGMENT_APPEAL_FILED": _appeal("file"),
     "appeal_withdraw/JUDGMENT_APPEAL_WITHDRAWN": _appeal("withdraw"),
@@ -806,6 +820,7 @@ PATHS = {
     "conclude_retry/JUDGMENT_CONCLUDED": _conclude_hears_again("retry", "JUDGMENT_CONCLUDED"),
     "conclude_reopened/JUDGMENT_CONCLUDED": _conclude_reopened,
     "flow_rejected_reopens/JUDGMENT_INITIATED": _flow_rejected_reopens,
+    "seal_withdrawn/JUDGMENT_CONCLUSION_WITHDRAWN": _seal_withdrawn,
     "wangsi_file/WANGSI_GRIEVANCE_FILED": _wangsi("file"),
     "wangsi_uphold/WANGSI_GRIEVANCE_UPHELD": _wangsi("uphold"),
     "wangsi_reject/WANGSI_GRIEVANCE_REJECTED": _wangsi("reject"),
