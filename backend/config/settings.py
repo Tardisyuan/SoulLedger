@@ -198,6 +198,14 @@ DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = _env_bool(
     "DISABLE_SERVER_SIDE_CURSORS", "false"
 )
 
+# Per-civilization sharding (docs/ARCHITECTURE-tenant-sharding.md 4.2). Stage 0: the router routes
+# nothing; see config/sharding.py for what each later stage changes. Rollback = delete this line.
+DATABASE_ROUTERS = ["config.sharding.ShardRouter"]
+# Civilizations (apps.souls.models.Civilization values, comma list) whose reads / writes are cut over
+# to their own alias. Empty = none; tests use override_settings (plan D8).
+SHARD_READ_CIVS = [c.strip() for c in os.getenv("SHARD_READ_CIVS", "").split(",") if c.strip()]
+SHARD_WRITE_CIVS = [c.strip() for c in os.getenv("SHARD_WRITE_CIVS", "").split(",") if c.strip()]
+
 AUTH_USER_MODEL = "authentication.User"
 
 # Password validation
