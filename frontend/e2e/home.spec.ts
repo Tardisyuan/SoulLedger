@@ -165,7 +165,7 @@ test.describe("Login page", () => {
     await page.getByRole("button", { name: "登录" }).click();
 
     await expect(page.getByText("账号或密码不对")).toBeVisible();
-    await expect(page.getByText("还可以再试 4 次，之后账号锁定 15 分钟。")).toBeVisible();
+    await expect(page.getByText("还可以再试 4 次，之后要等一会儿才能再试，最长 15 分钟。")).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
     expect(api.countOf("POST", "/auth/login/")).toBe(1);
   });
