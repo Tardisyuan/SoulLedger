@@ -108,7 +108,7 @@ export function CancelDispatchButton({
         }
       >
         <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t(withdrawApproval ? "dispatch.withdraw_approval_warning" : "dispatch.cancel_warning")}</p>
-        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+        <TextAreaField modEnterSubmits={false}
           label={t("dispatch.cancel_reason")}
           value={reason}
           onChange={(e) => setReason(e.target.value)}

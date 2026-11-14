@@ -113,7 +113,7 @@ export function LostTransitionDialog({
           {t(mode === "mark" ? "souls.lost.mark_body" : "souls.lost.recall_body")}
         </p>
         <div>
-          <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+          <TextAreaField modEnterSubmits={false}
             id={fieldId}
             label={t("souls.lost.reason_label")}
             description={t("souls.lost.reason_hint")}

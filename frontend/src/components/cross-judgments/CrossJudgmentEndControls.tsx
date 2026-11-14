@@ -127,7 +127,7 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
             ))}
           </div>
         </fieldset>
-        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+        <TextAreaField modEnterSubmits={false}
           label={t("crossJudgments.end_note")}
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -163,7 +163,7 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
       >
         <p data-testid="cross-cancel-body" className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{cancelBody}</p>
         {withdrawsPicks && <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.cancel_flow_note")}</p>}
-        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+        <TextAreaField modEnterSubmits={false}
           label={t("crossJudgments.cancel_reason")}
           value={reason}
           onChange={(e) => setReason(e.target.value)}

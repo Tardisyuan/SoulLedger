@@ -182,7 +182,7 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
           value={location}
           onChange={(e) => setLocation(e.target.value)}
         />
-        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+        <TextAreaField modEnterSubmits={false}
           id="tudi-register-report"
           label={t("earthGods.report_label")}
           maxLength={REPORT_MAX}

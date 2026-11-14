@@ -69,7 +69,7 @@ export function MfaResetDialog({ user, onClose }: { user: User; onClose: () => v
             </li>
           ))}
         </ul>
-        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+        <TextAreaField modEnterSubmits={false}
           label={t("mfa.admin.reset_reason")}
           rows={2}
           value={reason}

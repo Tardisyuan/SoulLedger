@@ -52,7 +52,7 @@ export function ImpersonateDialog({ user, onClose }: { user: User; onClose: () =
     >
       <div className="flex flex-col gap-4 text-sm text-[oklch(var(--color-ink))]">
         <p className="m-0">{t("admin.impersonate.body")}</p>
-        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+        <TextAreaField modEnterSubmits={false}
           label={t("admin.impersonate.reason_label")}
           rows={2}
           value={reason}

@@ -81,7 +81,7 @@ export function CorrectSettlementDialog({
         }}
       >
         <p className="text-sm text-[oklch(var(--color-ink))]">{t("souls.detail.correct_settlement.message")}</p>
-        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
+        <TextAreaField modEnterSubmits={false}
           label={t("souls.detail.correct_settlement.reason")}
           required
           rows={3}
