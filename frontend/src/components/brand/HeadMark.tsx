@@ -1,20 +1,21 @@
+"use client";
+
 import type { ReactNode } from "react";
 import type { SealCiv } from "@/src/components/plaque/Seal";
+import { useHallName } from "@/src/components/plaque/useHall";
+import { useI18n } from "@/src/contexts/I18nContext";
 
 /**
  * 页头记号(Design v4 第四十五批第四节):文明色收紧之后,四家不靠颜色分清的主通道。页头右上角,墨色
- * (深 34% / 浅 30%,globals.css `.page-head-mark`),去色以后照样看得见。装饰,`aria-hidden`,不翻译:
- * 地府的「地府」两字在英文与 egy 界面里也照样显示 —— 它是纹饰,与印上的「第一殿印」同一类,不是要读的字。
+ * (深 34% / 浅 30%,globals.css `.page-head-mark`),去色以后照样看得见。装饰,`aria-hidden`。
  *
- * 地府那一格可能换成「无字的竖排方印轮廓」(Design 请用户定):只换下面 `cn` 这一项,样式按 `data-head-mark` 选。
+ * 地府那一格是「殿名随殿变」(用户 2026-11-14,取代稿子的竖排「地府」两字):竖排此刻所在殿的殿名
+ * (`useHallName`,来自 `Tenant.hall_names`)。中文界面是汉字(稿子地府记号的字号),英文 / egy 是小号衬线大写、
+ * 字距 .3em(`data-head-script="latin"`);egy 没有殿名退英文。拿不到殿名时退回「地府」/「DIYU」。
+ * 其余三家不随殿变、不翻译:IVSTITIA、圣书体、ΚΡΙΣΙΣ 是纹饰,不是要读的字。
  * 埃及画成 SVG,不用 Unicode 圣书体:那要另加载 Noto Sans Egyptian Hieroglyphs,没加载上时四个字全是方框。
  */
-const MARKS: Record<SealCiv, ReactNode> = {
-  cn: (
-    <>
-      地<br />府
-    </>
-  ),
+const MARKS: Record<Exclude<SealCiv, "cn">, ReactNode> = {
   eu: "IVSTITIA",
   // 安卡、玛阿特之羽、荷鲁斯之眼、柱形;稿子 v4-batch45-civ-identity.html 的原样路径。
   eg: (
@@ -34,7 +35,17 @@ const MARKS: Record<SealCiv, ReactNode> = {
 
 /** 中性皮(`civ` 为 null)没有记号:记号说的是「哪一家」。 */
 export function HeadMark({ civ }: { civ: SealCiv | null }) {
+  const hallName = useHallName();
+  const { locale } = useI18n();
   if (!civ) return null;
+  if (civ === "cn") {
+    const han = locale === "zh-Hans";
+    return (
+      <span aria-hidden="true" data-head-mark="cn" data-head-script={han ? "han" : "latin"} className="page-head-mark">
+        {hallName ?? (han ? "地府" : "DIYU")}
+      </span>
+    );
+  }
   return (
     <span aria-hidden="true" data-head-mark={civ} className="page-head-mark">
       {MARKS[civ]}

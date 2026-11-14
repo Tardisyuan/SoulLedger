@@ -58,3 +58,20 @@ function useHallCode(): string | null {
   const own = useTenant().user?.tenant?.code;
   return viewed ?? own ?? null;
 }
+
+/**
+ * 此刻所在的殿的殿名,按界面语言(页头的地府记号,第四十五批;用户 2026-11-14 定「殿名随殿变」)。
+ * 来源:代看 / 进殿查看时是 `target.hall`,否则是账号所在殿的 `hall_names`(都来自 `Tenant.hall_names`)。
+ * egy 没填时后端退回 zh,这里改退英文(用户定:egy 界面不露汉字殿名)。都没有(旧的缓存信封)是 undefined。
+ */
+export function useHallName(): string | undefined {
+  const { locale } = useI18n();
+  const viewed = useImpersonation()?.target.hall;
+  const own = useTenant().user?.tenant?.hall_names;
+  const names = viewed ?? own;
+  if (!names) return undefined;
+  const zh = names["zh-Hans"];
+  if (locale === "zh-Hans") return zh || undefined;
+  if (locale === "egy" && names.egy && names.egy !== zh) return names.egy;
+  return names.en || undefined;
+}

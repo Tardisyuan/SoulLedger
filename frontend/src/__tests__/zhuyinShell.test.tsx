@@ -9,14 +9,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
 
-const mockTenant: { code: string; display_name: string; seal_glyphs?: string[] } = { code: "CN_DIYU", display_name: "第五殿" };
+const mockTenant: { code: string; display_name: string; seal_glyphs?: string[]; hall_names?: Record<string, string> } = { code: "CN_DIYU", display_name: "第五殿" };
+const mockI18n = { locale: "zh-Hans" };
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, tenant: mockTenant } }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
     t: (key: string, p?: Record<string, string>) => (key === "seal.aria" ? `${p?.court}之印` : key),
-    locale: "zh-Hans",
+    locale: mockI18n.locale,
   }),
 }));
 
@@ -29,6 +30,8 @@ const FRONTEND = path.join(__dirname, "..", "..");
 beforeEach(() => {
   mockTenant.code = "CN_DIYU";
   delete mockTenant.seal_glyphs;
+  delete mockTenant.hall_names;
+  mockI18n.locale = "zh-Hans";
 });
 
 describe("印", () => {
@@ -129,6 +132,25 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     const mark = screen.getByTestId("page-head").querySelector(".page-head-mark");
     expect(mark).toHaveAttribute("data-head-mark", "cn");
     expect(mark).toHaveAttribute("aria-hidden", "true");
+  });
+
+  // 用户 2026-11-14:地府的记号是此刻所在殿的殿名(`Tenant.hall_names`),按界面语言;egy 没有退英文;拿不到退回地府 / DIYU。
+  it.each([
+    ["zh-Hans", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "第五殿", "han"],
+    ["en", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "The Fifth Court", "latin"],
+    ["egy", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "Yanluo Qedi", "latin"],
+    // 后端 egy 空着时退回 zh(`Tenant.hall_names`);egy 界面不露汉字殿名,改退英文。
+    ["egy", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "第五殿" }, "The Fifth Court", "latin"],
+    ["zh-Hans", undefined, "地府", "han"],
+    ["en", undefined, "DIYU", "latin"],
+    ["egy", undefined, "DIYU", "latin"],
+  ])("地府记号 · %s 界面 · 殿名 %j → %s", (locale, names, shown, script) => {
+    mockI18n.locale = locale;
+    if (names) mockTenant.hall_names = names;
+    render(<PageShell title="名册">body</PageShell>);
+    const mark = screen.getByTestId("page-head").querySelector(".page-head-mark");
+    expect(mark).toHaveTextContent(new RegExp(`^${shown}$`));
+    expect(mark).toHaveAttribute("data-head-script", script);
   });
 
   it("中性皮(不认得的租户)的水印只画环,不放任何一个文明的中心物,也没有页头记号", () => {

@@ -1059,10 +1059,16 @@
     user-select: none;
     white-space: nowrap;
   }
+  /* 地府:竖排殿名(用户 2026-11-14「殿名随殿变」)。汉字照稿子地府记号的 26/30;英文 / egy 小号衬线大写,字距 .3em。 */
   .page-head-mark[data-head-mark="cn"] {
     top: 12px;
+    writing-mode: vertical-rl;
     font: 600 26px/30px var(--font-title);
-    text-align: center;
+  }
+  .page-head-mark[data-head-mark="cn"][data-head-script="latin"] {
+    font: 600 12px/16px var(--font-title);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
   }
   .page-head-mark[data-head-mark="eu"],
   .page-head-mark[data-head-mark="gr"] {

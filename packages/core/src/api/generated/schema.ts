@@ -15480,7 +15480,8 @@ export interface components {
          *     (no `id`, unlike `UserTenantRefSerializer`).
          *
          *     `civilization` picks the Web's 匾 skin; `seal_glyphs` are the 1–2 admin-set
-         *     seal characters, empty meaning "use the civilization default".
+         *     seal characters, empty meaning "use the civilization default". `hall_names` is
+         *     the hall's own name per UI language (the Web's 地府 head mark, Design batch 45).
          */
         LoginTenantRef: {
             code: string;
@@ -15488,6 +15489,9 @@ export interface components {
             display_name_en?: string;
             civilization: string;
             seal_glyphs: string[];
+            readonly hall_names: {
+                [key: string]: string;
+            };
         };
         /**
          * @description Body of POST /auth/logout/.
