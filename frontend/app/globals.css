@@ -528,6 +528,9 @@
      side 深 #0E0F11 / 浅 #F1F1EF。中性皮的印用品牌天平,不放任何一个文明的印。
      ═══════════════════════════════════════════════════════════════════════ */
   /* 深色是 :root,浅色是 .light;ThemeContext 按系统偏好或用户选择给 <html> 加类。 */
+  /* @tokens:start —— 到 @tokens:end 之间每一行 `--x: 值;` 的值(和行尾的 hex 注释)由 scripts/build-tokens.mjs
+     从 packages/core/tokens/ 的三份 DTCG JSON 写入;改值改 JSON,再跑 `node scripts/build-tokens.mjs`。
+     注释、选择器、顺序是手写的,生成器不动它们;JSON 里没有的名字写在这里会让生成器报错。 */
   :root {
     /* 纸 / 墨 · 规范 v4 深色(`.th-dark`)。 */
     --color-canvas: 0.178529 0.004066 285.9807; /* #111113 */
@@ -538,12 +541,12 @@
     --color-line: 0.297319 0.005579 271.2268;
     --color-line-strong: 0.595896 0.009766 264.4932; /* #7C7F85 */
     --color-block: 0.963595 0.002651 106.4490; /* #F3F3F1 */
-    --color-ink: 0.963595 0.002651 106.4490;
+    --color-ink: 0.963595 0.002651 106.4490; /* #F3F3F1 */
     --color-ink-muted: 0.775874 0.006082 264.5259; /* #B4B6BA */
-    --color-ink-subtle: 0.775874 0.006082 264.5259;
+    --color-ink-subtle: 0.775874 0.006082 264.5259; /* #B4B6BA */
     /* 立柱底 = 中性侧栏底;有文明时侧栏读 --color-side。匾上题字色两个主题同值(v4 onSolid)。 */
     --color-pillar: 0.155270 0.004214 285.8987; /* #0C0C0E */
-    --color-on-main: 1 0 0;
+    --color-on-main: 1 0 0; /* #FFFFFF */
     /* 强调 · 中性皮 = 墨;有文明时 [data-civ] 把这三个指到 --color-main-ink。accent-contrast 是强调底上的字 = 纸。 */
     --color-accent: 0.963595 0.002651 106.4490;
     --color-accent-contrast: 0.178529 0.004066 285.9807;
@@ -560,14 +563,14 @@
     --color-on-danger: 0.204832 0.006141 271.1072; /* #16171A */
     /* 危险按钮悬停 / 按下往哪边调:深色是深字,压暗会掉到 3.70:1(按下 76%),所以往白调;浅色是白字,往黑调。 */
     --danger-shade: white;
-    --color-danger-tint: 0.233082 0.057680 4.8370;
-    --color-danger-on-tint: 0.906877 0.050597 4.3604;
+    --color-danger-tint: 0.233082 0.057680 4.8370; /* #33101A */
+    --color-danger-on-tint: 0.906877 0.050597 4.3604; /* #FFD3DC */
     --color-success: 0.805320 0.101985 153.6633; /* #8AD3A1 */
     /* 提示条底色 · Design D2:成功底 浅 #E4FBE7 / 深 #102515,警示底 浅 #FFF1E2 / 深 #301904,
        明度与失败底对齐;底上的字用 success / warning 本色(inkOnSurfaceContract 钉 ≥ 4.5)。 */
     --color-success-tint: 0.241388 0.040904 150.1078;
     --color-warning: 0.681246 0.156180 54.9021;
-    --color-warning-tint: 0.240511 0.049375 60.4681;
+    --color-warning-tint: 0.240511 0.049375 60.4681; /* #301904 */
     /* 琥珀(v4 第八批 `--warn`):只给连接状态的点和顶栏下沿那条 2px 线,**不当字色**。不复用 --color-warning:
        那一档是警示框里的字(对 canvas / warning-tint ≥ 4.5,inkOnSurfaceContract 钉着),色相偏橙(深 #E07A23),
        审判中、炼狱去向都指着它;琥珀改它会连带改这几处。 */
@@ -581,8 +584,8 @@
        对 canvas / surface-1 / surface-2:深 7.54 / 6.88 / 6.27,浅 5.85 / 6.22 / 5.49(ledgerPaletteContract 钉 ≥ 4.5)。 */
     --color-ink-mid: 0.717491 0.006726 255.4889; /* #A1A4A8 */
     /* 长明灯:实底块 = 有,空底 + 描边 = 我点过;lamp-bg 是块上文字色。 */
-    --color-lamp: 0.860675 0.109733 85.2786;
-    --color-lamp-bg: 0.228754 0.029413 79.2504;
+    --color-lamp: 0.860675 0.109733 85.2786; /* #F2CC7A */
+    --color-lamp-bg: 0.228754 0.029413 79.2504; /* #241B0C */
     /* 禁用:底 surface-2、字 faint。 */
     --color-disabled-ink: 0.595896 0.009766 264.4932;
     --color-disabled-surface: 0.256756 0.007618 274.6528;
@@ -670,9 +673,9 @@
     --color-line: 0.940070 0 0;
     --color-line-strong: 0.642492 0.008222 260.7308; /* #8A8D92 */
     --color-block: 0.204832 0.006141 271.1072; /* #16171A */
-    --color-ink: 0.204832 0.006141 271.1072;
+    --color-ink: 0.204832 0.006141 271.1072; /* #16171A */
     --color-ink-muted: 0.455822 0.008971 260.7269; /* #54575C */
-    --color-ink-subtle: 0.455822 0.008971 260.7269;
+    --color-ink-subtle: 0.455822 0.008971 260.7269; /* #54575C */
     --color-pillar: 0.957310 0.003982 106.4744; /* #F1F1EE */
     --color-accent: 0.204832 0.006141 271.1072;
     --color-accent-contrast: 0.978573 0.002641 106.4481;
@@ -683,17 +686,17 @@
     --color-danger-strong: 0.479318 0.171592 15.4317; /* #A81E3C */
     --color-on-danger: 1 0 0; /* #FFFFFF */
     --danger-shade: black;
-    --color-danger-tint: 0.959029 0.020979 6.6063;
-    --color-danger-on-tint: 0.409460 0.155831 12.0157;
+    --color-danger-tint: 0.959029 0.020979 6.6063; /* #FFECEF */
+    --color-danger-on-tint: 0.409460 0.155831 12.0157; /* #8A0C33 */
     --color-success: 0.469880 0.102419 153.8115; /* #1F6B3F */
     --color-success-tint: 0.965876 0.035762 149.1233;
     --color-warning: 0.529090 0.135424 52.3541;
-    --color-warning-tint: 0.965162 0.024981 69.4434;
+    --color-warning-tint: 0.965162 0.024981 69.4434; /* #FFF1E2 */
     --color-warn: 0.548270 0.117080 72.5076; /* #9A6400 */
     --color-faint-text: 0.526852 0.008647 260.7291; /* #686B70 */
     --color-ink-mid: 0.491657 0.008800 260.7282; /* #5E6166 */
-    --color-lamp: 0.407751 0.090608 66.2502;
-    --color-lamp-bg: 0.960430 0.029660 85.5642;
+    --color-lamp: 0.407751 0.090608 66.2502; /* #6A3E00 */
+    --color-lamp-bg: 0.960430 0.029660 85.5642; /* #FBF1DC */
     --color-disabled-ink: 0.642492 0.008222 260.7308;
     --color-disabled-surface: 0.957310 0.003982 106.4744;
     /* 浅色遮罩 = ink × .42。 */
@@ -815,8 +818,45 @@
     --toast-bar: 3px;
     --juan: 400 16px/28px var(--font-title);
     --juan-strong: 600 16px/28px var(--font-title);
+    /* 语域令牌(fe-tokens §3.1 L1′,2026-11-14):type.juan.* 是「卷」(记录),type.tai.* 是「台」(控件),
+       另有门栏与功过记号两个部件字面。值照三个 .module.css 原来写死的字号 / 行高,一个不改;
+       `--x-size` / `--x-leading` 是同一令牌的字号与行高,给只设字号(或字号 + 行高)的地方用 ——
+       换成 font 简写会连字族、字重一起重置。整行的用法见下面的 `@utility juan` / `@utility tai`。 */
+    --juan-key: 400 13px/20px var(--font-sans);
+    --juan-key-size: 13px;
+    --juan-key-leading: 20px;
+    --juan-head: 400 12px/16px var(--font-sans);
+    --juan-head-size: 12px;
+    --juan-head-leading: 16px;
+    --juan-num: 400 13px/20px var(--font-mono);
+    --juan-num-size: 13px;
+    --juan-title: 600 32px/40px var(--font-title);
+    --juan-title-size: 32px;
+    --juan-title-leading: 40px;
+    --juan-name: 600 16px/24px var(--font-title);
+    --juan-name-size: 16px;
+    --juan-name-leading: 24px;
     --tai: 400 14px/22px var(--font-sans);
+    --tai-size: 14px;
     --tai-touch: 400 15px/24px var(--font-sans);
+    --tai-touch-size: 15px;
+    --tai-label: 400 13px/20px var(--font-sans);
+    --tai-label-size: 13px;
+    --tai-label-leading: 20px;
+    --tai-caption: 400 12px/16px var(--font-sans);
+    --tai-caption-size: 12px;
+    --tai-caption-leading: 16px;
+    --tai-micro: 400 11px/16px var(--font-sans);
+    --tai-micro-size: 11px;
+    --tai-micro-leading: 16px;
+    --tai-head: 500 12px/16px var(--font-sans);
+    --door-glyph: 600 18px/24px var(--font-title);
+    --door-glyph-size: 18px;
+    --door-glyph-leading: 24px;
+    --door-label: 400 11px/14px var(--font-sans);
+    --door-label-size: 11px;
+    --door-label-leading: 14px;
+    --mark-glyph: 600 11px/1 var(--font-title);
     --glowA: 0.3;
     --field: rgba(255, 255, 255, 0.05);
   }
@@ -829,6 +869,7 @@
       --opt-h: 56px;
     }
   }
+  /* @tokens:end */
 
   /* (v3 时这里写「文明皮只有上面这一条匾色」;v4 起是上面五个值加强调 / 焦点。)v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
      v3 身份带撤掉(2026-10-01);v2 的实底印(遮罩素材、残边扫描、三款印文字体)随 v3 描边印撤掉
@@ -1324,6 +1365,50 @@ html.theme-switching *::after {
     opacity: 1;
     transform: none;
   }
+}
+
+/* 语域 utility(fe-tokens §3.1 L1′,2026-11-14):「卷」(记录,衬线)与「台」(控件,无衬线)各一组,值是 @tokens 块里的
+   font 简写令牌(type.juan.* / type.tai.*)。一个元素的字族、字重、字号、行高都照某个令牌时写 `className="juan-key"`,
+   不再逐处手拼 `font-title text-md font-normal`;只换字号的地方读 `--x-size` / `--x-leading`(三个 .module.css 就是这样)。
+   font 简写会把 font-variant-numeric 等一并重置,所以等宽数字之类的修饰写在 utility 之后。 */
+@utility juan {
+  font: var(--juan);
+}
+@utility juan-strong {
+  font: var(--juan-strong);
+}
+@utility juan-key {
+  font: var(--juan-key);
+}
+@utility juan-head {
+  font: var(--juan-head);
+}
+@utility juan-num {
+  font: var(--juan-num);
+}
+@utility juan-title {
+  font: var(--juan-title);
+}
+@utility juan-name {
+  font: var(--juan-name);
+}
+@utility tai {
+  font: var(--tai);
+}
+@utility tai-touch {
+  font: var(--tai-touch);
+}
+@utility tai-label {
+  font: var(--tai-label);
+}
+@utility tai-caption {
+  font: var(--tai-caption);
+}
+@utility tai-micro {
+  font: var(--tai-micro);
+}
+@utility tai-head {
+  font: var(--tai-head);
 }
 
 /* overflow 只在动画期间是 hidden(离散属性,fill 是 backwards,结束后回到 visible),

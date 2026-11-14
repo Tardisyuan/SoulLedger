@@ -883,6 +883,9 @@ class TestJestSelection:
             # 2026-11-13: no jest test imports the generated schema; its readers are always-run, vitest, pytest.
             ["packages/core/openapi/schema.yml"],
             ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml", "packages/core/src/api/generated/schema.ts"],
+            # 2026-11-14: the tokens JSON's reader (designTokensAreGenerated) is always-run; its outputs are read or traced.
+            ["packages/core/tokens/semantic.tokens.json"],
+            ["packages/core/tokens/primitive.tokens.json", "frontend/app/globals.css", "mobile/src/theme.generated.ts"],
         ],
     )
     def test_an_ordinary_source_change_is_selective(self, hook, changed):
@@ -900,6 +903,9 @@ class TestJestSelection:
             # The 2026-11-12 exemption is those three names, not every data file next to them.
             ["frontend/src/__tests__/support/egyVocabulary.json", "frontend/src/config/landing-stats.json"],
             ["frontend/src/__tests__/support/egyOffLexicon.json"],  # exists: not the deleted-file rule
+            # The 2026-11-14 exemption is the tokens directory, not every JSON under packages/core.
+            ["packages/core/src/config/creditsOss.json"],  # exists: not the deleted-file rule
+            ["packages/core/tokens/semantic.tokens.json", "packages/core/src/config/creditsLiterature.json"],
             ["scripts/run-gates.sh"],
             ["scripts/install-hooks.sh"],
             # A path that no longer exists: deleted, or the old half of a rename.
