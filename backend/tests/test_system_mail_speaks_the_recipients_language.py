@@ -31,6 +31,12 @@ RESET_TEXT = {
     "en": "Your code: {code}\nValid for 5 minutes. If you did not ask for this, ignore this email.",
     "egy": "Hesb Maa-Ek: {code}\nWenen At 5. Nen Djes: Nen Iri Khet.",
 }
+#: S2(2026-11-15):有灵魂账号的收件人,重置信末尾再带一行灵魂编号(`authentication/tasks.py::send_reset_code_mail`)。
+SOUL_CODE_LINE = {
+    "zh-Hans": "你的灵魂编号：{soul_code}",
+    "en": "Your soul code: {soul_code}",
+    "egy": "Ren Hesb Ba-Ek: {soul_code}",
+}
 RESET_SUBJECT = {
     "zh-Hans": "SoulLedger 密码重置验证码", "en": "SoulLedger Password reset code", "egy": "SoulLedger Wehem Sekhem · Hesb Maa",
 }
@@ -108,11 +114,17 @@ def _assert_credential(message, soul, locale):
     assert MESSAGES[locale]["credential"]["note_once"] in html
 
 
-def _assert_reset(message, code, locale):
+def _assert_reset(message, code, locale, soul_code=None):
+    """`soul_code` 给了就要有那一行;没给(没有灵魂账号的收件人)就整封只有验证码,一行编号都不许多。"""
     assert message.subject == RESET_SUBJECT[locale]
-    assert message.body == RESET_TEXT[locale].format(code=code)
+    expected = RESET_TEXT[locale].format(code=code)
+    if soul_code is not None:
+        expected += "\n" + SOUL_CODE_LINE[locale].format(soul_code=soul_code)
+    assert message.body == expected
     html = _html(message)
     assert f'<html lang="{locale}">' in html and FOOTER[locale] in html and code in html
+    if soul_code is not None:
+        assert soul_code in html
 
 
 @pytest.mark.parametrize("locale", ["zh-Hans", "en", "egy"])
@@ -130,7 +142,7 @@ def test_a_preference_decides_both_mails_whatever_the_civilization(
     soul, _ = _provisioned(django_capture_on_commit_callbacks, "CN_DIYU", f"pref-{locale}@example.com", locale=locale)
 
     message, code = _reset_mail(api_client, f"pref-{locale}@example.com")
-    _assert_reset(message, code, locale)
+    _assert_reset(message, code, locale, soul.soul_code)
     for other in set(RESET_TEXT) - {locale}:
         assert FOOTER[other] not in _html(message), f"{other} footer leaked into a {locale} mail"
 
@@ -150,7 +162,7 @@ def test_without_a_preference_each_civilization_has_its_default(api_client, djan
     _assert_credential(message, soul, locale)
 
     message, reset_code = _reset_mail(api_client, email)
-    _assert_reset(message, reset_code, locale)
+    _assert_reset(message, reset_code, locale, soul.soul_code)
 
 
 @pytest.mark.django_db
@@ -159,7 +171,7 @@ def test_an_unknown_civilization_falls_back_to_chinese(api_client, django_captur
     soul, message = _provisioned(django_capture_on_commit_callbacks, "XX_NOWHERE", "nowhere@example.com")
     _assert_credential(message, soul, "zh-Hans")
     message, code = _reset_mail(api_client, "nowhere@example.com")
-    _assert_reset(message, code, "zh-Hans")
+    _assert_reset(message, code, "zh-Hans", soul.soul_code)
 
 
 @pytest.mark.django_db
