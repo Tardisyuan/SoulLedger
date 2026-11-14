@@ -41,7 +41,7 @@ def test_outcome_matches_the_old_branches(civilization, verdict):
 
 
 def test_rebirth_capable_is_the_old_set():
-    assert REBIRTH_CAPABLE_CIVILIZATIONS == frozenset({Civilization.CHINESE, Civilization.GREEK})
+    assert frozenset({Civilization.CHINESE, Civilization.GREEK}) == REBIRTH_CAPABLE_CIVILIZATIONS
     assert all(isinstance(c, Civilization) for c in REBIRTH_CAPABLE_CIVILIZATIONS)
     # Absence: the two terminal cosmologies are not in it.
     assert not {Civilization.EUROPEAN, Civilization.EGYPTIAN} & REBIRTH_CAPABLE_CIVILIZATIONS

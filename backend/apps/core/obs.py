@@ -20,7 +20,7 @@ import logging
 import threading
 import time
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ def flush() -> bool:
         return True
     if time.monotonic() < _down_until:
         return False
-    hour_key = "obs:h:" + datetime.now(timezone.utc).strftime("%Y%m%d%H")
+    hour_key = "obs:h:" + datetime.now(UTC).strftime("%Y%m%d%H")
     try:
         pipe = _redis().pipeline(transaction=False)
         for field, n in batch.items():

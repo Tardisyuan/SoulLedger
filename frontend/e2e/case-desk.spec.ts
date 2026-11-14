@@ -35,12 +35,13 @@ async function signInAsJudge(page: Page) {
   await page.getByLabel("密码").fill("correct-horse-battery");
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/desk$/);
+  return api;
 }
 
 test.describe("案卷台", () => {
   test("a judge lands on the desk, J moves to the next case, Enter opens it", async ({ page, isMobile }) => {
     test.skip(isMobile, "393 opens a case full-screen on tap; the keys are the desktop desk's");
-    await signInAsJudge(page);
+    const api = await signInAsJudge(page);
 
     const desk = page.getByTestId("case-desk");
     await expect(desk.getByTestId(`desk-row-${MINE.id}`)).toHaveAttribute("aria-current", "true");

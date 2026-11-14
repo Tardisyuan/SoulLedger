@@ -3,8 +3,7 @@ Audit views - AuditLog ViewSet with filtering support.
 """
 import csv
 import json
-from datetime import date, datetime, time, timedelta
-from datetime import timezone as dt_timezone
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.db.models import Q
@@ -122,7 +121,7 @@ def _midnight(day, tz):
     """`day` 0 点(`tz`)的 aware datetime;落在 datetime 能表示的范围外(0001-01-01 在东区)时是 None ——
     那一端不设界,与 `__date` 在那一天的结果相同。"""
     try:
-        return datetime.combine(day, time.min, tzinfo=tz).astimezone(dt_timezone.utc)
+        return datetime.combine(day, time.min, tzinfo=tz).astimezone(UTC)
     except OverflowError:
         return None
 

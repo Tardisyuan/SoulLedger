@@ -25,10 +25,10 @@ and does not import the domain, and a change under `apps/core/` runs the whole b
 imports only `Civilization`, so `apps.judgment.models` can import it at top level; what lives in apps that
 import judgment (the routers, the reading builders) is resolved on first call (`_deferred`).
 """
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 from importlib import import_module
-from typing import Callable
 
 from apps.souls.models import Civilization
 

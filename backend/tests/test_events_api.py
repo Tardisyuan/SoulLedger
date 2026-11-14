@@ -1,7 +1,6 @@
 """
 Tests for SoulEvent (Events) API endpoints.
 """
-from datetime import UTC
 
 import pytest
 
