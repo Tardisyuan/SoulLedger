@@ -190,9 +190,9 @@ export function Fab({ onPress, label }: { onPress: () => void; label: string }) 
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
+      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? shade(t.ink) : t.ink }]}
     >
-      <Icon name="plus" size={22} color={t.onPlaque} strokeWidth={1.5} />
+      <Icon name="plus" size={22} color={t.s0} strokeWidth={1.5} />
     </Pressable>
   );
 }
@@ -464,9 +464,9 @@ export function FindSoulScreen() {
               testID="find-write"
               accessibilityRole="button"
               onPress={() => void write(lookup.card.user_id, lookup.card.ticket)}
-              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
+              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.ink) : t.ink }]}
             >
-              <Txt style={[styles.writeText, { color: t.onPlaque }]}>{tr("soul_app.chat.find.write")}</Txt>
+              <Txt style={[styles.writeText, { color: t.s0 }]}>{tr("soul_app.chat.find.write")}</Txt>
             </Pressable>
           </View>
         ) : lookup.state === "not_found" ? (

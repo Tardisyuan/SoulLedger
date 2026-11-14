@@ -213,10 +213,13 @@ const patternStyle = { position: "absolute", left: 0, top: 0 } as const;
 
 /**
  * v4 `.glowtop`: the page header's light — `radial-gradient(70% 100% at 30% 0%, glow × glowA, transparent 70%)`
- * on the page ground, where v3 had a solid band. glowA is v4's: dark .30, light .24 (「页头光 0.24」).
- * Behind everything, never carrying meaning.
+ * on the page ground, where v3 had a solid band. Behind everything, never carrying meaning.
+ *
+ * 第四十八批第三节: it counts as the seal (the web's head watermark), on two conditions — only under a page's
+ * head, and never stronger than the web's head glow (`--glowA`, globals.css: dark .30, light .22). v4 printed .24
+ * for light; that is over the web's, so it is .22 here too.
  */
-export const GLOW_ALPHA = { dark: 0.3, light: 0.24 } as const;
+export const GLOW_ALPHA = { dark: 0.3, light: 0.22 } as const;
 
 export function GlowTop({ color, scheme, width, height, testID }: { color: string; scheme: "dark" | "light"; width: number; height: number; testID?: string }) {
   return (
@@ -234,8 +237,9 @@ export function GlowTop({ color, scheme, width, height, testID }: { color: strin
 
 /**
  * v3 `CivilizationMotif context="stage"` (App.tsx; the web's `CivMotif`, JudgmentDeskStage.tsx):
- * each civilization's abstract figure stretched over the whole 「你现在在哪」 block, behind it, in
- * the civilization's colour at 9% (`.motif-stage`) — under 10%, never carrying meaning. Lines are
+ * each civilization's abstract figure stretched over the whole 「你现在在哪」 block, behind it — never carrying
+ * meaning. 第四十八批第三节 A7: the figure stays, its colour is ink at the paper texture's strength
+ * (`TEXTURE_ALPHA` in civHead.tsx: 6% dark / 5% light); until then it was the civilization's colour at 9%. Lines are
  * 2 wide; the hall's four nodes and 埃及's pivot are filled. The neutral skin has none.
  */
 const MOTIF: Record<Exclude<CivKey, "neutral">, { lines: string[]; nodes?: { x: number; y: number; s: number }[]; pivot?: boolean }> = {
@@ -253,13 +257,13 @@ const MOTIF: Record<Exclude<CivKey, "neutral">, { lines: string[]; nodes?: { x: 
   gr: { lines: ["M276-10c85 74-68 143 18 218 56 49-10 82 6 116", "M300 324c-11 57-88 71-117 139M300 324c19 61 101 70 135 139M183 463c-7 17-9 38-7 57M435 463c9 18 12 37 11 57", "M260 45c57 48-42 93 15 142"] },
 };
 
-export const STAGE_MOTIF_OPACITY = 0.09;
+export const STAGE_MOTIF_OPACITY = { dark: 0.06, light: 0.05 } as const;
 
-export function StageMotif({ civ, color, testID }: { civ: CivKey; color: string; testID?: string }) {
+export function StageMotif({ civ, color, scheme, testID }: { civ: CivKey; color: string; scheme: "dark" | "light"; testID?: string }) {
   if (civ === "neutral") return null;
   const m = MOTIF[civ];
   return (
-    <Svg testID={testID} pointerEvents="none" width="100%" height="100%" viewBox="0 0 600 520" preserveAspectRatio="none" style={motifStyle} opacity={STAGE_MOTIF_OPACITY}>
+    <Svg testID={testID} pointerEvents="none" width="100%" height="100%" viewBox="0 0 600 520" preserveAspectRatio="none" style={motifStyle} opacity={STAGE_MOTIF_OPACITY[scheme]}>
       {m.lines.map((d) => (
         <Path key={d} d={d} fill="none" stroke={color} strokeWidth={2} />
       ))}

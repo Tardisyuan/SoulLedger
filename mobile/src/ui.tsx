@@ -765,16 +765,17 @@ export function GoneState({ from, onBack, testID, style }: { from?: string; onBa
 
 /**
  * 第三十批 空态: over a WHOLE-PAGE empty state (书信, 朋友圈, 申请) the civilization's G mark (the armillary
- * sphere, the neutral skin's ledger) at 96 and 12% in its colour; the page then says one sentence and one
+ * sphere, the neutral skin's ledger) at 96, in ink at 10% (第四十八批第三节 A8, as the web's `.empty-mark`; until
+ * then the civilization's colour at 12%); the page then says one sentence and one
  * next step. Which page it is, the language bundle says. An empty section inside a page keeps `Empty`'s dash.
- * The 12% view holds no touch target (an iOS view under opacity 0 takes none; this one is not 0, and is inert).
+ * The 10% view holds no touch target (an iOS view under opacity 0 takes none; this one is not 0, and is inert).
  */
 export function PageEmptyArt() {
   const t = useTheme();
   const compact = useFlavorCompact();
   return (
     <View testID={`empty-hero-${t.civ}`} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none" style={[styles.emptyArt, styles.emptyMark]}>
-      <Emblem civ={t.civ} size={compact ? 64 : 96} stroke={t.plaque} />
+      <Emblem civ={t.civ} size={compact ? 64 : 96} stroke={t.ink} />
     </View>
   );
 }
@@ -1444,7 +1445,8 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
 // ── loading ────────────────────────────────────────────────────────────
 
 /**
- * 第三十批 加载: a 2px line in the civilization's colour runs across the top (no spinner), over s2 bars in
+ * 第三十批 加载: a 2px line runs across the top (no spinner) — in ink at 60% (第四十八批第三节 A9: only a
+ * progress line that takes a page head's top line keeps the civilization's colour; this one sits in the content), over s2 bars in
  * the shape of what is coming — hairline-ruled rows, static, no shimmer. Under reduce motion the line stands
  * still. `${testID}-bars` holds the bars.
  */
@@ -1467,7 +1469,7 @@ export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: strin
         <Animated.View
           style={[
             styles.progressRun,
-            { backgroundColor: t.plaque, transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [-0.32 * width, width] }) }] },
+            { backgroundColor: t.ink, opacity: 0.6, transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [-0.32 * width, width] }) }] },
           ]}
         />
       </View>
@@ -1665,7 +1667,7 @@ export const styles = StyleSheet.create({
   goneMark: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed" },
   emptyArt: { alignSelf: "center", marginBottom: space[2] },
   // 第三十批 空态: the G mark at 12%.
-  emptyMark: { opacity: 0.12 },
+  emptyMark: { opacity: 0.1 },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },

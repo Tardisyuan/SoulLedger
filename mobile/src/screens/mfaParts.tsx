@@ -1,7 +1,8 @@
 /**
  * The small parts the 两步验证 screens share (设计 第十八批 `SoulMfaApp`): the 3px cover line, a checkbox row,
  * an underlined text link, the six-digit box, the state card of a failed step, and the confirmation sheet.
- * Colours are the App's theme slots (`plaqueFill` is the web's `--color-main`); nothing is a bare colour.
+ * Colours are the App's theme slots; nothing is a bare colour. 第四十八批第三节 A10: the cover line and the sheet's
+ * top edge are plain hairlines (`hair`), no longer the civilization's colour.
  */
 import { type ReactNode } from "react";
 import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
@@ -12,10 +13,10 @@ import { useI18n } from "../i18n";
 import { clockOf, digitsOf, type StepState } from "../mfa";
 import { Interp, Input, Txt, useReducedMotion, useTheme } from "../ui";
 
-/** 3px, in the civilization's main colour: the top of every screen in this flow. */
+/** A plain hairline at the top of every screen in this flow (第四十八批 A10; it was 3px in the civilization's colour). */
 export function CoverRule() {
   const t = useTheme();
-  return <View testID="cover-rule" style={[styles.rule, { backgroundColor: t.plaqueFill }]} />;
+  return <View testID="cover-rule" style={[styles.rule, { backgroundColor: t.hair }]} />;
 }
 
 export function Heading({ children, size = 24 }: { children: ReactNode; size?: 24 | 28 }) {
@@ -210,7 +211,7 @@ export function MfaSheet({
           <View
             testID={testID}
             accessibilityViewIsModal
-            style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.plaqueFill, paddingBottom: 32 + insets.bottom }]}
+            style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: 32 + insets.bottom }]}
           >
             {children}
           </View>
@@ -227,7 +228,7 @@ export function ButtonPair({ children, style }: { children: ReactNode; style?: S
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  rule: { height: 3 },
+  rule: { height: 1 },
   h24: { fontFamily: family.ui[600], fontSize: 24, lineHeight: 32 },
   h28: { fontFamily: family.ui[600], fontSize: 28, lineHeight: 36 },
   checkRow: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12 },
@@ -238,6 +239,6 @@ const styles = StyleSheet.create({
   digits: { fontSize: 28, letterSpacing: 14, minHeight: 54 },
   card: { borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
   cardTitle: { fontFamily: family.ui[600] },
-  sheet: { borderTopWidth: 3, paddingTop: 24, paddingHorizontal: 16, gap: 16 },
+  sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: 16, gap: 16 },
   pair: { flexDirection: "row", gap: 8 },
 });

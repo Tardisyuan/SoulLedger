@@ -104,10 +104,10 @@ function FollowButton({ following, followedBy, onPress, busy, compact }: { follo
       onPress={onPress}
       style={({ pressed }) => [
         styles.smallFollow,
-        following ? { borderWidth: 1, borderColor: t.hair2 } : { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill },
+        following ? { borderWidth: 1, borderColor: t.hair2 } : { backgroundColor: pressed ? shade(t.ink) : t.ink },
       ]}
     >
-      <Txt style={[styles.smallFollowText, { color: following ? t.inkMuted : t.onPlaque }]}>{label}</Txt>
+      <Txt style={[styles.smallFollowText, { color: following ? t.inkMuted : t.s0 }]}>{label}</Txt>
     </Pressable>
   );
 }

@@ -1001,13 +1001,13 @@ function Dock({
               { minHeight: size, minWidth: size },
               secondary
                 ? { borderWidth: 1, borderColor: t.hair2, backgroundColor: pressed ? t.s1 : "transparent" }
-                : { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill },
+                : { backgroundColor: pressed ? shade(t.ink) : t.ink },
             ]}
           >
             {ANDROID ? (
-              <Icon name="send" size={20} color={secondary ? t.inkSubtle : t.onPlaque} strokeWidth={1.5} />
+              <Icon name="send" size={20} color={secondary ? t.inkSubtle : t.s0} strokeWidth={1.5} />
             ) : (
-              <Txt testID={secondary ? "send-secondary" : "send-primary"} style={[styles.sendText, { color: secondary ? t.inkSubtle : t.onPlaque }]}>
+              <Txt testID={secondary ? "send-secondary" : "send-primary"} style={[styles.sendText, { color: secondary ? t.inkSubtle : t.s0 }]}>
                 {tr("soul_app.chat.compose.send")}
               </Txt>
             )}

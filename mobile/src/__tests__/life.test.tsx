@@ -209,9 +209,9 @@ describe("v3 civilization marks on 本世", () => {
     ]);
     // 地府's texture is the 稿纸 verticals, 24 apart.
     expect(svg("band-texture").findByType(Path).props.d).toMatch(/^M0\.5 0V\d+M24\.5 0V/);
-    // .glowtop: the glow at v4's light-scheme 0.24, gone by 70% (jest reports light).
+    // .glowtop: the glow at the web's light-scheme head glow 0.22 (第四十八批: never over the web's; v4 printed 0.24), gone by 70% (jest reports light).
     expect(stops("band-glow")).toEqual([
-      [0, 0.24, v4.civ.cn.glow],
+      [0, 0.22, v4.civ.cn.glow],
       [0.7, 0, v4.civ.cn.glow],
     ]);
     // Never the civilization's colour, never the band's white: the civilization-coloured pattern is gone.
@@ -251,18 +251,18 @@ describe("v3 civilization marks on 本世", () => {
     expect(style().opacity).toBe(0);
   });
 
-  it("「你现在在哪」 has the stage motif behind it, in the civilization's colour under 10%", async () => {
+  it("「你现在在哪」 has the stage motif behind it, in ink at the paper texture's 5% (light; 第四十八批 A7)", async () => {
     await open();
     await settle();
     const motif = svg("stage-motif");
-    expect(motif.props.opacity).toBeLessThan(0.1);
-    expect(motif.props.opacity).toBeGreaterThan(0);
+    expect(motif.props.opacity).toBe(0.05);
     // First child: drawn under the label, the state and the road.
     const first = screen.getByTestId("life-now").children[0];
     expect(typeof first === "string" ? first : first.props.testID).toBe("stage-motif");
     const paths = motif.findAllByType(Path);
     expect(paths.length).toBeGreaterThan(0);
-    expect(paths.map((p) => p.props.stroke)).toEqual(paths.map(() => v4.civ.cn.tL));
+    expect(paths.map((p) => p.props.stroke)).toEqual(paths.map(() => v4.light.ink));
+    expect(paths.map((p) => p.props.stroke)).not.toContain(v4.civ.cn.tL);
   });
 
   it("the current state is v3's display: glyph and word both 56, the word in Noto Serif SC 600", async () => {

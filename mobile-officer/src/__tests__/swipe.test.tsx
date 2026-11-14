@@ -8,7 +8,7 @@ import { AccessibilityInfo, Animated, AppState, StyleSheet, type AppStateStatus 
 import { PASS_UNDO_MS, SwipeScreen } from "../screens/swipe";
 import { sealReadbackWished, setSealReadbackWished } from "../prefs";
 import { READBACK_BUTTON_H, READBACK_SEAL_FLEX } from "../screens/rejectSheet";
-import { ToastProvider } from "../shared";
+import { ToastProvider, themeFor } from "../shared";
 import { renderOfficer } from "./harness";
 
 const mockList = jest.fn();
@@ -350,5 +350,18 @@ describe("落印前先确认(用户 2026-11-14,WCAG 2.2.1 的「可关」):通�
     expect(mockConclude).not.toHaveBeenCalled();
     expect(screen.getByTestId("swipe-card-j-1")).toBeTruthy();
     await enabled("swipe-pass");
+  });
+});
+
+describe("第四十八批 A2:「通过」圆键是墨色实底", () => {
+  it("底是墨、边是墨,不是本殿的文明色", async () => {
+    serve();
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    const t = themeFor("CHINESE_UNDERWORLD", "light");
+    const style = StyleSheet.flatten(screen.getByTestId("swipe-pass").props.style);
+    expect(style).toMatchObject({ backgroundColor: t.ink, borderColor: t.ink });
+    expect([t.plaque, t.plaqueFill]).not.toContain(style.backgroundColor);
+    await act(async () => {});
   });
 });

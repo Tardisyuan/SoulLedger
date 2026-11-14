@@ -181,7 +181,7 @@ describe("the entry", () => {
     expect(screen.queryByTestId("assist-entry")).toBeNull();
   });
 
-  it("on the life tab (v3) it is a 48pt circle in the civilization's colour over the page, not in the band", async () => {
+  it("on the life tab (v3) it is a 48pt circle in solid ink (第四十八批 A5) over the page, not in the band", async () => {
     await boot(true);
     const band = screen.getByTestId("plaque");
     const ids = (band as unknown as { findAll: (p: (n: { props: { testID?: unknown } }) => boolean) => { props: { testID: string } }[] })
@@ -189,7 +189,8 @@ describe("the entry", () => {
       .map((n) => n.props.testID);
     expect([...new Set(ids)]).toEqual(["header-account"]);
     const entry = StyleSheet.flatten(screen.getByTestId("assist-entry").props.style);
-    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v4.civ.cn.sL });
+    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v4.light.ink });
+    expect(entry.backgroundColor).not.toBe(v4.civ.cn.sL);
     await act(async () => fireEvent.press(screen.getByTestId("assist-entry")));
     expect(screen.getByTestId("assist-panel")).toBeTruthy();
   });

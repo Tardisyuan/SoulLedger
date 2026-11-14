@@ -284,14 +284,15 @@ describe("the tab bar (补足 B11 / C14)", () => {
   };
   const label = (name: string) => flat(screen.getByTestId(`tab-${name}-label`));
 
-  it("第三十批: one character over a small label; the current is ink with a 14×2 rule in the civilization's colour, the rest --faint-text", () => {
+  it("第三十批: one character over a small label; the current is ink with a 14×2 ink rule (第四十八批 A1), the rest --faint-text", () => {
     const t = themeFor("CHINESE", "light");
     expect([t.plaque, t.ink]).toEqual([v4.civ.cn.tL, v4.light.ink]);
     wrap(bar(["本世", "转生", "书信", "朋友圈"], 2), signedIn());
     expect(["Life", "Applications", "Letters", "Circle"].map((n) => screen.getByTestId(`tab-${n}-glyph`, H).props.children)).toEqual(["世", "生", "信", "圈"]);
     expect(flat(screen.getByTestId("tab-Letters-glyph", H))).toMatchObject({ fontSize: 18, lineHeight: 22, fontFamily: "NotoSerifSC_600", color: t.ink });
     expect(screen.getAllByTestId("tab-current-mark", H)).toHaveLength(1);
-    expect(flat(screen.getByTestId("tab-current-mark", H))).toMatchObject({ backgroundColor: t.plaque, width: 14, height: 2 });
+    expect(flat(screen.getByTestId("tab-current-mark", H))).toMatchObject({ backgroundColor: t.ink, width: 14, height: 2 });
+    expect(flat(screen.getByTestId("tab-current-mark", H)).backgroundColor).not.toBe(t.plaque);
     expect(label("Letters")).toMatchObject({ color: t.ink, fontFamily: "SoulLedgerSans_600", fontSize: 11 });
     expect(label("Life")).toMatchObject({ color: t.faintText, fontFamily: "SoulLedgerSans_400" });
     expect(label("Life").color).not.toBe(t.plaque);
