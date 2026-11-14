@@ -1,4 +1,5 @@
 [
   "officer_app.detail.next",
-  "officer_app.search.recent"
+  "officer_app.search.recent",
+  "soul_app.login.reset_filled"
 ]

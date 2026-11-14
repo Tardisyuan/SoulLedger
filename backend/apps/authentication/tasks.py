@@ -208,6 +208,8 @@ def send_reset_code_mail(token):
 
     from django.core.cache import cache
 
+    from apps.soul_accounts.models import SoulAccount
+
     from .mail import MESSAGES, fill, mail_locale, send_neutral_mail
     from .models import User
 
@@ -222,8 +224,15 @@ def send_reset_code_mail(token):
     try:
         locale = mail_locale(user=user)
         pack = MESSAGES[locale]["reset_code"]
-        send_neutral_mail(f"SoulLedger {pack['title']}", fill(pack["text"], code=code), heading=pack["title"],
-                          rows=[(pack["code_label"], code)], notes=[pack["note"]], to=[entry["email"]],
+        text, rows = fill(pack["text"], code=code), [(pack["code_label"], code)]
+        # S2 (2026-11-15): the soul code rides along, so a soul that lost the number with the password gets both back.
+        account = SoulAccount.objects.select_related("soul").filter(user=user).first()
+        if account is not None:
+            soul_code = account.soul.soul_code
+            text += "\n" + fill(pack["soul_code_line"], soul_code=soul_code)
+            rows.append((MESSAGES[locale]["credential"]["soul_code_label"], soul_code))
+        send_neutral_mail(f"SoulLedger {pack['title']}", text, heading=pack["title"],
+                          rows=rows, notes=[pack["note"]], to=[entry["email"]],
                           locale=locale)
     except Exception:  # logged without the code; the soul asks again
         logging.getLogger(__name__).error("password reset mail could not be sent", exc_info=False)

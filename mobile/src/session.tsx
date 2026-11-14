@@ -30,7 +30,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
 import { clearOutbox } from "./chat";
-import { bioEnabled, readCredential, rememberAccount, spendAutoPrompt } from "./deviceLogin";
+import { bioEnabled, readCredential, rememberAccount, rememberedAccount, spendAutoPrompt } from "./deviceLogin";
 import { useI18n } from "./i18n";
 import { deviceTokenFor, forgetDevice, rememberDevice } from "./mfa";
 import { onForeground, setUnauthorizedHandler } from "./platform";
@@ -262,6 +262,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   /** The answer to a password or a device-credential sign-in, which have one shape. */
   const afterFirstStep = useCallback(
     async (response: SoulLoginOutcome, sent: string | undefined, soulCode: string): Promise<MfaChallenge | null> => {
+      // S1 (2026-11-15): the password (or credential) was right, so the number is remembered now -- a first sign-in
+      // that stops at 改密 or at the second step never reaches `land()`. The name follows there; a name already
+      // remembered for this same number is kept meanwhile.
+      const before = rememberedAccount();
+      rememberAccount(response.soul_code, before?.code === response.soul_code ? before.name : "");
       if (isMfaRequired(response)) {
         // The server did not honour the remembered phone (expired, voided, another account's): forget it.
         if (sent) forgetDevice(soulCode);

@@ -344,6 +344,58 @@ describe("B1 · the phone remembers the account", () => {
     expect(rememberedAccount()).toEqual({ code: CODE, name: "张三" });
     expect(screen.getByTestId("login-known")).toBeTruthy();
   });
+
+  it("S1: a first sign-in that stops at the forced password change already remembers the number (no name yet)", async () => {
+    stubApi({
+      "/soul-auth/login/": { status: 200, data: { ...TOKENS, account: { ...PROFILE.account, must_change_password: true } } },
+    });
+    await renderApp();
+    expect(rememberedAccount()).toBeNull();
+    typeCode(CODE);
+    typePassword("initial-pass");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await screen.findByTestId("change-password-submit");
+    expect(rememberedAccount()).toEqual({ code: CODE, name: "" });
+  });
+
+  it("S1: a first sign-in that stops at the second step already remembers the number", async () => {
+    stubApi({ "/soul-auth/login/": { status: 200, data: PENDING } });
+    await renderApp();
+    typeCode(CODE);
+    typePassword("the-password");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await screen.findByTestId("login-mfa");
+    expect(rememberedAccount()).toEqual({ code: CODE, name: "" });
+  });
+
+  it("S1: a wrong password remembers nothing", async () => {
+    stubApi({ "/soul-auth/login/": refusal("invalid_credentials") });
+    await renderApp();
+    typeCode(CODE);
+    typePassword("wrong");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await screen.findByTestId("login-error");
+    expect(rememberedAccount()).toBeNull();
+  });
+
+  it("S1: the same number signing in again keeps the name it already had until /me/ answers", async () => {
+    remembered();
+    stubApi({ "/soul-auth/login/": { status: 200, data: PENDING } });
+    await renderApp();
+    typePassword("the-password");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await screen.findByTestId("login-mfa");
+    expect(rememberedAccount()).toEqual({ code: CODE, name: "张三" });
+  });
+
+  it("S1: a number remembered without a name shows the card with the number only", async () => {
+    rememberAccount(CODE, "");
+    spendAutoPrompt();
+    await renderApp();
+    expect(screen.getByTestId("login-known")).toBeTruthy();
+    expect(screen.queryByTestId("login-known-name")).toBeNull();
+    expect(screen.getByTestId("login-known-code")).toHaveTextContent(GROUPED);
+  });
 });
 
 describe("B2 · 面容 / 指纹 after the first sign-in", () => {

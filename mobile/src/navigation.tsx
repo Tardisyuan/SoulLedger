@@ -194,10 +194,15 @@ const TAB_TITLES: Record<string, string> = {
   Circle: "soul_app.circle.tab",
 };
 
-/** Success goes back to sign-in carrying a notice — never into a session. */
+/** Success goes back to sign-in carrying a notice and the soul code the reset answered (S2) — never into a session. */
 function ForgotPassword({ navigation }: NativeStackScreenProps<RootParams, "ForgotPassword">) {
   return (
-    <ForgotPasswordScreen onDone={() => navigation.popTo("Login", { passwordReset: true })} onCancel={() => navigation.popTo("Login")} />
+    <ForgotPasswordScreen
+      onDone={(soulCode) =>
+        navigation.popTo("Login", { passwordReset: true, ...(soulCode ? { scanned: soulCode, at: Date.now() } : {}) })
+      }
+      onCancel={() => navigation.popTo("Login")}
+    />
   );
 }
 

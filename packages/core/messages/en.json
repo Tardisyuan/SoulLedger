@@ -5069,6 +5069,7 @@
       "soul_code_hint": "10 letters and digits · on your slip, or scan it",
       "scan": "Scan",
       "scanned": "✓ Filled in from the code",
+      "reset_filled": "✓ Your soul number, from the reset",
       "bad_char": "! A soul number doesn't use \"{{c}}\"",
       "bad_char_body": "Numbers never use 0, O, 1, I or L. Check your slip again.",
       "bad_symbol": "! Only letters and digits",
@@ -7630,7 +7631,8 @@
       "title": "Password reset code",
       "code_label": "Code",
       "note": "Valid for 5 minutes. If you did not ask for this, ignore this email.",
-      "text": "Your code: {{code}}\nValid for 5 minutes. If you did not ask for this, ignore this email."
+      "text": "Your code: {{code}}\nValid for 5 minutes. If you did not ask for this, ignore this email.",
+      "soul_code_line": "Your soul code: {{soul_code}}"
     },
     "credential": {
       "title": "Soul account",

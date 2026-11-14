@@ -112,7 +112,8 @@ export function LoginScreen() {
   const [soulCode, setSoulCode] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [scanned, setScanned] = useState(false);
+  // Where a filled-in number came from: the scanner (true), or 「忘记密码」 bringing it back ("reset", S2).
+  const [scanned, setScanned] = useState<boolean | "reset">(false);
   const [lapse, setLapse] = useState<Lapse | null>(null);
   // The password box instead of the 面容 button: 「输入密码」 was tapped, or the system said no.
   const [wantPassword, setWantPassword] = useState(false);
@@ -141,10 +142,11 @@ export function LoginScreen() {
       setError(null);
       setPassword("");
     }
-    // The scanner went back with a code: it is the number now, and the cursor belongs in the password.
+    // The scanner (or a finished reset, S2) went back with a code: it is the number now, and the cursor belongs in
+    // the password. Behind a remembered account's card the box is not shown, and the card is left as it is.
     if (params?.scanned && params.at !== arrival?.at) {
       setSoulCode(params.scanned);
-      setScanned(true);
+      setScanned(params.passwordReset ? "reset" : true);
       setError(null);
     }
   }
@@ -351,9 +353,12 @@ export function LoginScreen() {
           {account ? (
             <View testID="login-known" style={[styles.card, { borderColor: theme.hair, backgroundColor: theme.s0 }]}>
               <View style={styles.fill}>
-                <Txt testID="login-known-name" style={styles.knownName}>
-                  {account.name}
-                </Txt>
+                {/* S1: a first sign-in that stopped at 改密 / the second step remembered the number before the name. */}
+                {account.name ? (
+                  <Txt testID="login-known-name" style={styles.knownName}>
+                    {account.name}
+                  </Txt>
+                ) : null}
                 <SoulCodeText testID="login-known-code" code={account.code} />
               </View>
               <Pressable testID="login-switch" accessibilityRole="button" disabled={busy} onPress={() => setSwitching(true)} style={styles.switch}>
@@ -372,7 +377,7 @@ export function LoginScreen() {
               onComplete={() => passwordRef.current?.focus()}
               onScan={() => navigation.navigate("ScanCode")}
               editable={!busy}
-              scanned={scanned && soulCode.length === SOUL_CODE_LENGTH}
+              scanned={soulCode.length === SOUL_CODE_LENGTH && scanned}
             />
           )}
           {bioScreen ? null : (
