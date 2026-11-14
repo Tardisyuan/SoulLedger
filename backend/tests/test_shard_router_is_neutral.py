@@ -1,9 +1,10 @@
 """Stage 0 contract of `config.sharding.ShardRouter`: it is installed and routes nothing.
 
-A random sample of 20 models (seeded; the seed is in every failure message, replay it with
-SHARD_NEUTRAL_SEED=<seed>) is asked through Django's public `django.db.router` for a read and a write
+Every model (auto-created M2M through tables included) is asked through Django's public `django.db.router` for a read and a write
 alias, with no context, inside each of the four civilizations' halls (the tenant contextvar from
-apps/tenants/managers.py), and with an instance hint carrying that hall. Every answer is "default".
+apps/tenants/managers.py), and with an instance hint carrying that hall. Every answer is "default". All of them, not a sample:
+a router that misroutes one model is the shape later stages get wrong, and the 2026-11-15 review's
+one-model mutation (ChatBlock writes to civ_chinese) was caught by a 20-model sample 1 run in 5.
 
 Mutation that turns it red (applied once, 2026-11-15): make `ShardRouter.db_for_write` return
 `alias_for_civilization(get_current_tenant().civilization)` unconditionally -- every write case goes
@@ -11,9 +12,6 @@ red (and the no-context ones raise). The second mutation, `return "default"` in 
 `test_an_instance_hint_keeps_its_own_database` red: neutral means "as if there were no router", and
 with no router a row read with `.using(alias)` keeps reading its relations from that alias.
 """
-import os
-import random
-
 import pytest
 from django.apps import apps
 from django.db import router
@@ -24,8 +22,7 @@ from apps.tenants.managers import clear_current_tenant, set_current_tenant
 from apps.tenants.models import Tenant
 from config.sharding import ShardRouter
 
-SEED = int(os.environ.get("SHARD_NEUTRAL_SEED") or random.SystemRandom().randrange(2**32))
-MODELS = random.Random(SEED).sample(sorted(apps.get_models(), key=lambda m: m._meta.label), 20)
+MODELS = sorted(apps.get_models(include_auto_created=True), key=lambda m: m._meta.label)
 HALLS = {civ.value: Tenant(code=f"S0_{civ.value}", declared_civilization=civ.value) for civ in Civilization}
 
 
@@ -67,7 +64,7 @@ def test_an_instance_hint_keeps_its_own_database(civ):
             got = fn(model, instance=obj)
             if got != "some_other_alias":
                 wrong.append(f"{model._meta.label} {op} -> {got}")
-    assert not wrong, f"seed={SEED}, hall={civ}:\n  " + "\n  ".join(wrong)
+    assert not wrong, f"hall={civ}:\n  " + "\n  ".join(wrong)
 
 
 @pytest.mark.parametrize("civ", [None, *HALLS], ids=lambda c: c or "no-context")
@@ -85,4 +82,4 @@ def test_reads_and_writes_go_to_default(civ):
                     got = f"raised {exc!r}"
                 if got != "default":
                     wrong.append(f"{model._meta.label} {op} {'instance' if hint else 'bare'} -> {got}")
-    assert not wrong, f"seed={SEED} (SHARD_NEUTRAL_SEED={SEED} to replay), hall={civ}:\n  " + "\n  ".join(wrong)
+    assert not wrong, f"hall={civ}:\n  " + "\n  ".join(wrong)

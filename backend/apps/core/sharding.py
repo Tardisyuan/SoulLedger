@@ -13,6 +13,8 @@ Placement is derived, not declared:
   CONTROL    everything else, plus the apps the user kept global (D1: identities, RBAC, menus) and
              the few models in CONTROL_MODELS.
 """
+from functools import cache
+
 from django.apps import apps
 from django.conf import settings
 from django.db import models
@@ -29,6 +31,25 @@ CONTROL_APPS = frozenset({"authentication", "perm", "menus"})
 CONTROL_MODELS = {
     "soul_assist.AssistConfig": "the one global assistant config row; eval_soul_account is a pointer to "
                                 "a test identity, not an owner",
+    # User decision 2026-11-15: the soul's login identity is looked up globally (by code / e-mail) before
+    # any hall is known, so it stays with the other identities (D1); SoulAccount.soul becomes a bare id
+    # in 1B. Its MFA / device-login tables follow it because their only path ran through it. The push
+    # tables are per account (one token, one login session) and are kept with it by name.
+    "soul_accounts.SoulAccount": "the soul's login identity, looked up globally by code / e-mail (D1)",
+    "soul_push.PushDevice": "a push token belongs to one login account and session; follows SoulAccount",
+    "soul_push.PushPreference": "one row per login account; follows SoulAccount",
+    "soul_push.PushDelivery": "per-account push log beside its device; follows SoulAccount",
+}
+#: Paths chosen by hand where the derivation would find two of equal length (it raises rather than
+#: pick), or where the row belongs to a hall only through a CONTROL model. An override is the one way
+#: a path may run through a CONTROL model.
+TENANT_PATH_OVERRIDES = {
+    "chat.ChatBlock": "blocker__soul__tenant",  # the blocker's row: every read and write filters on blocker
+    # Ties with workflow__tenant: the application is the soul's; its approval workflow is opened in the
+    # soul's hall, so the two agree today, and if a soul moves the application goes with the soul (D6).
+    "soul_accounts.RebirthApplication": "soul__tenant",
+    # Soul conversations. Officer ones (account null, user set) have no hall and stay in control (D2).
+    "soul_assist.AssistConversation": "account__soul__tenant",
 }
 
 #: The column a model names its owning hall by when it has several tenant foreign keys
@@ -64,25 +85,27 @@ def _is_control_by_decision(model):
     return model._meta.app_label in CONTROL_APPS or model._meta.label in CONTROL_MODELS
 
 
-def tenant_path(model):
-    """ORM lookup from `model` to its owning Tenant ("tenant", "soul__tenant", ...), or None.
-
-    Shortest chain of forward foreign keys wins; among equal lengths a chain with no nullable
-    link wins, then the alphabetically first. Chains never pass through Tenant itself or a
-    CONTROL-by-decision model (a User's hall is not its rows' hall)."""
+def _derive_path(model):
+    """Shortest chain of forward foreign keys wins; among equal lengths a chain with no nullable link
+    wins. Two chains still tied raise: name one in TENANT_PATH_OVERRIDES. Chains never pass through
+    Tenant itself or a CONTROL-by-decision model (a User's hall is not its rows' hall) unless an
+    override says so."""
     model = model._meta.concrete_model
     if model is _tenant_model() or _is_control_by_decision(model):
         return None
+    if model._meta.label in TENANT_PATH_OVERRIDES:
+        return TENANT_PATH_OVERRIDES[model._meta.label]
     frontier = [((), False, model)]
     seen = {model}
-    while frontier:
-        found = []
+    found = []  # (hops, nullable, path); a model reached with an override counts its override's hops
+    while frontier and not (found and min(found)[0] <= len(frontier[0][0])):
         for path, nullable, m in frontier:
-            direct = _direct_tenant_field(m) if not _is_control_by_decision(m) else None
+            direct = TENANT_PATH_OVERRIDES.get(m._meta.label)
+            if direct is None and not _is_control_by_decision(m):
+                direct = _direct_tenant_field(m)
             if direct:
-                found.append((nullable, "__".join((*path, direct))))
-        if found:
-            return min(found)[1]
+                full = "__".join((*path, direct))
+                found.append((full.count("__") + 1, nullable, full))
         nxt = []
         for path, nullable, m in frontier:
             for f in m._meta.concrete_fields:
@@ -94,13 +117,42 @@ def tenant_path(model):
                 nxt.append(((*path, f.name), nullable or f.null, target))
         seen.update(m for _, _, m in nxt)
         frontier = nxt
-    return None
+    if not found:
+        return None
+    best = min(found)[:2]
+    tied = sorted(p for h, n, p in found if (h, n) == best)
+    if len(tied) > 1:
+        raise ValueError(f"{model._meta.label}: tenant paths {tied} tie; name one in TENANT_PATH_OVERRIDES")
+    return tied[0]
+
+
+@cache
+def _by_label():
+    """label_lower -> (placement, tenant path), derived once from the CURRENT models, auto-created M2M
+    through tables included. Looked up by label so a historical model (what a migration's RunPython,
+    `allow_migrate` and `placed_here` receive) is placed like the live one: an identity check against
+    the current Tenant would call every historical model CONTROL, silently."""
+    out = {}
+    for m in apps.get_models(include_auto_created=True):
+        path = _derive_path(m)
+        out[m._meta.label_lower] = (REFERENCE if m is _tenant_model() else SHARD if path else CONTROL, path)
+    return out
+
+
+def placement_of(app_label, model_name):
+    """Placement by name, the way `allow_migrate(db, app_label, model_name)` is asked. A model no
+    longer in the code is CONTROL: it can only have been created and dropped on the control database."""
+    return _by_label().get(f"{app_label}.{model_name}".lower(), (CONTROL, None))[0]
+
+
+def tenant_path(model):
+    """ORM lookup from `model` to its owning Tenant ("tenant", "soul__tenant", ...), or None.
+    Live and historical models alike (resolved by label)."""
+    return _by_label().get(model._meta.label_lower, (CONTROL, None))[1]
 
 
 def placement(model):
-    if model._meta.concrete_model is _tenant_model():
-        return REFERENCE
-    return SHARD if tenant_path(model) else CONTROL
+    return placement_of(model._meta.app_label, model._meta.model_name)
 
 
 def alias_for_civilization(civ):

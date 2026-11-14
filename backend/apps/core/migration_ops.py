@@ -16,8 +16,15 @@ def placed_here(schema_editor, apps, *labels):
     model it reads or writes, so a seed of a control-only table (menus, roles, permissions) is skipped
     on a shard. `router.allow_migrate_model` is Django's own test; while the router allows everything
     this is always True. Guarded by `tests/test_migrations_use_the_migrated_alias.py`.
+
+    On a civilization shard (any alias named `civ_*`) it is False for every model, SHARD, CONTROL and
+    REFERENCE alike: no seed or backfill runs there. A shard is created empty and filled only by the
+    stage-2 sync; a SHARD seed run per shard would write every civilization's rows, and rows with no
+    hall, into each of them (plan stage 2, assertions b and c). `tests/test_placement_by_label.py`.
     """
     alias = schema_editor.connection.alias
+    if alias.startswith("civ_"):
+        return False
     return all(router.allow_migrate_model(alias, apps.get_model(label)) for label in labels)
 
 
