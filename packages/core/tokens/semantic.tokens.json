@@ -207,8 +207,7 @@
             ".light": {
               "colorSpace": "oklch",
               "components": [0.204832, 0.006141, 271.1072]
-            },
-            "[data-civ]": "{color.main-ink}"
+            }
           }
         }
       }
@@ -240,8 +239,7 @@
             ".light": {
               "colorSpace": "oklch",
               "components": [0.204832, 0.006141, 271.1072]
-            },
-            "[data-civ]": "{color.main-ink}"
+            }
           }
         }
       }

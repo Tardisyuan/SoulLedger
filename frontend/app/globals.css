@@ -516,11 +516,12 @@
      文明色的范围(用户 2026-11-06 决定,撤销 v3 的「文明只进匾色,只给匾、立柱当前项、印、行首色标、
      主按钮五处用」):照 v4,每个文明 5 个值,按 <html data-civ="…"> 选,两套主题各一档 ——
        --color-main       v4 solid:主按钮、身份带等实底,上面只放 on-main 白字
-       --color-main-ink   v4 civT:文明色的**字**,同时是 accent / accent-ink / focus(链接、选中、焦点环)
+       --color-main-ink   v4 civT:文明色的**字**,同时是 focus(焦点环)。accent / accent-ink(链接、选中)不随文明,
+                          一律是墨(用户 2026-11-14)
        --color-glow       v4 glow:顶部光晕、当前项与选中行的底色混入(两主题同值,透明度由 --glow-alpha 管)
        --color-metal      v4 metal:当前项的 3px 标、角饰
        --color-side       v4 sideD / sideL:侧栏底
-     没有 data-civ(登录前)= 中性皮:accent / focus 回到 ink,其余取 `--color-civ-neutral*`。
+     没有 data-civ(登录前)= 中性皮:focus 回到 ink,其余取 `--color-civ-neutral*`。
      中性皮是 Design 第八批第 5 条定的(与 App 的 NEUTRAL_CIV 同值):civT 深 #B4B6BA / 浅 #54575C(确认原值);
      solid 深 #55575E / 浅 #5A606B(白字 7.21 / 6.32:1;浅色原来的 #16171A 与正文同色,主按钮和正文一样黑,
      现在与正文的明度差 2.83:1);glow #8E939C(两主题同值);metal 用品牌金 深 #ECAA3D / 浅 #8A6A24;
@@ -546,7 +547,7 @@
     /* 立柱底 = 中性侧栏底;有文明时侧栏读 --color-side。匾上题字色两个主题同值(v4 onSolid)。 */
     --color-pillar: 0.155270 0.004214 285.8987; /* #0C0C0E */
     --color-on-main: 1 0 0; /* #FFFFFF */
-    /* 强调 · 中性皮 = 墨;有文明时 [data-civ] 把这三个指到 --color-main-ink。accent-contrast 是强调底上的字 = 纸。 */
+    /* 强调 · 任何殿下都是墨(用户 2026-11-14,文明色不进强调与链接)。accent-contrast 是强调底上的字 = 纸。 */
     --color-accent: 0.963595 0.002651 106.4490;
     --color-accent-contrast: 0.178529 0.004066 285.9807;
     --color-accent-ink: 0.963595 0.002651 106.4490;
@@ -770,17 +771,16 @@
     --color-seal: var(--color-civ-gr-seal);
   }
   /* 中性皮的子树(总簿,第三十批第 2 步):品牌金的顶线与水印,不随管理员的殿换色。只换这三槽 ——
-     强调与焦点照旧跟 <html> 的殿走,四栏各自的文明色由栏上的 data-civ 给。 */
+     焦点照旧跟 <html> 的殿走(强调本来就是墨),四栏各自的文明色由栏上的 data-civ 给。 */
   [data-skin="neutral"] {
     --color-main-ink: var(--color-civ-neutral-ink);
     --color-glow: var(--color-civ-neutral-glow);
     --color-metal: var(--color-civ-neutral-metal);
   }
-  /* 强调、链接、焦点环随文明的字色(v4 `.btn.t` / `.tag` / `.btn:focus-visible` 都是 civT)。
-     中性皮不在这里:没有 data-civ 时三者是 :root / .light 里的墨。 */
+  /* 焦点环随文明的字色(v4 `.btn:focus-visible` 是 civT)。强调与链接不随文明,在任何殿下都是墨(用户 2026-11-14:
+     文明色只上四个记号 —— 页顶 2px 线、印、行程脊、焦点环 —— 和两处氛围:门栏底、卷宗页头的光晕与水印)。
+     中性皮不在这里:没有 data-civ 时焦点环是 :root / .light 里的墨。 */
   [data-civ] {
-    --color-accent: var(--color-main-ink);
-    --color-accent-ink: var(--color-main-ink);
     --color-focus: var(--color-main-ink);
   }
 

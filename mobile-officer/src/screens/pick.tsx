@@ -235,11 +235,11 @@ function StationRow({ node, sources, on, onToggle }: { node: ApprovalNode; sourc
           locked
             ? { backgroundColor: theme.inkSubtle, borderColor: theme.inkSubtle }
             : on
-              ? { backgroundColor: theme.plaqueFill, borderColor: theme.plaqueFill }
+              ? { backgroundColor: theme.ink, borderColor: theme.ink }
               : { backgroundColor: "transparent", borderColor: theme.inkMuted },
         ]}
       >
-        {on ? <Txt variant="body" style={{ color: locked ? theme.s0 : theme.onPlaque }}>✓</Txt> : null}
+        {on ? <Txt variant="body" style={{ color: theme.s0 }}>✓</Txt> : null}
       </View>
       <View style={{ flex: 1 }}>
         <Txt variant="bodyLg" tone={on ? "ink" : "muted"} style={on ? undefined : styles.struck}>
@@ -367,7 +367,8 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
                       style={[
                         styles.node,
                         { borderBottomColor: theme.hair },
-                        isCurrent ? { borderLeftWidth: 3, borderLeftColor: theme.plaqueFill, paddingLeft: space[5] - 3 } : null,
+                        // 现在这一站:墨,不是文明色(用户 2026-11-14:文明色只上顶线、印、脊、焦点环)。
+                        isCurrent ? { borderLeftWidth: 3, borderLeftColor: theme.ink, paddingLeft: space[5] - 3 } : null,
                       ]}
                     >
                       <Txt variant="body" tone={look.skipped || look.notReached ? "subtle" : "ink"} style={styles.glyph}>{look.glyph}</Txt>

@@ -38,8 +38,8 @@ import type {
 } from "@/src/components/workflow/page/types";
 
 /* 模板列表的行(第三十六批 第一节第 3 条,四个文明同一写法):文明色只给顶线、印、卷宗脊、焦点四处 ——
-   选中是 card2 底加 2px civT 竖线(焦点),别处不上文明色。分组标题与案卷台的分组同一写法(12 · 500 · faint · .06em)。 */
-const ROW_SELECTED = "bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-line))] shadow-[inset_2px_0_0_oklch(var(--color-main-ink))] text-[oklch(var(--color-ink))]";
+   选中是墨 7% 的底加 3px 墨色竖线(与案卷台的选中行同一写法,用户 2026-11-14),别处不上文明色。分组标题与案卷台的分组同一写法(12 · 500 · faint · .06em)。 */
+const ROW_SELECTED = "bg-[color-mix(in_oklch,oklch(var(--color-ink))_7%,transparent)] border-[oklch(var(--color-line))] shadow-[inset_3px_0_0_oklch(var(--color-ink))] text-[oklch(var(--color-ink))]";
 const ROW_IDLE = "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]";
 
 export default function WorkflowPage() {
