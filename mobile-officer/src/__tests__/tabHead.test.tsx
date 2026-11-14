@@ -36,7 +36,7 @@ describe("案卷台's head", () => {
     expect(svgIds()).toContain("tab-head-texture");
     expect(screen.queryByTestId("head-mark-cn")).toBeNull();
     expect(mark().props.importantForAccessibility).toBe("no-hide-descendants");
-    expect(mark().findAll((n) => n.type === "Text").map((n) => n.props.children)).toEqual(["秦", "廣", "殿"]);
+    expect(mark().findAll((n) => String(n.type) === "Text").map((n) => n.props.children)).toEqual(["秦", "廣", "殿"]);
   });
 
   it("sits left of the buttons (24 + their width + 16) and is drawn only while the title ends 24 short of it", async () => {
@@ -60,7 +60,7 @@ describe("案卷台's head", () => {
 
   it("a cached profile without hall names: 地府", () => {
     renderOfficer(<TabHead tab="queue" onAsk={jest.fn()} />, { user: DIYU });
-    expect(mark().findAll((n) => n.type === "Text").map((n) => n.props.children)).toEqual(["地", "府"]);
+    expect(mark().findAll((n) => String(n.type) === "Text").map((n) => n.props.children)).toEqual(["地", "府"]);
   });
 });
 
