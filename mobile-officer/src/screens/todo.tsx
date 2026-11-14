@@ -50,7 +50,8 @@ export function TodoTab({
   version,
   initialFilter,
 }: {
-  onOpen: (item: ItemRef) => void;
+  /** `sequence`: the openable rows of the group it sits in, in order -- for 「下一件」 after a decision (D1). */
+  onOpen: (item: ItemRef, sequence?: ItemRef[]) => void;
   highlight: ItemRef | null;
   gone?: ReadonlySet<string>;
   version?: number;
@@ -161,7 +162,7 @@ function TodoGroupRows({
   group: TodoGroup;
   highlight: ItemRef | null;
   gone?: ReadonlySet<string>;
-  onOpen: (item: ItemRef) => void;
+  onOpen: (item: ItemRef, sequence?: ItemRef[]) => void;
 }) {
   const { t } = useI18n();
   const viewOnly = (VIEW_ONLY_KINDS as readonly string[]).includes(kind);
@@ -179,7 +180,7 @@ function TodoGroupRows({
         <SectionLabel>{`${label} · ${group.count}`}</SectionLabel>
       </View>
       {rows!.map((item) => (
-        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} gone={gone} onOpen={viewOnly ? undefined : onOpen} />
+        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} gone={gone} onOpen={viewOnly ? undefined : (ref) => onOpen(ref, refsOf(rows!))} />
       ))}
       <MoreRow more={more} state={moreState} />
       {viewOnly ? (
@@ -287,6 +288,11 @@ const FEEDBACK_TAGS: Record<string, string> = {
   app: "soul_inbox.feedback.tags.app",
   other: "soul_inbox.feedback.tags.other",
 };
+
+/** The rows a group shows, as what opens them (only the kinds a detail can open). */
+function refsOf(rows: readonly TodoItem[]): ItemRef[] {
+  return rows.flatMap((r) => (isTodoKind(r.target.kind) ? [{ kind: r.target.kind, id: r.target.id }] : []));
+}
 
 /** `onOpen` absent: a view-only row (no ›, nothing to press). */
 function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight: boolean; gone?: ReadonlySet<string>; onOpen?: (item: ItemRef) => void }) {

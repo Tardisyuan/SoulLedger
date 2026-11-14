@@ -8244,7 +8244,8 @@
       "no_souls_title": "Nothing found",
       "no_souls_body": "Try another name or ID.",
       "group_case": "Cases",
-      "no_soul": "No soul matches this name or number"
+      "no_soul": "No soul matches this name or number",
+      "recent": "Recently opened"
     },
     "assist": {
       "entry": "Ask",
@@ -8257,6 +8258,7 @@
     },
     "detail": {
       "your_step": "Your step",
+      "next": "Next ({{n}}/{{total}})",
       "cosign": "Add signer",
       "reject": "Reject",
       "approve": "Approve",

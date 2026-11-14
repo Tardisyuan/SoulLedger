@@ -8244,7 +8244,8 @@
       "no_souls_title": "没有找到",
       "no_souls_body": "换个名字或编号再试。",
       "group_case": "案件",
-      "no_soul": "没有编号或姓名对得上的灵魂"
+      "no_soul": "没有编号或姓名对得上的灵魂",
+      "recent": "最近打开"
     },
     "assist": {
       "entry": "问一问",
@@ -8257,6 +8258,7 @@
     },
     "detail": {
       "your_step": "本人这一步",
+      "next": "下一件({{n}}/{{total}})",
       "cosign": "加签",
       "reject": "驳回",
       "approve": "批准",

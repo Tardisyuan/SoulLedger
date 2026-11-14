@@ -2,9 +2,12 @@
  * 查询: 查灵魂, read-only -- the list and the detail screen offer nothing that writes. 问一问 moved
  * to every tab's top bar in batch 39 (assist.tsx); the 查灵魂 / 问一问 switch is gone.
  *
- * One box, no switch (Design 第四十批 O-d): when the text looks like a whole case number (`looksLikeCaseNumber`) the
- * same search also asks the judgment list, and an exact match is pinned above the souls as a 「案件」 group -- shown,
- * never jumped to (as the web's search, 8g). A case that does not match exactly is not offered.
+ * One box, no switch (Design 第四十批 O-d): the same search also asks the judgment list -- by soul name, or a case
+ * number's beginning (the server's `^case_number`) -- and what it answers is pinned above the souls as a 「案件」
+ * group: shown, never jumped to (as the web's search, 8g).
+ *
+ * Convenience audit 2026-11-15 D2: it searches SEARCH_PAUSE_MS after the last keystroke (「搜索」 on the keyboard still
+ * searches at once), and an empty box shows 「最近打开」 -- the last cases and souls opened (recentOpened.ts).
  */
 import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { soulsApi, type SoulListItem } from "@soulledger/core/api/souls";
@@ -14,7 +17,8 @@ import { View } from "react-native";
 
 import { Row, StateView } from "../kit";
 import { MoreRow, useMoreRows, type Page } from "../paged";
-import { isDenied, looksLikeCaseNumber } from "../rules";
+import { readRecent } from "../recentOpened";
+import { isDenied } from "../rules";
 import { useSession } from "../session";
 import { Input, Screen, SectionLabel, Txt, space, useI18n } from "../shared";
 
@@ -39,6 +43,9 @@ export function SearchTab({
     </Screen>
   );
 }
+
+/** How long the search waits after the last keystroke before it asks the server (as 加签's, sheets.tsx). */
+const SEARCH_PAUSE_MS = 300;
 
 /**
  * A soul code typed with dashes (`QU3-3Q9F-W5F`) is sent compact: the backend's DRF SearchFilter splits on
@@ -66,9 +73,12 @@ function SoulLookup({
   const role = state.status === "signedIn" ? state.user.role : "";
   const [text, setText] = useState(initialQuery);
   const [result, setResult] = useState<{ status: "idle" | "loading" | "error" | "denied" | "done"; first: Page<SoulListItem> | null; query: string }>({ status: "idle", first: null, query: "" });
-  // The 「案件」 group: only exact case-number matches. A failed or refused judgment search just shows no group.
+  // The 「案件」 group. A failed or refused judgment search just shows no group.
   const [cases, setCases] = useState<Judgment[]>([]);
   const sent = useRef(0);
+  // The query last sent, so the pause does not send again what 「搜索」 (or the way back) just sent.
+  const lastSent = useRef("");
+  const [recent] = useState(readRecent);
   const { query } = result;
   const fetchPage = useCallback((page: number) => soulsApi.list({ search: soulSearchTerm(query), page }).then((r) => r.data), [query]);
   const { rows, more, moreState } = useMoreRows(result.first, fetchPage);
@@ -77,15 +87,14 @@ function SoulLookup({
     const query = text.trim();
     if (!query) return;
     const mine = ++sent.current;
+    lastSent.current = query;
     onSearch?.(query);
     setResult({ status: "loading", first: null, query });
     setCases([]);
-    if (looksLikeCaseNumber(query)) {
-      judgmentApi.list({ search: query }).then(
-        (r) => mine === sent.current && setCases(r.data.results.filter((j) => j.case_number?.toLowerCase() === query.toLowerCase())),
-        () => undefined
-      );
-    }
+    judgmentApi.list({ search: query }).then(
+      (r) => mine === sent.current && setCases(r.data.results),
+      () => undefined
+    );
     soulsApi.list({ search: soulSearchTerm(query) }).then(
       (r) => mine === sent.current && setResult({ status: "done", first: r.data, query }),
       (e: unknown) => mine === sent.current && setResult({ status: isDenied(e) ? "denied" : "error", first: null, query })
@@ -97,6 +106,25 @@ function SoulLookup({
     if (initialQuery.trim()) search();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount, with the query it was given
   }, []);
+  // Typing searches after a pause; the timer reads `lastSent` when it fires, so a search 「搜索」 already sent is not repeated.
+  useEffect(() => {
+    const query = text.trim();
+    if (!query) return;
+    const id = setTimeout(() => {
+      if (query !== lastSent.current) search();
+    }, SEARCH_PAUSE_MS);
+    return () => clearTimeout(id);
+  }, [text, search]);
+  // An emptied box drops the last answer (one still on its way is ignored) and shows 「最近打开」 again.
+  const change = (next: string) => {
+    setText(next);
+    if (next.trim()) return;
+    sent.current++;
+    lastSent.current = "";
+    onSearch?.("");
+    setResult({ status: "idle", first: null, query: "" });
+    setCases([]);
+  };
 
   const souls = result.status === "done" && rows && rows.length > 0;
   return (
@@ -107,7 +135,7 @@ function SoulLookup({
           label={t("officer_app.search.souls")}
           placeholder={t("officer_app.search.placeholder")}
           value={text}
-          onChangeText={setText}
+          onChangeText={change}
           returnKeyType="search"
           onSubmitEditing={search}
         />
@@ -115,6 +143,26 @@ function SoulLookup({
           {t("officer_app.search.read_only")}
         </Txt>
       </View>
+      {text.trim() === "" && recent.length > 0 ? (
+        <View testID="search-recent">
+          <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
+            <SectionLabel>{t("officer_app.search.recent")}</SectionLabel>
+          </View>
+          {recent.map((e) => {
+            const open = e.type === "soul" ? () => onOpen(e.id) : onOpenJudgment ? () => onOpenJudgment(e.id) : undefined;
+            return (
+              <Row
+                key={`${e.type}:${e.id}`}
+                testID={`recent-row-${e.type}-${e.id}`}
+                title={e.title}
+                lines={[[t(e.type === "soul" ? "search.group_souls" : "officer_app.search.group_case"), e.line].filter(Boolean).join(" · ")]}
+                onPress={open}
+                right={open ? <Txt tone="muted">›</Txt> : undefined}
+              />
+            );
+          })}
+        </View>
+      ) : null}
       {cases.length > 0 ? (
         <View testID="search-cases">
           <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>

@@ -18,7 +18,6 @@ import {
   judgmentAdminItems,
   landingGoneKey,
   landingOf,
-  looksLikeCaseNumber,
   noticeIsDeskOnly,
   noticeLanding,
   loginFailureKey,
@@ -296,10 +295,6 @@ describe("O-c / O-d / O-f", () => {
     expect(goneKey({ type: "soul", id: "s" })).toBe(landingGoneKey({ tab: "todo", soul: "s" }));
     expect(goneKey({ type: "judgment", id: "x" })).not.toBe(goneKey({ type: "soul", id: "x" }));
     expect(landingGoneKey(null)).toBeNull();
-  });
-  it("only a whole case number adds the 案件 group", () => {
-    for (const q of ["CN-2026-0042", " cn-2026-0042 ", "SL-2026-10000", "EGDUAT-2026-0001"]) expect(looksLikeCaseNumber(q)).toBe(true);
-    for (const q of ["CN-2026-004", "CN-2026", "王守仁", "S00420031", "CN 2026 0042", "CN-26-0042"]) expect(looksLikeCaseNumber(q)).toBe(false);
   });
   it("sentence-plan changes are a to-do kind that only opens the desk", () => {
     expect(TODO_GROUPS.map((g) => g.kind)).toContain("sentence_change");

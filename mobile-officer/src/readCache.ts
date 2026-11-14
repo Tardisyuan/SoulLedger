@@ -19,6 +19,7 @@ import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { currentOwner, readOwned } from "./owner";
+import { clearRecent } from "./recentOpened";
 import { useOnline, useReloadOnReconnect, useRemote } from "./shared";
 
 export const CACHE_KEY = "officer_read_cache";
@@ -107,6 +108,7 @@ export function clearReadCache(): void {
   pending = null;
   mem = null;
   platform().persistent.remove(CACHE_KEY);
+  clearRecent(); // 查询's 「最近打开」 goes with it (recentOpened.ts)
   setShownAt(null);
 }
 
