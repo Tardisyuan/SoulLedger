@@ -11,6 +11,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { useRecordOpened } from "@/src/lib/recentOpened";
 import {
   soulsApi,
   judgmentApi,
@@ -76,7 +77,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { useConfirm } from "@/src/hooks/useConfirm";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
-import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { resolveEnumDisplay, shortIdentifier } from "@/src/lib/domainDisplay";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
@@ -592,6 +593,8 @@ export default function SoulDetailPage() {
           }
         : undefined;
   usePlaque({ title: t("plaque.soul"), hall, caseRef });
+  // 「最近打开」记每一种进来的方式,不只搜索面板(D5)。与搜索面板记的是同一行字。
+  useRecordOpened(user?.id, soulQuery.data ? { kind: "soul", id: soulQuery.data.id, href: `/souls/${soulQuery.data.id}`, title: soulQuery.data.name, sub: shortIdentifier(soulQuery.data.id) } : null);
   /* 卷宗脊与页签(第三十批第 3 步):与审判页同一份页头。脊的「现在」:地府读十三站与最相关那一场的殿,其余读行程。
      页签的后四节是本页的锚点;卷宗 = 这一页。 */
   const spine = useSpineNow({

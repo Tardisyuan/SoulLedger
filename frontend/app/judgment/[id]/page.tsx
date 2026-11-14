@@ -66,6 +66,7 @@ import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
 import { formatHistoricalDate, formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { useRecordOpened } from "@/src/lib/recentOpened";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { AmendmentPlanChanges } from "@/src/components/sentence-plan/AmendmentPlanChanges";
@@ -666,6 +667,13 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   // 殿名:这个案子的殿;案子没记殿(`court` 是空串)就写刑名司。
   const hall = useHall(courtLabel(t, judgment?.court, locale) || t("plaque.office.trials"));
   usePlaque({ title: t("plaque.desk"), hall, caseNumber: judgment?.case_number });
+  // 「最近打开」记每一种进来的方式,不只搜索面板(D5)。与搜索面板记的是同一行字。
+  useRecordOpened(
+    user?.id,
+    judgment
+      ? { kind: "judgment", id: judgment.id, href: `/judgment/${judgment.id}`, title: judgment.case_number, sub: [judgment.soul_name, courtLabel(t, judgment.court, locale)].filter(Boolean).join(" · ") }
+      : null
+  );
 
   if (isLoading) {
     return <PageSpinner label={t("judgment.detail.loading")} />;
