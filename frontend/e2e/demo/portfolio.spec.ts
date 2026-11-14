@@ -40,7 +40,6 @@ test("the safeguards tour enters as the administrator and lights up something on
     await page.getByTestId("demo-tour-next").click();
   }
   expect(dark, "steps with nothing highlighted").toEqual([]);
-  await page.locator('[data-testid="demo-tour-badge"][data-finished]').click();
   await expect(page.locator('[data-testid="demo-tour"][data-finished]')).toBeVisible();
   await expect(page.locator('[data-testid^="demo-tour-other-"]')).toHaveCount(4);
   clean(seen, "guard tour");

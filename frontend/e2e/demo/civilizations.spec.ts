@@ -36,15 +36,15 @@ for (const [skin, role] of SKINS) {
     }
     expect(steps).toBe(skin === "cn" || skin === "gr" ? 6 : 5);
     expect(dark, "steps with nothing highlighted").toEqual([]);
-    // The end folds to a chip at once, off the page (review r2): the chip opens the end card, 留在这里 folds it again.
+    // The end card shows once; 留在这里 folds it to a chip (review r2), which opens it again.
     const chip = page.locator('[data-testid="demo-tour-badge"][data-finished]');
-    await expect(chip).toBeVisible();
-    await expect(card).toHaveCount(0);
-    await chip.click();
     await expect(page.locator('[data-testid="demo-tour"][data-finished]')).toBeVisible();
+    await expect(chip).toHaveCount(0);
     await page.getByTestId("demo-tour-stay").click();
     await expect(card).toHaveCount(0);
     await expect(chip).toBeVisible();
+    await chip.click();
+    await expect(page.locator('[data-testid="demo-tour"][data-finished]')).toBeVisible();
     clean(seen, `tour ${skin}`);
   });
 }

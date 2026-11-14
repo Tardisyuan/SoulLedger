@@ -517,8 +517,8 @@ export default function DemoTour() {
     const civ = guard ? "" : t(`demo.civ.${tour.skin}.name`);
     const total = tour.steps.length;
     if (state.finished && state.collapsed) {
-      // Skipped or walked to the end, the card folds to a chip at once: left open, the 「导览已跳过」 card sat over the
-      // lower half of the dossier for the rest of the visit (review r2, 2026-11-14). The chip opens it again.
+      // A skipped tour folds to a chip at once; a finished one shows its end card first and folds when that is closed. Left
+      // open, the 「导览已跳过」 card sat over the lower half of the dossier for the rest of the visit (review r2, 2026-11-14).
       const doneTitle = state.skipped ? "demo.tour.skipped_title" : guard ? "demo.tour.guard.done_title" : "demo.tour.done_title";
       card = (
         <button
@@ -582,7 +582,7 @@ export default function DemoTour() {
       // 试一试越权、问一问那两步的卡片本身就是要点的东西,不收成一行。
       const foldable = narrow && !step.probe && !step.assist;
       const nextButton = here ? (
-        <button type="button" data-testid="demo-tour-next" className="band-colour h-9 shrink-0 px-3 text-sm font-semibold" onClick={() => (last ? update({ finished: true, collapsed: true }) : go(state.step + 1))}>
+        <button type="button" data-testid="demo-tour-next" className="band-colour h-9 shrink-0 px-3 text-sm font-semibold" onClick={() => (last ? update({ finished: true }) : go(state.step + 1))}>
           {t("demo.tour.next")} →
         </button>
       ) : (

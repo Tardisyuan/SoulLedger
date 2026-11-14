@@ -1,5 +1,5 @@
 /**
- * The demo tour, skipped or walked to its end, folds to a chip at once (review r2, 2026-11-14): the 「导览已跳过」 card
+ * The demo tour, skipped, folds to a chip at once (walked to its end: after its end card is closed) (review r2, 2026-11-14): the 「导览已跳过」 card
  * used to stay open at the bottom right for the rest of the visit, over the lower half of the dossier. The chip opens the
  * end card again; 留在这里 folds it back; 重看导览 starts the tour over from its first step.
  */
@@ -66,10 +66,14 @@ it("skipping leaves a chip, not the card over the page; the chip opens the card 
   expect(screen.getByTestId("demo-tour-badge")).toBeInTheDocument();
 });
 
-it("the last 下一步 folds to the chip too, which says the tour is done", async () => {
+it("the last 下一步 shows the end card once; closed, it folds to a chip that says the tour is done", async () => {
   mockPath = "/judgment";
   await show({ step: 1 });
   await click("demo-tour-next");
+  expect(screen.getByTestId("demo-tour")).toHaveAttribute("data-finished");
+  expect(screen.getByTestId("demo-tour")).toHaveTextContent(tours.done_title);
+  expect(screen.queryByTestId("demo-tour-badge")).toBeNull();
+  await click("demo-tour-stay");
   expect(screen.queryByTestId("demo-tour")).toBeNull();
   expect(screen.getByTestId("demo-tour-badge")).toHaveTextContent(tours.done_title);
   expect(screen.getByTestId("demo-tour-badge")).not.toHaveTextContent(tours.skipped_title);
