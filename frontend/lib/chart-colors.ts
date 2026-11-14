@@ -155,7 +155,7 @@ const DARK: ChartColors = {
     demerit: "oklch(0.946168 0.032488 229.2456)",
   },
   CHART_CHROME: {
-    grid: "oklch(0.297319 0.005579 271.2268)",
+    grid: "oklch(1 0 0 / 0.12)",
     axis: "oklch(0.963595 0.002651 106.4490)",
     tick: "oklch(0.775874 0.006082 264.5259)",
     tooltipBg: "oklch(0.222322 0.006013 271.1393)",
@@ -187,7 +187,7 @@ const LIGHT: ChartColors = {
     demerit: "oklch(0.259075 0.045425 251.0858)",
   },
   CHART_CHROME: {
-    grid: "oklch(0.940070 0 0)",
+    grid: "oklch(0 0 0 / 0.12)",
     axis: "oklch(0.204832 0.006141 271.1072)",
     tick: "oklch(0.455822 0.008971 260.7269)",
     tooltipBg: "oklch(1 0 0)",

@@ -136,7 +136,7 @@ describe("PermissionDenied", () => {
     // The mock returns unknown keys as-is: the sentence is drawn from its own key.
     expect(screen.getByTestId("permission-denied-ask")).toHaveTextContent("permission.ask_admin");
     expect(zh.permission.ask_admin).toBe("请找本殿管理员。");
-    expect(en.permission.ask_admin).toBe("Ask your hall's administrator.");
+    expect(en.permission.ask_admin).toBe("Ask your hall’s administrator.");
     // Administrators hang off the tenant (User.tenant; the password-help task notifies the
     // tenant's own ADMINs), so Design's `Per Pen` variant — not the court's `Wesekhet Pen`.
     expect(egy.permission.ask_admin).toBe("Dbh Er Sab Hery En Per Pen");

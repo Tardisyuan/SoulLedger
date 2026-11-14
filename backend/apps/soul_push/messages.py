@@ -93,7 +93,7 @@ MESSAGES = {
         },
         "appeal_upheld": {
             "title": "Appeal reviewed: the verdict stands",
-            "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the reviewer's note.",
+            "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the reviewer’s note.",
         },
         "appeal_amended": {
             "title": "Appeal reviewed: the verdict was changed",
@@ -106,7 +106,7 @@ MESSAGES = {
         },
         "wangsi_upheld_late": {
             "title": "Grievance upheld",
-            "body": "Your grievance was found true. Open Soul Ledger to read the reviewer's note.",
+            "body": "Your grievance was found true. Open Soul Ledger to read the reviewer’s note.",
         },
         "wangsi_delivered": {
             "title": "Grievance upheld: delivered",
@@ -115,7 +115,7 @@ MESSAGES = {
         },
         "wangsi_rejected": {
             "title": "Grievance not upheld",
-            "body": "Your grievance was not found true. Open Soul Ledger to read the reviewer's note.",
+            "body": "Your grievance was not found true. Open Soul Ledger to read the reviewer’s note.",
         },
         "disposition_executed": {
             "title": "Disposition carried out",

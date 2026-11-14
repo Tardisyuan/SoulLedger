@@ -77,7 +77,7 @@ MESSAGES = {
         "sentence_plan_cancelled": {"title": "Placement plan cancelled", "body": "The placement plan of soul {{soul}} was cancelled. The remaining stops are waived and the plan counts as complete.", "title_by_civ": {"cn": "Sentence plan cancelled"}, "body_by_civ": {"cn": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."}},
         "sentence_plan_amended": {"title": "Placement plan changed", "body": "The placement plan of soul {{soul}} has changed, involving {{tenant}}.", "title_by_civ": {"cn": "Sentence plan changed"}, "body_by_civ": {"cn": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."}},
         "sentence_request_pending": {"title": "Placement plan request pending", "body": "{{tenant}} has filed a request on the placement plan of soul {{soul}}. It awaits the original judge.", "title_by_civ": {"cn": "Sentence plan request pending"}, "body_by_civ": {"cn": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."}},
-        "sentence_request_decided": {"title": "Placement plan request decided", "body": "The original judge has decided this hall's request on the placement plan of soul {{soul}}. Open it to see.", "title_by_civ": {"cn": "Sentence plan request decided"}, "body_by_civ": {"cn": "The original judge has decided this hall's request on the sentence plan of soul {{soul}}. Open it to see."}},
+        "sentence_request_decided": {"title": "Placement plan request decided", "body": "The original judge has decided this hall’s request on the placement plan of soul {{soul}}. Open it to see.", "title_by_civ": {"cn": "Sentence plan request decided"}, "body_by_civ": {"cn": "The original judge has decided this hall’s request on the sentence plan of soul {{soul}}. Open it to see."}},
         "sentence_node_active": {"title": "Placement stop begun", "body": "Soul {{soul}} has arrived. Stop {{order}} of its placement plan begins in {{tenant}}.", "title_by_civ": {"cn": "Sentence stop begun"}, "body_by_civ": {"cn": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."}},
         "sentence_node_done": {"title": "Placement stop ended", "body": "Stop {{order}} ({{tenant}}) of the placement plan of soul {{soul}} has ended.", "title_by_civ": {"cn": "Sentence stop ended"}, "body_by_civ": {"cn": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."}},
         "sentence_node_waiting": {"title": "Held after serving", "body": "Soul {{soul}} has served stop {{order}} in {{tenant}} and stays there while a judgment is open. It returns once the judgment is concluded or withdrawn."},
@@ -92,9 +92,9 @@ MESSAGES = {
         "judgment_reassign_requested": {"title": "Reassignment requested", "body": "{{by}} asks for the case of {{soul}} to be reassigned"},
         "judgment_reassign_requested_with_reason": {"title": "Reassignment requested", "body": "{{by}} asks for the case of {{soul}} to be reassigned. Reason: {{reason}}"},
         "dispatch_proposed": {"title": "Dispatch proposal received", "body": "{{source}} proposes to send soul {{soul}} to your hall. It awaits your approval."},
-        "dispatch_approved": {"title": "Dispatch proposal approved", "body": "{{target}} approved your hall's proposal to send soul {{soul}}."},
-        "dispatch_rejected": {"title": "Dispatch proposal rejected", "body": "{{target}} rejected your hall's proposal to send soul {{soul}}. Reason: {{reason}}"},
-        "dispatch_rejected_bare": {"title": "Dispatch proposal rejected", "body": "{{target}} rejected your hall's proposal to send soul {{soul}}."},
+        "dispatch_approved": {"title": "Dispatch proposal approved", "body": "{{target}} approved your hall’s proposal to send soul {{soul}}."},
+        "dispatch_rejected": {"title": "Dispatch proposal rejected", "body": "{{target}} rejected your hall’s proposal to send soul {{soul}}. Reason: {{reason}}"},
+        "dispatch_rejected_bare": {"title": "Dispatch proposal rejected", "body": "{{target}} rejected your hall’s proposal to send soul {{soul}}."},
         "dispatch_cancelled": {"title": "Dispatch proposal cancelled by its sender", "body": "{{source}} cancelled its proposal to send soul {{soul}}. Reason: {{reason}}"},
         "dispatch_return_blocked": {
             "title": "Residence return blocked",
@@ -107,18 +107,18 @@ MESSAGES = {
         "judgment_released_for_you": {"title": "Case released", "body": "{{by}} released your case of {{soul}}; it is unclaimed again. Reason: {{reason}}"},
         "judgment_deferred_for_you": {"title": "Case deferred", "body": "{{by}} deferred your case of {{soul}}. Reason: {{reason}}"},
         "judgment_undeferred_for_you": {"title": "Case no longer deferred", "body": "{{by}} lifted the deferral on your case of {{soul}}. Reason: {{reason}}"},
-        "officer_handover_received": {"title": "Work handed over to you", "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} City Gods, {{letters}} letters."},
+        "officer_handover_received": {"title": "Work handed over to you", "body": "{{by}} handed {{from}}’s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} City Gods, {{letters}} letters."},
         "death_sync_retry_failed": {"title": "Death registration retry failed", "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."},
         "workflow_assigned": {"title": "Approval waiting on you", "body": "The approval flow {{workflow}} of soul {{soul}} is waiting on you."},
         "workflow_node_passed": {"title": "Approval flow update", "body": "The approval flow {{workflow}} of soul {{soul}} has passed {{node}}."},
         "workflow_timeout_reminder": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours. Please handle it soon."},
         "workflow_timeout_escalated": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."},
         "workflow_timeout_failed": {"title": "Approval timeout failed", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} timed out, but its timeout action could not be carried out. The flow waits at that step; please handle it by hand."},
-        "workflow_pick_nodes": {"title": "Pick this realm's stations", "body": "{{soul}} · approval flow from {{realm}}; this realm is no. {{order}}. Pick before your turn."},
-        "workflow_pick_waiting": {"title": "A flow is waiting for this realm to pick", "body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks."},
-        "workflow_pick_overdue": {"title": "{{realm}} hasn't picked in 3 days", "body": "{{soul}} · the flow has waited at {{realm}} for {{n}} days. Remind again, or go with the default flow."},
+        "workflow_pick_nodes": {"title": "Pick this realm’s stations", "body": "{{soul}} · approval flow from {{realm}}; this realm is no. {{order}}. Pick before your turn."},
+        "workflow_pick_waiting": {"title": "A flow is waiting for this realm to pick", "body": "{{soul}} · {{realm}}’s stations are done; it continues once this realm picks."},
+        "workflow_pick_overdue": {"title": "{{realm}} hasn’t picked in 3 days", "body": "{{soul}} · the flow has waited at {{realm}} for {{n}} days. Remind again, or go with the default flow."},
         "workflow_nodes_adjusted": {"title": "Stations changed in an approval flow", "body": "{{soul}} · {{by}}: restored {{added}}, skipped {{skipped}}. Reason: {{reason}}"},
-        "workflow_pick_withdrawn": {"title": "Pick-stations task withdrawn", "body": "The cross-realm judgment \"{{title}}\" was cancelled; no need to pick stations for {{soul}}."},
+        "workflow_pick_withdrawn": {"title": "Pick-stations task withdrawn", "body": "The cross-realm judgment “{{title}}” was cancelled; no need to pick stations for {{soul}}."},
         "cross_judgment_concluded": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} has concluded: passed."},
         "cross_judgment_concluded_fail": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} failed."},
         "cross_judgment_cancelled": {"title": "Cross-realm judgment cancelled", "body": "The cross-realm judgment {{title}} was cancelled. Reason: {{reason}}"},
@@ -132,7 +132,7 @@ MESSAGES = {
         "rebirth_status_approved": {"title": "Rebirth application update", "body": "Your rebirth application was approved."},
         "cooldown_decided_approved": {"title": "Cooldown shortening decided", "body": "Your request to shorten the cooldown was approved."},
         "cooldown_decided_rejected": {"title": "Cooldown shortening decided", "body": "Your request to shorten the cooldown was rejected."},
-        "assistant_cap_warning": {"title": "Assistant spend at 80% of this month's cap", "body": "Estimated spend this month is {{spent}} against a cap of {{cap}}. The assistant switches off at the cap; the month rolls over on the 1st at 8:00 Beijing time."},
+        "assistant_cap_warning": {"title": "Assistant spend at 80% of this month’s cap", "body": "Estimated spend this month is {{spent}} against a cap of {{cap}}. The assistant switches off at the cap; the month rolls over on the 1st at 8:00 Beijing time."},
         "assistant_cap_closed": {"title": "Assistant switched off: monthly cap reached", "body": "Estimated spend this month, {{spent}}, has reached the cap of {{cap}}, and the assistant master switch is off. It switches back on by itself on the 1st at 8:00 Beijing time, or raise the cap on the Assistant admin page and switch it on by hand."},
         "assistant_reopened": {"title": "Assistant switched back on: new month", "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."},
         "city_god_case_received": {"title": "New case for first review", "body": "The case of {{soul}} has reached {{city_god}} and is waiting for first review."},
@@ -250,12 +250,12 @@ SYSTEM_KINDS = {
 }
 
 
-#: Per-recipient variants of a type's kind. A sender picks one by writing its
-#: name into the row's `params["kind"]`; `kind_for` honours it only if it is
-#: listed here under the type's own kind, so a row cannot name any other text.
+#: Per-recipient variants of a type’s kind. A sender picks one by writing its
+#: name into the row’s `params["kind"]`; `kind_for` honours it only if it is
+#: listed here under the type’s own kind, so a row cannot name any other text.
 #:
 #: `password_help_requested_moderator`: from 2026-09-25 until 2026-11-07 a realm
-#: lead (殿主, the MODERATOR role then) was told about a colleague's 「忘记密码」
+#: lead (殿主, the MODERATOR role then) was told about a colleague’s 「忘记密码」
 #: but could not open user management, so their text said to ask an
 #: administrator instead. Nothing sends it any more (every recipient now holds
 #: `user.manage`, `apps/authentication/tasks.py::notify_password_help`); it
@@ -283,7 +283,7 @@ VARIANTS = {
 
 
 def kind_for(notification_type, params):
-    """The text a stored notification renders with: its type's kind, or the
+    """The text a stored notification renders with: its type’s kind, or the
     variant its `params` name when that variant belongs to that kind."""
     kind = KIND_BY_TYPE.get(notification_type)
     variant = (params or {}).get("kind")
@@ -334,7 +334,7 @@ def render(locale, kind, params):
 def render_all(notification_type, params):
     """`{locale: {"title", "message"}}` for every locale with copy for this row, or None when the row has no
     kind / params or the params leave a `{{…}}` unfilled (an old row). The WebSocket push uses it: the channel
-    group does not know each socket's language, so the client picks its own."""
+    group does not know each socket’s language, so the client picks its own."""
     kind = kind_for(notification_type, params)
     if not kind or not params:
         return None
