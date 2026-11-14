@@ -73,6 +73,7 @@ const EXPECTED = [
   "passwordRulesView.tsx",
   "platform.ts",
   "pushCore.ts",
+  "rememberedCard.tsx",
   "theme.generated.ts",
   "theme.ts",
   "ui.tsx",
