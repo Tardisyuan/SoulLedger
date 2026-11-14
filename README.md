@@ -28,7 +28,7 @@ differences instead of reskinning one schema.
 on recorded data, and every sign-in starts over. · **[API reference](https://soulledger.tardisyuan.ltd/api-docs)**
 
 **Contact**: open to full-stack roles, and to consulting on multi-tenant / approval-workflow systems.
-Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com).
+Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger). One line is enough.
 
 <p align="center">
   <a href="frontend/public/demo-videos/app-soul.mp4"><img src="frontend/public/demo-videos/app-soul.jpg" width="260" alt="Soul app: a soul reading its own record"></a>
@@ -147,15 +147,18 @@ Python 3.11 (with `uv`) and Node.js ≥ 20.9 (`.nvmrc`). No Docker, PostgreSQL o
 cd backend && cp .env.example .env
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
-.venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_tenants && .venv/bin/python manage.py seed_mythology  # the four halls
+.venv/bin/python manage.py seed_dev_users   # one sign-in per role, printed; refuses unless DEBUG=True
+.venv/bin/python manage.py runserver
 
 # web, from the repository root: http://localhost:3333
 npx -y npm@11 ci && git checkout -- package-lock.json
 npm run dev --workspace frontend
 ```
 
-Seed data, a sign-in account for each role, the two apps, Docker and the full test commands are in the
-[development guide](docs/DEVELOPMENT.md).
+Open <http://localhost:3333> and sign in with any account `seed_dev_users` printed. The two apps, Docker
+and the full test commands are in the [development guide](docs/DEVELOPMENT.md).
 
 ## Tests and CI
 
@@ -192,7 +195,8 @@ the exercise. `git log` is the accurate history; [`docs/MILESTONES.md`](docs/MIL
 Pull requests are welcome. Small ones are best: documentation fixes, translations, corrections to the
 mythology research, and bug fixes with a reproduction. Open an issue before anything large.
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the workflow and the rules for AI-assisted PRs. The maintainer
-works alone and usually replies within a week.
+works alone and usually replies within a week. Looking for a place to start? Try a
+[good first issue](https://github.com/Tardisyuan/SoulLedger/labels/good%20first%20issue).
 
 ## Credits
 
@@ -201,7 +205,7 @@ tests and docs were written with [Claude Code](https://claude.com/claude-code), 
 designed with Claude Design. Fonts, libraries, literature and services are listed on the app's About page
 (data in [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)).
 
-Maintainer: [@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)
+Maintainer: [@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
 
 ## License
 

@@ -26,7 +26,7 @@
 
 **[▶ 在线演示](https://soulledger.tardisyuan.ltd)**：不用注册，每个角色一键进入。这是纯前端版本，数据是录好的，每次登录回到原样。· **[API 参考](https://soulledger.tardisyuan.ltd/api-docs)**
 
-**联系**：在找全栈岗位，也接多租户 / 审批流系统的咨询。邮箱 [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)。
+**联系**：在找全栈岗位，也接多租户 / 审批流系统的咨询。邮箱 [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)，一句话就够。
 
 <p align="center">
   <a href="frontend/public/demo-videos/app-soul.mp4"><img src="frontend/public/demo-videos/app-soul.jpg" width="260" alt="灵魂端 App：灵魂看自己的账"></a>
@@ -129,15 +129,17 @@ flowchart LR
 cd backend && cp .env.example .env
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
-.venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_tenants && .venv/bin/python manage.py seed_mythology  # 四个殿
+.venv/bin/python manage.py seed_dev_users   # 每个角色一个可登录账号，打印出来；DEBUG=True 才肯跑
+.venv/bin/python manage.py runserver
 
 # 网页，在仓库根目录：http://localhost:3333
 npx -y npm@11 ci && git checkout -- package-lock.json
 npm run dev --workspace frontend
 ```
 
-以下内容见[开发指南](docs/DEVELOPMENT.md)（英文）：
-- 种子数据，以及每个角色各一个可登录账号；
+打开 <http://localhost:3333>，用 `seed_dev_users` 打印的任一账号登录。以下内容见[开发指南](docs/DEVELOPMENT.md)（英文）：
 - 两个 App 的构建；
 - Docker；
 - 完整的测试命令。
@@ -176,7 +178,7 @@ npm run dev --workspace frontend
 - 神话考据纠错
 - 带复现步骤的缺陷修复
 
-大改动请先开 issue 讨论。流程和 AI 辅助 PR 的规矩见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。维护者一个人，通常一周内回复。
+大改动请先开 issue 讨论。流程和 AI 辅助 PR 的规矩见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。维护者一个人，通常一周内回复。想找个地方上手，可以从 [good first issue](https://github.com/Tardisyuan/SoulLedger/labels/good%20first%20issue) 开始。
 
 ## 致谢
 
@@ -184,7 +186,7 @@ npm run dev --workspace frontend
 - 代码、测试和文档用 [Claude Code](https://claude.com/claude-code) 协作完成，界面用 Claude Design 设计。
 - 字体、开源软件、文献与服务的完整清单在 App 的「关于」页，数据在 [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)。
 
-维护者：[@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)
+维护者：[@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
 
 ## 许可证
 
