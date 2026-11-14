@@ -3658,7 +3658,6 @@
     "first_name_placeholder": "名",
     "last_name_placeholder": "姓",
     "roles": {
-      "SYSTEM_ADMIN": "系统管理员",
       "ADMIN": "管理员",
       "SYSTEM_ADMIN": "系统管理员",
       "MODERATOR": "朋友圈审核员",

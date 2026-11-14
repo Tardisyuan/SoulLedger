@@ -37,7 +37,7 @@ describe("isAdminRole / isSystemAdminRole", () => {
 
   it("SYSTEM_ADMIN has its own label in zh-Hans and en, not the key and not ADMIN's", () => {
     expect(zhHans.users.roles.SYSTEM_ADMIN).toBe("系统管理员");
-    expect(en.users.roles.SYSTEM_ADMIN).toBe("System administrator");
+    expect(en.users.roles.SYSTEM_ADMIN).toBe("System Administrator");
     expect(roleLabel(tZh, "SYSTEM_ADMIN")).toBe("系统管理员");
     expect(roleLabel(tZh, "SYSTEM_ADMIN")).not.toBe(roleLabel(tZh, "ADMIN"));
   });

@@ -1,4 +1,6 @@
 [
+  "audit.civilization_halls",
+  "audit.stats.scope_civilization",
   "auth.account_or_email_hint",
   "auth.error_attempts_body",
   "auth.error_locked_body",
@@ -15,9 +17,11 @@
   "officer_app.bio_login.wrong_password",
   "officer_app.login.email_hint",
   "officer_app.search.first_only",
+  "social_moderation.scope_civilization",
   "soul_app.login.email",
   "soul_app.login.email_hint",
   "soul_app.login.reset_filled",
   "soul_app.login.use_code",
-  "soul_app.login.use_email"
+  "soul_app.login.use_email",
+  "users.roles.SYSTEM_ADMIN"
 ]

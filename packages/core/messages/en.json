@@ -3658,7 +3658,6 @@
     "first_name_placeholder": "First Name",
     "last_name_placeholder": "Last Name",
     "roles": {
-      "SYSTEM_ADMIN": "System administrator",
       "ADMIN": "Administrator",
       "SYSTEM_ADMIN": "System Administrator",
       "MODERATOR": "Circle Moderator",
