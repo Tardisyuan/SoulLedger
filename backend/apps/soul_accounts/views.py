@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
+from apps.core.shard_reads import with_fanout
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.perm.filters import DataScopeFilter
@@ -179,8 +180,10 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
         svc.expire_due_credentials()
         svc.release_stalled_credentials()
         # 回收站里的灵魂不上待交付列表,也看不了明文、打不了交付单(只隐藏,凭据状态不动;恢复后原样回来)。
-        qs = InitialCredential.objects.filter(soul__is_deleted=False).select_related(
-            "soul", "account__user", "revealed_by", "delivered_by")
+        # Every leg (stage 3): a credential lives with its soul's current hall, and the home hall lists it --
+        # another civilization's, while the soul resides there.
+        qs = with_fanout(InitialCredential.objects.filter(soul__is_deleted=False).select_related(
+            "soul", "account__user", "revealed_by", "delivered_by"))
         return DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
 
     @extend_schema(request=None, responses={200: RevealedCredentialSerializer, 409: SoulErrorSerializer,

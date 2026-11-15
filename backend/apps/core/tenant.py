@@ -271,7 +271,7 @@ def scope_to_tenant(
         if residence_read and field == "tenant" and getattr(request, "method", None) in SAFE_METHODS:
             residence = residence_read_q(qs.model, halls)
             if residence is not None:
-                return qs.filter(Q(tenant__in=halls) | residence)
+                return _across_shards(qs.filter(Q(tenant__in=halls) | residence))
         return qs.filter(**{f"{field}__in": halls})
 
     tenant = getattr(request, "tenant", None)
@@ -284,7 +284,7 @@ def scope_to_tenant(
     if residence_read and field == "tenant" and getattr(request, "method", None) in SAFE_METHODS:
         residence = residence_read_q(qs.model, tenant)
         if residence is not None:
-            return qs.filter(Q(tenant=tenant) | residence)
+            return _across_shards(qs.filter(Q(tenant=tenant) | residence))
     return qs.filter(**{field: value})
 
 
@@ -304,6 +304,13 @@ def scope_to_tenant(
 # * 暂居结束(`tenant` 回到 `home_tenant`)例外自然失效:暂居地那些行不再满足
 #   「这一行属于灵魂此刻所在的租户」。
 # ---------------------------------------------------------------------------
+
+
+def _across_shards(qs):
+    """A residence read: the souls' residence courts wrote these rows in another civilization's shard (stage 3)."""
+    from apps.core.shard_reads import with_fanout
+
+    return with_fanout(qs)
 
 
 def residence_read_allowed(view) -> bool:
@@ -345,13 +352,40 @@ def residence_read_q(model, tenant):
     path = _soul_path(model)
     if path is None:
         return None
+    from django.conf import settings
     from django.db.models import QuerySet
 
+    if path and settings.SHARD_READ_CIVS:
+        return _residence_pairs_q(tenant)
     home = f"{path}home_tenant__in" if isinstance(tenant, QuerySet) else f"{path}home_tenant"
     away = Q(**{home: tenant}) & Q(**{f"{path}tenant__isnull": False})
     if path:
         away &= Q(tenant=F(f"{path}tenant"))
     return away
+
+
+def _residence_pairs_q(tenant):
+    """The same rows as the join above, without it (stage 3, apps/core/shard_reads.py): `soul` is a bare id that
+    crosses civilizations, so on a shard the soul may not be there to join -- a residence court's rows outlive
+    the soul's stay. The souls of `tenant` (a hall, or a queryset of halls) living away are read on every
+    leg first; then a row qualifies when it is one of those souls' and belongs to the hall the soul is in."""
+    from collections import defaultdict
+
+    from django.db.models import F, QuerySet
+
+    from apps.core.shard_reads import with_fanout
+    from apps.souls.models import Soul
+
+    home = "home_tenant__in" if isinstance(tenant, QuerySet) else "home_tenant"
+    away = with_fanout(Soul._base_manager.filter(**{home: tenant}, tenant__isnull=False)
+                       .exclude(tenant=F("home_tenant")).order_by().values_list("tenant_id", "pk"))
+    by_hall = defaultdict(list)
+    for hall, soul in away:
+        by_hall[hall].append(soul)
+    q = Q(pk__in=[])
+    for hall, souls in by_hall.items():
+        q |= Q(tenant_id=hall, soul_id__in=souls)
+    return q
 
 
 def residence_readable(obj, tenant) -> bool:

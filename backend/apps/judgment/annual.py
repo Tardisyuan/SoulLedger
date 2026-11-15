@@ -95,6 +95,20 @@ def _most_cited(concluded, locale):
     }
 
 
+def _souls_per_hall(opened):
+    """Distinct souls per soul hall. Read across shards (stage 3) a soul's cases may be in two civilizations'
+    databases, so a per-database Count(distinct) cannot be added up: the distinct (hall, soul) pairs are."""
+    from collections import Counter
+
+    from django.conf import settings
+
+    hall = ("soul__tenant__code", "soul__tenant__declared_civilization")
+    if not settings.SHARD_READ_CIVS:
+        return opened.values(*hall).annotate(n=Count("soul", distinct=True))
+    pairs = Counter((code, declared) for code, declared, _ in opened.values_list(*hall, "soul").distinct())
+    return [{hall[0]: code, hall[1]: declared, "n": n} for (code, declared), n in pairs.items()]
+
+
 def report(queryset, tenant, year=None, locale="zh-Hans", now=None) -> dict:
     tz_name = tenant.hall_timezone if tenant is not None else "UTC"
     tz = ZoneInfo(tz_name)
@@ -108,8 +122,7 @@ def report(queryset, tenant, year=None, locale="zh-Hans", now=None) -> dict:
     placed = opened.filter(is_final=True).exclude(HEARS_AGAIN_Q).values("soul").distinct().count()
     by_civ: dict[str, int] = {}
     # 一个灵魂只有一个租户,按租户分组的计数相加不会重复。
-    for row in opened.values("soul__tenant__code", "soul__tenant__declared_civilization").annotate(
-            n=Count("soul", distinct=True)):
+    for row in _souls_per_hall(opened):
         civ = _civ_of(row["soul__tenant__code"], row["soul__tenant__declared_civilization"])
         by_civ[civ] = by_civ.get(civ, 0) + row["n"]
 

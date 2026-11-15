@@ -1,7 +1,8 @@
 """Production database router for per-civilization sharding (docs/ARCHITECTURE-tenant-sharding.md 4.2;
 plan docs/audit/2026-11-15-sharding/PLAN.md).
 
-STAGE 1B CONTRACT. Reads and writes still go where they went with no router at all: "default", or an
+STAGE 1B CONTRACT (and stage 3 with SHARD_READ_CIVS empty). Reads and writes still go where they went with
+no router at all: "default", or an
 instance hint's own database. `tests/test_shard_router_is_neutral.py` holds it to that. What 1B adds
 only ever answers for a civilization alias (`civ_*`), and production has none until stage 2:
 
@@ -26,14 +27,15 @@ errored (8/8) while migrating the shadow alias (that guard and its alias were re
 
 What later stages change:
   2   writes still go to default; a shadow write to the civilization alias happens outside the router.
-  3   db_for_read: a SHARD model of a civilization in settings.SHARD_READ_CIVS goes to
-      `alias_for_civilization(civ)`, the civilization taken from the instance hint, else the tenant
-      contextvar; neither present raises `NoShardContext` -- never a silent fall back to default.
+  3   db_for_read (done): a SHARD model of a civilization in settings.SHARD_READ_CIVS goes to its shard, by
+      `apps.core.shard_reads.route` -- the instance hint, else the read context of the request / task; no
+      context raises `NoShardContext`, never a silent fall back to default. FANOUT reads are merged by the
+      QuerySet hooks in that module, not here.
   4   db_for_write: the same for settings.SHARD_WRITE_CIVS.
 
 Rollback at any stage before 4: delete the DATABASE_ROUTERS line in settings.
 """
-from apps.core.sharding import CONTROL, SHARD, app_has_shard_tables, placement, placement_of
+from apps.core.sharding import CONTROL, SHARD, NoShardContext, app_has_shard_tables, placement, placement_of
 
 SHARD_PREFIX = "civ_"
 
@@ -51,14 +53,33 @@ def _control_from_a_shard(model, hints):
 
 class ShardRouter:
     def db_for_read(self, model, **hints):
-        return _control_from_a_shard(model, hints)
+        control = _control_from_a_shard(model, hints)
+        if control is not None:
+            return control
+        # Stage 3 (apps/core/shard_reads.py): a SHARD model of a civilization in SHARD_READ_CIVS. None while
+        # nothing is cut over. A FANOUT read reaching the router is one the QuerySet hooks did not merge
+        # (raw SQL, explain, a combined queryset): refused rather than read from one database.
+        from apps.core.shard_reads import FANOUT, route
+
+        alias = route(model, hints)
+        if alias == FANOUT:
+            raise NoShardContext(f"{model._meta.label}: a read across every shard through a path that cannot merge")
+        return alias
 
     def db_for_write(self, model, **hints):
-        return _control_from_a_shard(model, hints)
+        from apps.core.shard_reads import write_route
+
+        return _control_from_a_shard(model, hints) or write_route(model, hints)
 
     def allow_relation(self, obj1, obj2, **hints):
         if obj1._state.db == obj2._state.db or None in (obj1._state.db, obj2._state.db):
             return None
+        from django.conf import settings
+
+        if settings.SHARD_READ_CIVS and not settings.SHARD_WRITE_CIVS:
+            # Stage 3: rows read from two shards meet in memory along a crossing key (a judgment and the soul
+            # it names); every write still goes to control (`apps.core.shard_reads.write_route`).
+            return True
         return not (placement(obj1) == SHARD and placement(obj2) == SHARD)
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):

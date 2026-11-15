@@ -15,6 +15,7 @@ from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission
 from apps.core.problems import problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
+from apps.core.shard_reads import with_fanout
 from apps.core.tenant import (
     civilization_halls,
     is_civilization_admin,
@@ -190,9 +191,11 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """
         from django.db.models import Q
 
-        qs = DispatchRecord._base_manager.filter(is_deleted=False).select_related(
+        # Every leg once civilizations are cut over (stage 3): a record lives with its source hall, and the
+        # target hall -- another civilization's -- lists it too.
+        qs = with_fanout(DispatchRecord._base_manager.filter(is_deleted=False).select_related(
             "source_tenant", "target_tenant", "soul", "dispatched_by", "decided_by"
-        )
+        ))
         user = self.request.user
         if is_tenant_exempt(user):
             return qs
@@ -442,11 +445,11 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
     @staticmethod
     def _proposed_queryset(tenant):
-        return DispatchRecord._base_manager.filter(
+        return with_fanout(DispatchRecord._base_manager.filter(  # proposals to this hall, from any civilization
             target_tenant=tenant,
             status=DispatchStatus.PROPOSED,
             is_deleted=False,
-        ).select_related("source_tenant", "soul", "dispatched_by").order_by("proposed_at")
+        ).select_related("source_tenant", "soul", "dispatched_by").order_by("proposed_at"))
 
     @staticmethod
     def _history_queryset(tenant, user):
@@ -708,6 +711,14 @@ def _participants_with_names():
     )
 
 
+def _seated_in(halls):
+    """Ids of the joint benches with a seat of `halls`. Read separately, not joined: a seat is a row of its own
+    hall and the bench one of the initiating hall's, so on a civilization's shard the join would lose every
+    bench another civilization opened (stage 3)."""
+    return list(with_fanout(CrossTenantJudgmentParticipant._base_manager.filter(
+        participant_tenant__in=halls).order_by()).values_list("judgment_id", flat=True))
+
+
 class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
                                  DataScopeViewSetMixin, viewsets.ModelViewSet):
     """
@@ -812,15 +823,16 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         # other ADMIN-bypass in this codebase. Without it, ADMIN was being
         # scoped down to only judgments touching ADMIN's own tenant, same as
         # every non-ADMIN caller.
-        qs = CrossTenantJudgment._base_manager.filter(is_deleted=False).select_related(
+        # Every leg (stage 3): a joint bench lives with its initiating hall; its seats with theirs.
+        qs = with_fanout(CrossTenantJudgment._base_manager.filter(is_deleted=False).select_related(
             "initiating_tenant"
-        ).prefetch_related(_participants_with_names())
+        ).prefetch_related(_participants_with_names()))
         user = self.request.user
         if is_tenant_exempt(user):
             return qs
         if is_civilization_admin(user):
             halls = civilization_halls(request_civilization(self.request))
-            return qs.filter(Q(initiating_tenant__in=halls) | Q(participants__participant_tenant__in=halls)).distinct()
+            return qs.filter(Q(initiating_tenant__in=halls) | Q(pk__in=_seated_in(halls))).distinct()
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             # `.distinct()`: the right-hand `Q` joins `participants`, and a row
@@ -829,7 +841,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             # judgment sees that judgment twice — in the page body and in the
             # paginated `count`, which is the number the UI prints.
             qs = qs.filter(
-                Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant)
+                Q(initiating_tenant=tenant) | Q(pk__in=_seated_in([tenant]))
             ).distinct()
             # 数据范围也要过(rbac-scope 第 9 条):同文件 DispatchRecord 补过,这里覆写后一直没补。
             return DataScopeFilter.filter_queryset(self.request, qs, CrossTenantJudgment)

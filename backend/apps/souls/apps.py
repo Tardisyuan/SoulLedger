@@ -52,3 +52,7 @@ class SoulsConfig(AppConfig):
         from apps.core import shard_sync
 
         shard_sync.connect()
+        # Stage 3: reads of a civilization in SHARD_READ_CIVS come from its shard; FANOUT reads merge every leg.
+        from apps.core import shard_reads
+
+        shard_reads.install()
