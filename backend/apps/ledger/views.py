@@ -550,7 +550,7 @@ class LedgerOverviewStatsView(APIView):
             audit_qs = AuditLog.objects.none()
         else:
             audit_qs = within_reach(AuditLog.objects.all(), request)
-        recent_logs = audit_qs.select_related("user").order_by("-timestamp")[:10]
+        recent_logs = audit_qs.select_related("user").order_by("-timestamp", "-id")[:10]  # total: tied timestamps
         recent_activity = [
             {
                 "id": log.id,

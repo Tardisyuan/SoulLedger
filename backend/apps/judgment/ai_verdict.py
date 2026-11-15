@@ -52,7 +52,7 @@ def facts_of(judgment, verdict, lang="zh-Hans"):
     cited = [c.statute for c in judgment.citations.select_related("statute", "statute__source_actor")]
     samples = (Judgment.objects.filter(tenant_id=judgment.tenant_id, civilization=judgment.civilization,
                                        verdict__isnull=False, is_final=True).exclude(notes="").exclude(pk=judgment.pk)
-               .select_related("soul").order_by("-concluded_at")[:SAMPLES])
+               .select_related("soul").order_by("-concluded_at", "-pk")[:SAMPLES])
     return {
         **base,
         "verdict": verdict,

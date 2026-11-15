@@ -381,7 +381,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         resource_stats = (
             qs.values("resource")
             .annotate(count=Count("id"))
-            .order_by("-count")[:20]
+            .order_by("-count", "resource")[:20]
         )
 
         return Response({
