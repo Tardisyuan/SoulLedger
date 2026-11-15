@@ -1658,8 +1658,8 @@ PROBE_PY
     if [ "$REAL_PG" = 1 ] && [ "$FULL_RUN" = 1 ]; then
         echo "  → pytest: multi-database guard (--ds=config.settings_multidb -m multidb)"
         SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $REAL_PG_ARGS --ds=config.settings_multidb \
-            -m multidb tests/test_multidb_shadow.py 2>&1 | tail -4
-        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (multi-database guard, tests/test_multidb_shadow.py) failed"
+            -m multidb tests/test_multidb_shadow.py tests/test_control_boundary.py 2>&1 | tail -4
+        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (multi-database guard, tests/test_multidb_shadow.py, tests/test_control_boundary.py) failed"
     fi
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!

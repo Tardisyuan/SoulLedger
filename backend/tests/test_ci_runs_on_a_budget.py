@@ -122,7 +122,7 @@ def _runs(job):
 def test_the_multidb_guard_runs_in_the_backend_job():
     """Review C21 (2026-10-31): test_multidb_shadow.py exists only under its own settings, so the suite skips it."""
     (command,) = [r for r in _runs("backend") if "test_multidb_shadow.py" in r]
-    assert "--ds=config.settings_multidb" in command and "-m multidb" in command, command
+    assert "--ds=config.settings_multidb" in command and "-m multidb" in command and "tests/test_control_boundary.py" in command, command
 
 
 def test_the_synapse_integration_runs_against_a_started_synapse_and_a_skip_fails_it():

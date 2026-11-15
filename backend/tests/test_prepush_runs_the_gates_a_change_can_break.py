@@ -1895,7 +1895,7 @@ class TestRealPostgres:
         proc, runs = self._reachable(main, fake_backend, "--full")
         assert len(runs) == 2, proc.stdout
         guard, suite = runs
-        assert "--ds=config.settings_multidb" in guard and "tests/test_multidb_shadow.py" in guard, guard
+        assert "--ds=config.settings_multidb" in guard and "tests/test_multidb_shadow.py" in guard and "tests/test_control_boundary.py" in guard, guard
         assert guard[guard.index("-m") + 1] == "multidb" and "--create-db" in guard, guard
         assert "--ds=config.settings_multidb" not in suite and "tests/test_multidb_shadow.py" not in suite, suite
 
