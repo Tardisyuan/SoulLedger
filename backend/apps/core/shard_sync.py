@@ -16,10 +16,11 @@ What a shard is supposed to hold, derived from `apps.core.sharding.placement` (n
 
 Every row is compared whole: a digest over every concrete column, not a timestamp.
 
-A row whose constrained foreign key names a row the shard will not hold (an edge that crosses
-civilizations: tests/tenancy_fk_inventory.py marks them "crosses by design" / "may cross") is not copied
-and is reported as "dangling", so the rest of the shard still syncs and reconcile does not exit 0 while it
-is there. Which of those edges become bare ids on a shard, or travel with copies, is a stage-4 (D6) call.
+A row whose constrained foreign key names a row the shard will not hold is not copied and is reported as
+"dangling", so the rest of the shard still syncs and reconcile does not exit 0 while it is there. Since
+stage 2 no key of the schema does that: the edges that cross civilizations (tests/tenancy_fk_inventory.py,
+"crosses by design" / "may cross") are bare ids, and `test_fk_inventory_across_tenants` holds the rule.
+The check stays for the next key somebody adds with a constraint.
 
 Writes to the target alias never go through `Model.save()` / `Model.delete()`: a raw `QuerySet._insert`
 (the values as read, no `pre_save`, so `auto_now` columns keep control's value) and `QuerySet._raw_delete`,
@@ -124,7 +125,10 @@ def fingerprints(qs, halls=None):
     blanks = [cols.index(c) + 1 for c in copy_blanks(qs.model)] if halls is not None else []
     tenant = cols.index("tenant_id") + 1 if blanks else None
     out = {}
-    for r in qs.values_list(qs.model._meta.pk.attname, *cols).iterator(chunk_size=2000):
+    # order_by(): a model ordered through a foreign key (SoulPathEntry: "soul", WorkflowSegment: "workflow")
+    # is read with an INNER JOIN to the target, and on a shard a bare id that crosses civilizations names a
+    # row that is not there -- the row would drop out of its own shard's digest and be "missing" forever.
+    for r in qs.order_by().values_list(qs.model._meta.pk.attname, *cols).iterator(chunk_size=2000):
         if blanks and _is_copy(r[tenant], halls):
             r = tuple(None if i in blanks else v for i, v in enumerate(r))
         out[str(r[0])] = _digest(r)
@@ -193,7 +197,7 @@ def _dangling(sources, halls):
             if target not in expected:
                 continue
             cols = ["pk", f.attname, *(["tenant_id"] if f.attname in blanks else [])]
-            pairs = {str(r[0]): str(r[1]) for r in src.values_list(*cols).iterator(chunk_size=2000)
+            pairs = {str(r[0]): str(r[1]) for r in src.order_by().values_list(*cols).iterator(chunk_size=2000)
                      if r[1] is not None and not (len(r) > 2 and _is_copy(r[2], halls))}
             links.append((model, target, pairs))
     out = {}
@@ -250,7 +254,7 @@ def apply_fix(found, direction):
             fields = model._meta.concrete_fields
             blanks = copy_blanks(model)
             for chunk in _chunks(new):
-                rows = list(src.filter(pk__in=chunk))
+                rows = list(src.filter(pk__in=chunk).order_by())  # no JOIN through a bare id: see fingerprints
                 for obj in rows:
                     if blanks and _is_copy(obj.tenant_id, halls):
                         for attname in blanks:

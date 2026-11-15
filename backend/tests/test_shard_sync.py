@@ -30,7 +30,7 @@ from django.test import override_settings
 from django.utils import timezone
 
 from apps.core.shard_sync import DEBOUNCE_KEY, compared_models, fingerprints, shard_aliases
-from apps.core.sharding import CONTROL, REFERENCE, alias_for_civilization, placement, tenant_path
+from apps.core.sharding import CONTROL, REFERENCE, SHARD, alias_for_civilization, placement, tenant_path
 
 CIVS = ("CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK")
 HAS_SHARDS = all(alias_for_civilization(c) in settings.DATABASES for c in CIVS)
@@ -160,22 +160,56 @@ def _hall(world, civ):
 
 def _dispatch_across(world, soul, target):
     """An executed cross-civilization dispatch, written the way DispatchService.execute leaves it: the soul
-    resides in `target` and its owning unit is one of the target hall's (D6)."""
+    resides in `target`, its owning unit is one of the target hall's (D6), and the record -- owned by the
+    home hall -- names a realm of the target hall (DispatchRecord.target_realm crosses by design)."""
     from apps.dispatch.models import DispatchRecord, DispatchStatus
     from apps.org.models import Organization
+    from apps.realms.models import Realm
 
     home = soul.home_tenant
     rec = world.row(DispatchRecord, home, fresh=True)
     DispatchRecord._base_manager.filter(pk=rec.pk).update(
         status=DispatchStatus.EXECUTED, soul=soul, source_tenant=home, target_tenant=target, tenant=home,
-        target_realm=None)
+        source_owner_org=soul.owner_org_id, target_realm=world.row(Realm, target).pk)
     type(soul)._base_manager.filter(pk=soul.pk).update(tenant=target, owner_org=world.row(Organization, target).pk)
+    return rec
 
 
-def _follows_the_soul():
-    """Models whose rows reach their hall through the soul (`soul__tenant`, `account__soul__tenant`, ...):
-    a move takes them along, and they may still point at the home hall's rows."""
-    return [m for m in compared_models() if "soul__" in (tenant_path(m) or "")]
+def _return_home(world, soul, rec):
+    """`DispatchService.end_residence`: the record EXECUTED -> RETURNED, the soul back in its home hall with
+    its old unit. Rows the residence wrote while it was there (its records, events, judgments...) stay in
+    the residence hall and keep pointing at the soul, which that shard no longer holds."""
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+
+    DispatchRecord._base_manager.filter(pk=rec.pk).update(status=DispatchStatus.RETURNED)
+    source_owner_org = DispatchRecord._base_manager.values_list("source_owner_org", flat=True).get(pk=rec.pk)
+    type(soul)._base_manager.filter(pk=soul.pk).update(tenant=soul.home_tenant_id, owner_org=source_owner_org)
+
+
+def _crossing_edges():
+    """SHARD -> SHARD keys without a constraint: the ones whose two rows may be in different civilizations
+    (tests/tenancy_fk_inventory.py, "crosses by design" / "may cross"). Derived from the schema."""
+    from apps.core.bare_ids import bare_ids_to
+
+    return sorted((f for fields in bare_ids_to().values() for f in fields
+                   if not f.model._meta.auto_created and placement(f.model) == SHARD
+                   and placement(f.related_model) == SHARD), key=lambda f: (f.model._meta.label, f.name))
+
+
+def _point_across(world, f, source_halls, target_halls, target_pk=None):
+    """Point one existing `f.model` row of a hall in `source_halls` at a `f.related_model` row of a hall in
+    `target_halls` (or at `target_pk`). False when no row would take it (a unique key, no rows)."""
+    rows = [r for h in source_halls for r in world.pool[(f.model, h.pk)]]
+    targets = [target_pk] if target_pk else [r.pk for h in target_halls for r in world.pool[(f.related_model, h.pk)]]
+    world.rng.shuffle(rows)
+    for row in rows[:20]:
+        try:
+            with transaction.atomic(using="default"):
+                f.model._base_manager.filter(pk=row.pk).update(**{f.attname: world.rng.choice(targets)})
+            return True
+        except IntegrityError:
+            continue
+    return False
 
 
 @pytest.fixture
@@ -191,15 +225,33 @@ def world():
             w.row(model, hall, fresh=True)
     Soul = apps.get_model("souls", "Soul")
     known = [h for h in halls if h.declared_civilization]
-    # Souls with nothing that follows them: such a row can point back at the home hall, which the
-    # residence shard does not hold -- test_a_row_pointing_out_of_its_shard_is_reported is about that.
-    followed = set()
-    for m in _follows_the_soul():
-        path = tenant_path(m)
-        followed |= set(m._base_manager.values_list(path[: path.rindex("soul__") + 4], flat=True))
-    movers = list(Soul._base_manager.filter(tenant__in=known).exclude(pk__in=followed).select_related("home_tenant"))
-    for soul in w.rng.sample(movers, 3):
-        _dispatch_across(w, soul, w.rng.choice([h for h in known if h.civilization != soul.home_tenant.civilization]))
+
+    def abroad(civ):
+        return [h for h in known if h.civilization != civ]
+
+    # Every key that may cross civilizations does, on some row: a dispatch to another civilization's realm,
+    # a joint-judgment seat (and its actor) of another civilization, a workflow segment and its stations
+    # run by another civilization's realm, rows pointing at another civilization's soul...
+    w.crossed = []
+    for f in _crossing_edges():
+        civ = w.rng.choice([h.civilization for h in known])
+        if _point_across(w, f, [h for h in known if h.civilization == civ], abroad(civ)):
+            w.crossed.append(f)
+    # One soul goes and comes back. While it was away its residence wrote rows pointing at it; they stay
+    # there. First, so the re-pointing cannot pick another mover's dispatch record and take its residence.
+    movers = list(Soul._base_manager.filter(tenant__in=known, tenant=F("home_tenant")).select_related("home_tenant"))
+    soul, *moved = w.rng.sample(movers, 4)
+    rec = _dispatch_across(w, soul, w.rng.choice(abroad(soul.home_tenant.civilization)))
+    residence = apps.get_model("tenants", "Tenant")._base_manager.get(
+        pk=type(rec)._base_manager.values_list("target_tenant", flat=True).get(pk=rec.pk))
+    for f in _crossing_edges():
+        if f.related_model is Soul:
+            _point_across(w, f, [residence], [], target_pk=soul.pk)
+    _return_home(w, soul, rec)
+    # Souls that move and stay, rows that followed them included (a rebirth application keeps its home workflow).
+    for mover in moved:
+        _dispatch_across(w, mover, w.rng.choice(abroad(mover.home_tenant.civilization)))
+    w.returned = soul.pk
     w.halls = halls
     return w
 
@@ -231,7 +283,12 @@ def _executed_cross_civ(soul_pk, civ):
 
 
 def _sync():
-    call_command("reconcile_shards", "--all", "--fix", stdout=io.StringIO())
+    out = io.StringIO()
+    try:
+        call_command("reconcile_shards", "--all", "--fix", stdout=out)
+    except CommandError as e:
+        raise AssertionError(f"{e}\n{out.getvalue()}") from None
+    return out.getvalue()
 
 
 def _reconcile(*args):
@@ -244,16 +301,19 @@ def _reconcile(*args):
 
 
 def _shard_pks(alias, model):
-    return {str(pk) for pk in model._base_manager.using(alias).values_list("pk", flat=True)}
+    return {str(pk) for pk in model._base_manager.using(alias).order_by().values_list("pk", flat=True)}
 
 
 # ---- (a) (b) (c) ---------------------------------------------------------------------------------------
 
 @sharded
 def test_after_sync_each_shard_holds_its_civilization_and_reconcile_is_clean(world):
-    _sync()
+    sync_out = _sync()
     code, out = _reconcile("--all")
     assert code == 0, out                                                                       # (a)
+    # Nothing left out: every key that may cross civilizations is a bare id, so no row is "dangling".
+    assert "not copied" not in sync_out + out, sync_out
+    assert world.crossed == _crossing_edges(), "the world did not cross every crossing key"
 
     Soul = apps.get_model("souls", "Soul")
     models_compared = [m for m in apps.get_models(include_auto_created=True)
@@ -281,8 +341,11 @@ def test_after_sync_each_shard_holds_its_civilization_and_reconcile_is_clean(wor
                     and any(pk in _shard_pks(alias_for_civilization(x), model) for x in CIVS)]     # (c)
     assert not stray, stray[:10]
     assert not nowhere, nowhere[:10]
-    # The world had what (b) and (c) are about.
+    # The world had what (b) and (c) are about, and a soul back from residence is in its home shard only.
     assert any("" in _owners(m).values() for m in models_compared)
+    back = Soul._base_manager.select_related("home_tenant").get(pk=world.returned)
+    assert [c for c in CIVS if Soul._base_manager.using(alias_for_civilization(c)).filter(pk=back.pk).exists()] == [
+        back.home_tenant.civilization]
     assert sum(_executed_cross_civ(s.pk, s.home_tenant.civilization) for s in Soul._base_manager.filter(home_tenant__isnull=False).select_related("home_tenant")) >= 3
 
 
@@ -364,10 +427,8 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
     control_before = _snapshot(["default"])
 
     code, out = _reconcile("--all", "--fix")
-    # What may be left is a row that followed the soul and still points into its old hall (dangling).
-    left = [line for line in out.splitlines() if line.startswith("still")]
-    assert all("not copied" in line and f"pk={soul.pk} " not in line for line in left), out
-    assert code == (1 if left else 0), out
+    # Rows that followed the soul and still point into its old hall are bare ids: nothing is left.
+    assert code == 0 and "still" not in out, out
     assert (Soul._meta.label, str(soul.pk)) in _reported(out)
     assert not Soul._base_manager.using(here).filter(pk=soul.pk).exists()
     assert _snapshot(["default"]) == control_before
@@ -390,15 +451,50 @@ def test_shard_to_control_brings_a_shard_write_back(world):
     assert _reconcile("--all")[0] == 0
 
 
+def _leaf(model):
+    """No row points at it and only its pk is unique: a row can go or be copied without breaking a key."""
+    return (not model._meta.related_objects and not model._meta.constraints and not model._meta.unique_together
+            and not [f for f in model._meta.concrete_fields if f.unique and not f.primary_key])
+
+
 @sharded
-def test_a_row_pointing_out_of_its_shard_is_reported(world):
-    """A row the shard cannot hold -- a constrained key names a row of another civilization, here a soul
-    moved with a rebirth application whose workflow stays in the home hall -- is reported and not
-    copied; the shard stays consistent and reconcile does not exit 0 until somebody decides."""
+def test_a_row_missing_from_a_shard_and_one_only_there_are_both_named(world):
+    """G7, from the retired shadow guard: model + pk for each side's surplus, nothing else."""
+    _sync()
+    civ = world.rng.choice(CIVS)
+    alias = alias_for_civilization(civ)
+    Model = world.rng.choice([m for m in compared_models() if _leaf(m) and not m._meta.auto_created
+                              and m._base_manager.using(alias).count() >= 2])
+    print(f"model {Model._meta.label} on {alias}")
+    gone, extra = Model._base_manager.using(alias).order_by("pk")[:2]
+    Model._base_manager.using(alias).filter(pk=gone.pk)._raw_delete(alias)
+    if isinstance(extra.pk, uuid.UUID):
+        extra.pk = uuid.uuid4()
+    else:
+        extra.pk = max(Model._base_manager.order_by().values_list("pk", flat=True)) + 1000
+    Model._base_manager.using(alias).bulk_create([extra])
+
+    code, out = _reconcile("--civ", civ)
+    assert code == 1
+    assert _reported(out) == {(Model._meta.label, str(gone.pk)), (Model._meta.label, str(extra.pk))}, out
+    assert f"pk={gone.pk} missing in {alias}" in out and f"pk={extra.pk} only in {alias}" in out
+    with pytest.raises(CommandError, match="unknown civilization"):
+        call_command("reconcile_shards", "--civ", "NOPE", stdout=io.StringIO())
+
+
+@sharded
+def test_a_row_pointing_out_of_its_shard_is_reported(world, monkeypatch):
+    """A row the shard cannot hold -- a constrained key names a row of another civilization -- is reported
+    and not copied; the shard stays consistent and reconcile does not exit 0 until somebody decides.
+    No key of the schema does that since stage 2 (they are bare ids), so one is given its constraint back
+    here: a soul moved with a rebirth application whose workflow stays in the home hall."""
     from apps.soul_accounts.models import RebirthApplication
 
+    monkeypatch.setattr(RebirthApplication._meta.get_field("workflow"), "db_constraint", True)
+
     app = RebirthApplication._base_manager.filter(
-        soul__tenant__isnull=False, workflow__isnull=False, soul__tenant=F("workflow__tenant")).select_related(
+        soul__tenant__isnull=False, workflow__isnull=False, soul__tenant=F("workflow__tenant"),
+        soul__home_tenant=F("workflow__tenant")).select_related(
         "soul__home_tenant").first()
     soul = app.soul
     target = next(h for h in world.halls if h.declared_civilization and h.civilization != soul.tenant.civilization)
