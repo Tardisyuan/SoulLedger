@@ -19,77 +19,26 @@ end (Django's setUpTestData shape); each case runs in a savepoint inside it.
 
     cd backend && ... python -m pytest --ds=config.settings_sharded -m sharded tests/test_sharded_reads_equal_single_db.py
 """
-import json
 import os
 import random
-import re
 
 import pytest
 from django.apps import apps
-from django.core.cache import caches
 from django.db import IntegrityError, connections, transaction
 from django.test import override_settings
-from django.urls import get_resolver, reverse
+from django.urls import reverse
 from rest_framework.pagination import PageNumberPagination
 
+from apps.core import shadow_reads as shadow
 from apps.core.shard_reads import FANOUT, crossing_keys, read_context
 from apps.core.sharding import SHARD, NoShardContext, alias_for_civilization, placement, tenant_path
 from tests.test_shard_sync import CIVS, HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_READS_SEED") or random.SystemRandom().randrange(10 ** 6))
-#: Response keys whose value is the moment of the request, not data: the clock, and a problem response's
-#: `instance` (the request's trace id).
-VOLATILE = {"as_of", "generated_at", "server_time", "now", "instance"}
-#: Endpoints whose GET writes the row it answers with (each request is rolled back, so each makes a new one):
-#: the keys that are new every time.
-WRITES_ON_READ = {"social-profile-me": {"id"}}
 PAGE_SIZE = 3
 
 
-# ---- endpoints, from the URLconf ------------------------------------------------------------------------
-
-def _walk(resolver=None, ns="", out=None):
-    out = [] if out is None else out
-    for p in (resolver or get_resolver()).url_patterns:
-        if hasattr(p, "url_patterns"):
-            if p.namespace == "admin":
-                continue
-            _walk(p, f"{ns}{p.namespace}:" if p.namespace else ns, out)
-            continue
-        out.append((ns, p))
-    return out
-
-
-def _endpoints():
-    """{case id: (url name, kwargs names, viewset class, action)} for every named pattern a GET reaches.
-    Format-suffix duplicates are left out (same view)."""
-    found = {}
-    for ns, p in _walk():
-        cb, name = p.callback, p.name
-        cls = getattr(cb, "cls", None)
-        if cls is None or not name:
-            continue
-        kwargs = tuple(sorted(p.pattern.regex.groupindex))
-        if "format" in kwargs:
-            continue
-        actions = getattr(cb, "actions", None)
-        if actions is not None:
-            if "get" not in actions:
-                continue
-            action = actions["get"]
-        elif hasattr(cls, "get") and "get" in getattr(cls, "http_method_names", ()):
-            action = "get"
-        else:
-            continue
-        found[f"{ns}{name}"] = (f"{ns}{name}", kwargs, cls, action)
-    return found
-
-
-ENDPOINTS = _endpoints()
-
-
-def _list_route_of(cls):
-    return next((name for name, (_, kw, c, a) in ENDPOINTS.items() if c is cls and a == "list" and not kw), None)
+ENDPOINTS = shadow.endpoints()
 
 
 # ---- the world --------------------------------------------------------------------------------------------
@@ -269,125 +218,19 @@ def _small_pages(monkeypatch):
     monkeypatch.setattr(PageNumberPagination, "page_size", PAGE_SIZE)
 
 
-# ---- comparing ---------------------------------------------------------------------------------------------
-
-def _volatile(key):
-    return key in VOLATILE or key.endswith("_remaining_seconds")  # seconds left until a deadline, at the request
-
-
-def _canon(value):
-    if isinstance(value, dict):
-        return {k: _canon(v) for k, v in sorted(value.items()) if not _volatile(k)}
-    if isinstance(value, list):
-        return sorted((_canon(v) for v in value), key=lambda v: json.dumps(v, sort_keys=True, default=str))
-    return value
-
+# ---- comparing (apps/core/shadow_reads.py) -------------------------------------------------------------------
 
 def _fetch(client, url):
-    """(status, body) -- every page of a paginated list joined; an exception is an answer too. What the request
-    writes (an audit row for an export, a stamp) is rolled back, so the next request reads the same world -- in
-    a savepoint marked as the test case's own, which `reads_control` does not take for the code's transaction."""
-    sp = transaction.atomic(using="default")
-    sp._from_testcase = True
-    sp.__enter__()
-    try:
-        return _fetch_pages(client, url)
-    finally:
-        transaction.set_rollback(True, using="default")
-        sp.__exit__(None, None, None)
-
-
-def _fetch_pages(client, url):
-    for c in caches.all():
-        c.clear()
-    rows, body, status = [], None, None
-    while url:
-        try:
-            res = client.get(url)
-        except Exception as e:  # noqa: BLE001 -- the other side must raise the same
-            if os.environ.get("SHARDED_READS_TRACE"):
-                import traceback
-
-                where = [f"{f.filename.split('backend/')[-1]}:{f.lineno} {f.name}" for f in traceback.extract_tb(e.__traceback__)
-                         if "/apps/" in f.filename and "shard_reads" not in f.filename]
-                return "raised", f"{type(e).__name__}: {str(e)[:200]} AT {where[-3:]}"
-            return "raised", f"{type(e).__name__}: {str(e)[:300]}"
-        status = res.status_code
-        ctype = res.get("Content-Type", "")
-        if "json" not in ctype:  # CSV, YAML, a PDF: the bytes, but the trace id a problem body carries
-            body = getattr(res, "content", b"") if not getattr(res, "streaming", False) else b"".join(res.streaming_content)
-            text = body.decode(errors="replace") if b"\x00" not in body[:1024] else str(len(body))
-            text = re.sub(r'nonce="[^"]*"|"X-CSRFTOKEN"] = "[^"]*"', "", text)  # a page's nonce and CSRF token are new on every request
-            return status, (ctype, "\n".join(ln for ln in text.splitlines() if not ln.startswith("instance:")))
-        try:
-            body = res.json()
-        except ValueError:  # a JSON-ish content type that is not one document (a stream of lines, YAML)
-            text = res.content.decode(errors="replace")
-            return status, "\n".join(ln for ln in text.splitlines() if not ln.startswith("instance:"))
-        if isinstance(body, dict) and "results" in body and "count" in body:
-            rows.extend(body["results"])
-            url = body.get("next")
-            if url:
-                url = url.split("testserver", 1)[-1]
-            continue
-        return status, _canon(body)
-    return status, {"count": body["count"], "results": _canon(rows)}
-
-
-def _diff(base, cut):
-    """What differs, short: the status, the rows only one side has, or the first differing key / line."""
-    if base[0] == cut[0] and isinstance(base[1], tuple) and isinstance(cut[1], tuple):
-        a, b = str(base[1][1]).splitlines(), str(cut[1][1]).splitlines()
-        first = next((i for i, (x, y) in enumerate(zip(a, b, strict=False)) if x != y), min(len(a), len(b)))
-        return f"line {first}: {a[first:first + 1]} | {b[first:first + 1]}"[:900]
-    if base[0] != cut[0] or not (isinstance(base[1], dict) and isinstance(cut[1], dict)):
-        return f"single db {str(base)[:300]} | cut over {str(cut)[:300]}"
-    a, b = base[1], cut[1]
-    if "results" in a and "results" in b:
-        da = {json.dumps(r, sort_keys=True, default=str) for r in a["results"]}
-        db = {json.dumps(r, sort_keys=True, default=str) for r in b["results"]}
-        by_id = {r.get("id"): r for r in b["results"] if isinstance(r, dict)}
-        for row in a["results"]:
-            other = by_id.get(row.get("id")) if isinstance(row, dict) else None
-            if other is not None and other != row:  # the same row, answered differently: which keys
-                keys = sorted(k for k in set(row) | set(other) if row.get(k) != other.get(k))
-                return f"row {row.get('id')}: " + "; ".join(f"{k}: {row.get(k)!r} | {other.get(k)!r}" for k in keys)[:900]
-        return (f"count {a.get('count')} vs {b.get('count')}; only single db: {sorted(da - db)[:2]}; "
-                f"only cut over: {sorted(db - da)[:2]}")[:900]
-    keys = [k for k in sorted(set(a) | set(b)) if a.get(k) != b.get(k)]
-    return f"keys {keys[:5]}: {str(a.get(keys[0]))[:250]} | {str(b.get(keys[0]))[:250]}" if keys else "?"
-
-
-def _drop(answer, keys):
-    status, body = answer
-    return (status, {k: v for k, v in body.items() if k not in keys}) if keys and isinstance(body, dict) else answer
-
-
-def _has_data(answer):
-    status, body = answer
-    if status != 200:
-        return False
-    if isinstance(body, dict) and "results" in body:
-        return bool(body["results"])
-    return bool(body)
+    return shadow.fetch(client, url, trace=bool(os.environ.get("SHARDED_READS_TRACE")))
 
 
 def _urls(case, world):
-    name, kwargs, cls, action = ENDPOINTS[case]
-    if not kwargs:
-        return [reverse(name)]
-    lookup = getattr(cls, "lookup_url_kwarg", None) or getattr(cls, "lookup_field", "pk")
-    lst = _list_route_of(cls)
-    if kwargs != (lookup,) or lst is None:
-        return []
-    with override_settings(SHARD_READ_CIVS=[]):
-        status, body = _fetch(world["callers"]["SYSTEM_ADMIN"], reverse(lst))
-    field = getattr(cls, "lookup_field", "pk")
-    rows = body if isinstance(body, list) else body.get("results", []) if isinstance(body, dict) else []
-    ids = [r.get(field, r.get("id")) for r in (rows if status == 200 else []) if isinstance(r, dict)]
-    ids = [i for i in ids if i is not None]
-    rng = random.Random(f"{SEED}:{case}")
-    return [reverse(name, kwargs={lookup: i}) for i in rng.sample(ids, min(4, len(ids)))]
+    lst = shadow.list_route_of(ENDPOINTS, ENDPOINTS[case][2])
+    answer = None
+    if ENDPOINTS[case][1] and lst:
+        with override_settings(SHARD_READ_CIVS=[]):
+            answer = _fetch(world["callers"]["SYSTEM_ADMIN"], reverse(lst))
+    return shadow.urls_for(ENDPOINTS, case, answer, random.Random(f"{SEED}:{case}"))
 
 
 @sharded
@@ -400,12 +243,12 @@ def test_cut_over_reads_answer_like_the_single_database(world, case):
     for who, client in world["callers"].items():
         for url in urls:
             with override_settings(SHARD_READ_CIVS=[]):
-                base = _drop(_fetch(client, url), WRITES_ON_READ.get(case, ()))
+                base = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
             with override_settings(SHARD_READ_CIVS=list(CIVS)):
-                cut = _drop(_fetch(client, url), WRITES_ON_READ.get(case, ()))
+                cut = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
             if base != cut:
-                mismatches.append(f"{who} GET {url}: {_diff(base, cut)}")
-            elif _has_data(base):
+                mismatches.append(f"{who} GET {url}: {shadow.diff(base, cut)}")
+            elif shadow.has_data(base):
                 with_data += 1
     assert not mismatches, f"SHARDED_READS_SEED={SEED}\n" + "\n".join(mismatches[:6])
     if not with_data:
@@ -545,3 +388,52 @@ def test_a_write_request_reads_control_and_a_read_request_its_shard(world):
                 assert Soul.objects.filter(pk=soul.pk).exists() is seen, method
             finally:
                 set_current_request(None)
+
+
+# ---- the 115 exit check: manage.py shadow_read_diff -------------------------------------------------------
+
+def _row_counts():
+    from django.db import router
+
+    return {(alias, m._meta.label): m._base_manager.using(alias).order_by().count()
+            for alias in connections for m in apps.get_models(include_auto_created=True)
+            if m._meta.managed and not m._meta.proxy and router.allow_migrate_model(alias, m)}
+
+
+def _shadow(*args):
+    import io
+
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    out = io.StringIO()
+    try:
+        call_command("shadow_read_diff", *args, stdout=out)
+        return 0, out.getvalue()
+    except CommandError as e:
+        return 1, f"{out.getvalue()}\n{e}"
+
+
+@sharded
+def test_shadow_read_diff_is_clean_on_a_synced_world_and_writes_nothing(world):
+    """The command over the synced world: no difference, data compared, and not one row more or less on any
+    database afterwards (every request and the token minting are rolled back)."""
+    before = _row_counts()
+    code, out = _shadow("--all", "--endpoint", "soul", "--max-pages", "2")
+    assert code == 0, out
+    assert " 0 differ" in out and " 0 with data" not in out, out
+    assert _row_counts() == before
+
+
+@sharded
+def test_shadow_read_diff_reports_a_row_no_shard_has_yet(world):
+    """A soul written to control and not synced: cutting its civilization over changes the hall ADMIN's list,
+    and the command says so and exits non-zero."""
+    from apps.souls.models import Soul, SoulState
+    from apps.tenants.models import Tenant
+
+    hall = Tenant.objects.filter(declared_civilization="GREEK").order_by("code").first()
+    Soul._base_manager.using("default").create(name="unsynced-shadow", tenant=hall, current_state=SoulState.JUDGING)
+    code, out = _shadow("--civ", "GREEK", "--endpoint", "soul-list", "--max-pages", "50")
+    assert code == 1, out
+    assert "DIFFERS" in out and "unsynced-shadow" in out, out

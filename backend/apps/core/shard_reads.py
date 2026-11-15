@@ -135,7 +135,11 @@ def current_context():
         return alias_for_reads(hall.civilization)
     if request is None:
         return FANOUT if _in_celery_task() else None
-    user = getattr(request, "user", None)
+    return context_for_user(getattr(request, "user", None))
+
+
+def context_for_user(user):
+    """The read context of a caller with no hall of its own (the request's and the websocket's rule alike)."""
     if user is None or not getattr(user, "is_authenticated", False):
         return FANOUT  # anonymous (sign-in by soul code, a public page) or not yet authenticated: no hall
     from apps.core.tenant import is_civilization_admin, is_tenant_exempt
