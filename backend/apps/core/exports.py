@@ -22,6 +22,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.core.csv_safe import csv_safe
 from apps.core.field_permissions import hidden_fields, withhold
+from apps.core.pagination import total_order
 from apps.core.tenant import request_tenant
 
 #: Every export's ceiling, the audit export included. Design batch 28 W5 greys the
@@ -44,6 +45,7 @@ def refuse_if_too_many(qs):
 
 def export_csv(request, *, qs, serializer_class, columns, filename, resource):
     """`columns` is [(header, serializer_key) or (header, serializer_key, soul_field), ...]. Returns the CSV response."""
+    qs = total_order(qs)  # tied rows in one order, whichever database answers (apps/core/pagination.py)
     refuse_if_too_many(qs)
     soul_hidden = hidden_fields(request.user, "Soul", {c[2] for c in columns if len(c) > 2})
     blank = {c[1] for c in columns if len(c) > 2 and c[2] in soul_hidden}

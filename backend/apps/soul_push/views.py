@@ -9,10 +9,10 @@ from django.db.models import F, Window
 from django.db.models.functions import RowNumber
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import serializers, status
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from apps.authentication.signin_sessions import session_of
+from apps.core.pagination import TotalOrderPagination
 from apps.soul_accounts.me_views import SoulAPIView
 from apps.soul_accounts.serializers import SoulErrorSerializer
 from apps.soul_push import services
@@ -130,6 +130,6 @@ class MeNotificationsView(SoulAPIView):
             .filter(rn=1)
             .order_by("-created_at", "-id")
         )
-        paginator = PageNumberPagination()
+        paginator = TotalOrderPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         return paginator.get_paginated_response(PushHistoryItemSerializer(page, many=True).data)

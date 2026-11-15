@@ -271,12 +271,16 @@ def approve_codenames():
 
 
 def _templates():
+    from apps.core.shard_reads import with_fanout
     from apps.workflow.models import WorkflowTemplate
 
     # `objects` drops soft-deleted rows; no tenant filter on purpose — roles
-    # are global rows and every caller here is ADMIN (tenant-exempt), so a
-    # template in any tenant that names a role is a reference to that role.
-    return list(WorkflowTemplate.objects.order_by("name", "id"))
+    # are global rows, so a template in any tenant that names a role is a
+    # reference to that role. Every hall's, whoever asks (the role list is
+    # open to any officer): read across every shard once reads are cut over,
+    # not the caller's hall's shard alone (shadow-diff-greek-1, JUDGE's
+    # `workflow_template_count`).
+    return list(with_fanout(WorkflowTemplate.objects.order_by("name", "id")))
 
 
 def _steps(template):

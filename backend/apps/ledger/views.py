@@ -18,6 +18,7 @@ from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.field_permissions import hidden_fields
 from apps.core.locale import locale_from_request
+from apps.core.pagination import total_order
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
 from apps.core.tenant import is_hall_less_admin, request_tenant, scope_to_tenant, within_reach
@@ -688,6 +689,7 @@ class LedgerExportStatsView(APIView):
         tenant = request_tenant(request)
         # Narrowed by the data scope as well (refactor audit 2026-11-08 1.1): the same souls `_scoped_souls` opens.
         qs = _scoped_souls(request, tenant).select_related("tenant") if tenant else Soul.objects.none()
+        qs = total_order(qs)
         refuse_if_too_many(qs)
 
         response = HttpResponse(content_type="text/csv")

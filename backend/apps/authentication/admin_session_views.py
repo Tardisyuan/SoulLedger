@@ -20,10 +20,10 @@ from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import permissions, serializers, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.core.pagination import TotalOrderPagination
 from apps.core.tenant import scope_to_tenant
 
 from . import signin_sessions
@@ -107,7 +107,7 @@ def admin_sessions_view(request):
             return refuse("user 必须是数字。", "invalid_user", status.HTTP_400_BAD_REQUEST)
         qs = qs.filter(user_id=int(user_id))
     current = signin_sessions.session_of(request.auth)
-    paginator = PageNumberPagination()
+    paginator = TotalOrderPagination()
     page = paginator.paginate_queryset(qs.order_by("-last_seen_at", "pk"), request)
     return paginator.get_paginated_response(AdminSessionSerializer([{
         "id": s.pk, "user_id": s.user_id, "username": s.user.username,

@@ -698,8 +698,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         from django.http import HttpResponse
 
         from apps.core.exports import refuse_if_too_many
+        from apps.core.pagination import total_order
 
-        qs = self.get_queryset()
+        qs = total_order(self.get_queryset())
         refuse_if_too_many(qs)
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="users.csv"'

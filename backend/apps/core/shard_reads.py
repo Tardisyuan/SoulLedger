@@ -30,7 +30,9 @@ rows are merged in that order and the slice is taken from the merge. `count` / `
 combine per leg. `install()` hooks those QuerySet methods; a path it does not cover (raw SQL, explain, a
 combined queryset) asks the router, which raises NoShardContext.
 """
+import decimal
 import functools
+import operator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
@@ -279,7 +281,7 @@ def _unreachable(model):
 
     out = set()
     for f in model._meta.concrete_fields:
-        if f.is_relation and f.many_to_one:
+        if f.is_relation and (f.many_to_one or f.one_to_one):  # a one-to-one (ChatIdentity.account) joins the same
             target = f.related_model
             if placement(target) not in (SHARD, REFERENCE) or (is_bare(f) and placement(target) == SHARD):
                 out.add(f.name)
@@ -647,8 +649,20 @@ def _key_reader(qs, order):
     raise NotImplementedError(f"{qs.model._meta.label}: {iterable.__name__} across shards")
 
 
-_COMBINE = {Count: lambda vs: sum(v or 0 for v in vs), Sum: lambda vs: sum(v for v in vs if v is not None)
-            if any(v is not None for v in vs) else None,
+def _total(values):
+    """The legs' sums added in their own type (a duration, a Decimal), not from the int 0; None when no leg had one."""
+    present = [v for v in values if v is not None]
+    return functools.reduce(operator.add, present) if present else None
+
+
+def _average(name, total, many, default):
+    """An Avg from the legs' Sum and Count: a number or a duration divided here."""
+    if isinstance(total, decimal.Decimal):  # Python's division does not round the way avg(numeric) does
+        raise NotImplementedError(f"{name}: Avg over a DecimalField cannot be combined across shards exactly")
+    return total / many if many else default
+
+
+_COMBINE = {Count: lambda vs: sum(v or 0 for v in vs), Sum: _total,
             Min: lambda vs: min((v for v in vs if v is not None), default=None),
             Max: lambda vs: max((v for v in vs if v is not None), default=None)}
 
@@ -695,7 +709,7 @@ def _combine_groups(qs, rows):
             out = {**dict(key), **{n: agg[n] for n in aggs}}
             for n, a in avgs.items():
                 total, many = agg[f"_shard_s_{n}"], agg[f"_shard_n_{n}"]
-                out[n] = total / many if many else a.default
+                out[n] = _average(n, total, many, a.default)
             return out
     elif iterable is ValuesListIterable:
         fields = list(qs._fields or ()) + [a for a in qs.query.annotation_select if a not in (qs._fields or ())]
@@ -776,9 +790,9 @@ def aggregate(qs, args, kwargs):
         if how == "distinct":
             out[name] = len(seen.get(name, set()) - {None})
         elif how == "avg":
-            s = sum(p[f"{name}__s"] or 0 for p in parts)
+            s = _total(p[f"{name}__s"] for p in parts)
             n = sum(p[f"{name}__n"] or 0 for p in parts)
-            out[name] = s / n if n else expr.default
+            out[name] = _average(name, s, n, expr.default)
         elif isinstance(how, tuple):  # Coalesce(aggregate, constants...)
             value = how[1]([p[name] for p in parts])
             out[name] = value if value is not None else next((v for v in how[2] if v is not None), None)
@@ -877,13 +891,15 @@ def install():
 
 
 def crossing_keys():
-    """SHARD -> SHARD bare ids: the two rows may be in different civilizations' shards."""
+    """SHARD -> SHARD bare ids: the two rows may be in different civilizations' shards. One-to-one keys too
+    (RebirthApplication.workflow: the application follows its soul home, the workflow stays in the hall that
+    opened it)."""
     from django.apps import apps
 
     from apps.core.bare_ids import is_bare
 
     return [f for m in apps.get_models() for f in m._meta.concrete_fields
-            if f.many_to_one and is_bare(f) and f.model is m and placement(m) == SHARD
+            if (f.many_to_one or f.one_to_one) and is_bare(f) and f.model is m and placement(m) == SHARD
             and placement(f.related_model) == SHARD]
 
 
@@ -893,10 +909,20 @@ def _install_crossing_accessors():
     its home's)."""
     from django.db.models.fields.related_descriptors import (
         ForwardManyToOneDescriptor,
+        ForwardOneToOneDescriptor,
         ReverseManyToOneDescriptor,
+        ReverseOneToOneDescriptor,
     )
 
     class CrossingForward(ForwardManyToOneDescriptor):
+        def get_queryset(self, **hints):
+            return with_fanout(super().get_queryset(**hints))
+
+    class CrossingForwardOne(ForwardOneToOneDescriptor):
+        def get_queryset(self, **hints):
+            return with_fanout(super().get_queryset(**hints))
+
+    class CrossingReverseOne(ReverseOneToOneDescriptor):
         def get_queryset(self, **hints):
             return with_fanout(super().get_queryset(**hints))
 
@@ -916,9 +942,10 @@ def _install_crossing_accessors():
             return Manager
 
     for f in crossing_keys():
-        if not isinstance(f.model.__dict__.get(f.name), CrossingForward):
-            setattr(f.model, f.name, CrossingForward(f))
+        forward, reverse = (CrossingForwardOne, CrossingReverseOne) if f.one_to_one else (CrossingForward,
+                                                                                          CrossingReverse)
+        if not isinstance(f.model.__dict__.get(f.name), forward):
+            setattr(f.model, f.name, forward(f))
         accessor = f.remote_field.get_accessor_name()
-        if accessor and not f.remote_field.hidden and not isinstance(
-                f.related_model.__dict__.get(accessor), CrossingReverse):
-            setattr(f.related_model, accessor, CrossingReverse(f.remote_field))
+        if accessor and not f.remote_field.hidden and not isinstance(f.related_model.__dict__.get(accessor), reverse):
+            setattr(f.related_model, accessor, reverse(f.remote_field))

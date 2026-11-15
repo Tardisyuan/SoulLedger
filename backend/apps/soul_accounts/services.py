@@ -20,6 +20,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.soul_accounts.delivery import pick_delivery
@@ -307,12 +308,26 @@ def _expire_if_due(credential) -> bool:
     return credential.status == CredentialStatus.VOID
 
 
+def _due_to_expire(now):
+    return Q(expires_at__lte=now,
+             status__in=[CredentialStatus.QUEUED, CredentialStatus.PENDING, CredentialStatus.REVEALED])
+
+
+def _stalled(now):
+    return Q(status=CredentialStatus.QUEUED, created_at__lte=now - QUEUED_STALL_AFTER, expires_at__gt=now)
+
+
+def credentials_awaiting_housekeeping():
+    """The rows the two sweeps below would change right now. Empty after they ran -- on control; a cut-over shard
+    still has them until the next sync (`InitialCredentialViewSet.get_queryset` reads control then)."""
+    now = timezone.now()
+    return InitialCredential.objects.filter(_due_to_expire(now) | _stalled(now))
+
+
 def expire_due_credentials():
     """把过期还带着明文的行作废。列表接口每次调用 —— 明文不因为没人来看就一直躺着。"""
-    return InitialCredential.objects.filter(
-        expires_at__lte=timezone.now(),
-        status__in=[CredentialStatus.QUEUED, CredentialStatus.PENDING, CredentialStatus.REVEALED],
-    ).update(status=CredentialStatus.VOID, secret="")
+    return InitialCredential.objects.filter(_due_to_expire(timezone.now())).update(
+        status=CredentialStatus.VOID, secret="")
 
 
 #: QUEUED 停这么久还没发出去,就当作入队丢了(F-ACCT-02):broker 收下而 worker 没在跑、或消息丢失时 `.delay` 不抛,
@@ -323,10 +338,8 @@ QUEUED_STALL_AFTER = timedelta(minutes=10)
 def release_stalled_credentials():
     """停住的 QUEUED → PENDING(进待交付,可查看 / 重试 / 打印),与 `expire_due_credentials` 一样由列表接口每次调用。
     worker 之后若照常取到这条,`send_credential` 对 PENDING 照发,只是同一个密码可能既被发出也被当面交付。"""
-    return InitialCredential.objects.filter(
-        status=CredentialStatus.QUEUED, created_at__lte=timezone.now() - QUEUED_STALL_AFTER,
-        expires_at__gt=timezone.now(),
-    ).update(status=CredentialStatus.PENDING, last_error="QueueStalled")
+    return InitialCredential.objects.filter(_stalled(timezone.now())).update(
+        status=CredentialStatus.PENDING, last_error="QueueStalled")
 
 
 def _void_open_credentials(account):

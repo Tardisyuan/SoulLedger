@@ -189,6 +189,8 @@ def diff(base, cut):
         a, b = str(base[1][1]).splitlines(), str(cut[1][1]).splitlines()
         first = next((i for i, (x, y) in enumerate(zip(a, b, strict=False)) if x != y), min(len(a), len(b)))
         return f"line {first}: {a[first:first + 1]} | {b[first:first + 1]}"[:900]
+    if base[0] == cut[0] and isinstance(base[1], list) and isinstance(cut[1], list):  # an unpaginated list
+        return diff((base[0], {"results": base[1]}), (cut[0], {"results": cut[1]}))
     if base[0] != cut[0] or not (isinstance(base[1], dict) and isinstance(cut[1], dict)):
         return f"before {str(base)[:300]} | cut over {str(cut)[:300]}"
     a, b = base[1], cut[1]

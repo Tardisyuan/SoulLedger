@@ -24,7 +24,7 @@ import random
 
 import pytest
 from django.apps import apps
-from django.db import IntegrityError, connections, transaction
+from django.db import IntegrityError, connections, models, transaction
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.pagination import PageNumberPagination
@@ -119,7 +119,92 @@ def _residence(rng, home, away, cache, counter, returned):
     if returned:
         move_soul(Soul._base_manager.get(pk=soul.pk), home)
         DispatchRecord._base_manager.filter(soul=soul).update(status=DispatchStatus.RETURNED)
-    return client
+    return account, client
+
+
+#: The moment the 115 souls tie on (shadow-diff-greek-1: two souls of two civilizations, one create_time).
+TIED_AT = "2026-05-10T16:50:49.878146+00:00"
+WORLD_MATRIX = "world.test"
+
+
+def _what_115_had(rng, halls_by_civ, accounts):
+    """Rows the first shadow_read_diff on 115 (GREEK, 2026-11-15) found differences in and this world had none of:
+    (a) a chat identity and letters to an officer inbox -- from the soul in residence and, for the soul back home,
+        to the hall it resided in -- plus a block and an assistant conversation (the paths through SoulAccount);
+    (b) souls held in a realm (open path entries), so the occupancy's average stay is a duration;
+    (c) rows of several civilizations tied on their list's first order key;
+    (d) a workflow template in every civilization whose steps name a role (the role list's template count)."""
+    from datetime import datetime, timedelta
+
+    from django.utils import timezone
+
+    from apps.chat.models import ChatBlock, ChatIdentity, Conversation, ConversationKind
+    from apps.dispatch.models import DispatchRecord
+    from apps.realms.models import Realm, SoulPathEntry
+    from apps.soul_assist.models import SCREENS, AssistConversation
+    from apps.souls.models import Soul
+    from apps.workflow.models import WorkflowTemplate
+
+    for i, account in enumerate(accounts):                                                                   # (a)
+        local = f"world{i}"
+        ChatIdentity.objects.create(account=account, soul_id=account.soul_id, localpart=local,
+                                    matrix_user_id=f"@{local}:{WORLD_MATRIX}")
+        rec = DispatchRecord._base_manager.get(soul_id=account.soul_id)
+        for hall in (rec.source_tenant, rec.target_tenant):
+            Conversation._base_manager.update_or_create(soul_a_id=account.soul_id, tenant=hall, defaults={
+                "kind": ConversationKind.OFFICER_INBOX, "account_a": account, "soul_b": None, "account_b": None,
+                "room_id": f"!inbox-{local}.{hall.code}:{WORLD_MATRIX}",
+                "last_message_at": timezone.now() - timedelta(hours=i + 1)})
+        AssistConversation.objects.create(account=account, screen=SCREENS[0])
+    ChatBlock.objects.create(blocker=accounts[0], blocked=accounts[1])
+    now = timezone.now()
+    for halls in halls_by_civ.values():                                                                   # (b)
+        for hall in halls:
+            realm = Realm._base_manager.filter(tenant=hall).first()
+            held = SoulPathEntry._base_manager.filter(left_at__isnull=True).values("soul_id")
+            for n, soul in enumerate(Soul._base_manager.filter(tenant=hall, is_deleted=False).exclude(pk__in=held)[:2]):
+                SoulPathEntry.objects.create(soul=soul, realm=realm, sequence=900 + n, tenant=hall,
+                                             entered_at=now - timedelta(days=rng.randint(1, 40), hours=rng.randint(0, 23)))
+    tied_at = datetime.fromisoformat(TIED_AT)
+    for model in apps.get_models():                                                                       # (c)
+        first = next((o for o in model._meta.ordering if isinstance(o, str)), None) if placement(model) == SHARD else None
+        try:
+            field = model._meta.get_field(first.lstrip("-")) if first else None
+        except Exception:  # noqa: BLE001 -- an ordering through a relation
+            field = None
+        if not isinstance(field, models.DateField):  # DateTimeField included
+            continue
+        value = tied_at if isinstance(field, models.DateTimeField) else tied_at.date()
+        for halls in halls_by_civ.values():
+            pks = _rows_of(model, halls)[:2]
+            try:
+                with transaction.atomic(using="default"):
+                    model._base_manager.filter(pk__in=pks).update(**{field.attname: value})
+            except IntegrityError:
+                continue
+    for halls in halls_by_civ.values():                                                                   # (d)
+        template = WorkflowTemplate.objects.filter(tenant__in=halls).first()
+        WorkflowTemplate._base_manager.filter(pk=template.pk).update(nodes_json=[
+            {"node_order": 1, "node_name": "trial", "approver_type": "ROLE", "approver_role": "JUDGE"}])
+
+
+class LettersMatrix:
+    """Synapse as the world's chat sees it: each inbox room (`!inbox-<localpart>.<hall>`) holds one letter from the
+    soul it names; every other call finds Synapse unreachable, the way 115's did (2026-11-15)."""
+
+    service_user = f"@soulledger:{WORLD_MATRIX}"
+
+    def recent_messages(self, room_id, limit=50):
+        local = room_id[len("!inbox-"):].split(".")[0]
+        return [{"event_id": f"$letter-{local}", "sender": f"@{local}:{WORLD_MATRIX}", "body": "a letter",
+                 "timestamp": 1_763_000_000_000, "officer": None}]
+
+    def __getattr__(self, name):
+        from apps.chat.matrix import MatrixError
+
+        def unreachable(*args, **kwargs):
+            raise MatrixError("Synapse 无法访问:ConnectionError")
+        return unreachable
 
 
 def _build(rng):
@@ -171,8 +256,9 @@ def _build(rng):
     crossed = [f for f in crossing_keys() if _point_across(rng, f, halls_by_civ, why)]
     cache, known = {}, [h for hs in halls_by_civ.values() for h in hs]
     home, away, home2, away2 = _pairs(rng, halls_by_civ)
-    souls = [_residence(rng, home, away, cache, counter, returned=False),
-             _residence(rng, home2, away2, cache, counter, returned=True)]
+    movers = [_residence(rng, home, away, cache, counter, returned=False),
+              _residence(rng, home2, away2, cache, counter, returned=True)]
+    _what_115_had(rng, halls_by_civ, [account for account, _ in movers])
 
     def user(name, role, hall=None, **kw):
         u = User.objects.create_user(username=name, password="x", role=role, tenant=hall, **kw)
@@ -185,10 +271,10 @@ def _build(rng):
     for civ in CIVS:
         callers[f"ADMIN@{civ}"] = user(f"civ-{civ}", UserRole.ADMIN, civilization=civ)
     callers["SYSTEM_ADMIN"] = user("sys", UserRole.SYSTEM_ADMIN)
-    callers["soul abroad"], callers["soul back home"] = souls
+    callers["soul abroad"], callers["soul back home"] = (client for _, client in movers)
     _sync()
     code, out = _reconcile("--all")
-    assert code == 0 and "not copied" not in out and "dangling" not in out, out
+    assert code == 0 and "not copied" not in out and "dangling" not in out, f"SHARDED_READS_SEED={SEED}\n{out}"
     print(f"models the filler could not make in some hall: {sorted(unmade)}")
     return {"callers": callers, "crossed": crossed, "halls": halls, "why_not_crossed": why}
 
@@ -218,6 +304,20 @@ def _small_pages(monkeypatch):
     monkeypatch.setattr(PageNumberPagination, "page_size", PAGE_SIZE)
 
 
+@pytest.fixture(autouse=True)
+def _chat_on(settings):
+    """Chat configured, its Synapse the world's (LettersMatrix): the inbox reads its rows before it asks Synapse."""
+    settings.MATRIX_ENABLED = True
+    settings.MATRIX_CLIENT = f"{__name__}.LettersMatrix"
+    settings.MATRIX_SERVER_NAME = WORLD_MATRIX
+
+
+@pytest.fixture(autouse=True)
+def _seed_in_report(request):
+    """The seed in every failing test's report, not only in the first test's captured setup output."""
+    request.node.add_report_section("setup", "seed", f"SHARDED_READS_SEED={SEED}")
+
+
 # ---- comparing (apps/core/shadow_reads.py) -------------------------------------------------------------------
 
 def _fetch(client, url):
@@ -233,20 +333,10 @@ def _urls(case, world):
     return shadow.urls_for(ENDPOINTS, case, answer, random.Random(f"{SEED}:{case}"))
 
 
-def _unstable(client, url, base, case):
-    """The single database answers the same paged question twice differently."""
-    with override_settings(SHARD_READ_CIVS=[]):
-        return shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ())) != base
-
-
-def _one_page(client, url, civs, case):
-    original = PageNumberPagination.page_size
-    PageNumberPagination.page_size = 10_000
-    try:
-        with override_settings(SHARD_READ_CIVS=civs):
-            return shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
-    finally:
-        PageNumberPagination.page_size = original
+#: Endpoints that must compare data: the five differences the first shadow_read_diff on 115 found (and the rows
+#: through SoulAccount beside them). A world that loses their rows fails here instead of skipping.
+MUST_HAVE_DATA = {"perm:list-roles", "realm-occupancy", "soul-export", "soul-inbox-messages", "me-chat-blocks",
+                  "me-assist-conversations"}
 
 
 @sharded
@@ -262,17 +352,12 @@ def test_cut_over_reads_answer_like_the_single_database(world, case):
                 base = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
             with override_settings(SHARD_READ_CIVS=list(CIVS)):
                 cut = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
-            if base != cut and _unstable(client, url, base, case):
-                # The single database itself paged it differently: an order with ties (ApprovalNode by
-                # `order`) puts a tied row on two pages and another on none, and PostgreSQL does not keep tie
-                # order between queries. Compared again on one page; the merge's slicing is held exactly by
-                # test_fanout_slices_equal_the_single_database (a total order).
-                base, cut = (_one_page(client, url, civs, case) for civs in ([], list(CIVS)))
             if base != cut:
                 mismatches.append(f"{who} GET {url}: {shadow.diff(base, cut)}")
             elif shadow.has_data(base):
                 with_data += 1
     assert not mismatches, f"SHARDED_READS_SEED={SEED}\n" + "\n".join(mismatches[:6])
+    assert with_data or case not in MUST_HAVE_DATA, f"{case}: the world lost the rows it is here for"
     if not with_data:
         pytest.skip(f"{case}: no caller had data here (both sides equal)")
 
@@ -318,6 +403,94 @@ def test_each_shard_leg_holds_rows(world):
         assert AuditLog._base_manager.filter(tenant__isnull=True).exists(), "the control leg lost hall-less rows"
     missed = sorted(set(map(str, crossing_keys())) - set(map(str, world["crossed"])))
     assert len(world["crossed"]) >= len(crossing_keys()) - 3, [(m, world["why_not_crossed"].get(m)) for m in missed]
+
+
+@sharded
+def test_the_world_has_what_115_had(world):
+    """`_what_115_had` left its rows, in every civilization where it says so."""
+    from apps.chat.models import ChatIdentity, Conversation, ConversationKind
+    from apps.perm.matrix import role_template_references
+    from apps.realms.models import SoulPathEntry
+    from apps.souls.models import Soul
+
+    def civs(model, **kw):
+        return {h.civilization for h in world["halls"] if model._base_manager.filter(**{tenant_path(model): h}, **kw)}
+
+    assert ChatIdentity._base_manager.count() == 2
+    assert len(civs(Conversation, kind=ConversationKind.OFFICER_INBOX)) >= 3  # residence halls and a home hall
+    assert civs(SoulPathEntry, left_at__isnull=True, realm__isnull=False) >= set(CIVS)
+    assert civs(Soul, create_time=TIED_AT) >= set(CIVS)
+    with override_settings(SHARD_READ_CIVS=[]):
+        named = {ref["template_id"] for ref in role_template_references().get("JUDGE", [])}
+    assert len(named) >= len(CIVS), named
+
+
+@sharded
+def test_fanout_aggregates_of_every_type_equal_the_single_database(world):
+    """aggregate() and values().annotate() read across every shard answer what the single database answers, for
+    every aggregate over every column type a SHARD model with rows has: Count, Sum, Min, Max and Avg over integers,
+    floats, durations, dates and times (Avg / Sum where the database has them). Avg over a Decimal is refused."""
+    import math
+    from datetime import timedelta
+
+    from django.db.models import Avg, Count, ExpressionWrapper, F, Max, Min, Sum, Value
+    from django.utils import timezone
+
+    def same(a, b):
+        if isinstance(a, float) and isinstance(b, float):
+            return math.isclose(a, b, rel_tol=1e-9)
+        if isinstance(a, timedelta) and isinstance(b, timedelta):
+            return abs(a - b) <= timedelta(microseconds=1)
+        return a == b
+
+    from apps.core.shard_reads import CONTROL_READS, _unreachable
+
+    now = timezone.now()
+    checked, decimals = set(), []
+    for model in apps.get_models():
+        if placement(model) != SHARD or not model._base_manager.exists() or model._meta.label in CONTROL_READS:
+            continue
+        for f in model._meta.concrete_fields:
+            if f.is_relation or f.primary_key:
+                continue
+            if isinstance(f, models.DateTimeField):
+                exprs = {"min": Min(f.name), "max": Max(f.name), "n": Count(f.name),
+                         "avg_age": Avg(ExpressionWrapper(Value(now) - F(f.name), output_field=models.DurationField())),
+                         "sum_age": Sum(ExpressionWrapper(Value(now) - F(f.name), output_field=models.DurationField()))}
+            elif isinstance(f, (models.DateField, models.TimeField)):
+                exprs = {"min": Min(f.name), "max": Max(f.name), "n": Count(f.name)}
+            elif isinstance(f, (models.IntegerField, models.FloatField, models.DurationField)):
+                exprs = {"min": Min(f.name), "max": Max(f.name), "sum": Sum(f.name), "avg": Avg(f.name)}
+            elif isinstance(f, models.DecimalField):
+                exprs = {"min": Min(f.name), "max": Max(f.name), "sum": Sum(f.name)}
+                if model._base_manager.filter(**{f"{f.name}__isnull": False}).exists():
+                    decimals.append((model, f.name))
+            else:
+                continue
+            group = tenant_path(model)
+            reads = [("aggregate", lambda qs, e=exprs: [qs.aggregate(**e)])]
+            if group.split("__")[0] not in _unreachable(model):  # grouped by a hall a shard can join to
+                reads.append(("grouped", lambda qs, e=exprs, g=group: sorted(
+                    qs.values(g).annotate(**e).order_by(), key=lambda r: str(r[g]))))
+            for label, read in reads:
+                with override_settings(SHARD_READ_CIVS=[]):
+                    base = read(model._base_manager.all())
+                with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(FANOUT):
+                    cut = read(model._base_manager.all())
+                assert len(base) == len(cut), (model._meta.label, f.name, label)
+                for b, c in zip(base, cut, strict=True):
+                    bad = {k: (b[k], c[k]) for k in b if not same(b[k], c[k])}
+                    assert not bad, (model._meta.label, f.name, label, bad, f"SHARDED_READS_SEED={SEED}")
+            checked.add(type(f).__name__)
+    assert {"DateTimeField", "DateField", "IntegerField", "DurationField"} <= checked, checked
+    for model, name in decimals[:1]:  # no SHARD model has a decimal column with values today
+        with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(FANOUT), pytest.raises(NotImplementedError):
+            model._base_manager.aggregate(a=Avg(name))
+    from decimal import Decimal
+
+    from apps.core.shard_reads import _average
+    with pytest.raises(NotImplementedError):
+        _average("a", Decimal("3"), 2, None)
 
 
 # ---- fail closed ------------------------------------------------------------------------------------------

@@ -7,13 +7,13 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.exports import export_csv
 from apps.core.idempotency import idempotent
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
+from apps.core.pagination import TotalOrderPagination
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -42,7 +42,7 @@ class DispositionFilter(filters.FilterSet):
         return queryset.filter(SECTION_FILTERS[value])
 
 
-class DispositionPagination(PageNumberPagination):
+class DispositionPagination(TotalOrderPagination):
     """The project page envelope plus `section_counts`: how many rows each of the
     three sections holds under the same filters as this page, ignoring
     `section` itself. The /disposition page shows these instead of counting the

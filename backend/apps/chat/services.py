@@ -52,6 +52,7 @@ from apps.chat.grant import sign as sign_grant
 from apps.chat.identity import deactivate_identity, display_name, ensure_identity
 from apps.chat.matrix import ROOM_EVENT_LEVELS, MatrixError, get_client, login_jwt
 from apps.chat.models import ChatBlock, ChatIdentity, Conversation, ConversationKind
+from apps.core.shard_reads import with_fanout
 from apps.social import soul_circle as circle
 from apps.social.models import Follow
 
@@ -944,7 +945,8 @@ def officer_messages(conversation, officer, *, request=None, limit=50, before=No
     client = get_client()
     names = {
         identity.matrix_user_id: display_name(identity.account)
-        for identity in ChatIdentity.objects.filter(soul=conversation.soul_a).select_related(
+        # Every leg: the identity lives with its soul, which may be home again while this hall holds the letters.
+        for identity in with_fanout(ChatIdentity.objects.filter(soul=conversation.soul_a)).select_related(
             "account__user", "account__soul"
         )
     }

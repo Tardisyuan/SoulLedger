@@ -124,7 +124,29 @@ class World:
                         if not f.null:
                             return None
                 setattr(obj, f.attname, None if val is None else val.pk)
+        self.same_owner(model, obj, first_hop)
         return self.columns(obj)
+
+    @staticmethod
+    def same_owner(model, obj, first_hop):
+        """A row owned through a key (`soul__tenant`) whose constrained key names a row owned through the same key
+        names that row of the same owner: the product writes both from one soul (CooldownShorteningRequest's
+        `application` is its own soul's RebirthApplication). Drawn apart, each followed its own soul when one of
+        the two moved, and the request named an application its shard does not hold: "not copied ... dangling"
+        on a seed that moved one of them (gate run 2026-11-16)."""
+        from apps.core.bare_ids import is_bare
+
+        if not first_hop:
+            return
+        hop = model._meta.get_field(first_hop)
+        if hop.related_model is not apps.get_model("souls", "Soul"):  # only a soul moves between shards
+            return
+        for f in model._meta.concrete_fields:
+            target = f.related_model
+            if (f.is_relation and f.name != first_hop and not is_bare(f) and getattr(obj, f.attname) is not None
+                    and placement(target) == SHARD and (tenant_path(target) or "").split("__")[0] == first_hop):
+                owner = target._base_manager.filter(pk=getattr(obj, f.attname)).values_list(hop.attname, flat=True)
+                setattr(obj, hop.attname, owner.get())
 
     def columns(self, obj, settle=False):
         """Draw the non-key columns. `settle`: NULL or the default where there is one (a check constraint such
@@ -237,10 +259,26 @@ def _seed():
     return seed
 
 
+def _seeded(request, seed):
+    """The seed in this test's report (a failure shows it), not only in the captured output of whichever test
+    built the module's world: a gate run lost it that way (2026-11-16)."""
+    request.node.add_report_section("setup", "seed", f"SHARD_SYNC_SEED={seed}")
+
+
+def _built(seed):
+    try:
+        return _build_world(seed)
+    except BaseException as e:
+        e.add_note(f"SHARD_SYNC_SEED={seed}")
+        raise
+
+
 @pytest.fixture
-def fresh_world():
+def fresh_world(request):
     """A fresh world in the test's own transaction (default only: the guard test runs in every suite)."""
-    return _build_world(_seed())
+    seed = _seed()
+    _seeded(request, seed)
+    return _built(seed)
 
 
 @pytest.fixture(scope="module")
@@ -253,10 +291,12 @@ def _synced_world(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         for alias in aliases:
             stack.enter_context(transaction.atomic(using=alias))
+        seed = _seed()
         try:
-            w = _build_world(_seed())
+            w = _built(seed)
             w.sync_out = _sync()
-        except BaseException:
+        except BaseException as e:
+            e.add_note(f"SHARD_SYNC_SEED={seed}")
             for alias in aliases:
                 transaction.set_rollback(True, using=alias)
             stack.close()
@@ -272,6 +312,7 @@ def _synced_world(django_db_setup, django_db_blocker):
 def world(_synced_world, request):
     """The module's synced world, with the test's own pool (a test that adds rows adds them to its copy, and
     they are rolled back) and its own random draws, seeded from the world's seed and the test's name."""
+    _seeded(request, _synced_world.seed)
     w = copy.copy(_synced_world)
     w.pool = defaultdict(list, {k: list(v) for k, v in _synced_world.pool.items()})
     w.rng = random.Random(f"{w.seed}:{request.node.name}")
@@ -427,6 +468,31 @@ def test_after_sync_reconcile_is_clean_and_the_world_had_what_it_checks(world):
     assert [c for c in CIVS if Soul._base_manager.using(alias_for_civilization(c)).filter(pk=back.pk).exists()] == [
         back.home_tenant.civilization]
     assert sum(_executed_cross_civ(s.pk, s.home_tenant.civilization) for s in Soul._base_manager.filter(home_tenant__isnull=False).select_related("home_tenant")) >= 3
+
+
+@sharded
+def test_a_constrained_key_between_two_rows_of_souls_names_one_soul(world):
+    """The world writes what the product writes (World.same_owner): a row owned through its soul whose constrained
+    key names another row owned through a soul names that soul's own row. Drawn apart, a move of one of the two
+    souls split them across shards, and the sync reported the row "not copied" on a few seeds only."""
+    from apps.core.bare_ids import is_bare
+
+    checked = []
+    for model in apps.get_models():
+        hop = (tenant_path(model) or "").split("__")[0]
+        if placement(model) != SHARD or not hop or model._meta.get_field(hop).related_model is not apps.get_model(
+                "souls", "Soul"):
+            continue
+        own = model._meta.get_field(hop).attname
+        for f in model._meta.concrete_fields:
+            if (f.is_relation and f.name != hop and not is_bare(f) and placement(f.related_model) == SHARD
+                    and (tenant_path(f.related_model) or "").split("__")[0] == hop):
+                pairs = list(model._base_manager.filter(**{f"{f.name}__isnull": False}).values_list(own, f"{f.name}__{hop}"))
+                assert pairs, f"{model._meta.label}.{f.name}: no row (SHARD_SYNC_SEED={world.seed})"
+                apart = [p for p in pairs if p[0] != p[1]]
+                assert not apart, (f"{model._meta.label}.{f.name}", apart[:3], f"SHARD_SYNC_SEED={world.seed}")
+                checked.append(f"{model._meta.label}.{f.name}")
+    assert "soul_accounts.CooldownShorteningRequest.application" in checked, checked
 
 
 @pytest.mark.django_db

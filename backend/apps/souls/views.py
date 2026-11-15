@@ -17,6 +17,7 @@ from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.exports import record_export, refuse_if_too_many
+from apps.core.pagination import total_order
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
@@ -346,7 +347,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         不截断(`apps/core/exports.py`)。自由文本格过 `csv_safe`。
         """
         if "ids" not in request.query_params:
-            souls = self.filter_queryset(self.get_queryset())
+            souls = total_order(self.filter_queryset(self.get_queryset()))
             refuse_if_too_many(souls)
         else:
             raw = [part.strip() for part in request.query_params.get("ids", "").split(",") if part.strip()]

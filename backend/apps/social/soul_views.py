@@ -12,10 +12,10 @@ from django.core.cache import cache
 from django.db.models import Exists, OuterRef, Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
+from apps.core.pagination import TotalOrderPagination
 from apps.core.problems import problem
 from apps.social import interactions
 from apps.social import media as post_media
@@ -102,7 +102,7 @@ class SoulSocialView(SoulAPIView):
         return super().handle_exception(exc)
 
     def paginate(self, queryset, serializer_class):
-        paginator = PageNumberPagination()
+        paginator = TotalOrderPagination()
         page = paginator.paginate_queryset(queryset, self.request, view=self)
         data = serializer_class(page, many=True, context={"viewer": self.request.user}).data
         return paginator.get_paginated_response(data)

@@ -15,11 +15,11 @@ from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.authentication.serializers import UserManagementSerializer
+from apps.core.pagination import TotalOrderPagination
 from apps.core.permissions import IsAdminPermission
 from apps.core.problems import ProblemSerializer, problem
 from apps.events.realtime import push_permission_refresh
@@ -62,7 +62,7 @@ class RoleMembersPageSerializer(serializers.Serializer):
     results = UserManagementSerializer(many=True)
 
 
-class _Page(PageNumberPagination):
+class _Page(TotalOrderPagination):
     page_size_query_param = "page_size"
     max_page_size = 100
 
