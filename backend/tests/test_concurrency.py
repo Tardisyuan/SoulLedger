@@ -1398,15 +1398,8 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 2026-10-27 灵魂搜索的三元组索引(apps/souls/migrations/0047_soul_search_trigram.py):pg_trgm 与 GIN
         # 只在 PostgreSQL 上存在。同文件另两条(列清单、表达式)每个引擎都跑。
         "tests/test_soul_search_trigram.py::test_the_indexes_exist_on_postgresql",
-        # 2026-11-15 分库阶段 1B:一个真的文明分库(`civ_greek`,只在 PG 的 multidb 设置里存在)上没有控制库的表、
-        # 外键不指向不存在的表、建库后无行、分库行带控制库用户 ID、跨库 JOIN 大声失败(D3)。SQLite 上
-        # 同样的规则由 tests/test_shard_router_boundary.py(allow_migrate / allow_relation)每个引擎都跑。
-        "tests/test_control_boundary.py::test_the_shard_has_no_control_table_and_control_has_them",
-        "tests/test_control_boundary.py::test_the_shard_holds_exactly_the_shard_and_reference_tables",
-        "tests/test_control_boundary.py::test_no_foreign_key_on_the_shard_points_at_a_missing_table",
-        "tests/test_control_boundary.py::test_migrate_left_the_shard_empty",
-        "tests/test_control_boundary.py::test_a_shard_row_keeps_a_control_users_id_and_resolves_it",
-        "tests/test_control_boundary.py::test_a_join_to_a_control_table_fails_loudly_on_the_shard",
+        # (2026-11-15 分库阶段 2:tests/test_control_boundary.py 的六条不再只在 PG 上 —— 它们改到
+        # `--ds=config.settings_sharded -m sharded`,两个引擎都跑。)
         # 2026-10-31 加密 JSON 列(review A2):列的 PostgreSQL 类型与 jsonb_typeof 只在 PG 上有;
         # SQLite 上同文件的往返测试读原始列，每个引擎都跑。
         "tests/test_encrypted_json_column.py::test_the_postgresql_column_is_text_holding_a_token_or_a_json_object",

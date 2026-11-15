@@ -122,7 +122,17 @@ def _runs(job):
 def test_the_multidb_guard_runs_in_the_backend_job():
     """Review C21 (2026-10-31): test_multidb_shadow.py exists only under its own settings, so the suite skips it."""
     (command,) = [r for r in _runs("backend") if "test_multidb_shadow.py" in r]
-    assert "--ds=config.settings_multidb" in command and "-m multidb" in command and "tests/test_control_boundary.py" in command, command
+    assert "--ds=config.settings_multidb" in command and "-m multidb" in command, command
+
+
+def test_the_sharded_group_runs_in_the_backend_job():
+    """Sharding stage 2: a `sharded` test skips unless the four civilization shards exist, and they exist only
+    under config.settings_sharded. The command runs the whole group, not a file list that a new test misses."""
+    (command,) = [ln.strip() for r in _runs("backend") for ln in r.splitlines()
+                  if ln.strip().startswith("python -m pytest") and "--ds=config.settings_sharded" in ln]
+    args = command.split()
+    assert args[args.index("-m", 2) + 1] == "sharded", command
+    assert not [a for a in args if a.startswith("tests/")], command
 
 
 def test_the_synapse_integration_runs_against_a_started_synapse_and_a_skip_fails_it():

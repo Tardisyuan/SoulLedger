@@ -131,7 +131,13 @@ jobs:
       - name: Multi-database guard
         run: |
           cd backend
-          python -m pytest --tb=short -q --no-cov --ds=config.settings_multidb -m multidb tests/test_multidb_shadow.py tests/test_control_boundary.py
+          python -m pytest --tb=short -q --no-cov --ds=config.settings_multidb -m multidb tests/test_multidb_shadow.py
+      # Sharding stage 2: the four civilization shards exist only under settings_sharded; `sharded` tests skip
+      # anywhere else. `run-gates.sh --real-pg --full` runs it too.
+      - name: Sharded group
+        run: |
+          cd backend
+          python -m pytest --tb=short -q --no-cov --ds=config.settings_sharded -m sharded
       # ruff's version comes from requirements-dev.txt — the same pin the local
       # backend/.venv and the pre-push hook use. This used to install ruff
       # unpinned, i.e. whatever was newest on the day of the run. Installed above.

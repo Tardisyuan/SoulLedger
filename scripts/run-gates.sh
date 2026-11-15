@@ -27,6 +27,11 @@
 #   Readers of the other side's files follow the changes in the side's own change set.
 # FULL: `--full` or GATES_FULL=1 - everything, with the coverage floors. A push to main is NOT full
 # (2026-10-24). `--affected` is the default spelled out; nothing forces selective (GATES_FULL=0 does not).
+# ONE SIDE: GATES_SIDES=js or GATES_SIDES=backend (default both, 2026-11-15) runs that side only; the other
+# prints that it was skipped and records nothing. Ignored on a push (both run); GATES_SIDES=js with
+# --real-pg is refused. E.g. GATES_SIDES=js while a `--real-pg --full` covers the backend.
+# --real-pg --full also runs the multi-database guard (--ds=config.settings_multidb -m multidb) and the
+# sharded group (--ds=config.settings_sharded -m sharded: four civilization shards, sharding stage 2).
 #
 # FAIL LATE (2026-11-15). Static checks run before a side's tests, but a red tsc / eslint / ruff /
 # makemigrations no longer stops the side: its remaining steps run, every red step is listed at the end,
@@ -90,6 +95,21 @@ while [ $# -gt 0 ]; do
     shift
 done
 P="gates"; [ "$PREPUSH" = 1 ] && P="pre-push"
+# GATES_SIDES (2026-11-15, user decision): js | backend | both (default). The other side does not run, says
+# so, and records nothing — e.g. GATES_SIDES=js while a `--real-pg --full` covers the backend. Not on a
+# push: the hook runs both sides (a delegated run, GATES_IN_REMOTE=1, takes what the caller passed it).
+GATES_SIDES="${GATES_SIDES:-both}"
+case "$GATES_SIDES" in
+    both|js|backend) ;;
+    *) echo "run-gates: GATES_SIDES must be js, backend or both, got '$GATES_SIDES'"; exit 2 ;;
+esac
+if [ "$GATES_SIDES" != both ] && [ "$PREPUSH" = 1 ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
+    echo "$P: GATES_SIDES=$GATES_SIDES ignored on a push — both sides run"; GATES_SIDES=both
+fi
+if [ "$GATES_SIDES" = js ] && [ "$REAL_PG" = 1 ]; then
+    echo "run-gates: --real-pg runs only the backend; GATES_SIDES=js leaves it nothing to run"; exit 2
+fi
+side_on() { [ "$GATES_SIDES" = both ] || [ "$GATES_SIDES" = "$1" ]; }
 
 ROOT="$(git rev-parse --show-toplevel)"
 # The tree this run tests, read now: record_side at the end must not vouch for a HEAD that moved while the
@@ -594,6 +614,7 @@ fi
 # tree); a selective run, the files the side covered (COVERED_BE / COVERED_JS).
 record_side() {
     [ "$PREPUSH" = 0 ] && [ "$REAL_PG" = 0 ] && [ "$2" = 0 ] || return 0
+    side_on "$1" || return 0  # GATES_SIDES left it out: nothing ran, nothing to vouch for
     cd "$ROOT" || return 0
     tree_is_clean || { echo "$P: not recording the $1 pass — $CLEAN_WHY"; return 0; }
     local tree file="$STAMP-$1" cov kind=selective
@@ -1134,7 +1155,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
     ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 run.lock sl-gates-); $(declare -f remote_prune); remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY; docker run --rm --init --name $RNAME \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
-        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} \
+        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6} \
         -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
         -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $RLIMIT bash -c '
@@ -1658,8 +1679,14 @@ PROBE_PY
     if [ "$REAL_PG" = 1 ] && [ "$FULL_RUN" = 1 ]; then
         echo "  → pytest: multi-database guard (--ds=config.settings_multidb -m multidb)"
         SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $REAL_PG_ARGS --ds=config.settings_multidb \
-            -m multidb tests/test_multidb_shadow.py tests/test_control_boundary.py 2>&1 | tail -4
-        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (multi-database guard, tests/test_multidb_shadow.py, tests/test_control_boundary.py) failed"
+            -m multidb tests/test_multidb_shadow.py 2>&1 | tail -4
+        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (multi-database guard, tests/test_multidb_shadow.py) failed"
+        # Sharding stage 2: the four civilization shards exist only under settings_sharded (a `sharded` test
+        # skips anywhere else); tests/test_control_boundary.py, tests/test_shard_sync.py ...
+        echo "  → pytest: sharded group (--ds=config.settings_sharded -m sharded)"
+        SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $REAL_PG_ARGS --ds=config.settings_sharded \
+            -m sharded 2>&1 | tail -4
+        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (sharded group, --ds=config.settings_sharded -m sharded) failed"
     fi
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
@@ -1872,12 +1899,15 @@ fi
 # one line with both verdicts (`gates-sides:`, which a delegating machine reads to record the sides), the
 # ledgers, and — when either side is red — every red step of both, then the exit.
 NOTES_BE=$(mktemp "${TMPDIR:-/tmp}/gates-notes-backend.XXXXXX"); NOTES_JS=$(mktemp "${TMPDIR:-/tmp}/gates-notes-js.XXXXXX")
+for side in backend js; do
+    side_on "$side" || echo "  → $side side skipped (GATES_SIDES=$GATES_SIDES): nothing run, nothing recorded"
+done
 if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     BE_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-backend.XXXXXX"); JS_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-js.XXXXXX")
     echo "  → backend (ruff, makemigrations, pytest) and JS (tsc, eslint, tests) side by side"
-    ( IN_SIDE=1; NOTES="$NOTES_BE"; static_backend; st=$?; run_backend_tests; exit "$st" ) >"$BE_LOG" 2>&1 &
+    ( IN_SIDE=1; NOTES="$NOTES_BE"; side_on backend || exit 0; static_backend; st=$?; run_backend_tests; exit "$st" ) >"$BE_LOG" 2>&1 &
     BE_PID=$!
-    ( IN_SIDE=1; NOTES="$NOTES_JS"; static_js; st=$?; run_js_tests; exit "$st" ) >"$JS_LOG" 2>&1 &
+    ( IN_SIDE=1; NOTES="$NOTES_JS"; side_on js || exit 0; static_js; st=$?; run_js_tests; exit "$st" ) >"$JS_LOG" 2>&1 &
     JS_PID=$!
     T0=$(date +%s); NEXT=60
     while kill -0 "$BE_PID" 2>/dev/null || kill -0 "$JS_PID" 2>/dev/null; do
@@ -1893,10 +1923,10 @@ if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     echo "  ── JS (exit $JS_RC) ──"; cat "$JS_LOG"
     rm -f "$BE_LOG" "$JS_LOG"
 else
-    ( IN_SIDE=1; NOTES="$NOTES_JS"; static_js ); JS_ST=$?
-    ( IN_SIDE=1; NOTES="$NOTES_BE"; static_backend ); BE_ST=$?
-    ( IN_SIDE=1; NOTES="$NOTES_BE"; run_backend_tests ); BE_RC=$?
-    ( IN_SIDE=1; NOTES="$NOTES_JS"; run_js_tests ); JS_RC=$?
+    ( IN_SIDE=1; NOTES="$NOTES_JS"; side_on js || exit 0; static_js ); JS_ST=$?
+    ( IN_SIDE=1; NOTES="$NOTES_BE"; side_on backend || exit 0; static_backend ); BE_ST=$?
+    ( IN_SIDE=1; NOTES="$NOTES_BE"; side_on backend || exit 0; run_backend_tests ); BE_RC=$?
+    ( IN_SIDE=1; NOTES="$NOTES_JS"; side_on js || exit 0; run_js_tests ); JS_RC=$?
     [ "$BE_ST" = 0 ] || BE_RC="$BE_ST"
     [ "$JS_ST" = 0 ] || JS_RC="$JS_ST"
 fi

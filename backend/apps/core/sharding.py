@@ -169,6 +169,19 @@ def alias_for_civilization(civ):
     return f"civ_{Civilization(civ).value.lower()}"
 
 
+def civilization_aliases():
+    """Every civilization's shard alias, configured or not, sorted: derived from `Civilization`."""
+    from apps.souls.models import Civilization
+
+    return sorted(alias_for_civilization(c) for c in Civilization.values)
+
+
+def shard_aliases():
+    """The civilization aliases this process has a database for, sorted. Production: one per
+    `SHARD_DATABASE_URL_<CIV>` that is set (config/shard_db `databases_from_env`); none by default."""
+    return [alias for alias in civilization_aliases() if alias in settings.DATABASES]
+
+
 def check_cut_over_settings(read, write, databases=None):
     """SHARD_READ_CIVS / SHARD_WRITE_CIVS (D8) name civilizations that have a shard, each one's alias is
     configured in DATABASES, and a civilization's writes are cut over only after its reads. Raised at
@@ -187,6 +200,13 @@ def check_cut_over_settings(read, write, databases=None):
     if early:
         raise ImproperlyConfigured(f"SHARD_WRITE_CIVS {early} are not in SHARD_READ_CIVS: cut reads over first")
     databases = settings.DATABASES if databases is None else databases
+    # A shard alias (`civ_*`, from SHARD_DATABASE_URL_<CIV>) that names no civilization is a typo such as
+    # SHARD_DATABASE_URL_CHINA: refuse it rather than migrate and sync a database nobody routes to.
+    from config.sharding import is_shard_alias
+
+    stray = sorted(a for a in databases if is_shard_alias(a) and a not in civilization_aliases())
+    if stray:
+        raise ImproperlyConfigured(f"DATABASES {stray} name no civilization; shard aliases are {civilization_aliases()}")
     missing = sorted(alias_for_civilization(c) for c in read if alias_for_civilization(c) not in databases)
     if missing:
         raise ImproperlyConfigured(f"SHARD_READ_CIVS needs DATABASES entries {missing}")

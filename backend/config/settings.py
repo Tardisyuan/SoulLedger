@@ -201,6 +201,13 @@ DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = _env_bool(
 # Per-civilization sharding (docs/ARCHITECTURE-tenant-sharding.md 4.2). Stage 0: the router routes
 # nothing; see config/sharding.py for what each later stage changes. Rollback = delete this line.
 DATABASE_ROUTERS = ["config.sharding.ShardRouter"]
+# Stage 2 (shadow shards): SHARD_DATABASE_URL_<CIV> adds the alias civ_<civ>. None set = `default` alone,
+# as before (tests/test_shard_settings.py). Migrated by `manage.py migrate_shards`; reads and writes stay on
+# default until SHARD_READ_CIVS / SHARD_WRITE_CIVS below name the civilization.
+from config.shard_db import databases_from_env  # noqa: E402
+
+DATABASES.update(databases_from_env(
+    os.environ, disable_server_side_cursors=DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"]))
 # Civilizations (apps.souls.models.Civilization values, comma list) whose reads / writes are cut over
 # to their own alias. Empty = none; tests use override_settings (plan D8).
 SHARD_READ_CIVS = [c.strip() for c in os.getenv("SHARD_READ_CIVS", "").split(",") if c.strip()]
