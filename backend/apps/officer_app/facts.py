@@ -59,14 +59,27 @@ def _deadline(node):
     return node.activated_at + timedelta(hours=node.timeout_hours)
 
 
-def _history(wf, node, nodes, user, tenant_id=None) -> list:
+def _halls_seen(user, tenant):
+    """Whose people's names this reader is shown: None = every hall's (SYSTEM_ADMIN); otherwise a frozenset of hall
+    pks — a civilization ADMIN its civilization's halls, anyone else the hall it reads as (none without one).
+
+    Until stage 1A's review, "no hall" here meant "every hall", so a civilization ADMIN read another civilization's
+    approvers on a cross-civilization flow (§7.5)."""
+    from apps.core.tenant import admin_hall_ids, is_hall_less_admin
+
+    if tenant is None and is_hall_less_admin(user):
+        return admin_hall_ids(user)
+    return frozenset({tenant.pk}) if tenant is not None else frozenset()
+
+
+def _history(wf, node, nodes, user, seen) -> list:
     """发起 → 已决的节点(按顺序)→ 当前节点。`mine` = 当前节点轮到我。
 
-    第四十三批:别的域的人名不给(外域段里轮到我时,本殿与其他参与域的审批人只显示站名)。"""
+    第四十三批:别的域的人名不给(外域段里轮到我时,本殿与其他参与域的审批人只显示站名)。`seen`:`_halls_seen`。"""
     from apps.workflow import decision_codes
 
     def visible(owner_id):
-        return tenant_id is None or owner_id == tenant_id
+        return seen is None or owner_id in seen
 
     steps = [{"kind": "start", "name": "", "name_en": "", "actor": _name(wf.create_user) if visible(wf.tenant_id) else None,
               "verdict": "", "comment": "", "at": wf.created_at, "mine": False}]
@@ -103,13 +116,14 @@ def workflow_facts(wf, user, tenant, *, reason) -> dict:
     nodes = _nodes(wf)
     # 位置只数需要人决定的节点,「通知 / 结束」是自动经过的,不算一步。
     steps = [n for n in nodes if n.kind not in AUTOMATIC_KINDS]
+    seen = _halls_seen(user, tenant)
     facts = {
         "soul": soul_ref(wf.soul),
-        "requester": _name(wf.create_user) if tenant is None or wf.tenant_id == tenant.pk else None,
+        "requester": _name(wf.create_user) if seen is None or wf.tenant_id in seen else None,
         "requester_hall": hall_ref(wf.tenant),
         "requested_at": wf.created_at,
         "reason": reason,
-        "history": _history(wf, node, nodes, user, getattr(tenant, "pk", None)),
+        "history": _history(wf, node, nodes, user, seen),
         "attachments": attachments_of(wf.judgment, user, tenant),
     }
     if node is not None:

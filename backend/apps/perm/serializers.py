@@ -287,12 +287,13 @@ class RolePermissionsSerializer(serializers.Serializer):
 
 class MyRolePermissionsSerializer(RolePermissionsSerializer):
     """`get_role_permissions` only: the caller's own answer also carries who they are now —
-    id, tenant (same shape as the login payload) and extra roles — so the web can refresh
+    id, tenant (same shape as the login payload), extra roles and civilization — so the web can refresh
     them on window focus instead of trusting a 24-hour cached envelope (rbac-web M-3)."""
 
     id = serializers.IntegerField()
     tenant = LoginTenantRefSerializer(allow_null=True)
     extra_roles = serializers.ListField(child=serializers.CharField())
+    civilization = serializers.CharField(allow_null=True)
 
 
 class RolePermissionAssignResultSerializer(serializers.Serializer):

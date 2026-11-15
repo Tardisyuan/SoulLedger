@@ -224,6 +224,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
                 id: data?.id ?? prev.id,
                 tenant: data?.tenant !== undefined ? data.tenant : prev.tenant,
                 extra_roles: data?.extra_roles ?? prev.extra_roles,
+                // 文明 ADMIN 的文明(`ownsHall` 读它):旧信封里没有时也从这里补上,不必重新登录。
+                civilization: data?.civilization !== undefined ? data.civilization : prev.civilization,
               }
             : prev
         );

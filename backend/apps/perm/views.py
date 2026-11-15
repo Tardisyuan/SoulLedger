@@ -262,6 +262,8 @@ def get_role_permissions(request):
         "id": request.user.pk,
         "tenant": user_tenant_ref(request.user),
         "extra_roles": list(request.user.extra_roles or []),
+        # 文明 ADMIN 管的文明(其余为 null),与登录应答同一个字段;网页的 `ownsHall` 读它。
+        "civilization": request.user.civilization,
     })
 
 

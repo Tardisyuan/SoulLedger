@@ -70,6 +70,8 @@ export interface RolePermissions {
   id?: number;
   tenant?: { code: string; display_name: string; civilization?: string; seal_glyphs?: string[] } | null;
   extra_roles?: string[];
+  /** `GET /perm/role-permissions/` only: the civilization a civilization ADMIN administers; null for everyone else. */
+  civilization?: string | null;
 }
 
 /** 200 body of POST /perm/role-permissions/assign/ (views.py:195). */

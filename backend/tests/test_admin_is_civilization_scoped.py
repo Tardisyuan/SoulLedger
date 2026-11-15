@@ -15,6 +15,11 @@ and the answers are compared with each other — never with a number written her
 
 Rows are identified by the `id` / `pk` / `code` a list row carries; an endpoint whose rows carry none of them is
 skipped (and counted, so the test cannot quietly compare nothing).
+
+Every compared model gets a row in every hall (`_make`, a type-driven filler; `OVERRIDES` / `EXTRA_ROWS` for what
+it cannot guess). Until 2026-11-15 the world held souls, actors, audit rows and realms only, and 42 of the 51
+comparisons were between two empty sets — the count said 51. What is asserted now is the number of endpoints with
+rows in both civilizations, and the exact list of those without (`EMPTY_BY_DESIGN`).
 """
 import random
 
@@ -26,6 +31,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.actors.models import Actor, ActorRole
 from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.models import User, UserRole
+from apps.core.tenant import civilization_halls
+from apps.judgment.models import CORPUS_CIVILIZATION
 from apps.realms.models import Realm, RealmType
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
@@ -62,6 +69,7 @@ def _client(user, hall=None):
         token["tenant_code"] = hall.code
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    client.user, client.hall = user, hall  # for tests that call a view's object gate directly
     return client
 
 
@@ -83,6 +91,106 @@ def _ids(client, url):
             out.add(str(key))
         url = body.get("next") if isinstance(body, dict) else None
     return out
+
+
+#: Field values the generic filler below cannot guess, by model: a row the hall's own ADMIN cannot list would make
+#: that endpoint's comparison empty again (a dispatch DRAFT is its proposer's alone, `hide_others_drafts`).
+OVERRIDES = {
+    # A proposal has a soul and a target (approve / reject read both): another hall of the same civilization, so
+    # the row stays inside one civilization's union (none for the unknown hall, which no approve here reaches).
+    "DispatchRecord": {"status": "PROPOSED", "soul": "Soul", "target_tenant": lambda hall: civilization_halls(
+        hall.known_civilization).exclude(pk=hall.pk).order_by("code").first()},
+    "Conversation": {"kind": "OFFICER_INBOX"},
+    "Reaction": {"post": "Post"},
+    "Statute": {"corpus": lambda hall: next(k for k, v in CORPUS_CIVILIZATION.items()
+                                            if v == (hall.known_civilization or "CHINESE"))},  # the soul inbox lists letters to a hall, not soul-to-soul rooms
+}
+
+#: More rows of a model, each with these values, where one row cannot be on every list that serves the model:
+#: moderation queues list PENDING, the handled list HIDDEN, the circle PUBLISHED; the city-god list a case at it.
+EXTRA_ROWS = {
+    "Post": [{"moderation_status": "PENDING"}, {"moderation_status": "HIDDEN"}],
+    "Comment": [{"moderation_status": "PENDING"}, {"moderation_status": "HIDDEN"}],
+    "Judgment": [{"city_god_status": "PENDING", "city_god": "CityGod"}],
+}
+
+#: Compared endpoints that stay empty for every caller here, and why. Exact: an endpoint that gains rows, or one
+#: that loses them, fails `test_…_sees_exactly…` until this list says so — the comparison count alone said 51 while
+#: 42 of those compared two empty sets.
+EMPTY_BY_DESIGN = {
+    "notification-list": "a caller's own notifications only: no administrator lists another user's",
+    "death-register-list": "authenticated by an external system's API key, not an officer token (401 to all here)",
+    "webhook-list": "the same: the death-sync API key's own webhooks",
+}
+
+
+def _make(model, hall, cache, counter, tenant_path=(), values=None):
+    """One saved row of ``model`` in ``hall``: required fields filled by type, FKs made recursively in the same hall,
+    and every FK on ``tenant_path`` (``("workflow", "tenant")``…) filled even when nullable."""
+    from django.db import models as m
+    from django.utils import timezone
+
+    from apps.tenants.models import Tenant
+
+    civ = hall.known_civilization or "CHINESE"
+    kw = {**OVERRIDES.get(model.__name__, {}), **(values or {})}
+    for name, value in kw.items():
+        f = model._meta.get_field(name)
+        if callable(value):
+            kw[name] = value(hall)
+        elif f.is_relation and isinstance(value, str):  # a model name: that model's row in this hall
+            if (f.related_model, hall.pk) not in cache:
+                cache[(f.related_model, hall.pk)] = _make(f.related_model, hall, cache, counter)
+            kw[name] = cache[(f.related_model, hall.pk)]
+    for f in model._meta.concrete_fields:
+        if f.primary_key or f.name in kw or getattr(f, "auto_now", False) or getattr(f, "auto_now_add", False):
+            continue
+        on_path = bool(tenant_path) and f.name == tenant_path[0]
+        if f.is_relation and f.related_model is Tenant and (not f.null or f.name == "tenant"):
+            kw[f.name] = hall
+            continue
+        if not on_path and (f.null or f.has_default() or (f.blank and isinstance(f, (m.CharField, m.TextField)))):
+            continue
+        counter[0] += 1
+        n = counter[0]
+        if f.is_relation:
+            rel = f.related_model
+            if rel is Tenant:
+                kw[f.name] = hall
+            elif f.one_to_one or rel.__name__ == "User" or (rel, hall.pk) not in cache:
+                # A fresh user per field: two user FKs on one row (follower / following) must differ.
+                row = _make(rel, hall, cache, counter, tenant_path[1:] if on_path else ())
+                if not f.one_to_one:
+                    cache[(rel, hall.pk)] = row
+                kw[f.name] = row
+            else:
+                kw[f.name] = cache[(rel, hall.pk)]
+        elif f.choices:
+            kw[f.name] = civ if f.name.endswith("civilization") else f.choices[0][0]
+        elif isinstance(f, m.JSONField):
+            kw[f.name] = {}
+        elif isinstance(f, m.UUIDField):
+            import uuid
+
+            kw[f.name] = uuid.uuid4()
+        elif isinstance(f, m.URLField):
+            kw[f.name] = f"https://example.invalid/{n}"
+        elif isinstance(f, (m.CharField, m.TextField)):
+            kw[f.name] = f"r{n}"[: f.max_length or 64]
+        elif isinstance(f, m.BooleanField):
+            kw[f.name] = False
+        elif isinstance(f, (m.IntegerField, m.DecimalField, m.FloatField)):
+            kw[f.name] = 1  # rounds, cycles, orders: the smallest legal value
+        elif isinstance(f, m.DateTimeField):
+            kw[f.name] = timezone.now() + timezone.timedelta(days=1)
+        elif isinstance(f, m.DateField):
+            kw[f.name] = timezone.localdate()
+        else:
+            raise AssertionError(f"{model.__name__}.{f.name}: no filler for {type(f).__name__}")
+    if model.__name__ == "User":
+        kw.pop("password", None)
+        return model.objects.create_user(password="x", **kw)
+    return model._base_manager.create(**kw)
 
 
 @pytest.fixture
@@ -110,6 +218,17 @@ def world():
         if rng.random() < 0.7:
             Realm.objects.create(realm_code=f"R_{hall.code}", civilization=civ, name_local=hall.code,
                                  realm_type=RealmType.HELL, tenant=hall)
+    models = {_model_for(cls) for _name, cls in _list_routes()} - {Tenant}
+    counter = [0]
+    for hall in every_hall:
+        cache = {}
+        for model in sorted(models, key=lambda mm: mm.__name__):
+            path = tuple(_tenant_path(model).split("__"))
+            # Already there: a hall's organization is made with the hall, a post with a reaction made before it.
+            if not model._base_manager.filter(**{_tenant_path(model): hall}).exists():
+                _make(model, hall, cache, counter, path)
+            for values in EXTRA_ROWS.get(model.__name__, []):
+                _make(model, hall, cache, counter, path, values)
     hall_less_log = AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="none")
 
     def admin(name, **kw):
@@ -128,7 +247,7 @@ def world():
 
 
 def test_a_civilization_admin_sees_exactly_its_halls_and_system_admin_sees_everything(world):
-    compared, skipped, mismatches = 0, [], []
+    compared, skipped, mismatches, empty = 0, [], [], set()
     for name, _cls in _list_routes():
         url = reverse(name)
         by_hall = {pk: _ids(c, url) for pk, c in world["hall_admin"].items()}
@@ -142,15 +261,22 @@ def test_a_civilization_admin_sees_exactly_its_halls_and_system_admin_sees_every
         for civ, halls in world["halls"].items():
             mine = _ids(world["civ_admin"][civ], url)
             union = set().union(*(by_hall[h.pk] for h in halls))
+            if not union:
+                empty.add(name)  # this civilization's comparison would be two empty sets
             if mine != union:
                 mismatches.append(f"{url} as {civ} ADMIN: extra {sorted(mine - union)[:5]}, "
                                   f"missing {sorted(union - mine)[:5]}")
             if mine & by_hall[world["unknown"].pk]:
                 mismatches.append(f"{url} as {civ} ADMIN: sees the unknown-civilization hall's rows")
         compared += 1
-    print(f"compared {compared} list endpoints; skipped (rows carry no id): {skipped}")
+    with_data = compared - len(empty)
+    print(f"compared {compared} list endpoints, {with_data} with rows in both civilizations; "
+          f"empty: {sorted(empty)}; skipped (rows carry no id): {skipped}")
     assert not mismatches, f"seed={world['seed']}\n" + "\n".join(mismatches)
-    assert compared >= 20, (compared, skipped)
+    assert empty == set(EMPTY_BY_DESIGN), (
+        f"seed={world['seed']}: endpoints with no rows for some civilization, not listed in EMPTY_BY_DESIGN: "
+        f"{sorted(empty - set(EMPTY_BY_DESIGN))}; listed but now have rows: {sorted(set(EMPTY_BY_DESIGN) - empty)}")
+    assert with_data >= 40, (with_data, sorted(empty))
 
 
 def test_rows_of_no_hall_are_system_admins_only(world):
@@ -185,3 +311,45 @@ def test_a_civilization_admin_enters_only_its_own_civilizations_halls():
     assert civ.post(f"/api/v1/tenants/{eg.code}/view/").status_code == 404
     assert civ.post(f"/api/v1/tenants/{unknown.code}/view/").status_code == 404
     assert system.post(f"/api/v1/tenants/{eg.code}/view/").status_code == 201
+
+
+def test_my_role_permissions_carry_the_civilization_i_administer():
+    """`GET /perm/role-permissions/` (the web refreshes the signed-in user from it on focus) says which civilization
+    a civilization ADMIN administers, and null for everyone else — the web's `ownsHall` reads it."""
+    hall, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})
+    users = {
+        "CHINESE": User.objects.create_user(username="rp-civ", password="x", role=UserRole.ADMIN, tenant=None,
+                                            civilization="CHINESE"),
+        None: User.objects.create_user(username="rp-sys", password="x", role=UserRole.SYSTEM_ADMIN, tenant=None),
+    }
+    bound = User.objects.create_user(username="rp-hall", password="x", role=UserRole.ADMIN, tenant=hall)
+    for expected, user in users.items():
+        assert _client(user).get("/api/v1/perm/role-permissions/").json()["civilization"] == expected
+    assert _client(bound, hall).get("/api/v1/perm/role-permissions/").json()["civilization"] is None
+
+
+def test_hall_stop_and_start_reach_only_the_callers_civilization():
+    """`POST /tenants/{code}/deactivate/` and `activate/` (`IsHallLessAdminPermission`, the hall through the scoped
+    queryset): SYSTEM_ADMIN any hall; a civilization ADMIN its civilization's halls, a hall it made included; another
+    civilization's hall and a hall of unknown civilization do not exist for it (404, and nothing changes); a hall's
+    own ADMIN is refused even its own hall (403). The web draws the buttons by the same rule (tenants/page.tsx)."""
+    cn, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})
+    made = Tenant.objects.create(code="CN_MADE", display_name="made", declared_civilization="CHINESE")
+    eg, _ = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "EG"})
+    unknown = Tenant.objects.create(code="UNKNOWN_HALL", display_name="unknown")
+    civ = _client(User.objects.create_user(username="civ-t", password="x", role=UserRole.ADMIN, tenant=None,
+                                           civilization="CHINESE"))
+    system = _client(User.objects.create_user(username="sys-t", password="x", role=UserRole.SYSTEM_ADMIN, tenant=None))
+    bound = _client(User.objects.create_user(username="adm-t", password="x", role=UserRole.ADMIN, tenant=cn), cn)
+
+    def active(hall):
+        return Tenant.objects.get(pk=hall.pk).is_active
+
+    for hall in (cn, made):
+        assert civ.post(f"/api/v1/tenants/{hall.code}/deactivate/").status_code == 200 and not active(hall)
+        assert civ.post(f"/api/v1/tenants/{hall.code}/activate/").status_code == 200 and active(hall)
+    for hall in (eg, unknown):
+        assert civ.post(f"/api/v1/tenants/{hall.code}/deactivate/").status_code == 404 and active(hall)
+    assert bound.post(f"/api/v1/tenants/{cn.code}/deactivate/").status_code == 403 and active(cn)
+    for hall in (eg, unknown):
+        assert system.post(f"/api/v1/tenants/{hall.code}/deactivate/").status_code == 200 and not active(hall)
