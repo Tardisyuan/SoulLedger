@@ -40,7 +40,7 @@ class AuditLog(AuditUserFields, models.Model):
     )
     user = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="audit_logs",
         null=True,
     )

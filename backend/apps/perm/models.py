@@ -553,7 +553,7 @@ class RoleDataScope(AuditUserFields):
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='data_scopes')
     resource = models.CharField(max_length=40, blank=True, default='', help_text="空 = 角色默认")
     scope = models.CharField(max_length=10, choices=SCOPE_CHOICES)
-    orgs = models.ManyToManyField('org.Organization', blank=True, related_name='+', help_text="DEFINE 的机构")
+    orgs = models.ManyToManyField('org.Organization', blank=True, related_name='+', help_text="DEFINE 的机构", db_constraint=False)
 
     class Meta:
         db_table = 'perm_role_data_scope'

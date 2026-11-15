@@ -35,9 +35,9 @@ class AssistConversation(SoftDeleteMixin, models.Model):
     恰好一个有值,由库里的约束保证,不靠调用方自觉。"""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    account = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, null=True, blank=True,
+    account = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True,
                                 related_name="assist_conversations")
-    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, null=True, blank=True,
+    user = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True,
                              related_name="assist_conversations")
     screen = models.CharField(max_length=20, choices=[(s, s) for s in dict.fromkeys(SCREENS + OFFICER_SCREENS)])
     created_at = models.DateTimeField(auto_now_add=True)
@@ -244,7 +244,7 @@ class AIDraft(models.Model):
 
     feature = models.CharField(max_length=30, choices=[(f, f) for f in FEATURES])
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
-    created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, related_name="+")
+    created_by = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, related_name="+")
     #: 对着哪个业务对象(如 `judgment` + id);没有对象的(审计查询)为空。
     target_type = models.CharField(max_length=40, blank=True, default="")
     target_id = models.CharField(max_length=64, blank=True, default="")
@@ -257,7 +257,7 @@ class AIDraft(models.Model):
     status = models.CharField(max_length=16, choices=STATUSES, default="pending")
     #: 1 − 相似度(difflib):0 = 原样采纳,1 = 全部重写。只在采纳时有值。
     edit_ratio = models.FloatField(null=True, blank=True)
-    decided_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, blank=True,
+    decided_by = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True,
                                    related_name="+")
     decided_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)

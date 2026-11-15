@@ -1,4 +1,6 @@
-"""Stage 0 contract of `config.sharding.ShardRouter`: it is installed and routes nothing.
+"""Stage 0 contract of `config.sharding.ShardRouter`, still true after 1B: it is installed and routes nothing.
+(1B's rules only answer for a `civ_*` alias, which production does not have yet; they are in
+tests/test_shard_router_boundary.py.)
 
 Every model (auto-created M2M through tables included) is asked through Django's public `django.db.router` for a read and a write
 alias, with no context, inside each of the four civilizations' halls (the tenant contextvar from

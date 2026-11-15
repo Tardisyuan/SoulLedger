@@ -635,11 +635,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             from apps.core.request_local import get_current_user
 
             user = get_current_user()
+        from apps.core.bare_ids import counting_cascades
+
         with transaction.atomic():
             soul = Soul.lock(self.pk)
             _, events = SoulEvent.all_objects.filter(soul=soul).delete()
-            _, cascaded = Soul.all_objects.filter(pk=soul.pk).delete()
-            manifest = {label: n for label, n in sorted((Counter(events) + Counter(cascaded)).items()) if n}
+            # The accounts (and what hangs off them) go through bare ids since stage 1B; Django's count misses them.
+            with counting_cascades() as via_bare_ids:
+                _, cascaded = Soul.all_objects.filter(pk=soul.pk).delete()
+            total = Counter(events) + Counter(cascaded) + via_bare_ids
+            manifest = {label: n for label, n in sorted(total.items()) if n}
             AuditLog.objects.create(
                 tenant_id=soul.tenant_id,
                 user=user if getattr(user, "is_authenticated", False) else None,

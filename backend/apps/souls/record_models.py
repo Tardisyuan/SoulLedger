@@ -364,7 +364,7 @@ class SoulRecord(AuditUserFields, models.Model):
     # SoulViewSet.acknowledge_record_date_warning.
     date_warning_acknowledged_by = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="acknowledged_soul_record_date_warnings",

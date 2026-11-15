@@ -1,44 +1,72 @@
 """Production database router for per-civilization sharding (docs/ARCHITECTURE-tenant-sharding.md 4.2;
 plan docs/audit/2026-11-15-sharding/PLAN.md).
 
-STAGE 0 CONTRACT: this router routes nothing. Every read and write goes to "default", it has no
-opinion on relations, and every model migrates everywhere. It is installed now so that the router
-chain, the placement inventory (`apps/core/sharding.py`, `tests/tenancy_placement.py`) and the
-alias-aware data migrations are exercised by every test run before any row moves.
-`tests/test_shard_router_is_neutral.py` holds it to that.
+STAGE 1B CONTRACT. Reads and writes still go where they went with no router at all: "default", or an
+instance hint's own database. `tests/test_shard_router_is_neutral.py` holds it to that. What 1B adds
+only ever answers for a civilization alias (`civ_*`), and production has none until stage 2:
+
+  allow_migrate   on a `civ_*` alias, CONTROL models are not created; SHARD and REFERENCE (Tenant) are.
+                  A RunPython / RunSQL of an app with no table there (auth, token_blacklist...) is skipped.
+                  Every other alias (default = the control database, the test shadow) has no answer, so
+                  it keeps everything. Decided by `placement_of(app_label, model_name)` -- by label,
+                  because during migrate the model hint is a historical class (tests/test_placement_by_label.py).
+                  A shard alias also needs the engine in `config/shard_db/` so the historical foreign keys
+                  to control tables are created bare there.
+  allow_relation  a pair with a CONTROL or REFERENCE side is allowed across databases (a shard row keeps a
+                  control user's bare id; every shard has a Tenant copy, D4). Two SHARD rows in different
+                  databases are refused. Same database: no answer (Django allows it).
+  CONTROL reads   a CONTROL model asked with an instance hint from a `civ_*` alias goes to default: its
+  / writes        table is not there, so `shard_row.create_user` resolves against the control database.
 
 "Goes to default" is spelled `return None`, not `return "default"`. None lets Django fall back the
 way it does with no router at all: an instance hint's own database (`obj._state.db`), else default.
 A hard "default" overrides that, so a row fetched with `.using(alias)` reads its relations from
 default. Measured 2026-11-15: with a hard "default" every test in tests/test_multidb_shadow.py
-errored (8/8) while migrating the shadow alias -- a RunPython's `Role` came from the shadow, its
-related lookup from default, and the assignment was refused across databases.
+errored (8/8) while migrating the shadow alias.
 
-What later stages change, and nothing else may:
-  1B  allow_migrate: SHARD models only on civ_* aliases, CONTROL only on default, REFERENCE (Tenant)
-      on both, decided by `placement_of(app_label, model_name)` -- by label, because during migrate the
-      model hint is a historical class (tests/test_placement_by_label.py); SHARD <-> CONTROL foreign
-      keys become bare ids (both cut lists pinned in the placement test). Data migrations already skip
-      civ_* aliases (`placed_here`).
+What later stages change:
   2   writes still go to default; a shadow write to the civilization alias happens outside the router.
   3   db_for_read: a SHARD model of a civilization in settings.SHARD_READ_CIVS goes to
       `alias_for_civilization(civ)`, the civilization taken from the instance hint, else the tenant
       contextvar; neither present raises `NoShardContext` -- never a silent fall back to default.
-  4   db_for_write: the same for settings.SHARD_WRITE_CIVS; allow_relation refuses cross-alias pairs.
+  4   db_for_write: the same for settings.SHARD_WRITE_CIVS.
 
 Rollback at any stage before 4: delete the DATABASE_ROUTERS line in settings.
 """
+from apps.core.sharding import CONTROL, SHARD, app_has_shard_tables, placement, placement_of
+
+SHARD_PREFIX = "civ_"
+
+
+def is_shard_alias(alias) -> bool:
+    return bool(alias) and alias.startswith(SHARD_PREFIX)
+
+
+def _control_from_a_shard(model, hints):
+    instance = hints.get("instance")
+    if instance is not None and is_shard_alias(instance._state.db) and placement(model) == CONTROL:
+        return "default"
+    return None
 
 
 class ShardRouter:
     def db_for_read(self, model, **hints):
-        return None
+        return _control_from_a_shard(model, hints)
 
     def db_for_write(self, model, **hints):
-        return None
+        return _control_from_a_shard(model, hints)
 
     def allow_relation(self, obj1, obj2, **hints):
-        return None
+        if obj1._state.db == obj2._state.db or None in (obj1._state.db, obj2._state.db):
+            return None
+        return not (placement(obj1) == SHARD and placement(obj2) == SHARD)
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        return True
+        if not is_shard_alias(db):
+            return None
+        if model_name is None:
+            # RunPython / RunSQL. An app with no table on a shard (auth, token_blacklist, menus, perm...)
+            # has nothing to run there; third-party data migrations do not call `placed_here`. Our own
+            # apps' data migrations are skipped on a shard by `placed_here`, their RunSQL runs.
+            return None if app_has_shard_tables(app_label) else False
+        return placement_of(app_label, model_name) != CONTROL

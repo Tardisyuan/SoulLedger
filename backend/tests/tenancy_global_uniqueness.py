@@ -14,7 +14,46 @@ Value: (kind, one-line reason)
 
 Dropping a GLOBAL_VALUE key must fail the test that reads this file; add one
 only together with a plan for how it stays unique across databases.
+
+STRATEGY (stage 1B): how each GLOBAL_VALUE stays unique once SHARD rows live in
+four databases. "key": (strategy, one-line reason).
+
+  CONTROL      the row stays in the control database (CONTROL or REFERENCE
+               placement, tests/tenancy_placement.py); its UNIQUE index still
+               covers every row. Never valid for a SHARD-placed key.
+  RANDOM       unique by construction without coordination: a random token,
+               a uuid, a hash of one, or an id assigned outside our databases.
+  PARTITIONED  a per-database sequence whose ranges cannot meet (a prefix per
+               hall / per database); stage 4 checks prefixes do not cross
+               civilizations.
+  REGISTRY     claimed first in a control-database registry (stage 4:
+               GlobalCode(kind, value, tenant_id)), then written to the shard.
 """
+
+STRATEGY = {
+    'authentication.MfaRememberedDevice:token_hash': ('CONTROL', 'officer MFA device: control table'),
+    'authentication.User:unique_user_email_among_live_rows': ('CONTROL', 'User stays in control (D1)'),
+    'authentication.User:username': ('CONTROL', 'User stays in control (D1)'),
+    'authentication.OfficerDeviceLogin:credential_hash': ('CONTROL', 'officer login identity: control table'),
+    'chat.ChatIdentity:localpart': ('RANDOM', 'HMAC-SHA256 of the SoulAccount pk (control-allocated, global), 96 bits kept'),
+    'chat.ChatIdentity:matrix_user_id': ('RANDOM', '@<localpart>:<server>; unique wherever the localpart is'),
+    'chat.Conversation:room_id': ('RANDOM', 'assigned by the Matrix homeserver, outside our databases'),
+    'death_sync.ExternalApiKey:key_hash': ('RANDOM', 'hash of a random API key; finding the hall by key is a lookup problem (stage 3), not a uniqueness one'),
+    'judgment.Judgment:case_number': ('PARTITIONED', '<prefix>-<year>-<n> from a counter per prefix-year; a hall prefix must not be shared across civilizations (stage 4 check)'),
+    'officer_app.OfficerPushDevice:token': ('CONTROL', 'officer device: control table'),
+    'org.Organization:code': ('REGISTRY', 'free text chosen by an administrator; claimed in the control registry before the shard write (stage 4)'),
+    'perm.Permission:unique_permission_codename_alive': ('CONTROL', 'RBAC stays in control (D1)'),
+    'perm.Role:unique_role_name_alive': ('CONTROL', 'RBAC stays in control (D1)'),
+    'scheduler.TaskRun:celery_task_id': ('RANDOM', 'Celery task id, a uuid4'),
+    'social.ModerationScore:social_moderation_score_one_per_row': ('RANDOM', '(kind, object_id) with object_id a uuid4 pk'),
+    'soul_assist.HelpChunk:help_chunk_one_per_entry': ('CONTROL', 'global help corpus: control table'),
+    'soul_push.PushDevice:token': ('CONTROL', 'follows SoulAccount into control'),
+    'soul_accounts.SoulDeviceLogin:credential_hash': ('CONTROL', 'follows SoulAccount into control'),
+    'soul_accounts.SoulMfaDevice:token_hash': ('CONTROL', 'follows SoulAccount into control'),
+    'souls.Soul:soul_code': ('REGISTRY', 'the soul login name; claimed in the control registry before the shard write (stage 4)'),
+    'workflow.ApprovalWorkflow:number': ('PARTITIONED', 'one global WF sequence today (a control counter row); needs a per-database prefix or range before stage 4'),
+    'tenants.Tenant:code': ('CONTROL', 'REFERENCE: the master is the control database, shards hold copies (D4)'),
+}
 
 UNIQUE_KEYS = {
     'authentication.MfaRememberedDevice:token_hash': ('GLOBAL_VALUE', 'hash of the remembered-device cookie token'),

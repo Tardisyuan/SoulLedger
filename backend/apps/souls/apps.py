@@ -34,6 +34,13 @@ class SoulsConfig(AppConfig):
         # Derive the placement table now (every model is loaded before any `ready()`): a tenant-path tie
         # raises here, at startup, instead of on the first request or migration that asks where a model lives
         # (VERIFY-stage0 open item 4). Cached, so the router's later lookups are free.
-        from apps.core.sharding import _by_label
+        from django.conf import settings
+
+        from apps.core import bare_ids
+        from apps.core.sharding import _by_label, check_cut_over_settings
 
         _by_label()
+        check_cut_over_settings(settings.SHARD_READ_CIVS, settings.SHARD_WRITE_CIVS)
+        # Stage 1B: the foreign keys across the control / shard boundary are bare ids; their delete rules
+        # (CASCADE / SET_NULL / PROTECT as before) are applied by apps.core.bare_ids on every alias.
+        bare_ids.connect()

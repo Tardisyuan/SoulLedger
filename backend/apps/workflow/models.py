@@ -1296,7 +1296,7 @@ class WorkflowTemplateVersion(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     saved_by = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="+",
@@ -1304,7 +1304,7 @@ class WorkflowTemplateVersion(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
     published_by = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="+",
@@ -1350,7 +1350,7 @@ class WorkflowSegment(models.Model):
     name_en = models.CharField(max_length=255, blank=True, default="")
     state = models.CharField(max_length=20, choices=SegmentState.choices)
     picked_by = models.ForeignKey(
-        "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+")
     picked_at = models.DateTimeField(null=True, blank=True)
     version = models.PositiveIntegerField(default=1)
     # When the flow first stood at this segment's gate unpicked; reminders count days from it.
@@ -1448,7 +1448,7 @@ class ApprovalNode(AuditUserFields, models.Model):
 
     approver = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="approved_nodes",
@@ -1563,7 +1563,7 @@ class ApprovalNode(AuditUserFields, models.Model):
         WorkflowSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="nodes")
     skip_kind = models.CharField(max_length=12, choices=SkipKind.choices, null=True, blank=True)
     skipped_by = models.ForeignKey(
-        "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+")
     skip_reason = models.TextField(blank=True, default="")
     is_required = models.BooleanField(default=False)
 

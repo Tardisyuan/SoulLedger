@@ -154,13 +154,13 @@ class User(AuditUserFields, AbstractUser):
         "actors.Actor",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="users",
         help_text="Linked underworld actor (e.g. Yanluo Wang as ADMIN)",
     )
     organization = models.ForeignKey(
         "org.Organization",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="users",

@@ -32,7 +32,7 @@ class PushDevice(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     account = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="push_devices")
     # 冗余 soul:租户隔离按 `soul__tenant` 一跳(与 InitialCredential 同一理由)。
-    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="push_devices")
+    soul = models.ForeignKey("souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, related_name="push_devices")
     token = models.CharField(max_length=255, unique=True)
     platform = models.CharField(max_length=10, choices=PushPlatform.choices)
     is_active = models.BooleanField(default=True)
@@ -66,7 +66,7 @@ class PushPreference(models.Model):
     account = models.OneToOneField(
         "soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="push_preference"
     )
-    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="push_preferences")
+    soul = models.ForeignKey("souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, related_name="push_preferences")
     rebirth = models.BooleanField(default=True, help_text="转生申请:提交确认、申诉确认、结果")
     judgment = models.BooleanField(default=True, help_text="审判结论与处置执行")
     residence = models.BooleanField(default=True, help_text="暂居开始 / 回归(依赖 feat/dispatch-residence)")
@@ -103,7 +103,7 @@ class PushDelivery(models.Model):
     # 空 = 事件发生时没有可推的设备,只为通知记录留一行(`status=NO_DEVICE`,从不入队发送)。
     device = models.ForeignKey(PushDevice, on_delete=models.CASCADE, related_name="deliveries", null=True, blank=True)
     account = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="push_deliveries")
-    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="push_deliveries")
+    soul = models.ForeignKey("souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, related_name="push_deliveries")
     event_type = models.CharField(max_length=40)
     kind = models.CharField(max_length=40)
     title = models.CharField(max_length=120)

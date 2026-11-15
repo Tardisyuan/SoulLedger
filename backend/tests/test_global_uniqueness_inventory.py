@@ -26,7 +26,7 @@ import pytest
 from django.apps import apps
 from django.db import IntegrityError, models, transaction
 
-from tests.tenancy_global_uniqueness import UNIQUE_KEYS
+from tests.tenancy_global_uniqueness import STRATEGY, UNIQUE_KEYS
 
 SKIP = {"auth", "contenttypes", "sessions", "admin", "django_celery_beat", "token_blacklist"}
 
@@ -90,6 +90,37 @@ def test_every_unique_key_is_pinned_with_its_kind_and_a_reason():
 def test_every_pinned_key_has_a_reason():
     blank = [k for k, (_, why) in UNIQUE_KEYS.items() if len(why.strip()) < 12]
     assert not blank, f"unique keys without a reason: {blank}"
+
+
+# ── Stage 1B: how each GLOBAL_VALUE stays unique across databases ─────────────
+
+STRATEGIES = {"CONTROL", "RANDOM", "PARTITIONED", "REGISTRY"}
+
+
+def test_every_global_value_and_nothing_else_has_a_strategy():
+    global_values = {k for k, (kind, _) in UNIQUE_KEYS.items() if kind == "GLOBAL_VALUE"}
+    missing, extra = sorted(global_values - set(STRATEGY)), sorted(set(STRATEGY) - global_values)
+    assert not (missing or extra), f"GLOBAL_VALUE without a strategy: {missing}; strategy for a non-GLOBAL key: {extra}"
+    unknown = sorted(f"{k}: {s}" for k, (s, _) in STRATEGY.items() if s not in STRATEGIES)
+    assert not unknown, f"strategies are {sorted(STRATEGIES)}: {unknown}"
+    blank = [k for k, (_, why) in STRATEGY.items() if len(why.strip()) < 12]
+    assert not blank, f"strategies without a reason: {blank}"
+
+
+def test_a_shard_placed_key_is_never_kept_unique_by_the_control_database():
+    """A SHARD table's UNIQUE index covers one civilization once its rows move: CONTROL is a claim that
+    the control database still sees every value, true only for CONTROL / REFERENCE placements. Placement
+    comes from apps.core.sharding, not from this file."""
+    from apps.core.sharding import SHARD, placement
+
+    wrong = sorted(f"{k} ({placement(apps.get_model(k.split(':')[0]))})"
+                   for k, (s, _) in STRATEGY.items()
+                   if s == "CONTROL" and placement(apps.get_model(k.split(":")[0])) == SHARD)
+    assert not wrong, f"SHARD-placed but marked CONTROL: {wrong}"
+    # and the converse: a control table needs no registry or partitioning
+    pointless = sorted(k for k, (s, _) in STRATEGY.items()
+                       if s in ("PARTITIONED", "REGISTRY") and placement(apps.get_model(k.split(":")[0])) != SHARD)
+    assert not pointless, f"REGISTRY / PARTITIONED on a key the control database already covers: {pointless}"
 
 
 # ── Headline guarantees: the ones the plan names, checked beyond "it exists" ─────

@@ -29,7 +29,7 @@ class TudiGod(AuditUserFields, models.Model):
     regions = models.JSONField(default=list, blank=True)
     city_god = models.ForeignKey("judgment.CityGod", on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="tudi_gods")
-    officers = models.ManyToManyField("authentication.User", blank=True, related_name="tudi_gods")
+    officers = models.ManyToManyField("authentication.User", blank=True, related_name="tudi_gods", db_constraint=False)
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()

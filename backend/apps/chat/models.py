@@ -46,7 +46,7 @@ class ChatIdentity(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     account = models.OneToOneField(
-        "soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="chat_identity"
+        "soul_accounts.SoulAccount", on_delete=models.DO_NOTHING, db_constraint=False, related_name="chat_identity"
     )
     # 冗余 soul:租户隔离按 `soul__tenant` 一跳(与 InitialCredential / PushDevice 同一理由)。
     soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="chat_identities")
@@ -88,10 +88,10 @@ class Conversation(models.Model):
     #: (不随对方转世变化),发言权也按它算 —— 新一世的账号永远不会被算进前世的房间。
     #: 可空只为迁移:存量行由 chat/0003 补上,新行在建房时写。
     account_a = models.ForeignKey(
-        "soul_accounts.SoulAccount", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+        "soul_accounts.SoulAccount", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+"
     )
     account_b = models.ForeignKey(
-        "soul_accounts.SoulAccount", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+        "soul_accounts.SoulAccount", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+"
     )
     #: 谁发起的私聊请求。互关直接建房时为空 —— 没有被节流的一方。
     initiator = models.ForeignKey(
@@ -121,7 +121,7 @@ class Conversation(models.Model):
     #: (本行 `tenant`)里持有 `soul_inbox.reply` 的在职官员(`inbox.assign`)。私聊不写。
     #: 同租户外键:收件殿司的官员,符合本文件顶部的分库约束。
     assignee = models.ForeignKey(
-        "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+"
     )
     assigned_at = models.DateTimeField(null=True, blank=True)
     #: 灵魂从 App「帮助与反馈」写来的信(Design 第二十八批 S5)带的类别,殿司收件箱的列表上显示为「反馈 · 类别」。
@@ -188,8 +188,8 @@ class ChatBlock(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    blocker = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="chat_blocks")
-    blocked = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="+")
+    blocker = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.DO_NOTHING, db_constraint=False, related_name="chat_blocks")
+    blocked = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -215,7 +215,7 @@ class InboxOfficerState(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="officer_states")
-    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="inbox_states")
+    user = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="inbox_states")
     last_read_at = models.DateTimeField(null=True, blank=True)
     archived_at = models.DateTimeField(null=True, blank=True)
     #: 上限与回复正文同一个(`OfficerReplySerializer`):草稿就是没发出的回复。
@@ -242,7 +242,7 @@ class InboxReplyTemplate(models.Model):
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="inbox_reply_templates")
     title = models.CharField(max_length=80)
     body = models.TextField()
-    created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, blank=True,
+    created_by = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True,
                                    related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -279,7 +279,7 @@ class ChatImage(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="images")
-    uploader = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="+")
+    uploader = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
     file = models.FileField(upload_to=_chat_image_path, max_length=200)
     width = models.PositiveIntegerField()
     height = models.PositiveIntegerField()

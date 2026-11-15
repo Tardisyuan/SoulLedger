@@ -499,7 +499,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         "authentication.User",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="claimed_judgments",
     )
     claimed_at = models.DateTimeField(null=True, blank=True)
@@ -511,7 +511,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         "authentication.User",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="deferred_judgments",
     )
     defer_reason = models.CharField(max_length=500, blank=True, default="")
@@ -522,7 +522,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         "authentication.User",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="reassign_requested_judgments",
     )
     reassign_reason = models.CharField(max_length=500, blank=True, default="")
@@ -538,7 +538,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         "authentication.User",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="concluded_judgments",
     )
     # 城隍初审(2026-10-24 用户决定,只在地府):登记的死亡先交出身地对应的城隍初审,解送之后才进十殿的队列。
@@ -552,7 +552,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     city_god_note = models.TextField(blank=True, default="")
     sent_on_at = models.DateTimeField(null=True, blank=True)
     sent_on_by = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="sent_on_judgments",
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="sent_on_judgments",
     )
 
     class Meta:
@@ -1312,7 +1312,7 @@ class JudgmentComment(AuditUserFields, models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="comments")
     author = models.ForeignKey(
-        "authentication.User", on_delete=models.SET_NULL, null=True, related_name="judgment_comments",
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, related_name="judgment_comments",
     )
     body = models.TextField(max_length=MAX_LENGTH)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1357,7 +1357,7 @@ class CaseAttachment(models.Model):
         "tenants.Tenant", on_delete=models.CASCADE, related_name="case_attachments", null=True,
     )
     uploader = models.ForeignKey(
-        "authentication.User", on_delete=models.SET_NULL, null=True, related_name="+",
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, related_name="+",
     )
     name = models.CharField(max_length=255, help_text="上传时的文件名,只用于显示与下载。")
     file = models.FileField(upload_to=_case_attachment_path, max_length=200)
@@ -1424,7 +1424,7 @@ class JudgmentAppeal(AuditUserFields, models.Model):
     original_verdict = models.CharField(max_length=20, choices=Verdict.choices)
     new_verdict = models.CharField(max_length=20, choices=Verdict.choices, null=True, blank=True)
     reviewer = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_appeals",
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="reviewed_appeals",
     )
     claimed_at = models.DateTimeField(null=True, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
@@ -1476,7 +1476,7 @@ class CityGod(AuditUserFields, models.Model):
     name = models.CharField(max_length=100)
     regions = models.JSONField(default=list, blank=True)
     is_default = models.BooleanField(default=False)
-    officers = models.ManyToManyField("authentication.User", blank=True, related_name="city_gods")
+    officers = models.ManyToManyField("authentication.User", blank=True, related_name="city_gods", db_constraint=False)
     #: 四级之一(docs/08 §二);空 = 未定级(这一列之前建的城隍)。
     rank = models.CharField(max_length=12, choices=CityGodRank.choices, blank=True, default="")
     #: 这位城隍设了哪些司(`CityGodBureau` 的值);docs/08:「级别越高,下属二十四司配置越齐全」—— 按实际配置记,不按级别推。

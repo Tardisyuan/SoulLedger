@@ -33,7 +33,8 @@ class ArchivableMixin(models.Model):
     archived_at = models.DateTimeField(null=True, blank=True)
     archived_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING,  # bare id (stage 1B, D3): apps.core.bare_ids clears it
+        db_constraint=False,
         null=True,
         blank=True,
         related_name="%(class)s_archived",

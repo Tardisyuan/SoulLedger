@@ -39,7 +39,7 @@ class SoulAccount(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="soul_account"
     )
-    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="accounts")
+    soul = models.ForeignKey("souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, related_name="accounts")
     cycle = models.PositiveIntegerField(help_text="这个账号属于第几世;0 是第一世。")
     previous_account = models.OneToOneField(
         "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="next_account"
@@ -99,7 +99,7 @@ class InitialCredential(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    account = models.ForeignKey(SoulAccount, on_delete=models.CASCADE, related_name="credentials")
+    account = models.ForeignKey(SoulAccount, on_delete=models.DO_NOTHING, db_constraint=False, related_name="credentials")
     # 冗余一个 soul 外键,为了按 `soul__home_tenant` 一跳做租户隔离(tests/test_tenant_scoping_contract.py 只认一跳)。
     soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="initial_credentials")
     channel = models.CharField(max_length=10, blank=True, default="", help_text="EMAIL / SMS;空表示没有可用渠道")
@@ -112,11 +112,11 @@ class InitialCredential(models.Model):
     sent_at = models.DateTimeField(null=True, blank=True)
     revealed_at = models.DateTimeField(null=True, blank=True)
     revealed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
     delivered_at = models.DateTimeField(null=True, blank=True)
     delivered_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
 
     class Meta:
@@ -146,7 +146,7 @@ class RebirthApplication(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="rebirth_applications")
-    account = models.ForeignKey(SoulAccount, on_delete=models.PROTECT, related_name="rebirth_applications")
+    account = models.ForeignKey(SoulAccount, on_delete=models.DO_NOTHING, db_constraint=False, related_name="rebirth_applications")
     cycle = models.PositiveIntegerField()
     desired_form = models.CharField(max_length=20, choices=RebirthForm.choices)
     statement = models.TextField(blank=True, default="", max_length=2000)
@@ -210,7 +210,7 @@ class CooldownShorteningRequest(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="cooldown_shortenings")
-    account = models.ForeignKey(SoulAccount, on_delete=models.PROTECT, related_name="cooldown_shortenings")
+    account = models.ForeignKey(SoulAccount, on_delete=models.DO_NOTHING, db_constraint=False, related_name="cooldown_shortenings")
     application = models.OneToOneField(
         RebirthApplication, on_delete=models.PROTECT, related_name="cooldown_shortening",
         help_text="其终局驳回引起这段冷却的那份申请。",
@@ -224,7 +224,7 @@ class CooldownShorteningRequest(models.Model):
     approved_days = models.PositiveIntegerField(null=True, blank=True, help_text="批准后,自决定时刻起还要等的天数。")
     decision_note = models.TextField(blank=True, default="", max_length=2000)
     decided_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
     decided_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -338,7 +338,7 @@ class SoulDataExport(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    account = models.ForeignKey(SoulAccount, on_delete=models.CASCADE, related_name="data_exports")
+    account = models.ForeignKey(SoulAccount, on_delete=models.DO_NOTHING, db_constraint=False, related_name="data_exports")
     # 冗余 soul:租户隔离按 `soul__home_tenant` 一跳(与 InitialCredential 同一理由)。
     soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="data_exports")
     status = models.CharField(max_length=10, choices=DataExportStatus.choices, default=DataExportStatus.QUEUED)

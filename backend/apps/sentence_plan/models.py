@@ -191,7 +191,7 @@ class SentencePlanRequest(AuditUserFields, models.Model):
     reason = models.TextField(blank=True, default="")
     decision_reason = models.TextField(blank=True, default="")
     decided_by = models.ForeignKey(
-        "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="sentence_requests_decided",
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="sentence_requests_decided",
     )
     decided_at = models.DateTimeField(null=True, blank=True)
 

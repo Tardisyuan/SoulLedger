@@ -23,10 +23,16 @@ class AuditUserFields(SoftDeleteMixin, models.Model):
     `create_user = None`** — measured on eight of them 2026-08-29. That is
     what `tests/test_every_writable_audit_viewset_sets_the_user.py` now walks
     the real URLconf to prevent.
+
+    create_user / update_user (and SoftDeleteMixin.deleted_by) are bare ids (stage 1B, D3 in
+    docs/audit/2026-11-15-sharding/PLAN.md): the user lives in the control database, most of these
+    rows in a civilization shard. No database constraint, no ORM on_delete; a hard-deleted user's ids
+    are cleared by `apps.core.bare_ids`. One place for every model, control ones included.
     """
     create_user = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
         related_name="%(class)s_created",
         null=True,
         blank=True,
@@ -38,7 +44,8 @@ class AuditUserFields(SoftDeleteMixin, models.Model):
     )
     update_user = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
         related_name="%(class)s_updated",
         null=True,
         blank=True,

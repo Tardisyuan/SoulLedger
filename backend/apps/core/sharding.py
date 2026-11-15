@@ -145,6 +145,13 @@ def placement_of(app_label, model_name):
     return _by_label().get(f"{app_label}.{model_name}".lower(), (CONTROL, None))[0]
 
 
+@cache
+def app_has_shard_tables(app_label):
+    """Whether any current model of the app is SHARD or REFERENCE, i.e. has a table on a shard."""
+    prefix = f"{app_label}.".lower()
+    return any(k.startswith(prefix) and p != CONTROL for k, (p, _) in _by_label().items())
+
+
 def tenant_path(model):
     """ORM lookup from `model` to its owning Tenant ("tenant", "soul__tenant", ...), or None.
     Live and historical models alike (resolved by label)."""
@@ -160,6 +167,24 @@ def alias_for_civilization(civ):
     from apps.souls.models import Civilization
 
     return f"civ_{Civilization(civ).value.lower()}"
+
+
+def check_cut_over_settings(read, write):
+    """SHARD_READ_CIVS / SHARD_WRITE_CIVS (D8) name civilizations that have a shard, and a civilization's
+    writes are cut over only after its reads. Raised at startup (`apps/souls/apps.py`), so a typo such as
+    `CHINA` refuses to boot instead of surfacing at the first `fanout()`."""
+    from django.core.exceptions import ImproperlyConfigured
+
+    from apps.souls.models import Civilization
+
+    known = set(Civilization.values)
+    for name, civs in (("SHARD_READ_CIVS", read), ("SHARD_WRITE_CIVS", write)):
+        bad = sorted(set(civs) - known)
+        if bad:
+            raise ImproperlyConfigured(f"{name} names {bad}; a shard exists only for {sorted(known)}")
+    early = sorted(set(write) - set(read))
+    if early:
+        raise ImproperlyConfigured(f"SHARD_WRITE_CIVS {early} are not in SHARD_READ_CIVS: cut reads over first")
 
 
 def fanout():

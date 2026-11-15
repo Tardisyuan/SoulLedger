@@ -78,7 +78,7 @@ class DispatchRecord(AuditUserFields, models.Model):
     )
     dispatched_by = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         related_name="dispatch_records",
     )
@@ -94,7 +94,7 @@ class DispatchRecord(AuditUserFields, models.Model):
     decision_reason = models.TextField(blank=True, default="")
     decided_by = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="dispatch_records_decided",
@@ -212,7 +212,7 @@ class CrossTenantJudgment(AuditUserFields, models.Model):
     cancel_reason = models.TextField(blank=True, default="")
     ended_by = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="cross_judgments_ended",
@@ -324,7 +324,7 @@ class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):
     sentence_submitted_at = models.DateTimeField(null=True, blank=True)
     sentence_submitted_by = models.ForeignKey(
         "authentication.User",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="sentences_submitted",

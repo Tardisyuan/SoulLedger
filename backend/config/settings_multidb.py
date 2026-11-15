@@ -25,6 +25,15 @@ else:
     # (config/testdb.py), as it does for `default`.
     _shadow["NAME"] = f"{_shadow['NAME']}_shadow"
 DATABASES[SHADOW_ALIAS] = _shadow
+# Stage 1B: one civilization shard, PostgreSQL only (tests/test_control_boundary.py skips without it).
+# Migrated with the shard engine, so it holds SHARD and REFERENCE tables and no control table.
+SHARD_TEST_ALIAS = "civ_greek"
+if "postgresql" in DATABASES["default"]["ENGINE"]:
+    _shard = copy.deepcopy(DATABASES["default"])
+    _shard["ENGINE"] = "config.shard_db.postgresql"
+    _shard["NAME"] = f"{_shard['NAME']}_{SHARD_TEST_ALIAS}"
+    _shard.get("TEST", {}).pop("NAME", None)  # never default's test database
+    DATABASES[SHARD_TEST_ALIAS] = _shard
 # The shadow router first: it answers None for every read / write it does not claim, for a relation
 # unless the two rows sit in different databases, and for every allow_migrate -- so the production
 # ShardRouter behind it still decides the rest, allow_migrate included (from 1B that is where SHARD /

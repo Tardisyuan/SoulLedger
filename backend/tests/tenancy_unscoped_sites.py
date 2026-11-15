@@ -90,6 +90,8 @@ SITES = [
     ('apps/audit/signals.py', 'sender._base_manager', 1, 'PK', 'pre-save snapshot of the same row by pk, for the audit diff'),
     ('apps/authentication/views.py', 'Tenant.objects', 2, 'GLOBAL', "UserViewSet.get_queryset: reads every tenant's MFA-required-roles setting to build one OR filter; the resulting User queryset is then scoped by the caller as usual ‖ civilizations_view: public list of active civilizations at login; exposes tenant codes only, no tenant rows"),
     ('apps/chat/inbox.py', 'Tenant.objects', 1, 'FANOUT', 'hall labels for tenants that already own conversations in the (already scoped) inbox queryset'),
+    ('apps/core/bare_ids.py', 'f.model._base_manager', 3, 'PK', "clear_bare_ids: the rows whose bare id names the hard-deleted row, by that id (PROTECT probe, then CASCADE / SET_NULL) -- what Django's collector did before 1B, whatever their hall ‖ orphans: bare ids naming no row of their target, a maintenance count (check_bare_ids)"),
+    ('apps/core/bare_ids.py', 'target._base_manager', 1, 'CLI', "orphans: every pk of a bare id's target on the control database, for check_bare_ids (run before reversing stage 1B)"),
     ('apps/core/recycle_bin.py', 'model._base_manager', 1, 'PK', 'helper returning the unfiltered manager for the recycle bin; callers scope (apps/core/recycle_bin_views.py)'),
     ('apps/core/ws_tenant.py', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/death_sync/management/commands/create_api_key.py', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),

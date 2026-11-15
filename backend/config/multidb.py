@@ -3,9 +3,9 @@ docs/ARCHITECTURE-tenant-sharding.md 4.1). Production routing is untouched:
 nothing outside `config/settings_multidb.py` imports this module.
 
 `ShadowTenantRouter` sends writes of a tenant-scoped instance whose `tenant_id`
-is in `SHADOW_TENANTS` to `SHADOW_ALIAS`, and refuses a relation between rows
-that live in different databases -- the check a real split needs and today's
-single database never makes.
+is in `SHADOW_TENANTS` to `SHADOW_ALIAS`. Relations between rows of different
+databases are decided by the production `ShardRouter` behind it (since stage 1B):
+two SHARD rows are refused, a bare id to a CONTROL row is not.
 """
 
 SHADOW_ALIAS = "tenant_shadow"
@@ -29,9 +29,9 @@ class ShadowTenantRouter:
         return self._alias(hints)
 
     def allow_relation(self, obj1, obj2, **hints):
-        db1, db2 = obj1._state.db, obj2._state.db
-        if db1 and db2 and db1 != db2:
-            return False
+        # No opinion since stage 1B: the production ShardRouter behind it refuses two SHARD rows in
+        # different databases and allows a pair with a CONTROL / REFERENCE side (a bare id). Refusing
+        # every cross-database pair here would hide that rule from this group.
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):

@@ -58,7 +58,7 @@ RESULT_MAX = 500
 class ScheduledJob(models.Model):
     periodic_task = models.OneToOneField(
         "django_celery_beat.PeriodicTask",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="scheduled_job",
     )
     job_key = models.CharField(max_length=200, db_index=True)
@@ -120,7 +120,7 @@ class TaskRun(models.Model):
     error = models.TextField(blank=True, default="")
     result = models.CharField(max_length=RESULT_MAX, blank=True, default="")
     triggered_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+        settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+"
     )
 
     class Meta:

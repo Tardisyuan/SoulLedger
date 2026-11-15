@@ -44,7 +44,7 @@ class Post(AuditUserFields, models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey(
         "authentication.User",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="social_posts",
     )
     content = models.TextField()
@@ -63,7 +63,7 @@ class Post(AuditUserFields, models.Model):
     # 的敏感词在写入时自动隐藏:`moderated_by` 为空、理由是 `sensitive_word:<词>`。
     # 删除不写这里:软删除自己有 deleted_by / deleted_at / delete_reason。
     moderated_by = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
     moderated_at = models.DateTimeField(null=True, blank=True)
     moderation_reason = models.CharField(max_length=500, blank=True, default="")
@@ -134,7 +134,7 @@ class PostMedia(SoftDeleteMixin, models.Model):
         Post, null=True, blank=True, on_delete=models.CASCADE, related_name="media",
     )
     uploader = models.ForeignKey(
-        "authentication.User", on_delete=models.CASCADE, related_name="social_media_uploads",
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="social_media_uploads",
     )
     position = models.PositiveSmallIntegerField(default=0)
     file = models.FileField(upload_to=_post_media_path, max_length=200)
@@ -169,7 +169,7 @@ class Comment(AuditUserFields, models.Model):
     )
     author = models.ForeignKey(
         "authentication.User",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="social_comments",
     )
     parent = models.ForeignKey(
@@ -188,7 +188,7 @@ class Comment(AuditUserFields, models.Model):
     )
     # 同 Post.moderated_*。
     moderated_by = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
     moderated_at = models.DateTimeField(null=True, blank=True)
     moderation_reason = models.CharField(max_length=500, blank=True, default="")
@@ -228,7 +228,7 @@ class Reaction(AuditUserFields, models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         "authentication.User",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="social_reactions",
     )
     post = models.ForeignKey(
@@ -322,12 +322,12 @@ class Follow(AuditUserFields, models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     follower = models.ForeignKey(
         "authentication.User",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="social_following",
     )
     following = models.ForeignKey(
         "authentication.User",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="social_followers",
     )
     tenant = models.ForeignKey(
@@ -460,7 +460,7 @@ class Report(models.Model):
     post = models.ForeignKey(Post, null=True, blank=True, on_delete=models.CASCADE, related_name="reports")
     comment = models.ForeignKey(Comment, null=True, blank=True, on_delete=models.CASCADE, related_name="reports")
     target_user = models.ForeignKey(
-        "authentication.User", on_delete=models.CASCADE, related_name="social_reports_against"
+        "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="social_reports_against"
     )
     status = models.CharField(max_length=10, choices=ReportStatus.choices, default=ReportStatus.OPEN)
     report_count = models.PositiveIntegerField(default=0)
@@ -469,7 +469,7 @@ class Report(models.Model):
     resolution = models.CharField(max_length=10, choices=ReportResolution.choices, blank=True, default="")
     resolution_note = models.CharField(max_length=500, blank=True, default="")
     resolved_by = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
     resolved_at = models.DateTimeField(null=True, blank=True)
 
@@ -498,7 +498,7 @@ class ReportEntry(models.Model):
     """一个灵魂对一条 Report 的一次举报。同一人对同一条举报只算一次。"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name="entries")
-    reporter = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="social_report_entries")
+    reporter = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="social_report_entries")
     reason = models.CharField(max_length=10, choices=ReportReason.choices)
     detail = models.CharField(max_length=500, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -540,7 +540,7 @@ class SensitiveWord(models.Model):
     # 默认 REVIEW:0007 之前的词一直是「命中进待审」,迁移后行为不变。
     action = models.CharField(max_length=10, choices=SensitiveWordAction.choices, default=SensitiveWordAction.REVIEW)
     created_by = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -577,16 +577,16 @@ class SocialMute(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="social_mutes")
-    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="social_mutes")
+    user = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="social_mutes")
     until = models.DateTimeField()
     reason = models.CharField(max_length=500, blank=True, default="")
     created_by = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     lifted_at = models.DateTimeField(null=True, blank=True)
     lifted_by = models.ForeignKey(
-        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        "authentication.User", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+"
     )
 
     class Meta:
@@ -621,8 +621,8 @@ class SocialInteraction(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="social_interactions")
-    recipient = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="social_interactions")
-    actor = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="+")
+    recipient = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="social_interactions")
+    actor = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
     kind = models.CharField(max_length=10, choices=InteractionKind.choices)
     post = models.ForeignKey(Post, null=True, blank=True, on_delete=models.CASCADE, related_name="+")
     comment = models.ForeignKey(Comment, null=True, blank=True, on_delete=models.CASCADE, related_name="+")
