@@ -315,7 +315,7 @@ def test_a_shard_rows_primary_moves_to_its_shard_only_when_its_writes_are_cut_ov
     assert primary_alias(greek) == "default"
 
 
-def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hall, settings):
+def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hall, settings, monkeypatch):
     """With Greek writes cut over, the control database's Greek Soul is a leftover copy: deleting it must
     not cascade to the control SoulAccount naming the soul (the shard's Soul is the real one). The
     primary's delete still does. tests/test_multidb_shadow.py has the same on a second database."""
@@ -329,12 +329,11 @@ def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hal
     greek, chinese = Soul.objects.create(name="g", tenant=greek_hall), Soul.objects.create(name="c", tenant=hall)
     kept, gone = account_of(greek, "bare-copy-g"), account_of(chinese, "bare-copy-c")
     settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
+    # fanout() would name civ_greek, which this settings file has no database for; the rows are here.
+    monkeypatch.setattr("apps.core.sharding.fanout", lambda: ["default"])
     greek.purge()
     assert SoulAccount.objects.filter(pk=kept.pk).exists()
-    # The primary still applies its rule. (Cut-over off again: fanout() would now visit civ_greek, which
-    # this settings file has no database for.)
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = []
-    chinese.purge()
+    chinese.purge()  # Chinese writes are not cut over: default is its primary, the rule applies
     assert not SoulAccount.objects.filter(pk=gone.pk).exists()
 
 
