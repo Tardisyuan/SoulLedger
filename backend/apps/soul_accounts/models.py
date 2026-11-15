@@ -153,10 +153,10 @@ class RebirthApplication(models.Model):
     appeal_statement = models.TextField(blank=True, default="", max_length=2000)
     status = models.CharField(max_length=20, choices=RebirthApplicationStatus.choices)
     workflow = models.OneToOneField(
-        "workflow.ApprovalWorkflow", on_delete=models.PROTECT, related_name="rebirth_application"
+        "workflow.ApprovalWorkflow", on_delete=models.DO_NOTHING, db_constraint=False, related_name="rebirth_application"
     )
     appeal_workflow = models.OneToOneField(
-        "workflow.ApprovalWorkflow", null=True, blank=True, on_delete=models.PROTECT,
+        "workflow.ApprovalWorkflow", null=True, blank=True, on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="rebirth_appeal",
     )
     cross_civilization = models.BooleanField(null=True, blank=True)

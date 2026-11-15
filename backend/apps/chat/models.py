@@ -78,9 +78,9 @@ class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     kind = models.CharField(max_length=20, choices=ConversationKind.choices)
     room_id = models.CharField(max_length=255, unique=True)
-    soul_a = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="chat_conversations_a")
+    soul_a = models.ForeignKey("souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, related_name="chat_conversations_a")
     soul_b = models.ForeignKey(
-        "souls.Soul", on_delete=models.CASCADE, null=True, blank=True, related_name="chat_conversations_b"
+        "souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="chat_conversations_b"
     )
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="chat_conversations")
     #: 双方各是**哪一世的账号**(`account_a` 对应 `soul_a`)。会话属于那一世,不属于灵魂:
@@ -95,7 +95,7 @@ class Conversation(models.Model):
     )
     #: 谁发起的私聊请求。互关直接建房时为空 —— 没有被节流的一方。
     initiator = models.ForeignKey(
-        "souls.Soul", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+        "souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+"
     )
     throttled = models.BooleanField(default=False)
     last_request_at = models.DateTimeField(null=True, blank=True)

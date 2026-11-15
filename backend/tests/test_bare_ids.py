@@ -9,6 +9,7 @@ is left dangling -- run before reversing the 1B migrations.
 Proven red 2026-11-15: `bare_ids.connect()` made a no-op -> the two hard-delete tests fail (the user
 ids stay on the realm, the follow row survives, the protected account is deleted).
 """
+import uuid as uuid_module
 from io import StringIO
 
 import pytest
@@ -114,6 +115,26 @@ def test_a_protected_bare_id_refuses_the_delete_and_nothing_changes(hall):
     assert ChatIdentity.objects.filter(pk=identity.pk).exists()  # nothing of the account went either
 
 
+def test_purging_a_soul_whose_record_a_court_ruled_on_goes_through(hall):
+    """EvidenceAdmission.record is RESTRICT: refused alone, lifted when the admission goes in the same delete
+    (through its judgment). Since stage 2 both SoulRecord.soul and Judgment.soul are bare ids, so the two
+    cascades come from bare_ids -- in one collector, or the RESTRICT would refuse the purge."""
+    from apps.judgment.models import EvidenceAdmission, Judgment
+    from apps.souls.models import Soul
+    from apps.souls.record_models import SoulRecord
+
+    soul = Soul.objects.create(name="ruled-on", tenant=hall)
+    record = SoulRecord.objects.create(soul=soul, tenant=hall, record_type=SoulRecord._meta.get_field(
+        "record_type").choices[0][0], civilization="CHINESE")
+    judgment = Judgment.objects.create(soul=soul, tenant=hall, case_number="BARE-RESTRICT-1", civilization="CHINESE")
+    EvidenceAdmission.objects.create(judgment=judgment, record=record, tenant=hall)
+
+    manifest = soul.purge()
+    assert not Soul.all_objects.filter(pk=soul.pk).exists()
+    assert not SoulRecord._base_manager.filter(pk=record.pk).exists()
+    assert manifest.get("judgment.EvidenceAdmission") == 1 and manifest.get("souls.SoulRecord") == 1, manifest
+
+
 def test_a_purged_souls_manifest_still_counts_what_went_through_bare_ids(hall):
     """Soul.purge reports every row it removed (tests/test_soul_purge.py). The soul's accounts, and their
     letters identity, now go through bare ids, which Django's own delete() count cannot see."""
@@ -153,18 +174,25 @@ def test_check_bare_ids_names_an_orphan_and_passes_without_one(hall):
     assert "realms.Realm.update_user" not in out.getvalue()
 
 
-def test_each_bare_ids_rule_is_the_on_delete_it_had_before_stage_1b():
-    """ON_DELETE is written by hand; the truth is the migration state just before the 24
-    `*_bare_ids_across_databases` migrations. Every bare id that existed then keeps exactly that rule
-    (a key missing from ON_DELETE means SET_NULL)."""
+#: The batches of AlterField migrations that made keys bare, by name suffix, and how many each has: 1B (the
+#: control / shard boundary) and stage 2 (SHARD -> SHARD edges across civilizations). A new batch is a
+#: new line here, so its rules are checked against the state just before it.
+BARE_ID_STAGES = [("_bare_ids_across_databases", 24, 150), ("_bare_ids_across_civilizations", 12, 20)]
+
+
+@pytest.mark.parametrize(("suffix", "migrations", "at_least"), BARE_ID_STAGES)
+def test_each_bare_ids_rule_is_the_on_delete_it_had_before_its_stage(suffix, migrations, at_least):
+    """ON_DELETE is written by hand; the truth is the migration state just before the batch that made the
+    key bare. Every bare id that was still a constrained key then keeps exactly that rule (a key missing
+    from ON_DELETE means SET_NULL); one already bare then got its rule from an earlier batch."""
     from django.db.migrations.loader import MigrationLoader
 
     loader = MigrationLoader(None, ignore_no_migrations=True)
-    stage = {k for k in loader.disk_migrations if k[1].endswith("_bare_ids_across_databases")}
-    assert len(stage) == 24, sorted(stage)
+    stage = {k for k in loader.disk_migrations if k[1].endswith(suffix)}
+    assert len(stage) == migrations, sorted(stage)
     parents = sorted({p.key for k in stage for p in loader.graph.node_map[k].parents} - stage)
     reached = {k for p in parents for k in loader.graph.forwards_plan(p)}
-    assert not reached & stage, "the 'before' state includes a 1B migration"
+    assert not reached & stage, f"the 'before' state includes a {suffix} migration"
     before = loader.project_state(parents)
 
     compared, wrong = 0, []
@@ -173,12 +201,14 @@ def test_each_bare_ids_rule_is_the_on_delete_it_had_before_stage_1b():
             continue  # a through-table row: CASCADE at both ends, before and after (Django's own rule)
         old = before.models.get((f.model._meta.app_label, f.model._meta.model_name))
         if old is None or f.name not in old.fields:
-            continue  # born bare after 1B: it had no earlier rule
-        was = old.fields[f.name].remote_field.on_delete
+            continue  # born bare after this batch: it had no earlier rule
+        was = old.fields[f.name]
+        if not was.db_constraint and was.remote_field.on_delete is models.DO_NOTHING:
+            continue  # already bare before this batch
         compared += 1
-        if was is not rule(f):
-            wrong.append(f"{label(f)}: was {was.__name__}, ON_DELETE says {rule(f).__name__}")
-    assert compared > 150, compared
+        if was.remote_field.on_delete is not rule(f):
+            wrong.append(f"{label(f)}: was {was.remote_field.on_delete.__name__}, ON_DELETE says {rule(f).__name__}")
+    assert compared > at_least, compared
     assert not wrong, "\n  ".join(wrong)
 
 
@@ -234,6 +264,8 @@ def _orphan_source(edge, hall):
         scope.orgs.add(org)
         rows = RoleDataScope.orgs.through.objects.filter(roledatascope=scope)
         return rows, f"{col}_id", (org.pk if col == "organization" else scope.pk) + GONE
+    if edge in CROSS_CIVILIZATION_EDGES:
+        return _crossing_orphan_source(edge, hall, user)
     god_model = CityGod if edge.startswith("judgment.") else TudiGod
     god = god_model.objects.create(tenant=hall, name="orph")
     god.officers.add(user)
@@ -241,9 +273,46 @@ def _orphan_source(edge, hall):
     return rows, f"{col}_id", (user.pk + GONE if col == "user" else uuid.uuid4())
 
 
+def _gone(obj):
+    return uuid_module.uuid4() if isinstance(obj.pk, uuid_module.UUID) else obj.pk + GONE
+
+
+def _crossing_orphan_source(edge, hall, user):
+    """Stage 2 targets: Realm, CrossTenantJudgment, ApprovalWorkflow, WorkflowSegment."""
+    from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord
+    from apps.souls.models import Soul
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow, SegmentState, WorkflowSegment
+
+    if edge == "dispatch.DispatchRecord.target_realm":
+        realm = _realm(hall, "ORT", user)
+        rec = DispatchRecord.objects.create(source_tenant=hall, target_realm=realm)
+        return DispatchRecord.objects.filter(pk=rec.pk), "target_realm_id", _gone(realm)
+    if edge == "dispatch.CrossTenantJudgmentParticipant.judgment":
+        joint = CrossTenantJudgment.objects.create(title="o", description="o", initiating_tenant=hall)
+        seat = CrossTenantJudgmentParticipant.objects.create(judgment=joint, participant_tenant=hall)
+        return CrossTenantJudgmentParticipant.objects.filter(pk=seat.pk), "judgment_id", _gone(joint)
+    wf = ApprovalWorkflow.objects.create(number="WF-ORPH", workflow_name="o", tenant=hall,
+                                         soul=Soul.objects.create(name="orph-wf", tenant=hall))
+    seg = WorkflowSegment.objects.create(workflow=wf, order=1, tenant=hall, civilization="CHINESE", name="o",
+                                         state=SegmentState.values[0])
+    if edge == "workflow.WorkflowSegment.workflow":
+        return WorkflowSegment.objects.filter(pk=seg.pk), "workflow_id", _gone(wf)
+    node = ApprovalNode.objects.create(workflow=wf, node_name="o", node_order=1, segment=seg)
+    return ApprovalNode.objects.filter(pk=node.pk), "segment_id", _gone(seg)
+
+
+#: One edge per target the stage-2 batch added (SHARD -> SHARD across civilizations).
+CROSS_CIVILIZATION_EDGES = [
+    "dispatch.DispatchRecord.target_realm",               # -> Realm
+    "dispatch.CrossTenantJudgmentParticipant.judgment",   # -> CrossTenantJudgment
+    "workflow.WorkflowSegment.workflow",                  # -> ApprovalWorkflow
+    "workflow.ApprovalNode.segment",                      # -> WorkflowSegment
+]
+
 #: One edge per target model of a bare id (the next test holds that every target is reached), plus
 #: every through-table column.
 ORPHAN_EDGES = [
+    *CROSS_CIVILIZATION_EDGES,
     "realms.Realm.create_user",              # -> User
     "soul_accounts.SoulAccount.soul",        # -> Soul
     "chat.ChatIdentity.account",             # -> SoulAccount
@@ -318,7 +387,7 @@ def test_a_shard_rows_primary_moves_to_its_shard_only_when_its_writes_are_cut_ov
 def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hall, settings, monkeypatch):
     """With Greek writes cut over, the control database's Greek Soul is a leftover copy: deleting it must
     not cascade to the control SoulAccount naming the soul (the shard's Soul is the real one). The
-    primary's delete still does. tests/test_multidb_shadow.py has the same on a second database."""
+    primary's delete still does. tests/test_shard_aliases.py has the same on a real shard."""
     from apps.soul_accounts.models import AccountOrigin, SoulAccount
     from apps.souls.models import Soul
 

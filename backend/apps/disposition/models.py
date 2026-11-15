@@ -59,7 +59,7 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     soul = models.ForeignKey(
         Soul,
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="dispositions",
     )
     judgment = models.OneToOneField(

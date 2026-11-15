@@ -61,7 +61,7 @@ class DispatchRecord(AuditUserFields, models.Model):
     # 与直接发起(`propose`)都要求两者齐全,所以 PROPOSED 及之后的行上它们恒非空。
     soul = models.ForeignKey(
         "souls.Soul",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="dispatch_records",
         null=True,
         blank=True,
@@ -71,7 +71,7 @@ class DispatchRecord(AuditUserFields, models.Model):
     # 空 = 没指定,执行时只记「离开」,与此前一样。SET_NULL 与 `SoulPathEntry.realm` 同一取法。
     target_realm = models.ForeignKey(
         "realms.Realm",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="dispatch_records",
@@ -286,7 +286,7 @@ class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     judgment = models.ForeignKey(
         CrossTenantJudgment,
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="participants",
     )
     participant_tenant = models.ForeignKey(
@@ -296,7 +296,7 @@ class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):
     )
     participant_actor = models.ForeignKey(
         "actors.Actor",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
         related_name="judgment_participations",

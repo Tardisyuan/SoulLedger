@@ -239,7 +239,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
     )
     soul = models.ForeignKey(
         "souls.Soul",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="approval_workflows",
     )
 
@@ -1342,7 +1342,7 @@ class WorkflowSegment(models.Model):
     `version` goes up on every pick / adjust / default pick; a write carrying an older one is refused
     (`segment_changed`) so two people cannot silently overwrite each other's choice.
     """
-    workflow = models.ForeignKey(ApprovalWorkflow, on_delete=models.CASCADE, related_name="segments")
+    workflow = models.ForeignKey(ApprovalWorkflow, on_delete=models.DO_NOTHING, db_constraint=False, related_name="segments")
     order = models.PositiveSmallIntegerField()
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="workflow_segments")
     civilization = models.CharField(max_length=30)
@@ -1407,7 +1407,7 @@ class ApprovalNode(AuditUserFields, models.Model):
     )
     approver_actor = models.ForeignKey(
         "actors.Actor",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         null=True,
         blank=True,
     )
@@ -1560,7 +1560,7 @@ class ApprovalNode(AuditUserFields, models.Model):
     # Null `segment` = a workflow built before segments. `is_required` = the segment's final review (or a
     # 结束): no pick or adjust may skip it; only cancelling the cross-realm judgment mid-segment does.
     segment = models.ForeignKey(
-        WorkflowSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="nodes")
+        WorkflowSegment, on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="nodes")
     skip_kind = models.CharField(max_length=12, choices=SkipKind.choices, null=True, blank=True)
     skipped_by = models.ForeignKey(
         "authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True, related_name="+")

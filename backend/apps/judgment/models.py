@@ -351,7 +351,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     case_number = models.CharField(max_length=32, unique=True, editable=False)
     soul = models.ForeignKey(
         Soul,
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="judgments",
     )
     civilization = models.CharField(max_length=20, choices=Civilization.choices)
@@ -1414,7 +1414,7 @@ class JudgmentAppeal(AuditUserFields, models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="appeals")
-    soul = models.ForeignKey(Soul, on_delete=models.CASCADE, related_name="judgment_appeals")
+    soul = models.ForeignKey(Soul, on_delete=models.DO_NOTHING, db_constraint=False, related_name="judgment_appeals")
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="judgment_appeals", null=True)
     round = models.PositiveSmallIntegerField()
     reason = models.TextField()

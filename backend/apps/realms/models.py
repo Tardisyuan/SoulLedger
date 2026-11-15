@@ -281,7 +281,7 @@ class SoulPathEntry(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     soul = models.ForeignKey(
-        "souls.Soul", on_delete=models.CASCADE, related_name="path_entries",
+        "souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, related_name="path_entries",
     )
     # SET_NULL 与 Disposition.destination_realm 同一取法:界域是软删的,硬删极少;
     # 硬删了,这一站仍然发生过。

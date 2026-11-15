@@ -6,8 +6,8 @@ accessor, no database constraint and no ORM on_delete -- Django's delete collect
 database the deleted row came from, and the rows pointing at a control user will live in four others.
 So the delete rule each of them had before 1B is kept here and applied explicitly, on every alias
 `fanout()` names, from a `pre_delete` receiver on each target model (wired in `apps/souls/apps.py`) --
-only when the row deleted is the authoritative one (`primary_alias`). Deleting a copy (the test shadow,
-a shard copy before its civilization's writes are cut over, a reconcile removing an extra row) touches
+only when the row deleted is the authoritative one (`primary_alias`). Deleting a copy (a
+shard copy before its civilization's writes are cut over, a reconcile removing an extra row) touches
 no other database.
 A hard delete of a User (only ever a queryset delete: `User.delete()` is a soft delete) is the main
 case; SoulAccount, Soul, Actor, Organization and django-celery-beat's PeriodicTask are the others.
@@ -23,7 +23,8 @@ from functools import cache
 from django.apps import apps
 from django.conf import settings
 from django.db import models, router
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, RestrictedError
+from django.db.models.deletion import Collector
 from django.db.models.signals import pre_delete
 
 #: The rule a bare id had before it was made bare, where it was not SET_NULL. Every non-null bare id
@@ -58,6 +59,26 @@ ON_DELETE = {
     "soul_push.PushDelivery.soul": models.CASCADE,
     "soul_push.PushDevice.soul": models.CASCADE,
     "soul_push.PushPreference.soul": models.CASCADE,
+    # Stage 2: SHARD -> SHARD edges that cross civilizations (tests/tenancy_fk_inventory.py, "crosses by
+    # design" / "may cross"); the `*_bare_ids_across_civilizations` migrations.
+    "chat.Conversation.initiator": models.CASCADE,
+    "chat.Conversation.soul_a": models.CASCADE,
+    "chat.Conversation.soul_b": models.CASCADE,
+    "dispatch.CrossTenantJudgmentParticipant.judgment": models.CASCADE,
+    "dispatch.DispatchRecord.soul": models.CASCADE,
+    "disposition.Disposition.soul": models.CASCADE,
+    "events.SoulEvent.soul": models.PROTECT,
+    "judgment.Judgment.soul": models.CASCADE,
+    "judgment.JudgmentAppeal.soul": models.CASCADE,
+    "realms.SoulPathEntry.soul": models.CASCADE,
+    "reincarnation.Reincarnation.soul": models.CASCADE,
+    "sentence_plan.SentencePlan.soul": models.CASCADE,
+    "soul_accounts.RebirthApplication.appeal_workflow": models.PROTECT,
+    "soul_accounts.RebirthApplication.workflow": models.PROTECT,
+    "souls.SoulRecord.soul": models.CASCADE,
+    "workflow.ApprovalNode.segment": models.CASCADE,
+    "workflow.ApprovalWorkflow.soul": models.CASCADE,
+    "workflow.WorkflowSegment.workflow": models.CASCADE,
 }
 
 
@@ -108,16 +129,35 @@ def clear_bare_ids(target, pks, aliases):
                 if held:
                     raise ProtectedError(f"{label(f)} still points at {target._meta.label} {list(pks)}", set(held))
     for alias in aliases:
+        # One collector for every CASCADE on the alias, as Django's own would have been: a RESTRICT met on
+        # the way (EvidenceAdmission.record -> SoulRecord) is lifted when the restricting row goes in the
+        # same delete (through Judgment), which one collector per field could not see (stage 2: both
+        # SoulRecord.soul and Judgment.soul are bare).
+        collector = Collector(using=alias, origin=target)
         for f in on[alias]:
             rows = f.model._base_manager.using(alias).filter(**{f"{f.attname}__in": pks})
             how = rule(f)
             if how is models.CASCADE:
-                _, per_model = rows.delete()
-                tally = _tally.get()
-                if tally is not None:
-                    tally.update(per_model)
+                collector.collect(rows, fail_on_restricted=False)
             elif how is models.SET_NULL:
                 rows.update(**{f.attname: None})
+        _refuse_restricted(collector)
+        _, per_model = collector.delete()
+        tally = _tally.get()
+        if tally is not None:
+            tally.update(per_model)
+
+
+def _refuse_restricted(collector):
+    """Django's end-of-collect RESTRICT check (`Collector.collect(fail_on_restricted=True)`), once over
+    everything collected above."""
+    for model, instances in collector.data.items():
+        collector.clear_restricted_objects_from_set(model, instances)
+    for qs in collector.fast_deletes:
+        collector.clear_restricted_objects_from_queryset(qs.model, qs)
+    held = {o for fields in collector.restricted_objects.values() for objs in fields.values() for o in objs}
+    if held:
+        raise RestrictedError("rows are referenced through restricted foreign keys", held)
 
 
 #: The rows a CASCADE above deleted, for a caller that reports what a delete removed: Django's
@@ -189,11 +229,13 @@ def orphans(aliases):
         where = homes(target, aliases)
         for alias in aliases:
             if where == [alias]:
-                known = target._base_manager.using(alias).values("pk")
+                known = target._base_manager.using(alias).order_by().values("pk")
             else:
-                # Django refuses a subquery across databases: the ids of every home, as one list.
+                # Django refuses a subquery across databases: the ids of every home, as one list. order_by()
+                # here and above: a target ordered through a foreign key (WorkflowSegment: "workflow") is read
+                # with an INNER JOIN, which drops a row whose bare id crosses to another database.
                 # ponytail: every pk in memory; batch it if a target table outgrows that.
-                known = {pk for a in where for pk in target._base_manager.using(a).values_list("pk", flat=True)}
+                known = {pk for a in where for pk in target._base_manager.using(a).order_by().values_list("pk", flat=True)}
             for f in fields:
                 if not router.allow_migrate_model(alias, f.model):
                     continue  # the pointing table is not on this alias (a CONTROL source on a shard)

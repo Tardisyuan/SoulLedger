@@ -71,7 +71,7 @@ class SentencePlan(AuditUserFields, models.Model):
     """一份审判结论生成的、有序的受刑计划。属于灵魂的原属租户。"""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="sentence_plans")
+    soul = models.ForeignKey("souls.Soul", on_delete=models.DO_NOTHING, db_constraint=False, related_name="sentence_plans")
     #: = soul.home_tenant(结案当时)。计划归原属文明,与转生申请、灵魂账号同一归属规则。
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="sentence_plans", null=True)
     #: 第几世,与 Judgment.cycle 同义。

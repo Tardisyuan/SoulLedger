@@ -185,7 +185,7 @@ class SoulEvent(AuditUserFields, models.Model):
     )
     soul = models.ForeignKey(
         "souls.Soul",
-        on_delete=models.PROTECT,
+        on_delete=models.DO_NOTHING, db_constraint=False,
         related_name="events",
     )
     event_type = models.CharField(max_length=50, choices=EventType.choices)

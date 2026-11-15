@@ -117,25 +117,79 @@ def test_each_pinned_constraint_is_the_fields_db_constraint():
     assert not wrong, "constraint column out of date:\n  " + "\n  ".join(wrong)
 
 
+#: Stage 2: reasons that say the two rows of a SHARD -> SHARD edge can belong to halls of different
+#: civilizations, i.e. sit in different shards. Which edges those are is the inventory's classification
+#: (a decision about the product, not derivable from the schema); the tests below make it binding and
+#: check it against what the schema does say.
+CROSSING = ("crosses by design", "may cross")
+
+
+def _edge(f):
+    return f"{f.model._meta.label}.{f.name}->{f.related_model._meta.label}"
+
+
+def _crosses_civilizations(f):
+    return EDGES.get(_edge(f), ("", "", ""))[2].startswith(CROSSING)
+
+
 def test_exactly_the_edges_across_databases_are_bare():
     """The rule, from the placements, over every FK / M2M of our models (the audit columns included):
-    an edge across databases must be BARE; any other must keep its constraint, except the audit trio,
-    which is bare everywhere from its one declaration."""
+    an edge across databases must be BARE -- across the control / shard boundary (placements) or across
+    civilizations (CROSSING); any other must keep its constraint, except the audit trio, which is bare
+    everywhere from its one declaration."""
     must_be_bare, needlessly_bare = [], []
     for m in _our_models():
         for f in [*m._meta.concrete_fields, *m._meta.local_many_to_many]:
             if not isinstance(f, (models.ForeignKey, models.ManyToManyField)):
                 continue
-            edge = f"{m._meta.label}.{f.name}->{f.related_model._meta.label}"
+            edge = _edge(f)
             audit = f.name in AUDIT_FIELDS and issubclass(m, AuditUserFields)
-            if _crosses(f) and _constraint(f) != "BARE":
+            crosses = _crosses(f) or _crosses_civilizations(f)
+            if crosses and _constraint(f) != "BARE":
                 must_be_bare.append(edge)
-            if not _crosses(f) and not audit and _constraint(f) == "BARE":
+            if not crosses and not audit and _constraint(f) == "BARE":
                 needlessly_bare.append(edge)
     assert not must_be_bare, ("Across databases but still a constraint (D3: db_constraint=False, "
                               "on_delete=DO_NOTHING):\n  " + "\n  ".join(sorted(must_be_bare)))
     assert not needlessly_bare, ("Bare though both ends share a database (the constraint was dropped "
                                  "for nothing):\n  " + "\n  ".join(sorted(needlessly_bare)))
+
+
+def test_an_edge_classified_crossing_is_one_the_schema_lets_cross():
+    """A CROSSING reason only makes sense on a key between two SHARD models that is not the hop the source
+    row reaches its own hall through (that hop drags the row along: it cannot point out of its shard)."""
+    from apps.core.sharding import SHARD, placement, tenant_path
+
+    wrong = []
+    for edge, (_c, _k, why) in EDGES.items():
+        if not why.startswith(CROSSING):
+            continue
+        f = _field(edge)
+        path = tenant_path(f.model) or ""
+        if placement(f.model) != SHARD or placement(f.related_model) != SHARD or path.split("__")[0] == f.name:
+            wrong.append(f"{edge} (path {path or None})")
+    assert not wrong, "classified crossing but cannot cross:\n  " + "\n  ".join(wrong)
+
+
+def test_a_row_that_follows_a_soul_is_crossing_where_it_points_into_a_hall():
+    """Derived, not classified: a model whose hall is reached through the soul (`soul__tenant`, ...) moves
+    with the soul when it resides elsewhere (D6), so a key from it to a hall-owned row that does not itself
+    follow a soul (RebirthApplication.workflow) can point into another civilization."""
+    from apps.core.sharding import SHARD, placement, tenant_path
+
+    def follows_a_soul(model):
+        return "soul__" in (tenant_path(model) or "")
+
+    missing = []
+    for m in _our_models():
+        if placement(m) != SHARD or not follows_a_soul(m):
+            continue
+        first = tenant_path(m).split("__")[0]
+        for f in m._meta.concrete_fields:
+            if (isinstance(f, models.ForeignKey) and f.name != first and placement(f.related_model) == SHARD
+                    and not follows_a_soul(f.related_model) and not _crosses_civilizations(f)):
+                missing.append(_edge(f))
+    assert not missing, "follows a soul, points into a hall, not classified crossing:\n  " + "\n  ".join(missing)
 
 
 def test_a_bare_foreign_key_has_no_orm_on_delete():
