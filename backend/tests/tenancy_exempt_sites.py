@@ -24,6 +24,9 @@ SITES = [
     ("apps/core/tenant.py", 6, "CIVILIZATION",
      "is_hall_less_admin / admin_hall_ids / reaches_hall / within_reach / scope_to_tenant / tenant_aggregate_filter: "
      "the helpers themselves; each answers SYSTEM_ADMIN first and the civilization ADMIN in the next branch"),
+    ("apps/core/shard_reads.py", 1, "CIVILIZATION",
+     "current_context: SYSTEM_ADMIN reads every shard (FANOUT); a civilization ADMIN reads its civilization's "
+     "shard (the next branch)"),
     ("apps/core/viewer.py", 1, "CIVILIZATION",
      "viewer_tenant_id: SEE_ALL for SYSTEM_ADMIN; the civilization's hall pks for a civilization ADMIN (`sees`)"),
     ("apps/core/viewsets.py", 1, "CIVILIZATION",
