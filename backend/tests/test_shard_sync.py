@@ -11,6 +11,7 @@ The models come from `placement`, never from a list here; the owner of a row fro
 
 The seed is printed; `SHARD_SYNC_SEED=<n>` replays a world.
 """
+import copy
 import datetime
 import decimal
 import io
@@ -18,6 +19,7 @@ import os
 import random
 import uuid
 from collections import defaultdict
+from contextlib import ExitStack
 
 import pytest
 from django.apps import apps
@@ -122,10 +124,17 @@ class World:
                         if not f.null:
                             return None
                 setattr(obj, f.attname, None if val is None else val.pk)
+        return self.columns(obj)
+
+    def columns(self, obj, settle=False):
+        """Draw the non-key columns. `settle`: NULL or the default where there is one (a check constraint such
+        as judgment_duat_stage_only_egyptian wants the blank value outside one civilization)."""
+        for f in obj._meta.concrete_fields:
+            if isinstance(f, models.AutoField) or f.is_relation:
                 continue
-            if f.null and self.rng.random() < 0.2:
+            if f.null and (settle or self.rng.random() < 0.2):
                 setattr(obj, f.attname, None)
-            elif f.has_default() and not f.choices and self.rng.random() < 0.5:
+            elif f.has_default() and (settle or (not f.choices and self.rng.random() < 0.5)):
                 setattr(obj, f.attname, f.get_default())
             else:
                 setattr(obj, f.attname, self.value(f))
@@ -135,11 +144,18 @@ class World:
         key = (model, getattr(hall, "pk", None))
         if self.pool[key] and not fresh and self.rng.random() < 0.6:
             return self.rng.choice(self.pool[key])
-        last = None
-        for _ in range(60):
-            obj = self.build(model, hall, depth)
-            if obj is None:
-                return None
+        last = obj = None
+        for attempt in range(60):
+            # A refused row is first tried again with the same keys and settled columns: drawing everything again
+            # built a new set of related rows per attempt, and the world grew to ~72k rows, most of them retry
+            # debris of a check constraint on one column (2026-11-16). The next attempt draws the keys too (a
+            # constraint across keys -- exactly one target, one root unit per hall -- needs other keys).
+            if attempt % 2 == 0:
+                obj = self.build(model, hall, depth)
+                if obj is None:
+                    return None
+            else:
+                self.columns(obj, settle=True)
             try:
                 with transaction.atomic(using="default"):
                     model._base_manager.using("default").bulk_create([obj])
@@ -215,11 +231,56 @@ def _point_across(world, f, source_halls, target_halls, target_pk=None):
     return False
 
 
-@pytest.fixture
-def world():
+def _seed():
     seed = int(os.environ.get("SHARD_SYNC_SEED") or random.SystemRandom().randrange(10 ** 6))
     print(f"SHARD_SYNC_SEED={seed}")
+    return seed
+
+
+@pytest.fixture
+def fresh_world():
+    """A fresh world in the test's own transaction (default only: the guard test runs in every suite)."""
+    return _build_world(_seed())
+
+
+@pytest.fixture(scope="module")
+def _synced_world(django_db_setup, django_db_blocker):
+    """One world per module and xdist worker, synced to the shards once (2026-11-16: built per test, the six
+    tests that use it took 35+ minutes on PostgreSQL). Built inside an atomic block on every alias that is
+    rolled back at the end of the module -- what Django's TestCase does for setUpTestData -- so each test's
+    own transaction is a savepoint inside it, and whatever a test writes is gone before the next one."""
+    aliases, stack = list(settings.DATABASES), ExitStack()
+    with django_db_blocker.unblock():
+        for alias in aliases:
+            stack.enter_context(transaction.atomic(using=alias))
+        try:
+            w = _build_world(_seed())
+            w.sync_out = _sync()
+        except BaseException:
+            for alias in aliases:
+                transaction.set_rollback(True, using=alias)
+            stack.close()
+            raise
+    yield w
+    with django_db_blocker.unblock():
+        for alias in aliases:
+            transaction.set_rollback(True, using=alias)
+        stack.close()
+
+
+@pytest.fixture
+def world(_synced_world, request):
+    """The module's synced world, with the test's own pool (a test that adds rows adds them to its copy, and
+    they are rolled back) and its own random draws, seeded from the world's seed and the test's name."""
+    w = copy.copy(_synced_world)
+    w.pool = defaultdict(list, {k: list(v) for k, v in _synced_world.pool.items()})
+    w.rng = random.Random(f"{w.seed}:{request.node.name}")
+    return w
+
+
+def _build_world(seed):
     w = World(random.Random(seed))
+    w.seed = seed
     halls = [_hall(w, civ) for civ in CIVS for _ in range(w.rng.randint(1, 2))] + [_hall(w, "")]  # "" = UNKNOWN
     for model in compared_models():
         if placement(model) == REFERENCE:
@@ -237,8 +298,11 @@ def world():
     # run by another civilization's realm, rows pointing at another civilization's soul...
     w.crossed = []
     for f in _crossing_edges():
-        civ = w.rng.choice([h.civilization for h in known])
-        if _point_across(w, f, [h for h in known if h.civilization == civ], abroad(civ)):
+        # Every civilization in turn, from a random one: a single draw found no row to re-point on some seeds
+        # (SHARD_SYNC_SEED=971633, 2026-11-16), and the world crossed fewer keys than exist.
+        civs = sorted({h.civilization for h in known})
+        w.rng.shuffle(civs)
+        if any(_point_across(w, f, [h for h in known if h.civilization == civ], abroad(civ)) for civ in civs):
             w.crossed.append(f)
     # One soul goes and comes back. While it was away its residence wrote rows pointing at it; they stay
     # there. First, so the re-pointing cannot pick another mover's dispatch record and take its residence.
@@ -312,43 +376,53 @@ def _shard_pks(alias, model):
 
 # ---- (a) (b) (c) ---------------------------------------------------------------------------------------
 
+#: Every model with a table on a shard, derived here and not from `compared_models()` (a model the sync
+#: forgot must still be a case). Labels, so the cases are named and xdist spreads them over its workers.
+MODELS_ON_SHARDS = sorted(m._meta.label for m in apps.get_models(include_auto_created=True)
+                          if m._meta.managed and not m._meta.proxy and placement(m) != CONTROL)
+
+
+def _model(label):
+    return next(m for m in apps.get_models(include_auto_created=True) if m._meta.label == label)
+
+
 @sharded
-def test_after_sync_each_shard_holds_its_civilization_and_reconcile_is_clean(world):
-    sync_out = _sync()
+@pytest.mark.parametrize("label", MODELS_ON_SHARDS)
+def test_after_sync_each_shard_holds_its_civilization_of_the_model(world, label):
+    """(b) (c), and nothing missing, one model per case: what each shard holds of it after the sync."""
+    model = _model(label)
+    Soul = apps.get_model("souls", "Soul")
+    owners = _owners(model)
+    everywhere = set(owners)
+    held = {civ: _shard_pks(alias_for_civilization(civ), model) for civ in CIVS}
+    assert any(held.values()), f"{label}: the world left it empty in every shard"
+    stray = []
+    for civ in CIVS:
+        alias = alias_for_civilization(civ)
+        if owners and next(iter(owners.values())) is None:  # REFERENCE: every row, every shard
+            assert held[civ] == everywhere, (alias, label)
+            continue
+        want = {pk for pk, c in owners.items() if c == civ}
+        if model is Soul:
+            want |= {pk for pk in everywhere if owners[pk] != civ and _executed_cross_civ(pk, civ)}
+        assert held[civ] >= want, (alias, label, sorted(want - held[civ])[:5])                    # nothing missing
+        stray += [(alias, label, pk, owners.get(pk)) for pk in held[civ] - want]                   # (b)
+    nowhere = [(label, pk) for pk, c in owners.items() if c == "" and any(pk in held[x] for x in CIVS)]  # (c)
+    assert not stray, stray[:10]
+    assert not nowhere, nowhere[:10]
+
+
+@sharded
+def test_after_sync_reconcile_is_clean_and_the_world_had_what_it_checks(world):
     code, out = _reconcile("--all")
     assert code == 0, out                                                                       # (a)
     # Nothing left out: every key that may cross civilizations is a bare id, so no row is "dangling".
-    assert "not copied" not in sync_out + out, sync_out
+    assert "not copied" not in world.sync_out + out, world.sync_out
     assert world.crossed == _crossing_edges(), "the world did not cross every crossing key"
 
     Soul = apps.get_model("souls", "Soul")
-    models_compared = [m for m in apps.get_models(include_auto_created=True)
-                       if m._meta.managed and not m._meta.proxy and placement(m) != CONTROL]
-    with_data = {m._meta.label for m in models_compared
-                 if any(m._base_manager.using(alias_for_civilization(c)).exists() for c in CIVS)}
-    assert with_data == {m._meta.label for m in models_compared}, "models the world left empty in every shard"
-
-    nowhere, stray = [], []
-    for model in models_compared:
-        owners = _owners(model)
-        everywhere = set(owners)
-        for civ in CIVS:
-            alias = alias_for_civilization(civ)
-            held = _shard_pks(alias, model)
-            if owners and next(iter(owners.values())) is None:  # REFERENCE: every row, every shard
-                assert held == everywhere, (alias, model._meta.label)
-                continue
-            want = {pk for pk, c in owners.items() if c == civ}
-            if model is Soul:
-                want |= {pk for pk in everywhere if owners[pk] != civ and _executed_cross_civ(pk, civ)}
-            assert held >= want, (alias, model._meta.label, sorted(want - held)[:5])             # nothing missing
-            stray += [(alias, model._meta.label, pk, owners.get(pk)) for pk in held - want]        # (b)
-        nowhere += [(model._meta.label, pk) for pk, c in owners.items() if c == ""
-                    and any(pk in _shard_pks(alias_for_civilization(x), model) for x in CIVS)]     # (c)
-    assert not stray, stray[:10]
-    assert not nowhere, nowhere[:10]
     # The world had what (b) and (c) are about, and a soul back from residence is in its home shard only.
-    assert any("" in _owners(m).values() for m in models_compared)
+    assert any("" in _owners(_model(label)).values() for label in MODELS_ON_SHARDS)
     back = Soul._base_manager.select_related("home_tenant").get(pk=world.returned)
     assert [c for c in CIVS if Soul._base_manager.using(alias_for_civilization(c)).filter(pk=back.pk).exists()] == [
         back.home_tenant.civilization]
@@ -356,7 +430,7 @@ def test_after_sync_each_shard_holds_its_civilization_and_reconcile_is_clean(wor
 
 
 @pytest.mark.django_db
-def test_every_constrained_key_of_the_world_refuses_another_civilization(world):
+def test_every_constrained_key_of_the_world_refuses_another_civilization(fresh_world):
     """The keys the world keeps inside one hall, pointed across: every constrained SHARD -> SHARD key that is
     not the row's own hall hop (derived, not listed) is refused at save time when it names a row of another
     civilization, and accepted for a row of the same hall. Runs without shard databases."""
@@ -364,6 +438,7 @@ def test_every_constrained_key_of_the_world_refuses_another_civilization(world):
 
     from apps.core.sharding import CrossCivilizationKeyError, _refuse_cross_civilization, same_civilization_keys
 
+    world = fresh_world
     keys = [(m, f) for m in compared_models() for f in same_civilization_keys(m)]
     assert len(keys) >= 50, len(keys)
     wired = {r[0][0] for r in pre_save.receivers}
@@ -426,7 +501,6 @@ def _changeable(model):
 
 @sharded
 def test_a_random_update_on_control_is_reported_exactly_and_fixed(world):
-    _sync()
     rng = world.rng
     # A model with rows in a shard and a column to change; queryset.update() sends no signal and leaves
     # update_time alone.
@@ -465,7 +539,6 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
     CASCADE the soul's login account and SET_NULL its other bare ids on every alias."""
     from apps.soul_accounts.models import SoulAccount
 
-    _sync()
     Soul = apps.get_model("souls", "Soul")
     account = next(a for a in SoulAccount._base_manager.filter(soul__tenant__isnull=False).select_related("soul__tenant")
                    if a.soul.tenant.civilization in CIVS and a.soul.tenant_id == a.soul.home_tenant_id)
@@ -488,7 +561,6 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
 
 @sharded
 def test_shard_to_control_brings_a_shard_write_back(world):
-    _sync()
     civ = world.rng.choice(CIVS)
     alias = alias_for_civilization(civ)
     Soul = apps.get_model("souls", "Soul")
@@ -576,7 +648,6 @@ def _leaf(model):
 @sharded
 def test_a_row_missing_from_a_shard_and_one_only_there_are_both_named(world):
     """G7, from the retired shadow guard: model + pk for each side's surplus, nothing else."""
-    _sync()
     civ = world.rng.choice(CIVS)
     alias = alias_for_civilization(civ)
     leaves = [m for m in compared_models() if _leaf(m) and not m._meta.auto_created
