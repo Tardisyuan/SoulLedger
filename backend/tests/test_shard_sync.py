@@ -453,7 +453,8 @@ def test_shard_to_control_brings_a_shard_write_back(world):
 
 def _leaf(model):
     """No row points at it and only its pk is unique: a row can go or be copied without breaking a key."""
-    return (not model._meta.related_objects and not model._meta.constraints and not model._meta.unique_together
+    return (not model._meta.related_objects and not model._meta.unique_together
+            and not [c for c in model._meta.constraints if isinstance(c, models.UniqueConstraint)]
             and not [f for f in model._meta.concrete_fields if f.unique and not f.primary_key])
 
 
@@ -463,10 +464,13 @@ def test_a_row_missing_from_a_shard_and_one_only_there_are_both_named(world):
     _sync()
     civ = world.rng.choice(CIVS)
     alias = alias_for_civilization(civ)
-    Model = world.rng.choice([m for m in compared_models() if _leaf(m) and not m._meta.auto_created
-                              and m._base_manager.using(alias).count() >= 2])
+    leaves = [m for m in compared_models() if _leaf(m) and not m._meta.auto_created
+              and m._base_manager.using(alias).exists()]
+    assert leaves, "no model without inbound keys or unique columns has rows on the shard"
+    Model = world.rng.choice(leaves)
     print(f"model {Model._meta.label} on {alias}")
-    gone, extra = Model._base_manager.using(alias).order_by("pk")[:2]
+    gone = Model._base_manager.using(alias).order_by("pk").first()
+    extra = Model._base_manager.using(alias).get(pk=gone.pk)  # a copy of it, under a new pk, on the shard only
     Model._base_manager.using(alias).filter(pk=gone.pk)._raw_delete(alias)
     if isinstance(extra.pk, uuid.UUID):
         extra.pk = uuid.uuid4()
