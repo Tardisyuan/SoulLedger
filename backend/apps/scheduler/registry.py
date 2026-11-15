@@ -177,6 +177,10 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 停用官员的会话、删空的会话真删;已注销的灵魂账号不因注销而删(用户 2026-10-20)。
     # GLOBAL:会话挂在账号上,账号没有租户列。每天一次,留存以天计。
     JobSpec("soul_assist.purge_history", GLOBAL, "30 4 * * *", max_runtime=1800),
+    # 影子分库(分库第 2 阶段,apps/core/shard_sync.py):把控制库的行同步到每个已配置的文明分库
+    # (`reconcile_shards --all --fix`)。写入后另有 on_commit 去抖触发;这一条兜住 `.update()` 这类不发信号的写。
+    # GLOBAL:分库按文明,不按殿。没配分库时什么也不做。
+    JobSpec("sharding.sync_shards", GLOBAL, "*/10 * * * *", max_runtime=540),
     # ---- this app's own maintenance --------------------------------------------
     # Every 5 minutes: the finest-grained job above is 5-minutely, so a stuck
     # run is noticed within one period of its own max_runtime; two indexed

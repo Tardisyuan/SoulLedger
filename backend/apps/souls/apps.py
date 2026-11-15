@@ -44,3 +44,7 @@ class SoulsConfig(AppConfig):
         # Stage 1B: the foreign keys across the control / shard boundary are bare ids; their delete rules
         # (CASCADE / SET_NULL / PROTECT as before) are applied by apps.core.bare_ids on every alias.
         bare_ids.connect()
+        # Stage 2: a commit that wrote a shard model queues one debounced shard sync (no-op without shards).
+        from apps.core import shard_sync
+
+        shard_sync.connect()

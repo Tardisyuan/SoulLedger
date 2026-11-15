@@ -4893,6 +4893,7 @@
       "scheduler_reap_stale_runs": "Close out stuck runs",
       "scheduler_check_overdue": "Detect overdue jobs",
       "scheduler_prune_runs": "Prune old run history",
+      "sharding_sync_shards": "Sync the civilization shards",
       "soul_push_sweep": "Soul push: requeue and fetch receipts",
       "officer_app_check_receipts": "Officer push: fetch receipts",
       "workflow_process_timeouts_for_tenant": "Process approval-node timeouts",

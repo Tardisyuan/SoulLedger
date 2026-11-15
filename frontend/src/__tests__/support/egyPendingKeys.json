@@ -17,6 +17,7 @@
   "officer_app.bio_login.wrong_password",
   "officer_app.login.email_hint",
   "officer_app.search.first_only",
+  "scheduler.jobs.sharding_sync_shards",
   "social_moderation.scope_civilization",
   "soul_app.login.email",
   "soul_app.login.email_hint",

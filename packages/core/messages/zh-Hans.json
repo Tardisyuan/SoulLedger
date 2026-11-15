@@ -4893,6 +4893,7 @@
       "scheduler_reap_stale_runs": "收尾卡死的执行记录",
       "scheduler_check_overdue": "检测超时未跑的任务",
       "scheduler_prune_runs": "清理过期执行记录",
+      "sharding_sync_shards": "同步各文明分库",
       "soul_push_sweep": "灵魂推送:重新入队与查回执",
       "officer_app_check_receipts": "官员推送:查回执",
       "workflow_process_timeouts_for_tenant": "处理审批超时",
