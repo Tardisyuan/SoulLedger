@@ -98,14 +98,17 @@ def clear_bare_ids(target, pks, aliases):
     """Apply each bare id's own rule to the rows pointing at `pks` of `target`, on every alias:
     PROTECT refuses before anything changes, then CASCADE deletes and SET_NULL nulls."""
     fields = bare_ids_to().get(target._meta.concrete_model, [])
+    # Only where the pointing table exists: a CONTROL source (User.create_user...) is not on a shard, and
+    # asking a shard for it failed every hard delete of a user once fanout() named one (stage 2).
+    on = {alias: [f for f in fields if router.allow_migrate_model(alias, f.model)] for alias in aliases}
     for alias in aliases:
-        for f in fields:
+        for f in on[alias]:
             if rule(f) is models.PROTECT:
                 held = list(f.model._base_manager.using(alias).filter(**{f"{f.attname}__in": pks})[:5])
                 if held:
                     raise ProtectedError(f"{label(f)} still points at {target._meta.label} {list(pks)}", set(held))
     for alias in aliases:
-        for f in fields:
+        for f in on[alias]:
             rows = f.model._base_manager.using(alias).filter(**{f"{f.attname}__in": pks})
             how = rule(f)
             if how is models.CASCADE:
@@ -192,6 +195,8 @@ def orphans(aliases):
                 # ponytail: every pk in memory; batch it if a target table outgrows that.
                 known = {pk for a in where for pk in target._base_manager.using(a).values_list("pk", flat=True)}
             for f in fields:
+                if not router.allow_migrate_model(alias, f.model):
+                    continue  # the pointing table is not on this alias (a CONTROL source on a shard)
                 n = (f.model._base_manager.using(alias).exclude(**{f"{f.attname}__isnull": True})
                      .exclude(**{f"{f.attname}__in": known}).count())
                 if n:
