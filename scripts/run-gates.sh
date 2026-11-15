@@ -32,7 +32,7 @@
 # --real-pg is refused. E.g. GATES_SIDES=js while a `--real-pg --full` covers the backend.
 # --real-pg --full also runs the sharded group (--ds=config.settings_sharded -m sharded: four civilization
 # shards, sharding stage 2; it replaced the multi-database guard and its test-only settings in stage 2), at
-# the same time as the suite and under xdist: GATES_SHARDED_WORKERS of PYTEST_WORKERS (default a third).
+# the same time as the suite and under xdist: GATES_SHARDED_WORKERS of PYTEST_WORKERS (default a sixth: 2 of 11-12; its tests take ~2 min, the suite is the long pole).
 #
 # FAIL LATE (2026-11-15). Static checks run before a side's tests, but a red tsc / eslint / ruff /
 # makemigrations no longer stops the side: its remaining steps run, every red step is listed at the end,
@@ -1702,7 +1702,7 @@ PROBE_PY
     # and `--real-pg --full` runs it on the same PostgreSQL and Redis (C21, 2026-10-31: then the multi-database
     # guard, which this group replaced): tests/test_control_boundary.py, tests/test_shard_sync.py ...
     # It ran serially before the suite and took 35+ minutes on PostgreSQL (2026-11-16). Now it runs at the same
-    # time, under xdist: GATES_SHARDED_WORKERS of the PYTEST_WORKERS (default a third, rounded up) and the suite
+    # time, under xdist: GATES_SHARDED_WORKERS of the PYTEST_WORKERS (default a sixth, rounded up: 2 of 11-12 — 2026-11-16, the group finished at ~20 min beside a ~59 min suite) and the suite
     # the rest, so the two together stay within the CPUs PYTEST_WORKERS was sized for. Each of its workers
     # clones default and the four shards from the controller's templates (root conftest.py; on the remote box
     # the kept template of the input hash). Its own log; both exit codes decide (pytest_finish).
@@ -1710,7 +1710,7 @@ PROBE_PY
     if [ "$REAL_PG" = 1 ] && [ "$FULL_RUN" = 1 ]; then
         SHARDED_XDIST=""
         if [ -n "$XDIST" ]; then
-            SHARDED_WORKERS="${GATES_SHARDED_WORKERS:-$(( (PYTEST_WORKERS + 2) / 3 ))}"
+            SHARDED_WORKERS="${GATES_SHARDED_WORKERS:-$(( (PYTEST_WORKERS + 5) / 6 ))}"
             MAIN_WORKERS=$(( PYTEST_WORKERS - SHARDED_WORKERS )); [ "$MAIN_WORKERS" -ge 1 ] || MAIN_WORKERS=1
             SHARDED_XDIST="-n $SHARDED_WORKERS --dist worksteal"
             XDIST="-n $MAIN_WORKERS --dist worksteal"

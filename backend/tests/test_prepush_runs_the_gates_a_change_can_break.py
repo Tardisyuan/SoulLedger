@@ -1914,15 +1914,15 @@ class TestRealPostgres:
         assert "--create-db" in sharded and not [a for a in sharded if a.startswith("tests/")], sharded
         assert not [a for a in suite if a.startswith("--ds=")], suite
         assert "settings_multidb" not in proc.stdout, proc.stdout
-        # 12 workers: a third (4) for the group, the rest (8) for the suite, both work-stealing.
-        assert sharded[sharded.index("-n") + 1] == "4" and "worksteal" in sharded, sharded
-        assert suite[suite.index("-n") + 1] == "8" and "worksteal" in suite, suite
+        # 12 workers: a sixth (2) for the group, the rest (10) for the suite, both work-stealing.
+        assert sharded[sharded.index("-n") + 1] == "2" and "worksteal" in sharded, sharded
+        assert suite[suite.index("-n") + 1] == "10" and "worksteal" in suite, suite
         assert "beside the suite" in proc.stdout and "sharded group, exit 0" in proc.stdout, proc.stdout
         # GATES_SHARDED_WORKERS overrides the split.
-        _, runs = self._reachable(main, fake_backend, "--full", PYTEST_WORKERS="12", GATES_SHARDED_WORKERS="2")
+        _, runs = self._reachable(main, fake_backend, "--full", PYTEST_WORKERS="12", GATES_SHARDED_WORKERS="4")
         sharded = next(r for r in runs if "--ds=config.settings_sharded" in r)
         suite = next(r for r in runs if r is not sharded)
-        assert (sharded[sharded.index("-n") + 1], suite[suite.index("-n") + 1]) == ("2", "10"), runs
+        assert (sharded[sharded.index("-n") + 1], suite[suite.index("-n") + 1]) == ("4", "8"), runs
 
     def test_both_runs_decide_and_a_red_sharded_group_does_not_stop_the_suite(self, checkouts, fake_backend, tmp_path):
         """Fail late: the group and the suite run at once; either one red makes the run red, and the suite's
