@@ -1893,11 +1893,16 @@ class TestRealPostgres:
         so every ordinary run skips it. `--real-pg --full` runs it, on the same database, before the suite."""
         main, _ = checkouts
         proc, runs = self._reachable(main, fake_backend, "--full")
-        assert len(runs) == 2, proc.stdout
-        guard, suite = runs
-        assert "--ds=config.settings_multidb" in guard and "tests/test_multidb_shadow.py" in guard and "tests/test_control_boundary.py" in guard, guard
+        assert len(runs) == 3, proc.stdout
+        guard, sharded, suite = runs
+        assert "--ds=config.settings_multidb" in guard and "tests/test_multidb_shadow.py" in guard, guard
         assert guard[guard.index("-m") + 1] == "multidb" and "--create-db" in guard, guard
-        assert "--ds=config.settings_multidb" not in suite and "tests/test_multidb_shadow.py" not in suite, suite
+        # Sharding stage 2: the whole `sharded` group under the four-shard settings, no file list a new test misses.
+        assert "--ds=config.settings_sharded" in sharded and sharded[sharded.index("-m") + 1] == "sharded", sharded
+        assert "--create-db" in sharded and not [a for a in sharded if a.startswith("tests/")], sharded
+        for ds in ("--ds=config.settings_multidb", "--ds=config.settings_sharded"):
+            assert ds not in suite, suite
+        assert "tests/test_multidb_shadow.py" not in suite, suite
 
 
 class TestTheWholeRunOnAnotherMachine:
@@ -2937,7 +2942,7 @@ class TestEachSideKeepsItsOwnLedger:
         assert "classify: core=0 frontend=0 backend=0" in out, out
         assert "classify-jest-readers: 1" in out and "jest reader: src/__tests__/readsBackend.test.ts" in out, out
 
-    def _run_red_backend(self, main: Path, tmp_path: Path) -> subprocess.CompletedProcess:
+    def _run_red_backend(self, main: Path, tmp_path: Path, *args: str, **extra) -> subprocess.CompletedProcess:
         b = tmp_path / "bin"
         b.mkdir()
         (b / "npm").write_text("#!/bin/bash\necho 'Tests: 1 passed'\n")
@@ -2948,9 +2953,10 @@ class TestEachSideKeepsItsOwnLedger:
                       'exec python3 "$@"\n')
         py.chmod(0o755)
         env = _clean_env(PYTHON_BIN=str(py), RUFF_BIN=shutil.which("true"), DATABASE_URL="sqlite:///:memory:",
-                         REDIS_URL=os.environ.get("REDIS_URL", ""), GATES_STAMP_FILE=str(tmp_path / "passed"))
+                         REDIS_URL=os.environ.get("REDIS_URL", ""), GATES_STAMP_FILE=str(tmp_path / "passed"), **extra)
         env["PATH"] = f"{b}:{env['PATH']}"
-        return subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--base", "HEAD~1"], cwd=main, env=env,
+        return subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), *(args or ("--base", "HEAD~1"))],
+                              cwd=main, env=env,
                               capture_output=True, text=True, timeout=120)
 
     def test_a_green_side_is_recorded_when_the_other_is_red(self, checkouts, tmp_path, fake_backend):
@@ -3006,6 +3012,57 @@ class TestEachSideKeepsItsOwnLedger:
         assert "already passed `scripts/run-gates.sh --full`" in push.stdout, push.stdout
 
 
+class TestGatesSidesRunsOneSide:
+    """GATES_SIDES (2026-11-15, user decision): js | backend | both. The side left out does not run, says so and
+    records nothing -- the main session runs the JS side while a `--real-pg --full` covers the backend."""
+
+    _run_red_backend = TestEachSideKeepsItsOwnLedger._run_red_backend
+
+    def _red_backend_and_a_js_reader(self, main: Path):
+        (main / "mobile" / "src").mkdir(parents=True)
+        (main / "mobile" / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('../../backend/x.py');\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "a mobile test that reads backend/")
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "a backend change: its tests red, the JS side (the reader) green")
+
+    def test_js_only_skips_the_red_backend_and_records_only_js(self, checkouts, tmp_path):
+        """Mutation: the flag ignored (side_on always true) -> the red backend runs, exit 1, red."""
+        main, _ = checkouts
+        self._red_backend_and_a_js_reader(main)
+        proc = self._run_red_backend(main, tmp_path, GATES_SIDES="js")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "backend side skipped (GATES_SIDES=js): nothing run, nothing recorded" in proc.stdout, proc.stdout
+        assert "1 failed" not in proc.stdout and "→ ruff" not in proc.stdout, proc.stdout
+        assert (tmp_path / "passed-js").exists() and not (tmp_path / "passed-backend").exists()
+
+    def test_backend_only_records_nothing_for_the_green_js_side(self, checkouts, tmp_path):
+        """Mutation: record_side without its side_on check -> the skipped (exit 0) JS side is recorded, red."""
+        main, _ = checkouts
+        self._red_backend_and_a_js_reader(main)
+        proc = self._run_red_backend(main, tmp_path, GATES_SIDES="backend")
+        assert proc.returncode != 0 and "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
+        assert "js side skipped (GATES_SIDES=backend)" in proc.stdout, proc.stdout
+        assert not (tmp_path / "passed-js").exists(), "the skipped side was recorded"
+
+    def test_an_unknown_value_and_js_with_real_pg_are_refused(self, checkouts):
+        main, _ = checkouts
+        for args, extra, said in (([], "frontend", "GATES_SIDES must be js, backend or both"),
+                                  (["--real-pg"], "js", "--real-pg runs only the backend")):
+            proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), *args], cwd=main,
+                                  env=_clean_env(GATES_SIDES=extra), capture_output=True, text=True, timeout=30)
+            assert proc.returncode == 2 and said in proc.stdout, proc.stdout
+
+    def test_a_push_runs_both_sides_whatever_it_says(self, checkouts, tmp_path):
+        """The hook must not let a push through with one side unchecked. Mutation: honour it on --prepush -> red."""
+        main, _ = checkouts
+        self._red_backend_and_a_js_reader(main)
+        proc = self._run_red_backend(main, tmp_path, "--prepush", GATES_SIDES="js", PREPUSH_CHANGED="backend/x.py")
+        assert "GATES_SIDES=js ignored on a push — both sides run" in proc.stdout, proc.stdout
+        assert proc.returncode != 0, proc.stdout
+
+
 class TestPytestProgressNamesTheFailures:
     """2026-11-15 (user decision): the progress line said "failed so far: 3" for twenty minutes and named them
     only at the end — or never, when the time limit ended the run first. Now each new failure is named by node
@@ -3052,7 +3109,8 @@ class TestHelpSaysWhatTheScriptDoes:
         assert proc.returncode == 0, proc.stderr
         out = proc.stdout
         for said in ("soulledger-gates-passed-backend", "Each side picks its own base", "FAIL LATE",
-                     "select-backend-tests.py", "A push to main is NOT full", "90 when --full or when the backend"):
+                     "select-backend-tests.py", "A push to main is NOT full", "90 when --full or when the backend",
+                     "GATES_SIDES=js", "--ds=config.settings_sharded -m sharded"):
             assert said in out, said
         for stale in ("pytest-testmon", "a push to\nrefs/heads/main", "EVERYTHING ELSE RUNS IN FULL"):
             assert stale not in out, stale
