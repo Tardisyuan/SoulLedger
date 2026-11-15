@@ -14,6 +14,7 @@ import pytest
 from django.test import RequestFactory, override_settings
 
 from apps.core.request_local import set_current_request
+from apps.core.shard_reads import CONTROL_ALIAS, read_context
 from tests import test_concurrency as races
 from tests.test_concurrency import (  # noqa: F401 -- the fixtures the inherited tests ask for
     cn_admin,
@@ -37,7 +38,8 @@ def _cut_over_and_post(monkeypatch):
         original(self)
 
     monkeypatch.setattr(races._Thread, "run", run)
-    with override_settings(SHARD_READ_CIVS=list(CIVS)):
+    # The test's own setup and assertions read control (the master in stage 3), outside any request.
+    with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(CONTROL_ALIAS):
         yield
 
 

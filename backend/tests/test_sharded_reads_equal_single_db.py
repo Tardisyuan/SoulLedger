@@ -40,6 +40,9 @@ SEED = int(os.environ.get("SHARDED_READS_SEED") or random.SystemRandom().randran
 #: Response keys whose value is the moment of the request, not data: the clock, and a problem response's
 #: `instance` (the request's trace id).
 VOLATILE = {"as_of", "generated_at", "server_time", "now", "instance"}
+#: Endpoints whose GET writes the row it answers with (each request is rolled back, so each makes a new one):
+#: the keys that are new every time.
+WRITES_ON_READ = {"social-profile-me": {"id"}}
 PAGE_SIZE = 3
 
 
@@ -318,8 +321,9 @@ def _fetch_pages(client, url):
             return status, (ctype, "\n".join(ln for ln in text.splitlines() if not ln.startswith("instance:")))
         try:
             body = res.json()
-        except ValueError:  # a JSON content type that is not one document (a stream of lines)
-            return status, res.content.decode(errors="replace")
+        except ValueError:  # a JSON-ish content type that is not one document (a stream of lines, YAML)
+            text = res.content.decode(errors="replace")
+            return status, "\n".join(ln for ln in text.splitlines() if not ln.startswith("instance:"))
         if isinstance(body, dict) and "results" in body and "count" in body:
             rows.extend(body["results"])
             url = body.get("next")
@@ -331,7 +335,11 @@ def _fetch_pages(client, url):
 
 
 def _diff(base, cut):
-    """What differs, short: the status, the rows only one side has, or the first differing key."""
+    """What differs, short: the status, the rows only one side has, or the first differing key / line."""
+    if base[0] == cut[0] and isinstance(base[1], tuple) and isinstance(cut[1], tuple):
+        a, b = str(base[1][1]).splitlines(), str(cut[1][1]).splitlines()
+        first = next((i for i, (x, y) in enumerate(zip(a, b, strict=False)) if x != y), min(len(a), len(b)))
+        return f"line {first}: {a[first:first + 1]} | {b[first:first + 1]}"[:900]
     if base[0] != cut[0] or not (isinstance(base[1], dict) and isinstance(cut[1], dict)):
         return f"single db {str(base)[:300]} | cut over {str(cut)[:300]}"
     a, b = base[1], cut[1]
@@ -342,6 +350,11 @@ def _diff(base, cut):
                 f"only cut over: {sorted(db - da)[:2]}")[:900]
     keys = [k for k in sorted(set(a) | set(b)) if a.get(k) != b.get(k)]
     return f"keys {keys[:5]}: {str(a.get(keys[0]))[:250]} | {str(b.get(keys[0]))[:250]}" if keys else "?"
+
+
+def _drop(answer, keys):
+    status, body = answer
+    return (status, {k: v for k, v in body.items() if k not in keys}) if keys and isinstance(body, dict) else answer
 
 
 def _has_data(answer):
@@ -381,9 +394,9 @@ def test_cut_over_reads_answer_like_the_single_database(world, case):
     for who, client in world["callers"].items():
         for url in urls:
             with override_settings(SHARD_READ_CIVS=[]):
-                base = _fetch(client, url)
+                base = _drop(_fetch(client, url), WRITES_ON_READ.get(case, ()))
             with override_settings(SHARD_READ_CIVS=list(CIVS)):
-                cut = _fetch(client, url)
+                cut = _drop(_fetch(client, url), WRITES_ON_READ.get(case, ()))
             if base != cut:
                 mismatches.append(f"{who} GET {url}: {_diff(base, cut)}")
             elif _has_data(base):
@@ -449,7 +462,9 @@ def test_a_read_with_no_context_is_refused_once_a_civilization_is_cut_over(world
 
     assert get_current_request() is None and get_current_tenant() is None
     assert current_context() is None, (_context.get(), _in_celery_task())
-    shard_models = [m for m in apps.get_models() if placement(m) == SHARD]
+    from apps.core.shard_reads import CONTROL_READS
+
+    shard_models = [m for m in apps.get_models() if placement(m) == SHARD and m._meta.label not in CONTROL_READS]
     for civ in CIVS:
         with override_settings(SHARD_READ_CIVS=[civ]):
             for model in shard_models:

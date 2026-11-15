@@ -488,15 +488,20 @@ def merged(qs):
     # values(...).annotate(Count(...)): one row per group on each leg, combined here. A model queryset's own
     # annotate(Count(...)) is per row (group_by True): its rows are disjoint across legs and stay as they are.
     grouped = isinstance(q.group_by, tuple) and any(a.contains_aggregate for a in q.annotation_select.values())
+    # values() / values_list() ordered by what they do not select: the keys ride along as annotations
+    # (`_shard_k<i>`, the way the database adds them to a SELECT DISTINCT) and are dropped after the merge.
+    extra = bool(order) and iterable is not ModelIterable and not grouped and not _selects_keys(qs, order)
     rows = []
     for alias, narrow, on_control in legs(qs.model):
         leg = _leg(qs, alias, narrow, None, on_control)
         if grouped and _avgs(qs):
-            leg = leg.annotate(**{f"_shard_{k}_{n}": fn(*a.source_expressions) for n, a in _avgs(qs).items()
-                                  for k, fn in (("s", Sum), ("n", Count))})
-        if iterable is ModelIterable and order:
+            leg = leg.annotate(**{f"_shard_{k}_{n}": fn(*a.source_expressions, filter=a.filter)
+                                  for n, a in _avgs(qs).items() for k, fn in (("s", Sum), ("n", Count))})
+        if order and (iterable is ModelIterable or extra):
             leg = leg.annotate(**{f"_shard_k{i}": models.F(name) if isinstance(name, str) else name
                                   for i, (name, _, _) in enumerate(order)})
+            if iterable is FlatValuesListIterable:
+                leg._iterable_class = ValuesListIterable  # keep the keys; flattened again below
             if guard(leg, leg.db) == CONTROL_ALIAS:  # an order through a crossing key
                 leg = on_control(leg)
         if high is not None and not grouped:
@@ -507,12 +512,43 @@ def merged(qs):
     elif q.distinct and iterable is not ModelIterable:
         rows = list(dict.fromkeys(rows)) if iterable is not ValuesIterable else _dedupe_dicts(rows)
     if order and len(rows) > 1:
-        rows = _sort(rows, _key_reader(qs, order), order)
+        rows = _sort(rows, _extra_keys(iterable, len(order)) if extra else _key_reader(qs, order), order)
     if iterable is ModelIterable and order:
         for r in rows:
             for i in range(len(order)):
                 r.__dict__.pop(f"_shard_k{i}", None)
+    elif extra:
+        rows = [_without_keys(r, iterable, len(order)) for r in rows]
     return _sliced(rows, low, high)
+
+
+def _output_names(qs):
+    fields = list(qs._fields or ())
+    return fields + [a for a in qs.query.annotation_select if a not in fields]
+
+
+def _selects_keys(qs, order):
+    names = _output_names(qs)
+    if qs._iterable_class is ValuesIterable and not qs._fields:
+        return all(isinstance(n, str) and n in [f.attname for f in qs.model._meta.concrete_fields] + names
+                   for n, _, _ in order)
+    if qs._iterable_class is FlatValuesListIterable:
+        return all(n == names[0] for n, _, _ in order)
+    return all(isinstance(n, str) and n in names for n, _, _ in order)
+
+
+def _extra_keys(iterable, n):
+    if iterable is ValuesIterable:
+        return lambda r: tuple(r[f"_shard_k{i}"] for i in range(n))
+    return lambda r: tuple(r[-n:])
+
+
+def _without_keys(row, iterable, n):
+    if iterable is ValuesIterable:
+        return {k: v for k, v in row.items() if not k.startswith("_shard_k")}
+    if iterable is FlatValuesListIterable:
+        return row[0]
+    return row[:-n]
 
 
 def _dedupe_dicts(rows):
@@ -630,6 +666,8 @@ def _part(expr, name):
     if type(expr) is models.Avg:
         src, flt = expr.source_expressions, expr.filter
         return "avg", {f"{name}__s": Sum(*src, filter=flt), f"{name}__n": Count(*src, filter=flt)}
+    if type(expr) is Count and expr.distinct:
+        return "distinct", {}
     if isinstance(expr, Coalesce) and expr.source_expressions[0].contains_aggregate:
         inner, *rest = expr.source_expressions
         if not all(isinstance(r, models.Value) for r in rest):
@@ -649,15 +687,24 @@ def aggregate(qs, args, kwargs):
         how, exprs = _part(expr, name)
         asked[name] = (how, expr)
         per_leg.update(exprs)
-    parts = []
+    parts, seen = [], {}
     for alias, narrow, on in legs(qs.model):
         leg = _leg(qs, alias, narrow, None, on)
-        if guard(leg.alias(**per_leg), leg.db) == CONTROL_ALIAS:  # an aggregate through a crossing key
+        probe = leg.alias(**per_leg, **{f"_shard_d_{n}": e.source_expressions[0] for n, (h, e) in asked.items()
+                                        if h == "distinct"})
+        if guard(probe, leg.db) == CONTROL_ALIAS:  # an aggregate through a crossing key
             leg = on(leg)
-        parts.append(leg.aggregate(**per_leg))
+        parts.append(leg.aggregate(**per_leg) if per_leg else {})
+        for name, (how, expr) in asked.items():  # Count(distinct): the values themselves, unioned below
+            if how == "distinct":
+                values = leg.filter(expr.filter) if expr.filter is not None else leg
+                values = values.annotate(_shard_v=expr.source_expressions[0]).order_by()
+                seen.setdefault(name, set()).update(values.values_list("_shard_v", flat=True).distinct())
     out = {}
     for name, (how, expr) in asked.items():
-        if how == "avg":
+        if how == "distinct":
+            out[name] = len(seen.get(name, set()) - {None})
+        elif how == "avg":
             s = sum(p[f"{name}__s"] or 0 for p in parts)
             n = sum(p[f"{name}__n"] or 0 for p in parts)
             out[name] = s / n if n else expr.default
