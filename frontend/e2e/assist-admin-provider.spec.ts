@@ -1,4 +1,4 @@
-import { test, expect, setupAuthenticatedPage } from "./fixtures";
+import { test, expect, setupAuthenticatedPage, signInAsSystemAdmin, zh } from "./fixtures";
 
 /**
  * 助手管理 · 供应商 (canvas provider-platforms 1a/2c/3a/4b, narrow 5a) in a real layout engine: preset summary,
@@ -8,6 +8,8 @@ import { test, expect, setupAuthenticatedPage } from "./fixtures";
 for (const [width, height] of [[1440, 900], [393, 852]] as const) {
   test(`${width}: the 供应商 block from platform to test, without horizontal scroll`, async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
+    // Provider and keys are every hall's: SYSTEM_ADMIN only (`soul_assist/admin_views.py::IsAdminRole`).
+    await signInAsSystemAdmin(page, api);
     await page.setViewportSize({ width, height });
     await page.goto("/admin/assistant");
 
@@ -47,3 +49,12 @@ for (const [width, height] of [[1440, 900], [393, 852]] as const) {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   });
 }
+
+// The refused side: TEST_USER is a hall's ADMIN, which the backend answers 403 here; the page says so and asks nothing.
+test("a hall's ADMIN gets the permission-denied page and no config request", async ({ page }) => {
+  const api = await setupAuthenticatedPage(page);
+  await page.goto("/admin/assistant");
+  await expect(page.getByTestId("permission-denied")).toContainText(zh("permission.denied_message"));
+  await expect(page.getByRole("region", { name: "供应商" })).toHaveCount(0);
+  expect(api.countOf("GET", "/assist-admin/config/")).toBe(0);
+});

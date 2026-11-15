@@ -116,6 +116,14 @@ export const TEST_USER = {
   tenant: { id: 1, code: "CN_DIYU", display_name: "中国地府" },
 };
 
+/**
+ * SYSTEM_ADMIN (tenant-sharding stage 1A): no hall, the one global role (backend `is_tenant_exempt`). Writes to
+ * configuration every hall shares — the permission matrix, roles, data scopes, config import
+ * (`CanWriteGlobalSettings`) and the assistant's provider (`soul_assist/admin_views.py::IsAdminRole`) — are its
+ * only. A hall-less ADMIN is a civilization ADMIN now and is refused them. Sign in with `signInAsSystemAdmin`.
+ */
+export const SYSTEM_ADMIN_USER = { ...TEST_USER, role: "SYSTEM_ADMIN" as const, tenant: null };
+
 function b64url(value: object): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
@@ -2236,6 +2244,19 @@ export async function seedAuthState(page: Page, user: object = TEST_USER): Promi
  */
 export async function selectPreset(page: Page, name: RegExp | string): Promise<void> {
   await page.getByRole("button", { name }).first().click();
+}
+
+/**
+ * Re-seed as SYSTEM_ADMIN_USER. `/perm/role-permissions/` answers with the role too and the context takes the
+ * server's (TenantContext), so it is answered as SYSTEM_ADMIN here — or the reload would sign in as ADMIN again.
+ */
+export async function signInAsSystemAdmin(page: Page, api: ApiMock): Promise<void> {
+  api.on("GET", "/perm/role-permissions/", {
+    role: SYSTEM_ADMIN_USER.role,
+    permissions: PERMISSIONS.map((p) => p.codename),
+    details: PERMISSIONS,
+  });
+  await seedAuthState(page, SYSTEM_ADMIN_USER);
 }
 
 export async function setupAuthenticatedPage(page: Page): Promise<ApiMock> {

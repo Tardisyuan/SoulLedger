@@ -1,4 +1,4 @@
-import { test, expect, setupAuthenticatedPage } from "./fixtures";
+import { test, expect, setupAuthenticatedPage, signInAsSystemAdmin } from "./fixtures";
 
 /**
  * 助手管理 · 向量模型 (canvas 「助手管理 · RAG」 1b/1c, narrow 1j/1k) in a real layout engine: the block
@@ -7,6 +7,8 @@ import { test, expect, setupAuthenticatedPage } from "./fixtures";
 for (const [width, height] of [[1440, 900], [393, 852]] as const) {
   test(`${width}: the 向量模型 block, its rebuild notice, and no horizontal scroll`, async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
+    // Provider and keys are every hall's: SYSTEM_ADMIN only (`soul_assist/admin_views.py::IsAdminRole`).
+    await signInAsSystemAdmin(page, api);
     await page.setViewportSize({ width, height });
     await page.goto("/admin/assistant");
 

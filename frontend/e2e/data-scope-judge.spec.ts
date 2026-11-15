@@ -1,4 +1,4 @@
-import { test, expect, mockApi, seedAuthState, setupAuthenticatedPage, OPENED_JUDGMENT, PERMISSIONS, SOUL_DETAIL, SOULS, TEST_USER, type ApiMock, zh } from "./fixtures";
+import { test, expect, mockApi, seedAuthState, setupAuthenticatedPage, OPENED_JUDGMENT, PERMISSIONS, SOUL_DETAIL, SOULS, SYSTEM_ADMIN_USER, TEST_USER, type ApiMock, zh } from "./fixtures";
 
 /**
  * 数据范围 B8:管理员在角色抽屉里把「判官」配成「本机构」→ 判官登录 → 灵魂与审判只剩本机构的;
@@ -93,7 +93,7 @@ function serveByScope(api: ApiMock) {
   api.on("GET", "/perm/role-permissions/", () => ({
     body: judgeSignedIn
       ? { role: "JUDGE", permissions: JUDGE_CODENAMES, details: PERMISSIONS.filter((p) => JUDGE_CODENAMES.includes(p.codename)) }
-      : { role: TEST_USER.role, permissions: PERMISSIONS.map((p) => p.codename), details: PERMISSIONS },
+      : { role: SYSTEM_ADMIN_USER.role, permissions: PERMISSIONS.map((p) => p.codename), details: PERMISSIONS },
   }));
 
   const souls = [S_HOME, S_PEER, S_PEER_MINE];
@@ -124,10 +124,10 @@ function serveByScope(api: ApiMock) {
 
 test.describe("Data scope: a judge set to 本机构 sees only that organization", () => {
   test("configure in the role drawer, sign in as the judge, see the scoped lists and a 404 detail", async ({ page }) => {
-    // ── 管理员(无殿 ADMIN,唯一能写范围的人)在角色抽屉里配「本机构」──
+    // ── 管理员(SYSTEM_ADMIN,唯一能写范围的人:PUT 走 CanWriteGlobalSettings)在角色抽屉里配「本机构」──
     const api = await setupAuthenticatedPage(page);
     serveByScope(api);
-    await seedAuthState(page, { ...TEST_USER, tenant: null });
+    await seedAuthState(page, SYSTEM_ADMIN_USER);
 
     // Before: no config row = 全部 — the admin's own list has all three.
     await page.goto("/souls");
