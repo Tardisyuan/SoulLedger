@@ -76,6 +76,17 @@ class TestDossier:
         assert d["actions"]["claim"] is True and d["actions"]["release"] is False
         assert d["actions"]["refusals"] == {"release": "not_claimed"}
 
+    def test_a_decided_case_that_never_opened_a_workflow_reads_as_closed(self, world):
+        # 115 had judgments decided before workflows existed: the reverse one-to-one raised and the dossier was a 500.
+        case = _case(world.cn)
+        Judgment.objects.filter(pk=case.pk).update(is_final=True)
+        assert not hasattr(Judgment.objects.get(pk=case.pk), "approval_workflow")
+        r = world.clients["a"].get(f"{BASE}{case.pk}/")
+        assert r.status_code == 200, r.content
+        assert r.json()["phase"] == "CLOSED"
+        listed = world.clients["a"].get(BASE)
+        assert listed.status_code == 200, listed.content
+
     def test_another_halls_case_is_404(self, world):
         case = _case(world.cn)
         assert world.clients["eu"].get(f"{BASE}{case.pk}/").status_code == 404

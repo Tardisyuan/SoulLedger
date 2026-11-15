@@ -137,7 +137,8 @@ def phase_of(judgment) -> str:
     from apps.workflow.models import ApprovalWorkflowStatus as S
 
     if judgment.verdict is not None or judgment.is_final:
-        flow = judgment.approval_workflow
+        # A reverse one-to-one raises when no workflow was ever opened (legacy rows on 115, 2026-11-16) — that is CLOSED, not a 500.
+        flow = getattr(judgment, "approval_workflow", None)
         if flow is not None and flow.decides_judgment and flow.status in (S.PENDING, S.IN_PROGRESS, S.APPEAL, S.EXCEPTION):
             return DossierPhase.AWAITING_REVIEW
         return DossierPhase.CLOSED
