@@ -342,7 +342,63 @@ def _crossing_join(query, alias):
             label = keys.get((parent, left, join.table_name, right))
             if label:
                 return label
+    return _crossing_subquery(q)
+
+
+def _crossing_subquery(query, depth=0):
+    """A correlated subquery that matches the outer row through a crossing key is the same hazard as a join
+    (Exists(Reincarnation.filter(soul=OuterRef("soul")))): the rows it looks for may be in another shard. The
+    label of the first crossing key such a subquery (any level down) filters on, or None."""
+    from django.db.models.expressions import Col
+    from django.db.models.sql import Query
+
+    by_field = {(f.model._meta.concrete_model, f.column): f"{f.model._meta.label}.{f.name}" for f in crossing_keys()}
+
+    def walk(node):
+        if isinstance(node, Query):
+            inner = node.model._meta.concrete_model if node.model else None
+            for expr in _nodes(node.where):
+                lhs = getattr(expr, "lhs", None)
+                if isinstance(lhs, Col) and (inner, lhs.target.column) in by_field and _outer_ref(expr, node):
+                    return by_field[(inner, lhs.target.column)]
+            if depth < 3:
+                found = _crossing_subquery(node, depth + 1)
+                if found:
+                    return found
+            return None
+        for child in node.get_source_expressions() if hasattr(node, "get_source_expressions") else ():
+            if child is not None:
+                found = walk(child)
+                if found:
+                    return found
+        inner_query = getattr(node, "query", None)
+        return walk(inner_query) if isinstance(inner_query, Query) else None
+
+    for expr in [*query.annotations.values(), *_nodes(query.where)]:
+        found = walk(expr)
+        if found:
+            return found
     return None
+
+
+def _nodes(where):
+    """Every leaf of a WHERE tree."""
+    for child in getattr(where, "children", ()):
+        if hasattr(child, "children"):
+            yield from _nodes(child)
+        else:
+            yield child
+
+
+def _outer_ref(lookup, inner):
+    """The lookup compares with the outer query's row: an OuterRef, or (once resolved) a column of a table the
+    subquery itself does not have."""
+    from django.db.models.expressions import Col, OuterRef, ResolvedOuterRef
+
+    rhs = getattr(lookup, "rhs", None)
+    parts = [rhs, *getattr(rhs, "get_source_expressions", list)()]
+    return any(isinstance(e, (OuterRef, ResolvedOuterRef)) or (isinstance(e, Col) and e.alias not in inner.alias_map)
+               for e in parts)
 
 
 def guard(qs, alias):
