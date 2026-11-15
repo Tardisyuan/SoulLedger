@@ -119,15 +119,10 @@ def _runs(job):
     return [step.get("run", "") for step in data["jobs"][job]["steps"]]
 
 
-def test_the_multidb_guard_runs_in_the_backend_job():
-    """Review C21 (2026-10-31): test_multidb_shadow.py exists only under its own settings, so the suite skips it."""
-    (command,) = [r for r in _runs("backend") if "test_multidb_shadow.py" in r]
-    assert "--ds=config.settings_multidb" in command and "-m multidb" in command, command
-
-
 def test_the_sharded_group_runs_in_the_backend_job():
     """Sharding stage 2: a `sharded` test skips unless the four civilization shards exist, and they exist only
-    under config.settings_sharded. The command runs the whole group, not a file list that a new test misses."""
+    under config.settings_sharded. The command runs the whole group, not a file list that a new test misses.
+    It replaced the multi-database guard (review C21, 2026-10-31), whose settings are gone."""
     (command,) = [ln.strip() for r in _runs("backend") for ln in r.splitlines()
                   if ln.strip().startswith("python -m pytest") and "--ds=config.settings_sharded" in ln]
     args = command.split()

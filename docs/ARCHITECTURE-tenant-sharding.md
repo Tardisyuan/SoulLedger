@@ -324,6 +324,11 @@ RLS 能解决的问题。若用户坚持「终点就是 (c)」,上表只是定�
   测试在 G3 配置里:相同数据通过、改一行的 `update_time` 红并点名模型与 pk、缺行与多行都红;把比较改成恒等,两条红。
   顺带发现:建租户会在 `default` 里播种它的 `ScheduledJob`,对账第一次就把它们报成「影子库缺失」—— 工具对,夹具没复制。
   **真分库时:**异步双写有延迟,对账要能容忍一个重试窗口(再比一次再报),本版没有。
+- **2026-11-15 分库阶段 2 起，上面两条的单库形态已退役**:`config/settings_multidb.py`、`config/multidb.py`(`ShadowTenantRouter`)、
+  `reconcile_tenant_shadow` 与 `multidb` 标记都删了。G3 改在 `config.settings_sharded` 的四个文明库上、经生产 `ShardRouter` 跑
+  (`tests/test_shard_aliases.py`,`sharded` 标记);G7 由 `reconcile_shards`(带 `--retry-window`)与 `tests/test_shard_sync.py` 接手。
+  「影子库上 RunPython 播了行」「租户写落到路由的库」两条不再适用：分库没有控制表可播、本组 app 的种子在分库上跳过(`placed_here`);
+  阶段 2 的 `ShardRouter` 不路由写(由同步复制)。
 
 **G2 是最大的缺口:** 契约测试守的是「viewset 过 `scope_to_tenant`」,而 service、任务、信号里的 `all_objects` 查询没有守卫。
 分库后这些全都要带路由,而现在没人知道有多少 —— 先用 grep 量一遍(本稿 `Tenant.objects` / `all_objects` 在 `apps/` 里的直取点数

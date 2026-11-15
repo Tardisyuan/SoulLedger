@@ -267,8 +267,6 @@ SITES = [
     ('apps/ledger/journal.py', 'Soul.all_objects', 1, 'FILTERED', 'only the IN-subquery that narrows an already hall-scoped journal queryset to the souls in the data scope; returns no row by itself'),
     ('apps/souls/serializers.py', 'Tenant.objects', 1, 'CODE', 'only the hall-less global admin reaches it: the seed hall of the civilization they chose, by globally unique code (Tenant has no tenant column)'),
     ('apps/souls/serializers.py', 'Statute.all_objects', 2, 'FILTERED', "SoulRecordSerializer.validate_statute_clause: Statute looked up by code AND the soul tenant_id, so a citation never resolves against (or echoes) another hall's clauses ‖ SoulRecordSerializer.validate_inferno_article: Statute looked up by code AND the soul tenant_id (Statute.code is unique per (tenant, code))"),
-    ('apps/tenants/management/commands/reconcile_tenant_shadow.py', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code (Tenant has no tenant column; the lookup names exactly one row)'),
-    ('apps/tenants/management/commands/reconcile_tenant_shadow.py', 'model._base_manager', 1, 'CLI', 'reconciliation tool: reads one database at a time, always filtered by the --tenant id; soft-deleted rows must be compared too'),
     ('apps/tenants/management/commands/seed_tenants.py', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/tenants/middleware.py', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/tenants/views.py', 'Tenant.objects', 1, 'FILTERED', "wrapped in scope_to_tenant(field='pk')"),

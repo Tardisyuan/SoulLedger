@@ -7,7 +7,7 @@ only ever answers for a civilization alias (`civ_*`), and production has none un
 
   allow_migrate   on a `civ_*` alias, CONTROL models are not created; SHARD and REFERENCE (Tenant) are.
                   A RunPython / RunSQL of an app with no table there (auth, token_blacklist...) is skipped.
-                  Every other alias (default = the control database, the test shadow) has no answer, so
+                  Every other alias (default = the control database, any other) has no answer, so
                   it keeps everything. Decided by `placement_of(app_label, model_name)` -- by label,
                   because during migrate the model hint is a historical class (tests/test_placement_by_label.py).
                   A shard alias also needs the engine in `config/shard_db/` so the historical foreign keys
@@ -22,7 +22,7 @@ only ever answers for a civilization alias (`civ_*`), and production has none un
 way it does with no router at all: an instance hint's own database (`obj._state.db`), else default.
 A hard "default" overrides that, so a row fetched with `.using(alias)` reads its relations from
 default. Measured 2026-11-15: with a hard "default" every test in tests/test_multidb_shadow.py
-errored (8/8) while migrating the shadow alias.
+errored (8/8) while migrating the shadow alias (that guard and its alias were retired in stage 2).
 
 What later stages change:
   2   writes still go to default; a shadow write to the civilization alias happens outside the router.

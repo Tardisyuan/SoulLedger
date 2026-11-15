@@ -553,7 +553,7 @@ def _db_kind(item):
 
 def _skip_sharded_without_shards(items):
     """`@pytest.mark.sharded` tests need all four civilization shards (`--ds=config.settings_sharded`).
-    None configured: they skip, as `multidb` does. Some but not all: the run stops -- a settings file that
+    None configured: they skip. Some but not all: the run stops -- a settings file that
     lost one shard would otherwise turn the gate step into skips that exit 0."""
     sharded = [item for item in items if item.get_closest_marker("sharded")]
     if not sharded:

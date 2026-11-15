@@ -55,7 +55,7 @@ def test_a_shard_places_the_historical_models_migrate_passes_in():
     assert router.allow_migrate_model("civ_greek", statute) and not router.allow_migrate_model("civ_greek", menu)
 
 
-@pytest.mark.parametrize("alias", ["default", "tenant_shadow", "some_other_alias"])
+@pytest.mark.parametrize("alias", ["default", "replica", "some_other_alias"])
 def test_any_other_alias_migrates_everything(alias):
     refused = [m._meta.label for m in MODELS if not router.allow_migrate_model(alias, m)]
     assert not refused, f"{alias} refuses {refused}"

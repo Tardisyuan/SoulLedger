@@ -1881,28 +1881,26 @@ class TestRealPostgres:
         # A stand-in selector, so the by-app branch runs (with none, the whole suite runs — PG-only included).
         (main / "scripts" / "select-backend-tests.py").write_text("print('tests/test_souls.py')\n")
         proc, runs = self._reachable(main, fake_backend)
-        assert len(runs) == 1, proc.stdout  # no multi-database guard without --full (next test)
+        assert len(runs) == 1, proc.stdout  # no sharded group without --full (next test)
         args = runs[0]
         assert "--create-db" in args and "faulthandler_timeout=600" in args, args
         assert self.PG_ONLY in args and "tests/test_souls.py" in args, args
         assert "-m" in args and "not migration" in args, args
         assert "→ ruff, makemigrations: skipped — --real-pg runs pytest only" in proc.stdout
 
-    def test_full_also_runs_the_multidb_guard_that_the_suite_skips(self, checkouts, fake_backend):
-        """C21 (2026-10-31): tests/test_multidb_shadow.py exists only under --ds=config.settings_multidb,
-        so every ordinary run skips it. `--real-pg --full` runs it, on the same database, before the suite."""
+    def test_full_also_runs_the_sharded_group_that_the_suite_skips(self, checkouts, fake_backend):
+        """C21 (2026-10-31): a test that exists only under its own settings is skipped by every ordinary run.
+        Since sharding stage 2 that is the `sharded` group (--ds=config.settings_sharded, which replaced the
+        multi-database guard); `--real-pg --full` runs it, on the same database, before the suite."""
         main, _ = checkouts
         proc, runs = self._reachable(main, fake_backend, "--full")
-        assert len(runs) == 3, proc.stdout
-        guard, sharded, suite = runs
-        assert "--ds=config.settings_multidb" in guard and "tests/test_multidb_shadow.py" in guard, guard
-        assert guard[guard.index("-m") + 1] == "multidb" and "--create-db" in guard, guard
-        # Sharding stage 2: the whole `sharded` group under the four-shard settings, no file list a new test misses.
+        assert len(runs) == 2, proc.stdout
+        sharded, suite = runs
+        # The whole `sharded` group under the four-shard settings, no file list a new test misses.
         assert "--ds=config.settings_sharded" in sharded and sharded[sharded.index("-m") + 1] == "sharded", sharded
         assert "--create-db" in sharded and not [a for a in sharded if a.startswith("tests/")], sharded
-        for ds in ("--ds=config.settings_multidb", "--ds=config.settings_sharded"):
-            assert ds not in suite, suite
-        assert "tests/test_multidb_shadow.py" not in suite, suite
+        assert not [a for a in suite if a.startswith("--ds=")], suite
+        assert "settings_multidb" not in proc.stdout, proc.stdout
 
 
 class TestTheWholeRunOnAnotherMachine:

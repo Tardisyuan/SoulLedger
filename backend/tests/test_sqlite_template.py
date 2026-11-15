@@ -17,7 +17,7 @@ def tree(tmp_path):
         "apps/soul_assist/corpus/doc.md": "# corpus",
         "apps/audit/signals.py": "# post_migrate receiver",
         "config/settings.py": "INSTALLED_APPS = []",
-        "config/settings_multidb.py": "from .settings import *",
+        "config/settings_sharded.py": "from .settings import *",
         "requirements.lock": "django==5.2",
         "apps/judgment/tests.py": "def test(): pass",
         "apps/judgment/test_models.py": "def test(): pass",
@@ -42,7 +42,7 @@ def tree(tmp_path):
         "apps/soul_assist/corpus/doc.md",                      # a data file under apps/
         "apps/audit/signals.py",                               # a post_migrate receiver
         "config/settings.py",
-        "config/settings_multidb.py",
+        "config/settings_sharded.py",
         "requirements.lock",
     ],
 )

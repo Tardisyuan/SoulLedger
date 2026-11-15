@@ -91,7 +91,7 @@ def test_startup_check_refuses_a_stray_shard_alias_and_accepts_the_four():
 
 
 def test_shard_aliases_are_what_databases_has(settings):
-    settings.DATABASES = {"default": {}, "tenant_shadow": {}, "civ_greek": {}, "civ_chinese": {}}
+    settings.DATABASES = {"default": {}, "replica": {}, "civ_greek": {}, "civ_chinese": {}}
     assert shard_aliases() == ["civ_chinese", "civ_greek"]
     settings.DATABASES = {"default": {}}
     assert shard_aliases() == []

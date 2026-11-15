@@ -126,14 +126,10 @@ jobs:
           name: count-backend
           path: ${{ runner.temp }}/backend.xml
           retention-days: 7
-      # The multi-database guard (G3/G7) exists only under its own settings; the suite above skips it
-      # (review C21, 2026-10-31). Same PostgreSQL and Redis. `run-gates.sh --real-pg --full` runs it too.
-      - name: Multi-database guard
-        run: |
-          cd backend
-          python -m pytest --tb=short -q --no-cov --ds=config.settings_multidb -m multidb tests/test_multidb_shadow.py
       # Sharding stage 2: the four civilization shards exist only under settings_sharded; `sharded` tests skip
-      # anywhere else. `run-gates.sh --real-pg --full` runs it too.
+      # anywhere else, so the suite above skips them (review C21, 2026-10-31). Same PostgreSQL and Redis.
+      # It replaced the multi-database guard (G3/G7 now run on the shards). `run-gates.sh --real-pg --full`
+      # runs it too.
       - name: Sharded group
         run: |
           cd backend

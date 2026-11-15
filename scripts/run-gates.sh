@@ -30,8 +30,8 @@
 # ONE SIDE: GATES_SIDES=js or GATES_SIDES=backend (default both, 2026-11-15) runs that side only; the other
 # prints that it was skipped and records nothing. Ignored on a push (both run); GATES_SIDES=js with
 # --real-pg is refused. E.g. GATES_SIDES=js while a `--real-pg --full` covers the backend.
-# --real-pg --full also runs the multi-database guard (--ds=config.settings_multidb -m multidb) and the
-# sharded group (--ds=config.settings_sharded -m sharded: four civilization shards, sharding stage 2).
+# --real-pg --full also runs the sharded group (--ds=config.settings_sharded -m sharded: four civilization
+# shards, sharding stage 2; it replaced the multi-database guard and its test-only settings in stage 2).
 #
 # FAIL LATE (2026-11-15). Static checks run before a side's tests, but a red tsc / eslint / ruff /
 # makemigrations no longer stops the side: its remaining steps run, every red step is listed at the end,
@@ -1674,15 +1674,11 @@ PROBE_PY
     PYARGS=(-v --no-header --no-cov --durations=30 --durations-min=5 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
-    # The multi-database guard (tests/test_multidb_shadow.py) exists only under its own settings, so the
-    # suite below skips it. `--real-pg --full` runs it first, on the same PostgreSQL and Redis (C21, 2026-10-31).
+    # Sharding stage 2: the four civilization shards exist only under settings_sharded (a `sharded` test
+    # skips anywhere else), so the suite below skips the group. `--real-pg --full` runs it first, on the same
+    # PostgreSQL and Redis (C21, 2026-10-31: then the multi-database guard, which this group replaced):
+    # tests/test_control_boundary.py, tests/test_shard_sync.py, tests/test_shard_aliases.py ...
     if [ "$REAL_PG" = 1 ] && [ "$FULL_RUN" = 1 ]; then
-        echo "  → pytest: multi-database guard (--ds=config.settings_multidb -m multidb)"
-        SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $REAL_PG_ARGS --ds=config.settings_multidb \
-            -m multidb tests/test_multidb_shadow.py 2>&1 | tail -4
-        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (multi-database guard, tests/test_multidb_shadow.py) failed"
-        # Sharding stage 2: the four civilization shards exist only under settings_sharded (a `sharded` test
-        # skips anywhere else); tests/test_control_boundary.py, tests/test_shard_sync.py ...
         echo "  → pytest: sharded group (--ds=config.settings_sharded -m sharded)"
         SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $REAL_PG_ARGS --ds=config.settings_sharded \
             -m sharded 2>&1 | tail -4
