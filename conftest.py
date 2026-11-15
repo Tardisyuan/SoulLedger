@@ -551,6 +551,25 @@ def _db_kind(item):
     return None
 
 
+def _skip_sharded_without_shards(items):
+    """`@pytest.mark.sharded` tests need all four civilization shards (`--ds=config.settings_sharded`).
+    None configured: they skip, as `multidb` does. Some but not all: the run stops -- a settings file that
+    lost one shard would otherwise turn the gate step into skips that exit 0."""
+    sharded = [item for item in items if item.get_closest_marker("sharded")]
+    if not sharded:
+        return
+    from apps.core.sharding import civilization_aliases, shard_aliases
+
+    have, want = shard_aliases(), civilization_aliases()
+    if have == want:
+        return
+    if have:
+        raise pytest.UsageError(f"`sharded` tests need DATABASES {want}; these settings have only {have}")
+    skip = pytest.mark.skip(reason="needs --ds=config.settings_sharded (four civilization shards)")
+    for item in sharded:
+        item.add_marker(skip)
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config, items):
     """Refuse a run in which a plain database test comes after a transactional one.
@@ -569,6 +588,7 @@ def pytest_collection_modifyitems(config, items):
     this sees the final order; under xdist every worker collects the same list
     and receives items in increasing index order, so the check holds there too.
     """
+    _skip_sharded_without_shards(items)
     seen_tx = None
     for item in items:
         kind = _db_kind(item)

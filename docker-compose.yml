@@ -162,6 +162,7 @@ services:
     command: >
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate &&
+             python manage.py migrate_shards &&
              python manage.py bootstrap_system_admin &&
              python manage.py seed_mythology &&
              python manage.py setup_scheduled_tasks &&

@@ -11,31 +11,27 @@ A civilization shard is migrated from the same migrations as the control databas
     `select_related` from a shard, and the error is the guard against a query that silently reads
     across databases.
 
-PostgreSQL only, under the multidb settings (the alias `civ_greek` exists only there):
+Under the sharded settings (stage 2: the four `civ_*` aliases exist only there), on SQLite (the shard
+engine in `config/shard_db/sqlite3/`) and on PostgreSQL:
 
     cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true \
-      REDIS_URL=redis://127.0.0.1:6399/0 .venv/bin/python -m pytest --ds=config.settings_multidb \
-      -m multidb --no-cov --create-db tests/test_control_boundary.py
+      DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 .venv/bin/python -m pytest \
+      --ds=config.settings_sharded -m sharded --no-cov tests/test_control_boundary.py
 
-Mutation to prove it red (on real PG): `ShardRouter.allow_migrate` answering True for CONTROL on a shard
+Mutation to prove it red: `ShardRouter.allow_migrate` answering True for CONTROL on a shard
 -> the table tests list the control tables and the JOIN test does not raise.
 """
 import pytest
 from django.apps import apps
-from django.conf import settings
-from django.db import ProgrammingError, connection, connections, transaction
+from django.db import OperationalError, ProgrammingError, connections, transaction
 
 from apps.core.sharding import CONTROL, placement
 
-SQLITE = connection.vendor == "sqlite"
 SHARD = "civ_greek"
-HAVE_SHARD = SHARD in settings.DATABASES
 
 pytestmark = [
-    pytest.mark.multidb,
-    pytest.mark.skipif(SQLITE, reason="a shard database is PostgreSQL only (config/settings_multidb.py)"),
-    pytest.mark.skipif(not HAVE_SHARD, reason="needs --ds=config.settings_multidb on PostgreSQL"),
-    pytest.mark.django_db(databases=["default", SHARD] if HAVE_SHARD else ["default"]),
+    pytest.mark.sharded,  # skips unless the four shards exist (root conftest.py)
+    pytest.mark.django_db(databases="__all__"),
 ]
 
 #: Named by the plan; the placement-derived test below covers the rest.
@@ -126,5 +122,7 @@ def test_a_join_to_a_control_table_fails_loudly_on_the_shard(shard_hall):
     from apps.realms.models import Realm
 
     _realm(shard_hall, User.objects.create_user(username="cb-join", password="x", role="JUDGE"))
-    with pytest.raises(ProgrammingError, match="authentication_user"), transaction.atomic(using=SHARD):
+    # PostgreSQL: ProgrammingError (relation does not exist); SQLite: OperationalError (no such table).
+    with pytest.raises((ProgrammingError, OperationalError), match="authentication_user"), \
+            transaction.atomic(using=SHARD):
         list(Realm._base_manager.using(SHARD).select_related("create_user"))
