@@ -690,6 +690,14 @@ def fake_backend(tmp_path):
     return str(py)
 
 
+def _with_xdist(python):
+    """`python` that also answers yes to the gates' `-c "import xdist"` probe (the stand-in has no xdist)."""
+    py = Path(python).with_name("fake-python-xdist")
+    py.write_text(f'#!/bin/bash\n[ "$1 $2" = "-c import xdist" ] && exit 0\nexec "{python}" "$@"\n')
+    py.chmod(0o755)
+    return str(py)
+
+
 def _pytest_line(hook, cwd, python, changed):
     proc = _run(
         hook, cwd, changed, PYTHON_BIN=python, RUFF_BIN=shutil.which("true"),
@@ -1857,7 +1865,7 @@ class TestRealPostgres:
         assert "PostgreSQL unreachable" in proc.stdout, proc.stdout
         assert "PYTEST TEMPLATE" not in proc.stdout
 
-    def _reachable(self, main: Path, python: str, *args) -> tuple[subprocess.CompletedProcess, list[list[str]]]:
+    def _reachable(self, main: Path, python: str, *args, **extra) -> tuple[subprocess.CompletedProcess, list[list[str]]]:
         """The gates against a listening stand-in PostgreSQL; returns the run and each pytest's argv."""
         import socket
 
@@ -1867,7 +1875,7 @@ class TestRealPostgres:
         try:
             port = listener.getsockname()[1]
             (main / "backend" / ".env").write_text(f'DATABASE_URL="postgres://u:p@127.0.0.1:{port}/x"\n')
-            proc = self._gates(main, python, *args, DATABASE_URL="sqlite:///:memory:")
+            proc = self._gates(main, python, *args, DATABASE_URL="sqlite:///:memory:", **extra)
         finally:
             listener.close()
         assert proc.returncode == 0, proc.stdout + proc.stderr
@@ -1891,16 +1899,55 @@ class TestRealPostgres:
     def test_full_also_runs_the_sharded_group_that_the_suite_skips(self, checkouts, fake_backend):
         """C21 (2026-10-31): a test that exists only under its own settings is skipped by every ordinary run.
         Since sharding stage 2 that is the `sharded` group (--ds=config.settings_sharded, which replaced the
-        multi-database guard); `--real-pg --full` runs it, on the same database, before the suite."""
+        multi-database guard); `--real-pg --full` runs it, on the same database.
+        Since 2026-11-16 (user decision) beside the suite and under xdist, the workers split between the two:
+        serially before the suite it took 35+ minutes on PostgreSQL. Mutation: start it in the foreground, or
+        give it no -n, or leave the suite all PYTEST_WORKERS -> red."""
         main, _ = checkouts
-        proc, runs = self._reachable(main, fake_backend, "--full")
+        fake_backend = _with_xdist(fake_backend)
+        proc, runs = self._reachable(main, fake_backend, "--full", PYTEST_WORKERS="12")
         assert len(runs) == 2, proc.stdout
-        sharded, suite = runs
+        sharded = next(r for r in runs if "--ds=config.settings_sharded" in r)
+        suite = next(r for r in runs if r is not sharded)
         # The whole `sharded` group under the four-shard settings, no file list a new test misses.
-        assert "--ds=config.settings_sharded" in sharded and sharded[sharded.index("-m") + 1] == "sharded", sharded
+        assert sharded[sharded.index("-m") + 1] == "sharded", sharded
         assert "--create-db" in sharded and not [a for a in sharded if a.startswith("tests/")], sharded
         assert not [a for a in suite if a.startswith("--ds=")], suite
         assert "settings_multidb" not in proc.stdout, proc.stdout
+        # 12 workers: a third (4) for the group, the rest (8) for the suite, both work-stealing.
+        assert sharded[sharded.index("-n") + 1] == "4" and "worksteal" in sharded, sharded
+        assert suite[suite.index("-n") + 1] == "8" and "worksteal" in suite, suite
+        assert "beside the suite" in proc.stdout and "sharded group, exit 0" in proc.stdout, proc.stdout
+        # GATES_SHARDED_WORKERS overrides the split.
+        _, runs = self._reachable(main, fake_backend, "--full", PYTEST_WORKERS="12", GATES_SHARDED_WORKERS="2")
+        sharded = next(r for r in runs if "--ds=config.settings_sharded" in r)
+        suite = next(r for r in runs if r is not sharded)
+        assert (sharded[sharded.index("-n") + 1], suite[suite.index("-n") + 1]) == ("2", "10"), runs
+
+    def test_both_runs_decide_and_a_red_sharded_group_does_not_stop_the_suite(self, checkouts, fake_backend, tmp_path):
+        """Fail late: the group and the suite run at once; either one red makes the run red, and the suite's
+        result is still printed. Mutation: drop SHARDED_STATUS from the verdict -> exit 0 -> red."""
+        main, _ = checkouts
+        red = tmp_path / "red-sharded-python"
+        red.write_text(
+            "#!/bin/bash\n"
+            'case "$*" in *settings_sharded*) echo "1 failed"; exit 1 ;; esac\n'
+            f'exec "{fake_backend}" "$@"\n')
+        red.chmod(0o755)
+        import socket
+
+        listener = socket.socket()
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        try:
+            (main / "backend" / ".env").write_text(
+                f'DATABASE_URL="postgres://u:p@127.0.0.1:{listener.getsockname()[1]}/x"\n')
+            proc = self._gates(main, str(red), "--full", DATABASE_URL="sqlite:///:memory:")
+        finally:
+            listener.close()
+        assert proc.returncode != 0, proc.stdout
+        assert "pytest (sharded group, --ds=config.settings_sharded -m sharded) failed" in proc.stdout, proc.stdout
+        assert "sharded group, exit 1" in proc.stdout and "PYTEST TEMPLATE=" in proc.stdout, proc.stdout
 
 
 class TestTheWholeRunOnAnotherMachine:

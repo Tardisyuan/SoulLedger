@@ -31,7 +31,8 @@
 # prints that it was skipped and records nothing. Ignored on a push (both run); GATES_SIDES=js with
 # --real-pg is refused. E.g. GATES_SIDES=js while a `--real-pg --full` covers the backend.
 # --real-pg --full also runs the sharded group (--ds=config.settings_sharded -m sharded: four civilization
-# shards, sharding stage 2; it replaced the multi-database guard and its test-only settings in stage 2).
+# shards, sharding stage 2; it replaced the multi-database guard and its test-only settings in stage 2), at
+# the same time as the suite and under xdist: GATES_SHARDED_WORKERS of PYTEST_WORKERS (default a third).
 #
 # FAIL LATE (2026-11-15). Static checks run before a side's tests, but a red tsc / eslint / ruff /
 # makemigrations no longer stops the side: its remaining steps run, every red step is listed at the end,
@@ -1333,35 +1334,60 @@ fi
 # decision): a long run used to say "failed so far: 3" for twenty minutes and name them only at its end — or
 # never, when the time limit ended it first. pytest runs with -v for this, so every test has a line of its
 # own: `path::name FAILED [ 12%]` serially, `[gw0] [ 12%] FAILED path::name` under xdist.
+# With SHARDED_PID / SHARDED_LOG set (`--real-pg --full`, SHARDED GROUP BESIDE THE SUITE below) it follows
+# both runs, a progress line each, and both exit codes decide.
 # GATES_PROGRESS_EVERY (seconds) is the test seam.
+pytest_progress() {  # <label> <log> <name of the variable holding the failures already shown>
+    local pct bad new
+    pct=$(grep -oE '\[ *[0-9]+%\]' "$2" | tail -1 | tr -d '[] ')
+    bad=$(grep -E '\[ *[0-9]+%\]' "$2" | grep -E ' (FAILED|ERROR)( |$)' | grep -oE '[^ []+::[^ ]+' | awk '!seen[$0]++')
+    echo "    … $1 ${pct:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $(printf '%s' "$bad" | grep -c . || true)"
+    new=$(printf '%s\n' "$bad" | grep -vxF -e "${!3}" | grep . || true)
+    [ -n "$new" ] && printf '%s\n' "$new" | sed 's/^/        FAILED /'
+    printf -v "$3" '%s' "$bad"
+}
+pytest_summary() {  # <log> <status>
+    # The thirty slowest over 5 s, so a run that stalls says where (--durations=30 --durations-min=5 below).
+    sed -n '/slowest [0-9]* *durations/,/^$/p' "$1" | sed 's/^/    /'
+    # COLD (migrated) or HOT (cloned), the input hash, the seconds — the root conftest's summary line
+    # (backend/config/sqlite_template.py, telemetry 2026-11-13). Named here: `tail -4` may not reach it.
+    grep -m1 '^test template: ' "$1" | sed 's/^/    /'
+    tail -4 "$1"
+    if [ "$2" -eq 0 ]; then rm -f "$1"; else echo "    full log: $1"; fi
+}
 pytest_finish() {
-    local every="${GATES_PROGRESS_EVERY:-30}" bad shown="" new
-    T0=$(date +%s); NEXT=$every
-    while kill -0 "$PYTEST_PID" 2>/dev/null; do
+    local every="${GATES_PROGRESS_EVERY:-30}" shown_main="" shown_sharded="" main_on sharded_on main_s="" sharded_s=""
+    T0=$(date +%s); NEXT=$every; SHARDED_STATUS=0
+    while :; do
+        main_on=0; sharded_on=0
+        EL=$(( $(date +%s) - T0 ))
+        if kill -0 "$PYTEST_PID" 2>/dev/null; then main_on=1; else main_s="${main_s:-$EL}"; fi
+        if [ -n "${SHARDED_PID:-}" ]; then
+            if kill -0 "$SHARDED_PID" 2>/dev/null; then sharded_on=1; else sharded_s="${sharded_s:-$EL}"; fi
+        fi
+        [ "$main_on$sharded_on" = 00 ] && break
         sleep 1
         EL=$(( $(date +%s) - T0 ))
-        if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
+        if [ "$EL" -ge "$NEXT" ]; then
             NEXT=$(( NEXT + every ))
-            PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
-            bad=$(grep -E '\[ *[0-9]+%\]' "$PYTEST_LOG" | grep -E ' (FAILED|ERROR)( |$)' \
-                | grep -oE '[^ []+::[^ ]+' | awk '!seen[$0]++')
-            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $(printf '%s' "$bad" | grep -c . || true)"
-            new=$(printf '%s\n' "$bad" | grep -vxF -e "$shown" | grep . || true)
-            [ -n "$new" ] && printf '%s\n' "$new" | sed 's/^/        FAILED /'
-            shown="$bad"
+            [ "$main_on" = 1 ] && pytest_progress pytest "$PYTEST_LOG" shown_main
+            [ "$sharded_on" = 1 ] && pytest_progress "pytest (sharded group)" "$SHARDED_LOG" shown_sharded
         fi
     done
     wait "$PYTEST_PID"; PYTEST_STATUS=$?
-    # The thirty slowest over 5 s, so a run that stalls says where (--durations=30 --durations-min=5 below).
-    sed -n '/slowest [0-9]* *durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
-    # COLD (migrated) or HOT (cloned), the input hash, the seconds — the root conftest's summary line
-    # (backend/config/sqlite_template.py, telemetry 2026-11-13). Named here: `tail -4` may not reach it.
-    grep -m1 '^test template: ' "$PYTEST_LOG" | sed 's/^/    /'
-    tail -4 "$PYTEST_LOG"
-    if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
+    if [ -n "${SHARDED_PID:-}" ]; then
+        wait "$SHARDED_PID"; SHARDED_STATUS=$?
+        echo "  → pytest: sharded group, exit $SHARDED_STATUS in ${sharded_s}s"
+        pytest_summary "$SHARDED_LOG" "$SHARDED_STATUS"
+        echo "  → pytest: suite, exit $PYTEST_STATUS in ${main_s}s"
+    fi
+    pytest_summary "$PYTEST_LOG" "$PYTEST_STATUS"
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
     [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
-    [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed"
+    local why=""
+    [ "$PYTEST_STATUS" -eq 0 ] || why="pytest failed"
+    [ "$SHARDED_STATUS" -eq 0 ] || why="${why:+$why; }pytest (sharded group, --ds=config.settings_sharded -m sharded) failed"
+    [ -z "$why" ] || fail "$why"
     cd "$ROOT" || exit 1
 }
 
@@ -1671,19 +1697,35 @@ PROBE_PY
     # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
     REAL_PG_ARGS=""
     if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
+    # SHARDED GROUP BESIDE THE SUITE (2026-11-16, user decision). Sharding stage 2: the four civilization shards
+    # exist only under settings_sharded (a `sharded` test skips anywhere else), so the suite skips the group,
+    # and `--real-pg --full` runs it on the same PostgreSQL and Redis (C21, 2026-10-31: then the multi-database
+    # guard, which this group replaced): tests/test_control_boundary.py, tests/test_shard_sync.py ...
+    # It ran serially before the suite and took 35+ minutes on PostgreSQL (2026-11-16). Now it runs at the same
+    # time, under xdist: GATES_SHARDED_WORKERS of the PYTEST_WORKERS (default a third, rounded up) and the suite
+    # the rest, so the two together stay within the CPUs PYTEST_WORKERS was sized for. Each of its workers
+    # clones default and the four shards from the controller's templates (root conftest.py; on the remote box
+    # the kept template of the input hash). Its own log; both exit codes decide (pytest_finish).
+    SHARDED_PID=""
+    if [ "$REAL_PG" = 1 ] && [ "$FULL_RUN" = 1 ]; then
+        SHARDED_XDIST=""
+        if [ -n "$XDIST" ]; then
+            SHARDED_WORKERS="${GATES_SHARDED_WORKERS:-$(( (PYTEST_WORKERS + 2) / 3 ))}"
+            MAIN_WORKERS=$(( PYTEST_WORKERS - SHARDED_WORKERS )); [ "$MAIN_WORKERS" -ge 1 ] || MAIN_WORKERS=1
+            SHARDED_XDIST="-n $SHARDED_WORKERS --dist worksteal"
+            XDIST="-n $MAIN_WORKERS --dist worksteal"
+        fi
+        echo "  → pytest: sharded group (--ds=config.settings_sharded -m sharded, ${SHARDED_XDIST:-serial}) beside the suite (${XDIST:-serial})"
+        SHARDED_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-pytest-sharded.XXXXXX")
+        # shellcheck disable=SC2086
+        SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -v --no-header --no-cov --durations=30 --durations-min=5 \
+            $SHARDED_XDIST -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true \
+            $REAL_PG_ARGS --ds=config.settings_sharded -m sharded >"$SHARDED_LOG" 2>&1 &
+        SHARDED_PID=$!
+    fi
     PYARGS=(-v --no-header --no-cov --durations=30 --durations-min=5 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
-    # Sharding stage 2: the four civilization shards exist only under settings_sharded (a `sharded` test
-    # skips anywhere else), so the suite below skips the group. `--real-pg --full` runs it first, on the same
-    # PostgreSQL and Redis (C21, 2026-10-31: then the multi-database guard, which this group replaced):
-    # tests/test_control_boundary.py, tests/test_shard_sync.py, tests/test_shard_aliases.py ...
-    if [ "$REAL_PG" = 1 ] && [ "$FULL_RUN" = 1 ]; then
-        echo "  → pytest: sharded group (--ds=config.settings_sharded -m sharded)"
-        SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $REAL_PG_ARGS --ds=config.settings_sharded \
-            -m sharded 2>&1 | tail -4
-        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (sharded group, --ds=config.settings_sharded -m sharded) failed"
-    fi
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     pytest_finish
