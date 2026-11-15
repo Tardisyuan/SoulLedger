@@ -19,7 +19,7 @@ from django.db import models, transaction
 from django.db.models import ProtectedError
 
 from apps.authentication.models import User, UserRole
-from apps.core.bare_ids import ON_DELETE, bare_ids_to, is_bare, label
+from apps.core.bare_ids import ON_DELETE, bare_ids_to, is_bare, label, rule
 from apps.realms.models import Realm
 from apps.tenants.models import Tenant
 
@@ -33,7 +33,7 @@ def _all_bare():
 def test_every_bare_id_that_cannot_be_nulled_names_its_rule_and_every_rule_is_a_bare_id():
     bare = {label(f): f for f in _all_bare()}
     assert len(bare) > 150, f"only {len(bare)} bare ids found; the discovery is broken, not the schema"
-    unruled = sorted(k for k, f in bare.items() if not f.null and k not in ON_DELETE)
+    unruled = sorted(k for k, f in bare.items() if not f.null and rule(f) is models.SET_NULL)
     assert not unruled, f"NOT NULL bare ids with no CASCADE / PROTECT rule (SET_NULL would fail): {unruled}"
     stale = sorted(k for k in ON_DELETE if k not in bare)
     assert not stale, f"rules for fields that are not bare ids: {stale}"
@@ -41,9 +41,15 @@ def test_every_bare_id_that_cannot_be_nulled_names_its_rule_and_every_rule_is_a_
 
 def test_discovery_sees_exactly_the_bare_foreign_keys():
     seen = {label(f) for f in _all_bare()}
-    declared = {f"{m._meta.label}.{f.name}" for m in apps.get_models() for f in m._meta.concrete_fields
+    declared = {f"{m._meta.label}.{f.name}" for m in apps.get_models(include_auto_created=True)
+                for f in m._meta.concrete_fields
                 if isinstance(f, models.ForeignKey) and is_bare(f) and f.model is m}
     assert seen == declared and "realms.Realm.create_user" in seen and "realms.Realm.parent_realm" not in seen
+    # The M2M through tables whose M2M field is db_constraint=False: both their keys, CASCADE.
+    through = {"perm.RoleDataScope_orgs.organization", "perm.RoleDataScope_orgs.roledatascope",
+               "judgment.CityGod_officers.user", "judgment.CityGod_officers.citygod",
+               "death_sync.TudiGod_officers.user", "death_sync.TudiGod_officers.tudigod"}
+    assert {label(f) for f in _all_bare() if f.model._meta.auto_created} == through
 
 
 @pytest.fixture
@@ -145,3 +151,267 @@ def test_check_bare_ids_names_an_orphan_and_passes_without_one(hall):
         call_command("check_bare_ids", stdout=out)
     assert "realms.Realm.create_user on default: 1 orphan id(s)" in out.getvalue()
     assert "realms.Realm.update_user" not in out.getvalue()
+
+
+def test_each_bare_ids_rule_is_the_on_delete_it_had_before_stage_1b():
+    """ON_DELETE is written by hand; the truth is the migration state just before the 24
+    `*_bare_ids_across_databases` migrations. Every bare id that existed then keeps exactly that rule
+    (a key missing from ON_DELETE means SET_NULL)."""
+    from django.db.migrations.loader import MigrationLoader
+
+    loader = MigrationLoader(None, ignore_no_migrations=True)
+    stage = {k for k in loader.disk_migrations if k[1].endswith("_bare_ids_across_databases")}
+    assert len(stage) == 24, sorted(stage)
+    parents = sorted({p.key for k in stage for p in loader.graph.node_map[k].parents} - stage)
+    reached = {k for p in parents for k in loader.graph.forwards_plan(p)}
+    assert not reached & stage, "the 'before' state includes a 1B migration"
+    before = loader.project_state(parents)
+
+    compared, wrong = 0, []
+    for f in _all_bare():
+        if f.model._meta.auto_created:
+            continue  # a through-table row: CASCADE at both ends, before and after (Django's own rule)
+        old = before.models.get((f.model._meta.app_label, f.model._meta.model_name))
+        if old is None or f.name not in old.fields:
+            continue  # born bare after 1B: it had no earlier rule
+        was = old.fields[f.name].remote_field.on_delete
+        compared += 1
+        if was is not rule(f):
+            wrong.append(f"{label(f)}: was {was.__name__}, ON_DELETE says {rule(f).__name__}")
+    assert compared > 150, compared
+    assert not wrong, "\n  ".join(wrong)
+
+
+GONE = 10_000_000
+
+
+def _orphan_source(edge, hall):
+    """One row on `edge`'s source side naming a real target: (a queryset of just that row, the column,
+    a value that names no row of the target)."""
+    import uuid
+
+    from django_celery_beat.models import CrontabSchedule, PeriodicTask
+
+    from apps.actors.models import Actor
+    from apps.chat.models import ChatIdentity
+    from apps.death_sync.models import TudiGod
+    from apps.judgment.models import CityGod
+    from apps.org.models import Organization
+    from apps.org.ownership import tenant_root
+    from apps.perm.models import Role, RoleDataScope
+    from apps.scheduler.models import ScheduledJob
+    from apps.soul_accounts.models import AccountOrigin, SoulAccount
+    from apps.souls.models import Soul
+
+    user = User.objects.create_user(username=f"orph-{edge}"[:150], password="x", role=UserRole.JUDGE, tenant=hall)
+    org = Organization.objects.create(name="orph", code=f"ORPH_{edge}"[-50:], category="", tenant=hall,
+                                      parent=tenant_root(hall))
+    col = edge.rsplit(".", 1)[1]
+    if edge == "realms.Realm.create_user":
+        return Realm.all_objects.filter(pk=_realm(hall, "BRO", user).pk), "create_user_id", user.pk + GONE
+    if edge == "authentication.User.organization":
+        User.all_objects.filter(pk=user.pk).update(organization=org)
+        return User.all_objects.filter(pk=user.pk), "organization_id", org.pk + GONE
+    if edge == "authentication.User.actor":
+        actor = Actor.objects.create(name="orph", civilization="CHINESE", role="JUDGE", tenant=hall)
+        User.all_objects.filter(pk=user.pk).update(actor=actor)
+        return User.all_objects.filter(pk=user.pk), "actor_id", uuid.uuid4()
+    if edge in ("soul_accounts.SoulAccount.soul", "chat.ChatIdentity.account"):
+        soul = Soul.objects.create(name="orph", tenant=hall)
+        account = SoulAccount.objects.create(user=user, soul=soul, cycle=0, origin=AccountOrigin.OFFICER)
+        if col == "soul":
+            return SoulAccount.objects.filter(pk=account.pk), "soul_id", uuid.uuid4()
+        ident = ChatIdentity.objects.create(account=account, soul=soul, localpart="soul_orph",
+                                            matrix_user_id="@soul_orph:x")
+        return ChatIdentity.objects.filter(pk=ident.pk), "account_id", uuid.uuid4()
+    if edge == "scheduler.ScheduledJob.periodic_task":
+        cron, _ = CrontabSchedule.objects.get_or_create(minute="0", hour="3", timezone="UTC")
+        pt = PeriodicTask.objects.create(name="orph", task="orph", crontab=cron)
+        job = ScheduledJob.objects.create(periodic_task=pt, job_key="tests.orph")
+        return ScheduledJob.objects.filter(pk=job.pk), "periodic_task_id", pt.pk + GONE
+    if edge.startswith("perm.RoleDataScope_orgs."):
+        scope = RoleDataScope.objects.create(role=Role.objects.get_or_create(name="orph")[0], scope="DEFINE")
+        scope.orgs.add(org)
+        rows = RoleDataScope.orgs.through.objects.filter(roledatascope=scope)
+        return rows, f"{col}_id", (org.pk if col == "organization" else scope.pk) + GONE
+    god_model = CityGod if edge.startswith("judgment.") else TudiGod
+    god = god_model.objects.create(tenant=hall, name="orph")
+    god.officers.add(user)
+    rows = god_model.officers.through.objects.filter(user=user)
+    return rows, f"{col}_id", (user.pk + GONE if col == "user" else uuid.uuid4())
+
+
+#: One edge per target model of a bare id (the next test holds that every target is reached), plus
+#: every through-table column.
+ORPHAN_EDGES = [
+    "realms.Realm.create_user",              # -> User
+    "soul_accounts.SoulAccount.soul",        # -> Soul
+    "chat.ChatIdentity.account",             # -> SoulAccount
+    "authentication.User.organization",      # -> Organization
+    "authentication.User.actor",             # -> Actor
+    "scheduler.ScheduledJob.periodic_task",  # -> PeriodicTask
+    "perm.RoleDataScope_orgs.organization",
+    "perm.RoleDataScope_orgs.roledatascope",
+    "judgment.CityGod_officers.user",
+    "judgment.CityGod_officers.citygod",
+    "death_sync.TudiGod_officers.user",
+    "death_sync.TudiGod_officers.tudigod",
+]
+
+
+def test_the_orphan_edges_reach_every_target_of_a_bare_id():
+    fields = {label(f): f for f in _all_bare()}
+    assert set(ORPHAN_EDGES) <= set(fields)
+    reached = {fields[e].related_model._meta.concrete_model for e in ORPHAN_EDGES}
+    assert reached == set(bare_ids_to()), sorted(m._meta.label for m in set(bare_ids_to()) - reached)
+
+
+@pytest.mark.parametrize("edge", ORPHAN_EDGES)
+def test_check_bare_ids_reports_an_orphan_on_any_edge_and_only_that_edge(hall, edge):
+    from apps.core.bare_ids import orphans
+
+    rows, attname, gone = _orphan_source(edge, hall)
+    assert rows.count() == 1
+    assert orphans(["default"]) == []
+    rows.update(**{attname: gone})
+    assert orphans(["default"]) == [(edge, "default", 1)]
+    out = StringIO()
+    with pytest.raises(CommandError, match="1 bare id column"):
+        call_command("check_bare_ids", stdout=out)
+    assert f"{edge} on default: 1 orphan id(s)" in out.getvalue()
+
+
+def test_clearing_a_deleted_organization_removes_its_through_table_rows(hall):
+    """Django clears a through table only on the deleted row's own database; bare_ids does it on each
+    alias it is given. Called directly: on one database Django's collector would hide a miss."""
+    from apps.core.bare_ids import clear_bare_ids
+    from apps.org.models import Organization
+
+    rows, _, _ = _orphan_source("perm.RoleDataScope_orgs.organization", hall)
+    row = rows.get()
+    gone, scope = row.organization, row.roledatascope
+    kept = Organization.objects.create(name="kept", code="ORPH_KEPT", category="", tenant=hall, parent=gone.parent)
+    scope.orgs.add(kept)
+    clear_bare_ids(Organization, [gone.pk], ["default"])
+    assert list(scope.orgs.values_list("pk", flat=True)) == [kept.pk]  # its row went, the other stayed
+
+
+@pytest.fixture
+def greek_hall():
+    return Tenant.objects.get_or_create(code="GR_BARE", defaults={"display_name": "GR",
+                                                                   "declared_civilization": "GREEK"})[0]
+
+
+def test_a_shard_rows_primary_moves_to_its_shard_only_when_its_writes_are_cut_over(hall, greek_hall, settings):
+    from apps.core.bare_ids import primary_alias
+    from apps.souls.models import Soul
+
+    greek, chinese = Soul.objects.create(name="g", tenant=greek_hall), Soul.objects.create(name="c", tenant=hall)
+    user = User.objects.create_user(username="bare-primary", password="x", role=UserRole.JUDGE, tenant=greek_hall)
+    assert [primary_alias(x) for x in (greek, chinese, user)] == ["default"] * 3
+    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
+    assert [primary_alias(x) for x in (greek, chinese, user)] == ["civ_greek", "default", "default"]
+    settings.SHARD_WRITE_CIVS = []  # reads alone do not move the authoritative copy
+    assert primary_alias(greek) == "default"
+
+
+def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hall, settings):
+    """With Greek writes cut over, the control database's Greek Soul is a leftover copy: deleting it must
+    not cascade to the control SoulAccount naming the soul (the shard's Soul is the real one). The
+    primary's delete still does. tests/test_multidb_shadow.py has the same on a second database."""
+    from apps.soul_accounts.models import AccountOrigin, SoulAccount
+    from apps.souls.models import Soul
+
+    def account_of(soul, name):
+        user = User.objects.create_user(username=name, password="x", role="SOUL", tenant=soul.tenant)
+        return SoulAccount.objects.create(user=user, soul=soul, cycle=0, origin=AccountOrigin.OFFICER)
+
+    greek, chinese = Soul.objects.create(name="g", tenant=greek_hall), Soul.objects.create(name="c", tenant=hall)
+    kept, gone = account_of(greek, "bare-copy-g"), account_of(chinese, "bare-copy-c")
+    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
+    greek.purge()
+    assert SoulAccount.objects.filter(pk=kept.pk).exists()
+    # The primary still applies its rule. (Cut-over off again: fanout() would now visit civ_greek, which
+    # this settings file has no database for.)
+    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = []
+    chinese.purge()
+    assert not SoulAccount.objects.filter(pk=gone.pk).exists()
+
+
+# --- Django admin ---------------------------------------------------------------
+# A bare-id PROTECT is raised from pre_delete, which the admin's confirmation page (its own collector)
+# cannot see: an admin delete that reached one would 500 instead of showing "cannot delete". None can
+# today -- Soul's admin delete is off, SoulAccount has no admin, and User -> SoulAccount is a real
+# PROTECT the admin shows. This holds that, for every registered admin.
+
+def _deleted_with(model):
+    """Every model a delete of `model` removes: Django's CASCADE edges and the bare ids' CASCADE rules."""
+    from apps.core.bare_ids import rule
+
+    seen, todo = {model}, [model]
+    while todo:
+        m = todo.pop()
+        nxt = [r.related_model for r in m._meta.related_objects
+               if getattr(r.field.remote_field, "on_delete", None) is models.CASCADE]
+        nxt += [f.model for f in bare_ids_to().get(m._meta.concrete_model, []) if rule(f) is models.CASCADE]
+        for n in nxt:
+            if n._meta.concrete_model not in seen:
+                seen.add(n._meta.concrete_model)
+                todo.append(n._meta.concrete_model)
+    return seen
+
+
+def test_no_admin_delete_can_reach_a_bare_id_protect(rf):
+    from django.contrib import admin
+
+    from apps.core.bare_ids import rule
+
+    held = {f.related_model._meta.concrete_model: label(f) for f in _all_bare() if rule(f) is models.PROTECT}
+    assert held, "no bare PROTECT found; the discovery is broken"
+    request = rf.get("/")
+    request.user = User(is_superuser=True, is_staff=True, is_active=True)
+    wrong = sorted(f"{model._meta.label} -> {m._meta.label} (held by {held[m]})"
+                   for model, model_admin in admin.site._registry.items()
+                   if model_admin.has_delete_permission(request)
+                   for m in _deleted_with(model) if m in held)
+    assert not wrong, ("an admin delete reaching a bare-id PROTECT 500s instead of showing 'cannot delete'; "
+                       "turn the delete off there or check the bare ids first:\n  " + "\n  ".join(wrong))
+
+
+def test_the_admin_refuses_a_soul_delete_that_a_bare_id_protects_instead_of_failing(hall, client):
+    from apps.soul_accounts.models import AccountOrigin, RebirthApplication, SoulAccount
+    from apps.souls.models import Soul
+    from apps.workflow.models import ApprovalWorkflow
+
+    soul = Soul.objects.create(name="admin-protected", tenant=hall)
+    owner = User.objects.create_user(username="bare-admin-soul", password="x", role="SOUL", tenant=hall)
+    account = SoulAccount.objects.create(user=owner, soul=soul, cycle=0, origin=AccountOrigin.OFFICER)
+    wf = ApprovalWorkflow.objects.create(number="WF-BARE-ADM", workflow_name="rebirth", tenant=hall, soul=soul)
+    form = RebirthApplication._meta.get_field("desired_form").choices[0][0]
+    RebirthApplication.objects.create(soul=soul, account=account, cycle=0, desired_form=form,
+                                      status="UNDER_REVIEW", workflow=wf)
+    client.force_login(User.objects.create_superuser(username="bare-admin", email="a@x.test", password="x"))
+
+    url = f"/admin/souls/soul/{soul.pk}/delete/"
+    assert client.get(url).status_code == 403
+    assert client.post(url, {"post": "yes"}).status_code == 403
+    bulk = client.post("/admin/souls/soul/", {"action": "delete_selected", "_selected_action": [soul.pk], "post": "yes"})
+    assert bulk.status_code in (200, 302)  # the action is not offered; nothing runs
+    assert Soul.all_objects.filter(pk=soul.pk).exists() and SoulAccount.objects.filter(pk=account.pk).exists()
+
+
+def test_the_admin_shows_cannot_delete_for_a_user_with_a_soul_account(hall, client):
+    """User -> SoulAccount is a real PROTECT, which the admin's confirmation page sees."""
+    from apps.soul_accounts.models import AccountOrigin, SoulAccount
+    from apps.souls.models import Soul
+
+    owner = User.objects.create_user(username="bare-admin-user", password="x", role="SOUL", tenant=hall)
+    account = SoulAccount.objects.create(user=owner, soul=Soul.objects.create(name="u", tenant=hall), cycle=0,
+                                         origin=AccountOrigin.OFFICER)
+    client.force_login(User.objects.create_superuser(username="bare-admin2", email="b@x.test", password="x"))
+
+    response = client.post("/admin/authentication/user/", {"action": "delete_selected",
+                                                           "_selected_action": [owner.pk], "post": "yes"})
+    assert response.status_code == 200
+    assert "would require deleting the following protected related objects" in response.content.decode()
+    assert User.all_objects.filter(pk=owner.pk).exists() and SoulAccount.objects.filter(pk=account.pk).exists()

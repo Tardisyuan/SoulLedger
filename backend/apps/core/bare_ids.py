@@ -5,7 +5,10 @@ Each one is `ForeignKey(..., on_delete=DO_NOTHING, db_constraint=False)`: same `
 accessor, no database constraint and no ORM on_delete -- Django's delete collector only looks in the
 database the deleted row came from, and the rows pointing at a control user will live in four others.
 So the delete rule each of them had before 1B is kept here and applied explicitly, on every alias
-`fanout()` names, from a `pre_delete` receiver on each target model (wired in `apps/souls/apps.py`).
+`fanout()` names, from a `pre_delete` receiver on each target model (wired in `apps/souls/apps.py`) --
+only when the row deleted is the authoritative one (`primary_alias`). Deleting a copy (the test shadow,
+a shard copy before its civilization's writes are cut over, a reconcile removing an extra row) touches
+no other database.
 A hard delete of a User (only ever a queryset delete: `User.delete()` is a soft delete) is the main
 case; SoulAccount, Soul, Actor, Organization and django-celery-beat's PeriodicTask are the others.
 
@@ -18,7 +21,8 @@ from contextvars import ContextVar
 from functools import cache
 
 from django.apps import apps
-from django.db import models
+from django.conf import settings
+from django.db import models, router
 from django.db.models import ProtectedError
 from django.db.models.signals import pre_delete
 
@@ -62,17 +66,28 @@ def label(field) -> str:
 
 
 def is_bare(field) -> bool:
-    """A forward FK we cut: no constraint and no ORM on_delete. (Auto-created M2M through tables keep
-    Django's CASCADE; their M2M field carries `db_constraint=False`, the ORM still clears them.)"""
-    return (isinstance(field, models.ForeignKey) and not field.db_constraint
-            and field.remote_field.on_delete is models.DO_NOTHING)
+    """A forward FK with no database constraint: the ones we cut (on_delete=DO_NOTHING), and both FKs of
+    an auto-created M2M through table whose M2M field has `db_constraint=False` (RoleDataScope_orgs,
+    CityGod_officers, TudiGod_officers). Those keep Django's CASCADE, but Django clears them only on the
+    database the deleted row is in, and reversing 1B puts their constraints back -- so they are checked
+    for orphans and cleared across databases like the others."""
+    if not isinstance(field, models.ForeignKey) or field.db_constraint:
+        return False
+    return field.model._meta.auto_created or field.remote_field.on_delete is models.DO_NOTHING
+
+
+def rule(field):
+    """The delete rule a bare id keeps: a through-table row goes with either end (CASCADE)."""
+    if field.model._meta.auto_created:
+        return models.CASCADE
+    return ON_DELETE.get(label(field), models.SET_NULL)
 
 
 @cache
 def bare_ids_to():
     """{target concrete model: [bare FK fields pointing at it]} over every installed model."""
     out = {}
-    for m in apps.get_models():
+    for m in apps.get_models(include_auto_created=True):
         for f in m._meta.concrete_fields:
             if is_bare(f) and f.model is m:
                 out.setdefault(f.related_model._meta.concrete_model, []).append(f)
@@ -85,20 +100,20 @@ def clear_bare_ids(target, pks, aliases):
     fields = bare_ids_to().get(target._meta.concrete_model, [])
     for alias in aliases:
         for f in fields:
-            if ON_DELETE.get(label(f)) is models.PROTECT:
+            if rule(f) is models.PROTECT:
                 held = list(f.model._base_manager.using(alias).filter(**{f"{f.attname}__in": pks})[:5])
                 if held:
                     raise ProtectedError(f"{label(f)} still points at {target._meta.label} {list(pks)}", set(held))
     for alias in aliases:
         for f in fields:
             rows = f.model._base_manager.using(alias).filter(**{f"{f.attname}__in": pks})
-            rule = ON_DELETE.get(label(f), models.SET_NULL)
-            if rule is models.CASCADE:
+            how = rule(f)
+            if how is models.CASCADE:
                 _, per_model = rows.delete()
                 tally = _tally.get()
                 if tally is not None:
                     tally.update(per_model)
-            elif rule is models.SET_NULL:
+            elif how is models.SET_NULL:
                 rows.update(**{f.attname: None})
 
 
@@ -119,9 +134,28 @@ def counting_cascades():
         _tally.reset(token)
 
 
+def primary_alias(instance):
+    """The alias holding the authoritative row of `instance`: its civilization's shard once that
+    civilization's writes are cut over (settings.SHARD_WRITE_CIVS, stage 4), else the control database.
+    CONTROL / REFERENCE rows, and SHARD rows with no hall (D2), are always on "default"."""
+    from apps.core.sharding import SHARD, alias_for_civilization, placement, tenant_path
+
+    if not settings.SHARD_WRITE_CIVS or placement(type(instance)) != SHARD:
+        return "default"
+    hall = instance
+    for step in tenant_path(type(instance)).split("__"):
+        hall = getattr(hall, step, None)
+        if hall is None:
+            return "default"
+    civ = hall.civilization
+    return alias_for_civilization(civ) if civ in settings.SHARD_WRITE_CIVS else "default"
+
+
 def _on_pre_delete(sender, instance, using, **kwargs):
     from apps.core.sharding import fanout
 
+    if using != primary_alias(instance):
+        return  # a copy: Django's collector clears its own database; the other databases keep theirs
     # ponytail: one statement per bare id per deleted row; hard deletes of these targets are rare
     # (queryset deletes in tests and admin). Batch per collector if a bulk path ever appears.
     clear_bare_ids(sender, [instance.pk], fanout())
@@ -132,16 +166,31 @@ def connect():
         pre_delete.connect(_on_pre_delete, sender=target, dispatch_uid=f"bare_ids:{target._meta.label}")
 
 
+def homes(target, aliases):
+    """The aliases among `aliases` whose rows of `target` count as real: "default" for a CONTROL model;
+    for a SHARD / REFERENCE one, every alias it is migrated on (control and the shards), because a SHARD
+    row lives in its civilization's shard once that is cut over."""
+    from apps.core.sharding import CONTROL, placement
+
+    if placement(target) == CONTROL:
+        return ["default"]
+    return [a for a in aliases if router.allow_migrate_model(a, target)]
+
+
 def orphans(aliases):
-    """[(edge label, alias, count)] of bare ids that name no row of their target on the control
-    database. What `check_bare_ids` prints; run it before reversing the 1B migrations, because putting
-    a constraint back fails on the first orphan."""
+    """[(edge label, alias, count)] of bare ids, on each alias, that name no row of their target on any
+    of the target's `homes`. What `check_bare_ids` prints; run it before reversing the 1B migrations,
+    because putting a constraint back fails on the first orphan."""
     found = []
     for target, fields in bare_ids_to().items():
-        in_control = target._base_manager.using("default").values("pk")
+        where = homes(target, aliases)
         for alias in aliases:
-            # Django refuses a subquery across databases; another alias gets the ids as a list.
-            known = in_control if alias == "default" else list(in_control.values_list("pk", flat=True))
+            if where == [alias]:
+                known = target._base_manager.using(alias).values("pk")
+            else:
+                # Django refuses a subquery across databases: the ids of every home, as one list.
+                # ponytail: every pk in memory; batch it if a target table outgrows that.
+                known = {pk for a in where for pk in target._base_manager.using(a).values_list("pk", flat=True)}
             for f in fields:
                 n = (f.model._base_manager.using(alias).exclude(**{f"{f.attname}__isnull": True})
                      .exclude(**{f"{f.attname}__in": known}).count())

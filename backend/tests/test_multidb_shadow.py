@@ -172,3 +172,69 @@ def test_unknown_tenant_or_alias_is_an_error(halls):
         call_command("reconcile_tenant_shadow", tenant="NOPE", alias=SHADOW_ALIAS)
     with pytest.raises(CommandError, match="no database alias"):
         call_command("reconcile_tenant_shadow", tenant="MB", alias="nowhere")
+
+
+# --- bare ids across two databases (stage 1B, apps/core/bare_ids.py) ------------
+
+def _soul_with_account(hall, user_hall, name):
+    """A soul on default and the control account naming it by a bare id."""
+    from apps.authentication.models import User
+    from apps.soul_accounts.models import AccountOrigin, SoulAccount
+    from apps.souls.models import Soul
+
+    soul = Soul(name=name, tenant=hall)
+    soul.save(using="default")  # explicit: the router would send tenant B to the shadow
+    user = User.objects.db_manager("default").create_user(username=name, password="x", role="SOUL", tenant=user_hall)
+    account = SoulAccount.objects.using("default").create(user=user, soul=soul, cycle=0, origin=AccountOrigin.OFFICER)
+    return soul, account
+
+
+def test_deleting_a_shadow_copy_of_a_soul_leaves_the_control_account_and_the_primary_does_not(halls):
+    """A bare id's rule runs where the deleted row is authoritative (bare_ids.primary_alias: default
+    until a civilization's writes are cut over). Deleting the shadow copy, as a dual-write repair or a
+    reconcile would, must not reach the control database."""
+    from apps.soul_accounts.models import SoulAccount
+    from apps.souls.models import Soul
+
+    a, b = halls
+    soul, account = _soul_with_account(b, a, "copy-soul")
+    Soul._base_manager.using(SHADOW_ALIAS).bulk_create([Soul._base_manager.using("default").get(pk=soul.pk)])
+
+    Soul._base_manager.using(SHADOW_ALIAS).filter(pk=soul.pk).delete()
+    assert not Soul._base_manager.using(SHADOW_ALIAS).filter(pk=soul.pk).exists()
+    assert SoulAccount.objects.using("default").filter(pk=account.pk).exists()
+    assert Soul._base_manager.using("default").filter(pk=soul.pk).exists()
+
+    Soul._base_manager.using("default").get(pk=soul.pk).purge()  # the primary: its CASCADE applies
+    assert not SoulAccount.objects.using("default").filter(pk=account.pk).exists()
+
+
+def test_check_bare_ids_finds_a_shard_target_on_any_home_and_a_control_target_only_on_default(halls):
+    """A SHARD target (Soul) counts on every alias it is migrated on: once a civilization is cut over
+    its souls live in the shard, and a bare id naming one is not an orphan. A CONTROL target (User)
+    counts only on default: a stray copy elsewhere does not make a dangling id real."""
+    import uuid
+
+    from apps.authentication.models import User
+    from apps.core.bare_ids import orphans
+    from apps.soul_accounts.models import SoulAccount
+    from apps.souls.models import Soul
+
+    a, b = halls
+    soul, account = _soul_with_account(b, a, "shadow-soul")
+    aliases = ["default", SHADOW_ALIAS]
+    assert orphans(aliases) == []
+
+    # The account now names a soul that exists only on the shadow, as it would a cut-over shard's soul.
+    elsewhere = Soul._base_manager.using("default").get(pk=soul.pk)
+    elsewhere.pk, elsewhere.owner_org_id = uuid.uuid4(), None  # its hall's root org is on default only
+    Soul._base_manager.using(SHADOW_ALIAS).bulk_create([elsewhere])
+    SoulAccount.objects.using("default").filter(pk=account.pk).update(soul_id=elsewhere.pk)
+    assert orphans(aliases) == []
+
+    ghost = User(pk=9_000_000, username="ghost", role="JUDGE")
+    ghost.save(using=SHADOW_ALIAS)  # a user that exists only on the shadow (a pk default has no row for)
+    realm = _realm(a, "RG")
+    realm.save(using="default")
+    type(realm)._base_manager.using("default").filter(pk=realm.pk).update(create_user_id=ghost.pk)
+    assert orphans(aliases) == [("realms.Realm.create_user", "default", 1)]

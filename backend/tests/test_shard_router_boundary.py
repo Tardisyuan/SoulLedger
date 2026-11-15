@@ -117,15 +117,28 @@ def test_a_control_model_hinted_from_a_shard_row_is_read_from_control():
     (["CHINA"], [], "SHARD_READ_CIVS names \\['CHINA'\\]"),
     (["GREEK"], ["greek"], "SHARD_WRITE_CIVS names \\['greek'\\]"),
     ([], ["GREEK"], "not in SHARD_READ_CIVS"),
+    (["GREEK", "CHINESE"], [], "needs DATABASES entries \\['civ_chinese'\\]"),
 ])
 def test_the_cut_over_settings_name_real_civilizations_and_reads_go_first(read, write, error):
-    """D8: a typo refuses to boot (apps/souls/apps.py) instead of failing at the first fanout()."""
+    """D8: a typo or a missing shard database refuses to boot (apps/souls/apps.py) instead of failing
+    at the first fanout()."""
     from django.core.exceptions import ImproperlyConfigured
 
     from apps.core.sharding import check_cut_over_settings
 
+    databases = {"default": {}, "civ_greek": {}, "civ_egyptian": {}}
     if error is None:
-        check_cut_over_settings(read, write)
+        check_cut_over_settings(read, write, databases)
     else:
         with pytest.raises(ImproperlyConfigured, match=error):
-            check_cut_over_settings(read, write)
+            check_cut_over_settings(read, write, databases)
+
+
+def test_the_cut_over_check_reads_the_real_databases_setting_by_default():
+    from django.core.exceptions import ImproperlyConfigured
+
+    from apps.core.sharding import check_cut_over_settings
+
+    check_cut_over_settings([], [])
+    with pytest.raises(ImproperlyConfigured, match="civ_egyptian"):
+        check_cut_over_settings(["EGYPTIAN"], [])  # no settings file here configures civ_egyptian

@@ -169,10 +169,11 @@ def alias_for_civilization(civ):
     return f"civ_{Civilization(civ).value.lower()}"
 
 
-def check_cut_over_settings(read, write):
-    """SHARD_READ_CIVS / SHARD_WRITE_CIVS (D8) name civilizations that have a shard, and a civilization's
-    writes are cut over only after its reads. Raised at startup (`apps/souls/apps.py`), so a typo such as
-    `CHINA` refuses to boot instead of surfacing at the first `fanout()`."""
+def check_cut_over_settings(read, write, databases=None):
+    """SHARD_READ_CIVS / SHARD_WRITE_CIVS (D8) name civilizations that have a shard, each one's alias is
+    configured in DATABASES, and a civilization's writes are cut over only after its reads. Raised at
+    startup (`apps/souls/apps.py`), so a typo such as `CHINA` or a missing `civ_greek` database refuses
+    to boot instead of surfacing at the first `fanout()`."""
     from django.core.exceptions import ImproperlyConfigured
 
     from apps.souls.models import Civilization
@@ -185,6 +186,10 @@ def check_cut_over_settings(read, write):
     early = sorted(set(write) - set(read))
     if early:
         raise ImproperlyConfigured(f"SHARD_WRITE_CIVS {early} are not in SHARD_READ_CIVS: cut reads over first")
+    databases = settings.DATABASES if databases is None else databases
+    missing = sorted(alias_for_civilization(c) for c in read if alias_for_civilization(c) not in databases)
+    if missing:
+        raise ImproperlyConfigured(f"SHARD_READ_CIVS needs DATABASES entries {missing}")
 
 
 def fanout():
