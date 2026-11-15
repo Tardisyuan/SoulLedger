@@ -233,6 +233,22 @@ def _urls(case, world):
     return shadow.urls_for(ENDPOINTS, case, answer, random.Random(f"{SEED}:{case}"))
 
 
+def _unstable(client, url, base, case):
+    """The single database answers the same paged question twice differently."""
+    with override_settings(SHARD_READ_CIVS=[]):
+        return shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ())) != base
+
+
+def _one_page(client, url, civs, case):
+    original = PageNumberPagination.page_size
+    PageNumberPagination.page_size = 10_000
+    try:
+        with override_settings(SHARD_READ_CIVS=civs):
+            return shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
+    finally:
+        PageNumberPagination.page_size = original
+
+
 @sharded
 @pytest.mark.parametrize("case", sorted(ENDPOINTS))
 def test_cut_over_reads_answer_like_the_single_database(world, case):
@@ -246,6 +262,12 @@ def test_cut_over_reads_answer_like_the_single_database(world, case):
                 base = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
             with override_settings(SHARD_READ_CIVS=list(CIVS)):
                 cut = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
+            if base != cut and _unstable(client, url, base, case):
+                # The single database itself paged it differently: an order with ties (ApprovalNode by
+                # `order`) puts a tied row on two pages and another on none, and PostgreSQL does not keep tie
+                # order between queries. Compared again on one page; the merge's slicing is held exactly by
+                # test_fanout_slices_equal_the_single_database (a total order).
+                base, cut = (_one_page(client, url, civs, case) for civs in ([], list(CIVS)))
             if base != cut:
                 mismatches.append(f"{who} GET {url}: {shadow.diff(base, cut)}")
             elif shadow.has_data(base):
