@@ -6,8 +6,8 @@ import s from "./dossier.module.css";
 
 /**
  * 卷宗脊(Design 第三十批 第 3 步第 2 条,定稿):页头下方,高 `--spine-h`。四家位置、高度、左右留白一样,只有形状不同。
- * 已行 = 文明色(civT)实线实心;待行 = 灰虚线空心;现在 = 全图唯一的 metal,外加一圈 `--now-breath` 的呼吸
- * (减少动效时不呼吸)。几何照 Design 的 940×44 定稿 SVG(`spines/spine-*.svg`);颜色不写死,读令牌
+ * 已行 = 文明色(civT)实线实心;待行 = 灰虚线空心;现在 = 全图唯一的 metal,外加一圈呼吸:播 `--now-breath-count` 次就停,
+ * 「现在」换站或重新进页时再播(svg 按 `now` 换 key);减少动效时不呼吸。几何照 Design 的 940×44 定稿 SVG(`spines/spine-*.svg`);颜色不写死,读令牌
  * (`dossier.module.css` 的 .done / .todo / .now),所以随 `[data-civ]` 与深浅主题走。
  *
  * 为什么是组件而不是 public/ 下的 SVG:定稿 SVG 把「现在」画死在一个位置(地府第一殿、埃及天平 …),
@@ -20,7 +20,7 @@ export function DossierSpine({ civ, now, testId = "dossier-spine" }: { civ: Spin
   const label = t(`caseDesk.dossier.spine.${civ}.aria`);
   return (
     <div className={s.spine} data-testid={testId} data-now={now ? JSON.stringify(now) : undefined}>
-      <svg viewBox="0 0 940 44" preserveAspectRatio="xMinYMid meet" role="img" aria-label={label} className={s.spineSvg}>
+      <svg key={now ? JSON.stringify(now) : ""} viewBox="0 0 940 44" preserveAspectRatio="xMinYMid meet" role="img" aria-label={label} className={s.spineSvg}>
         {civ === "cn" && <CnSpine now={now?.civ === "cn" ? now : null} />}
         {civ === "eu" && <EuSpine now={now?.civ === "eu" ? now : null} />}
         {civ === "eg" && <EgSpine now={now?.civ === "eg" ? now : null} />}

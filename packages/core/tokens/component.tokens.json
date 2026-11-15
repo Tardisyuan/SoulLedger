@@ -16,8 +16,9 @@
   },
   "stamp": {
     "$type": "duration",
+    "$description": "落印 (Design batch 53 motion.seal): scale --stamp-scale -> 1, opacity 0 -> 1, no halo, for every seal moment. The same numbers as SEAL_MOTION in packages/core/src/config/motion.ts (sealMotionTokens.test.ts).",
     "$value": {
-      "value": 240,
+      "value": 200,
       "unit": "ms"
     }
   },
@@ -25,12 +26,29 @@
     "$type": "cubicBezier",
     "$value": [0.2, 0.8, 0.2, 1]
   },
+  "stamp-scale": {
+    "$type": "number",
+    "$value": 1.18
+  },
+  "stamp-reduced": {
+    "$type": "duration",
+    "$description": "Reduce motion: the seal fades in over this, without the scale.",
+    "$value": {
+      "value": 120,
+      "unit": "ms"
+    }
+  },
   "now-breath": {
     "$type": "duration",
+    "$description": "The spine's current point breathes --now-breath-count times, then stays still (Design batch 53 motion.breathe; BREATHE_MOTION).",
     "$value": {
-      "value": 3.2,
+      "value": 2.4,
       "unit": "s"
     }
+  },
+  "now-breath-count": {
+    "$type": "number",
+    "$value": 3
   },
   "judge-w": {
     "$type": "dimension",

@@ -69,6 +69,33 @@ describe("DossierSpine", () => {
   });
 });
 
+describe("DossierSpine 的呼吸重播(第五十三批 G2)", () => {
+  // 呼吸只播三次(CSS,sealMotionTokens.test.ts 守着);「现在」换站时要再播 —— svg 换 key 重挂,CSS 动画从头来。
+  // 变异:去掉 svg 上的 key → 第一条红(同一个节点)。
+  const svg = (c: HTMLElement) => c.querySelector("svg")!;
+  it("「现在」换了一站:脊重新挂上,呼吸从头播", () => {
+    const { container, rerender } = wrap(<DossierSpine civ="cn" now={{ civ: "cn", at: "hall", n: 5 }} />);
+    const before = svg(container);
+    rerender(
+      <I18nProvider>
+        <DossierSpine civ="cn" now={{ civ: "cn", at: "hall", n: 6 }} />
+      </I18nProvider>
+    );
+    expect(svg(container)).not.toBe(before);
+  });
+
+  it("同一站再渲染一次:不重挂,呼吸不会每次渲染都重来", () => {
+    const { container, rerender } = wrap(<DossierSpine civ="cn" now={{ civ: "cn", at: "hall", n: 5 }} />);
+    const before = svg(container);
+    rerender(
+      <I18nProvider>
+        <DossierSpine civ="cn" now={{ civ: "cn", at: "hall", n: 5 }} />
+      </I18nProvider>
+    );
+    expect(svg(container)).toBe(before);
+  });
+});
+
 describe("DossierSeal", () => {
   it("地府方印的四个字随殿变,右起竖读;不知道第几殿是「冥府之印」", () => {
     const { container, rerender } = wrap(<DossierSeal civ="cn" hall={5} />);
@@ -90,7 +117,14 @@ describe("DossierSeal", () => {
       </I18nProvider>
     );
     expect(screen.getByTestId("dossier-seal")).toHaveAccessibleName("希腊 · 陶片");
-    expect(screen.getByTestId("dossier-seal").getAttribute("class")).toMatch(/stampIn/);
+    // 全站同一下落印(第五十三批 G1):globals.css 的 `.stamp-in`,不是模块里自己的一份。
+    expect(screen.getByTestId("dossier-seal")).toHaveClass("stamp-in");
+    rerender(
+      <I18nProvider>
+        <DossierSeal civ="gr" />
+      </I18nProvider>
+    );
+    expect(screen.getByTestId("dossier-seal")).not.toHaveClass("stamp-in");
   });
 });
 

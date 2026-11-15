@@ -5,7 +5,8 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import zh from "@soulledger/core/messages/zh-Hans.json";
-import { Animated, StyleSheet } from "react-native";
+import { SEAL_MOTION } from "@soulledger/core/config/motion";
+import { AccessibilityInfo, Animated, StyleSheet } from "react-native";
 
 import { HOLD_TO_SEAL_MS, SEAL_LIFT, SealSheet } from "../screens/sealSheet";
 import { verdictFailure } from "../screens/swipe";
@@ -109,20 +110,44 @@ describe("按住落印", () => {
     expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
   });
 
-  it("stamps: the solid seal hangs lifted while held and drops to 1× when it lands", async () => {
+  // 第五十三批 G1: one seal motion everywhere (SEAL_MOTION). Lifted at 1.18× while held, a 200 ms timing to 1× on the
+  // seal's curve when it lands; no spring, no spreading copy (the halo). Mutation seen red: the spring put back.
+  it("stamps: the solid seal hangs lifted at 1.18× while held and drops to 1× in 200 ms, with no halo copy", async () => {
     mockConclude.mockResolvedValue({ data: {} });
     open();
     const scale = () => (StyleSheet.flatten(screen.getByTestId("seal-solid", { includeHiddenElements: true }).props.style).transform as { scale: number }[])[0].scale;
     expect(scale()).toBe(1);
     fireEvent.press(screen.getByTestId("seal-option-RETRY"));
     fireEvent(screen.getByTestId("seal-hold"), "pressIn");
-    expect(scale()).toBe(SEAL_LIFT);
-    expect(SEAL_LIFT).toBeGreaterThan(1);
+    expect(SEAL_LIFT).toBe(SEAL_MOTION.scaleFrom);
+    expect(scale()).toBe(1.18);
+    const timing = jest.spyOn(Animated, "timing");
     const spring = jest.spyOn(Animated, "spring");
     fireEvent(screen.getByTestId("seal-hold"), "longPress");
-    // The drop is a spring to 1× on the native driver (jest does not run the frames, so ask what was started).
-    expect(spring).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, useNativeDriver: true }));
+    // jest does not run the frames, so ask what was started.
+    expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, duration: 200, useNativeDriver: true }));
+    expect(spring).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("seal-ink", { includeHiddenElements: true })).toBeNull();
+    timing.mockRestore();
     spring.mockRestore();
+    await act(async () => {});
+  });
+
+  it("reduce motion: no lift while held, and the seal fades in over 120 ms when it lands", async () => {
+    const rm = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    mockConclude.mockResolvedValue({ data: {} });
+    open();
+    await act(async () => {});
+    const scale = () => (StyleSheet.flatten(screen.getByTestId("seal-solid", { includeHiddenElements: true }).props.style).transform as { scale: number }[])[0].scale;
+    fireEvent.press(screen.getByTestId("seal-option-RETRY"));
+    fireEvent(screen.getByTestId("seal-hold"), "pressIn");
+    expect(scale()).toBe(1);
+    const timing = jest.spyOn(Animated, "timing");
+    fireEvent(screen.getByTestId("seal-hold"), "longPress");
+    expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, duration: SEAL_MOTION.reduced.durationMs }));
+    expect(timing).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: SEAL_MOTION.durationMs }));
+    timing.mockRestore();
+    rm.mockResolvedValue(false);
     await act(async () => {});
   });
 

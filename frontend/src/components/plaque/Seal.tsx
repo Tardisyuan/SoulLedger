@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { civSkinOf } from "@/src/lib/civSkin";
-import { MOTION_DURATIONS, MOTION_EASINGS, prefersReducedMotion } from "@/lib/motion";
 
 /**
  * 印(规范 v3 `Seal`,2026-10-02 取代 v2 的实底印):描边几何印 —— 2px 外框 + 内缩 6px 的
@@ -47,41 +45,10 @@ export function sealGlyphsFor(civ: SealCiv, glyphs: readonly string[] | null | u
 }
 
 /**
- * 盖印(v3 第 7 轮 `App.tsx` 动效表「印落下」):scale 1.7 → .96 → 1、opacity 0 → 1,320ms,
- * 强调曲线 cubic-bezier(.2,.8,.3,1)(token `drop`)。.96 落在 75% 处(原型 `@keyframes stamp-down`
- * 的结构)。取代 v2 的「下落 28px → 压实」。
- * 减少动态效果时不播:印直接是落定的样子。WAAPI,不进 motion —— 多段关键帧、可 cancel()。
+ * 落印(Design 第五十三批 G1):每变一次 `stampKey`(且非 0)根元素换一次 key,重新挂上 `.stamp-in`,CSS 播一次
+ * --stamp-scale → 1、透明度 0 → 1、200ms(globals.css)。没有光晕;减少动态效果时不缩放、120ms 淡入。
+ * 与案卷台判栏的 `DossierSeal`、官员 App 的落印是同一下。
  */
-export const STAMP_KEYFRAMES: Keyframe[] = [
-  { offset: 0, opacity: 0, transform: "scale(1.7)" },
-  { offset: 0.75, opacity: 1, transform: "scale(0.96)" },
-  { offset: 1, opacity: 1, transform: "scale(1)" },
-];
-
-export const STAMP_GLOW_KEYFRAMES: Keyframe[] = [
-  { boxShadow: "0 0 0 0 oklch(var(--color-glow) / 0.75)" },
-  { boxShadow: "0 0 0 18px oklch(var(--color-glow) / 0)" },
-];
-
-function useStamp(stampKey: number | undefined) {
-  const root = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const el = root.current;
-    if (!stampKey || !el || typeof el.animate !== "function" || prefersReducedMotion()) return;
-    const press = el.animate(STAMP_KEYFRAMES, {
-      duration: MOTION_DURATIONS.slow * 1000,
-      easing: `cubic-bezier(${MOTION_EASINGS.drop.join(",")})`,
-    });
-    // 落定那一下,一圈文明光从印边散开(徽记「盖印」那一闪,2026-11-10)。
-    const glow = el.animate(STAMP_GLOW_KEYFRAMES, { duration: 700, delay: MOTION_DURATIONS.slow * 750, easing: "ease-out" });
-    return () => {
-      press.cancel();
-      glow.cancel();
-    };
-  }, [stampKey]);
-  return root;
-}
-
 export function Seal({
   size,
   civ,
@@ -107,7 +74,6 @@ export function Seal({
 }) {
   const { t } = useI18n();
   const { user } = useTenant();
-  const root = useStamp(stampKey);
   const skin = civ ?? civSkinOf(user?.tenant?.code ?? null);
   if (!isSealCiv(skin)) return null;
 
@@ -119,14 +85,14 @@ export function Seal({
 
   return (
     <span
-      ref={root}
+      key={stampKey || 0}
       role={decorative ? undefined : "img"}
       aria-label={decorative ? undefined : label}
       aria-hidden={decorative ? true : undefined}
       data-civ={skin}
       data-small={small ? "" : undefined}
       data-testid={decorative ? undefined : "seal"}
-      className={`seal ${className}`}
+      className={`seal ${stampKey ? "stamp-in " : ""}${className}`}
       style={{ width: size, height: skin === "eg" ? Math.round(size * EG_ASPECT) : size }}
     >
       <span aria-hidden="true" className="seal-glyphs" style={{ fontSize }}>

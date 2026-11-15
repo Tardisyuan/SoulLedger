@@ -40,8 +40,8 @@ export const v4 = {
       "sD": "#7E362B",
       "mD": "#D7A85B",
       "mL": "#886116",
-      "sideD": "#270E06",
-      "sideL": "#FFDCCE"
+      "sideD": "#2B110C",
+      "sideL": "#FFE4DF"
     },
     "eu": {
       "glow": "#A0709F",
@@ -51,8 +51,8 @@ export const v4 = {
       "sD": "#5A3A63",
       "mD": "#B9C2CF",
       "mL": "#5C6878",
-      "sideD": "#1D0F25",
-      "sideL": "#F2DDFF"
+      "sideD": "#231226",
+      "sideL": "#F9E2FF"
     },
     "eg": {
       "glow": "#5F93C8",
@@ -62,8 +62,8 @@ export const v4 = {
       "sD": "#2B4E79",
       "mD": "#E3CB53",
       "mL": "#716400",
-      "sideD": "#051729",
-      "sideL": "#CEEAFF"
+      "sideD": "#071A2D",
+      "sideL": "#DFEDFF"
     },
     "gr": {
       "glow": "#5F9C94",
@@ -73,8 +73,8 @@ export const v4 = {
       "sD": "#28544F",
       "mD": "#CB7A5B",
       "mL": "#86422A",
-      "sideD": "#001C14",
-      "sideL": "#C6F2E2"
+      "sideD": "#011F19",
+      "sideL": "#C8F7EB"
     }
   }
 } as const;

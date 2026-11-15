@@ -272,17 +272,17 @@
      `--text-*: initial` 清掉 Tailwind 的默认档,只剩这七个名字;字重只用 400 / 500 / 600。 */
   /* 2026-11-15(设计参照 §3,用户采纳):十档 11(只给大写小标签)/ 12 / 14 / 16 / 20 / 24 / 32 / 40 / 56 / 88,
      正文 13 → 14,行高落 4px 格;去掉 13、15、18、28。名字暂不动(约 2100 处调用点),只改值:
-     sm = 14 是正文;md = 16/28 是「卷」记录正文;xl 与 dossier 同为 32/40。2xs 的 0.1em 字距从档上拿掉,
+     sm = 14/20 是正文;md = 16/24 是「卷」记录正文;xs = 12/16(第五十三批 G3 的表:行高全在 4px 格上,12 配 16、16 配 24);xl 与 dossier 同为 32/40。2xs 的 0.1em 字距从档上拿掉,
      只给大写标签(下面 base 层 `.text-2xs.uppercase`);两档展示字号用 clamp 在 360–1240 视口间连续变。 */
   --text-*: initial;
   --text-2xs: 11px;
   --text-2xs--line-height: 16px;
   --text-xs: 12px;
-  --text-xs--line-height: 20px;
+  --text-xs--line-height: 16px;
   --text-sm: 14px;
   --text-sm--line-height: 20px;
   --text-md: 16px;
-  --text-md--line-height: 28px;
+  --text-md--line-height: 24px;
   --text-md--font-weight: 600;
   --text-lg: 20px;
   --text-lg--line-height: 28px;
@@ -626,22 +626,22 @@
     --color-civ-cn-ink: 0.780211 0.090787 36.1736; /* #EBA38F */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
     --color-civ-cn-metal: 0.759187 0.109953 78.2056; /* #D7A85B */
-    --color-civ-cn-side: 0.201116 0.045136 39.3472; /* #270E06 */
+    --color-civ-cn-side: 0.216008 0.044517 32.2021; /* #2B110C */
     --color-civ-eu: 0.402590 0.077427 318.6416; /* #5A3A63 */
     --color-civ-eu-ink: 0.780171 0.095377 311.9891; /* #CCA6E4 */
     --color-civ-eu-glow: 0.610358 0.089013 327.2939; /* #A0709F */
     --color-civ-eu-metal: 0.811059 0.020830 257.4811; /* #B9C2CF */
-    --color-civ-eu-side: 0.199771 0.046522 312.1737; /* #1D0F25 */
+    --color-civ-eu-side: 0.215635 0.045079 321.4206; /* #231226 */
     --color-civ-eg: 0.418933 0.082983 254.5438; /* #2B4E79 */
     --color-civ-eg-ink: 0.779300 0.093304 250.0374; /* #89BCF1 */
     --color-civ-eg-glow: 0.648635 0.097389 249.9778; /* #5F93C8 */
     --color-civ-eg-metal: 0.840099 0.140332 97.9493; /* #E3CB53 */
-    --color-civ-eg-side: 0.200146 0.043841 249.9110; /* #051729 */
+    --color-civ-eg-side: 0.213251 0.045308 250.4658; /* #071A2D */
     --color-civ-gr: 0.412855 0.049685 185.8153; /* #28544F */
     --color-civ-gr-ink: 0.779070 0.094463 171.8769; /* #73CBB0 */
     --color-civ-gr-glow: 0.648865 0.064720 185.1646; /* #5F9C94 */
     --color-civ-gr-metal: 0.659981 0.110769 41.5329; /* #CB7A5B */
-    --color-civ-gr-side: 0.201596 0.039412 171.1871; /* #001C14 */
+    --color-civ-gr-side: 0.214594 0.038473 177.1058; /* #011F19 */
     --color-main: var(--color-civ-neutral);
     --color-main-ink: var(--color-civ-neutral-ink);
     --color-glow: var(--color-civ-neutral-glow);
@@ -726,19 +726,19 @@
     --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
     --color-civ-cn-ink: 0.458890 0.104876 35.6528; /* #883F2C */
     --color-civ-cn-metal: 0.520586 0.099805 78.4603; /* #886116 */
-    --color-civ-cn-side: 0.919968 0.043456 43.0308; /* #FFDCCE */
+    --color-civ-cn-side: 0.939480 0.030589 30.1804; /* #FFE4DF */
     --color-civ-eu: 0.496494 0.097231 319.2785; /* #7A4F85 */
     --color-civ-eu-ink: 0.459079 0.115783 311.8177; /* #6D4286 */
     --color-civ-eu-metal: 0.513029 0.029377 255.6539; /* #5C6878 */
-    --color-civ-eu-side: 0.924792 0.050605 312.6535; /* #F2DDFF */
+    --color-civ-eu-side: 0.939945 0.045645 319.2164; /* #F9E2FF */
     --color-civ-eg: 0.515592 0.103715 255.1595; /* #3C69A2 */
     --color-civ-eg-ink: 0.459325 0.117055 250.3637; /* #175A96 */
     --color-civ-eg-metal: 0.500161 0.104135 100.4376; /* #716400 */
-    --color-civ-eg-side: 0.923207 0.041190 240.3821; /* #CEEAFF */
+    --color-civ-eg-side: 0.941063 0.028629 254.6783; /* #DFEDFF */
     --color-civ-gr: 0.507348 0.062072 185.1700; /* #37716A */
     --color-civ-gr-ink: 0.459924 0.084498 172.5200; /* #0E6753 */
     --color-civ-gr-metal: 0.460510 0.100199 39.7875; /* #86422A */
-    --color-civ-gr-side: 0.925795 0.050240 171.0762; /* #C6F2E2 */
+    --color-civ-gr-side: 0.940078 0.050732 177.8776; /* #C8F7EB */
     /* 浅色从暗到亮。 */
     --color-chart-1: 0.259075 0.045425 251.0858;
     --color-chart-2: 0.360350 0.044648 250.3338;
@@ -811,16 +811,20 @@
      第 3 步(第十节):
        --seal-size   96 卷宗页 / 72 灵魂端 / 40 列表(这里是 96;小印由组件的 size 给)
        --mark        功过记号 16px,墨色(`MeritMark`)
-       --stamp / --stamp-ease   落印 240ms,从 1.18 倍落到 1,只播一次
-       --now-breath  脊上「现在」的呼吸周期
+       --stamp / --stamp-ease / --stamp-scale   落印(第五十三批 G1,四处同一下):200ms,从 1.18 倍落到 1,透明度 0 → 1,
+                     只播一次,没有光晕;--stamp-reduced 是减少动态效果时的 120ms 淡入(不缩放)。类名 `.stamp-in`
+       --now-breath / --now-breath-count   脊上「现在」的呼吸(第五十三批 G2):周期 2.4s,播三次就停
        --judge-w     卷宗页右栏(台)宽
        --opt-h       去处 1–4 的行高:桌面 44、触屏 56 */
   :root {
     --seal-size: 96px;
     --mark: 16px;
-    --stamp: 240ms;
+    --stamp: 200ms;
     --stamp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --now-breath: 3.2s;
+    --stamp-scale: 1.18;
+    --stamp-reduced: 120ms;
+    --now-breath: 2.4s;
+    --now-breath-count: 3;
     --judge-w: 380px;
     --opt-h: 44px;
     --topline: 2px;
@@ -828,32 +832,32 @@
     --stack-w: 340px;
     --spine-h: 44px;
     --toast-bar: 3px;
-    --juan: 400 16px/28px var(--font-title);
-    --juan-strong: 600 16px/28px var(--font-title);
+    --juan: 400 16px/24px var(--font-title);
+    --juan-strong: 600 16px/24px var(--font-title);
     /* 语域令牌(fe-tokens §3.1 L1′,2026-11-14):type.juan.* 是「卷」(记录),type.tai.* 是「台」(控件),
-       另有门栏与功过记号两个部件字面。值照三个 .module.css 原来写死的字号 / 行高,一个不改;
+       另有门栏与功过记号两个部件字面。值起初照三个 .module.css 原来写死的字号 / 行高;第五十三批 G3 收进十档:13 → 14、15 → 16(触屏),卷 16/24、台 14/20;
        `--x-size` / `--x-leading` 是同一令牌的字号与行高,给只设字号(或字号 + 行高)的地方用 ——
        换成 font 简写会连字族、字重一起重置。整行的用法见下面的 `@utility juan` / `@utility tai`。 */
-    --juan-key: 400 13px/20px var(--font-sans);
-    --juan-key-size: 13px;
+    --juan-key: 400 14px/20px var(--font-sans);
+    --juan-key-size: 14px;
     --juan-key-leading: 20px;
     --juan-head: 400 12px/16px var(--font-sans);
     --juan-head-size: 12px;
     --juan-head-leading: 16px;
-    --juan-num: 400 13px/20px var(--font-mono);
-    --juan-num-size: 13px;
+    --juan-num: 400 14px/20px var(--font-mono);
+    --juan-num-size: 14px;
     --juan-title: 600 32px/40px var(--font-title);
     --juan-title-size: 32px;
     --juan-title-leading: 40px;
     --juan-name: 600 16px/24px var(--font-title);
     --juan-name-size: 16px;
     --juan-name-leading: 24px;
-    --tai: 400 14px/22px var(--font-sans);
+    --tai: 400 14px/20px var(--font-sans);
     --tai-size: 14px;
-    --tai-touch: 400 15px/24px var(--font-sans);
-    --tai-touch-size: 15px;
-    --tai-label: 400 13px/20px var(--font-sans);
-    --tai-label-size: 13px;
+    --tai-touch: 400 16px/24px var(--font-sans);
+    --tai-touch-size: 16px;
+    --tai-label: 400 14px/20px var(--font-sans);
+    --tai-label-size: 14px;
     --tai-label-leading: 20px;
     --tai-caption: 400 12px/16px var(--font-sans);
     --tai-caption-size: 12px;
@@ -1323,15 +1327,6 @@
     }
   }
 
-  /* 空状态的主视觉轻轻呼吸(v4「10」):5s 一次,缩放 1 → 1.035,透明度 .5 → .72。出错不动。
-     减少动态效果时停在终态(下面的 reduced-motion 块与 reducedMotionContract)。 */
-  /* `opacity: .5` 是终态本身:减少动态效果时那条 1ms 规则让动画跑一次就结束，结束后回到这里的值。
-     此前这里没写，结束后是 1 —— 印比正常时深一倍，不是「停在终态」。 */
-  .empty-breathe {
-    animation: empty-breathe 5s ease-in-out infinite;
-    transform-origin: center;
-    opacity: 0.5;
-  }
   .seal[data-civ="eu"] {
     border-radius: 50%;
   }
@@ -1384,17 +1379,6 @@ html.theme-switching *::after {
   transition-timing-function: var(--ease-enter);
 }
 
-@keyframes empty-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1.035);
-    opacity: 0.72;
-  }
-}
 
 /* 概览进页(v4 第七批 S04 `.roll` / `.ring`):主卡的大数字从 0 滚到实际值,「本月已结」环从 0 扫到实际百分比,
    900ms、进场曲线,随元素挂上(数据到了)播一次。数字只用 CSS:`--n` 注册成整数才能被插值,`counter()` 把它写出来。
@@ -2591,8 +2575,33 @@ li:last-child > .route-row {
   }
 }
 
+/* ── 落印(第五十三批 G1):审判页、案卷台判栏、审判队列同一下 ─────────────────────────────
+   `Seal` 与 `DossierSeal` 落印时挂 `.stamp-in`,播一次:--stamp-scale → 1、透明度 0 → 1、--stamp、--stamp-ease。
+   没有光晕(此前审判页是 1.7 倍加一圈文明光,Design 定为去掉)。减少动态效果:不缩放,--stamp-reduced 淡入 ——
+   类选择器压过上面那条 `*` 的 1ms,两边都是 !important。数与 App 的 SEAL_MOTION 相同(sealMotionTokens.test.ts)。 */
+.stamp-in {
+  animation: seal-stamp var(--stamp) var(--stamp-ease) both;
+}
+@keyframes seal-stamp {
+  from {
+    transform: scale(var(--stamp-scale));
+    opacity: 0;
+  }
+}
+@keyframes seal-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp-in {
+    animation-name: seal-fade !important;
+    animation-duration: var(--stamp-reduced) !important;
+  }
+}
+
 /* ── 徽记效果铺开(2026-11-10 用户定:灵魂详情页头、判决落印、概览 KPI 卡、欢迎页)──────────────
-   落印的光环在 Seal.tsx(WAAPI);欢迎页用落地页同一个 LandingEmblem(描线 + 扫光)。 */
+   欢迎页用落地页同一个 LandingEmblem(描线 + 扫光)。 */
 .soul-head-emblem {
   opacity: 0.3;
   animation: soul-head-emblem-in 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) 0.15s backwards;

@@ -170,16 +170,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.201116, 0.045136, 39.3472],
-            "hex": "#270E06"
+            "components": [0.216008, 0.044517, 32.2021],
+            "hex": "#2B110C"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.919968, 0.043456, 43.0308],
-                  "hex": "#FFDCCE"
+                  "components": [0.939480, 0.030589, 30.1804],
+                  "hex": "#FFE4DF"
                 }
               }
             }
@@ -254,16 +254,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.199771, 0.046522, 312.1737],
-            "hex": "#1D0F25"
+            "components": [0.215635, 0.045079, 321.4206],
+            "hex": "#231226"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.924792, 0.050605, 312.6535],
-                  "hex": "#F2DDFF"
+                  "components": [0.939945, 0.045645, 319.2164],
+                  "hex": "#F9E2FF"
                 }
               }
             }
@@ -338,16 +338,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.200146, 0.043841, 249.911],
-            "hex": "#051729"
+            "components": [0.213251, 0.045308, 250.4658],
+            "hex": "#071A2D"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.923207, 0.04119, 240.3821],
-                  "hex": "#CEEAFF"
+                  "components": [0.941063, 0.028629, 254.6783],
+                  "hex": "#DFEDFF"
                 }
               }
             }
@@ -422,16 +422,16 @@
         "side": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.201596, 0.039412, 171.1871],
-            "hex": "#001C14"
+            "components": [0.214594, 0.038473, 177.1058],
+            "hex": "#011F19"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.925795, 0.05024, 171.0762],
-                  "hex": "#C6F2E2"
+                  "components": [0.940078, 0.050732, 177.8776],
+                  "hex": "#C8F7EB"
                 }
               }
             }

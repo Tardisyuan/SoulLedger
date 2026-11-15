@@ -82,22 +82,22 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-ink-mid": { light: "#5e6166", dark: "#a1a4a8" },
   "--color-civ-cn": { light: "#a64a3b", dark: "#7e362b" },
   // civT / metal / side:设计参照 2026-11-15 §3.1(用户采纳「颜色按建议改」):civT 等明度(深 L .78 / 浅 L .46),
-  // 门栏底彩度深 .045 / 浅 .050,埃及与希腊的印(= metal)拉开。solid 与 glow 不动。
+  // 埃及与希腊的印(= metal)拉开。solid 与 glow 不动。门栏底(side)按第五十三批 G3,见下面「door-rail ground」。
   "--color-civ-cn-ink": { light: "#883f2c", dark: "#eba38f" },
   "--color-civ-cn-metal": { light: "#886116", dark: "#d7a85b" },
-  "--color-civ-cn-side": { light: "#ffdcce", dark: "#270e06" },
+  "--color-civ-cn-side": { light: "#ffe4df", dark: "#2b110c" },
   "--color-civ-eu": { light: "#7a4f85", dark: "#5a3a63" },
   "--color-civ-eu-ink": { light: "#6d4286", dark: "#cca6e4" },
   "--color-civ-eu-metal": { light: "#5c6878", dark: "#b9c2cf" },
-  "--color-civ-eu-side": { light: "#f2ddff", dark: "#1d0f25" },
+  "--color-civ-eu-side": { light: "#f9e2ff", dark: "#231226" },
   "--color-civ-eg": { light: "#3c69a2", dark: "#2b4e79" },
   "--color-civ-eg-ink": { light: "#175a96", dark: "#89bcf1" },
   "--color-civ-eg-metal": { light: "#716400", dark: "#e3cb53" },
-  "--color-civ-eg-side": { light: "#ceeaff", dark: "#051729" },
+  "--color-civ-eg-side": { light: "#dfedff", dark: "#071a2d" },
   "--color-civ-gr": { light: "#37716a", dark: "#28544f" },
   "--color-civ-gr-ink": { light: "#0e6753", dark: "#73cbb0" },
   "--color-civ-gr-metal": { light: "#86422a", dark: "#cb7a5b" },
-  "--color-civ-gr-side": { light: "#c6f2e2", dark: "#001c14" },
+  "--color-civ-gr-side": { light: "#c8f7eb", dark: "#011f19" },
 };
 
 const CIVS = ["neutral", "cn", "eu", "eg", "gr"] as const;
@@ -212,6 +212,25 @@ describe("the paired texts the spec measures", () => {
   it.each(THEMES)("%s input border (faint) on s1 ≥ 3:1 — the line token would not be", (theme) => {
     expect(contrastRatio(rgbOf(theme, "--color-line-strong"), rgbOf(theme, "--color-surface-1"))).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(lineOn(theme, "--color-surface-1"), rgbOf(theme, "--color-surface-1"))).toBeLessThan(3);
+  });
+});
+
+/* 门栏底(Design 第五十三批 G3,用户取 Design 的建议):浅色 L .94,各家取这个明度下 sRGB 画得出的最高彩度
+ * (地府 .030、埃及 .029、欧洲 .046、希腊 .050 —— 四家浓淡不齐是色域使然);深色 L .215、彩度 .045,希腊在这个明度上限约 .039。
+ * 上面的 hex 表钉住值;这里钉住规则,免得照「浅 .050 一律」再改回去 —— 出域的值会被浏览器压回来,看起来一样,数却是错的。
+ * 变异:把浅色地府的 side 改回 #FFDCCE(L .92)→ 明度这条红。 */
+describe("door-rail ground (Design batch 53 G3)", () => {
+  const lch = (theme: ThemeName, civ: string) => resolveTriple(TOKENS_BY_THEME[theme], `--color-civ-${civ}-side`).trim().split(/\s+/).map(Number);
+  const LIGHT_CHROMA = { cn: 0.03, eg: 0.029, eu: 0.046, gr: 0.05 } as const;
+  it.each(Object.entries(LIGHT_CHROMA))("light %s: L .94 at its gamut's chroma", (civ, c) => {
+    const [L, C] = lch("light", civ);
+    expect(Math.abs(L - 0.94)).toBeLessThanOrEqual(0.002);
+    expect(Math.abs(C - c)).toBeLessThanOrEqual(0.0015);
+  });
+  it.each(["cn", "eu", "eg", "gr"])("dark %s: L .215 at chroma .045 (Greek at its .039 ceiling)", (civ) => {
+    const [L, C] = lch("dark", civ);
+    expect(Math.abs(L - 0.215)).toBeLessThanOrEqual(0.002);
+    expect(Math.abs(C - (civ === "gr" ? 0.039 : 0.045))).toBeLessThanOrEqual(0.001);
   });
 });
 

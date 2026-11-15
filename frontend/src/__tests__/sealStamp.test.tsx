@@ -1,54 +1,41 @@
 /**
- * 印落下(v3 第 7 轮 App.tsx 动效表):scale 1.7 → .96 → 1、opacity 0 → 1,320ms,强调曲线
- * cubic-bezier(.2,.8,.3,1)。减少动态效果:不播,印直接在最终位置。jsdom 没有 WAAPI,这里换上一个记录器。
+ * 落印(Design 第五十三批 G1):审判页的印与案卷台、官员 App 是同一下 —— globals.css 的 `.stamp-in`
+ * (200ms、1.18 → 1、透明度 0 → 1,参数由 sealMotionTokens.test.ts 守着)。此前这里是 WAAPI 的 1.7 → .96 → 1
+ * 加一圈文明光,Design 定为去掉。jsdom 不跑 CSS 动画,所以这里看的是:印挂没挂那个类、每次落印是不是重挂、
+ * 而且不再调 `element.animate`(没有自己那一份,也没有光晕)。
  */
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 import { Seal } from "@/src/components/plaque/Seal";
 
 const animate = jest.fn(() => ({ cancel: jest.fn() }));
-let reduced = false;
 
 beforeEach(() => {
   animate.mockClear();
-  reduced = false;
   Object.defineProperty(HTMLElement.prototype, "animate", { configurable: true, value: animate });
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: (q: string) => ({ matches: reduced && q.includes("reduce"), media: q }),
-  });
 });
 
 afterAll(() => {
   delete (HTMLElement.prototype as { animate?: unknown }).animate;
-  delete (window as { matchMedia?: unknown }).matchMedia;
 });
 
-it("stamps by scale 1.7 → .96 → 1 with opacity 0 → 1, 320ms on the emphasis curve", () => {
+it("stamps with the shared class, and draws no WAAPI drop or glow ring of its own", () => {
   render(<Seal size={72} civ="cn" stampKey={1} />);
-  // The press, then a ring of the civilization's glow as it lands (2026-11-10).
-  expect(animate).toHaveBeenCalledTimes(2);
-  const [glowFrames, glowOptions] = animate.mock.calls[1] as unknown as [Keyframe[], KeyframeAnimationOptions];
-  expect(JSON.stringify(glowFrames)).toContain("--color-glow");
-  expect(glowOptions.delay).toBe(240);
-  const [frames, options] = animate.mock.calls[0] as unknown as [Keyframe[], KeyframeAnimationOptions];
-  expect(frames).toEqual([
-    { offset: 0, opacity: 0, transform: "scale(1.7)" },
-    { offset: 0.75, opacity: 1, transform: "scale(0.96)" },
-    { offset: 1, opacity: 1, transform: "scale(1)" },
-  ]);
-  // No v2 drop left behind.
-  expect(JSON.stringify(frames)).not.toMatch(/translate/);
-  expect(options).toEqual({ duration: 320, easing: "cubic-bezier(0.2,0.8,0.3,1)" });
+  expect(screen.getByTestId("seal")).toHaveClass("seal", "stamp-in");
+  expect(animate).not.toHaveBeenCalled();
+});
+
+it("each new stampKey remounts the seal, so the one CSS drop plays again", () => {
+  const { rerender } = render(<Seal size={72} civ="cn" stampKey={1} />);
+  const first = screen.getByTestId("seal");
+  rerender(<Seal size={72} civ="cn" stampKey={1} />);
+  expect(screen.getByTestId("seal")).toBe(first);
+  rerender(<Seal size={72} civ="cn" stampKey={2} />);
+  expect(screen.getByTestId("seal")).not.toBe(first);
+  expect(screen.getByTestId("seal")).toHaveClass("stamp-in");
 });
 
 it("does not stamp without a stampKey", () => {
   render(<Seal size={72} civ="cn" />);
-  expect(animate).not.toHaveBeenCalled();
-});
-
-it("reduced motion: no animation, the seal is simply there", () => {
-  reduced = true;
-  render(<Seal size={72} civ="cn" stampKey={1} />);
-  expect(animate).not.toHaveBeenCalled();
+  expect(screen.getByTestId("seal")).not.toHaveClass("stamp-in");
 });

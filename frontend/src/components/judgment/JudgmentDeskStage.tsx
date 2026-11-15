@@ -156,8 +156,7 @@ export function MaterialDock({
  * 盖印确认层(原型 `ConfirmationView`):全屏一层,落判前最后看一眼「你选了什么、谁签、落印后进入审批 / 不可撤回」。
  *
  * 原型这一层整幅铺文明主色;这里是中性面 + 印 + 主按钮 —— 文明色只走五处,印与主按钮正是其中两处。
- * 落判成功后同一层翻成「已写入记录」,印按 `stampKey` 落下(320ms、ease-drop;减少动态时直接是
- * 落定的样子,见 `Seal`)。Esc / 「返回检查」关层,裁决与判词都还在页面上。
+ * 落判成功后同一层翻成「已写入记录」,印按 `stampKey` 落下(全站同一下 `.stamp-in`,见 `Seal`)。Esc / 「返回检查」关层,裁决与判词都还在页面上。
  */
 export function JudgmentConfirmLayer({
   open,

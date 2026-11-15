@@ -58,15 +58,21 @@
 .keep {
   display: inline;
 }
+/* 「现在」的呼吸(第五十三批 G2):周期 --now-breath、播 --now-breath-count 次就停,缩放 1 → 1.06、浓度 1 → .7。
+   「现在」换站或重新进页时重播 —— DossierSpine 按 `now` 给 svg 换 key,元素重挂,动画从头来。 */
 .breath {
-  animation: spine-now var(--now-breath, 3.2s) ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spine-now var(--now-breath) ease-in-out var(--now-breath-count);
 }
 @keyframes spine-now {
   0%,
   100% {
-    opacity: 0.25;
+    transform: scale(1);
+    opacity: 1;
   }
   50% {
+    transform: scale(1.06);
     opacity: 0.7;
   }
 }
@@ -113,25 +119,8 @@
 .onSealStroke {
   stroke: oklch(var(--color-canvas));
 }
-.stampIn {
-  animation: seal-stamp var(--stamp, 240ms) var(--stamp-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
-}
-@keyframes seal-stamp {
-  0% {
-    transform: scale(1.18);
-    opacity: 0;
-  }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .breath,
-  .stampIn {
+  .breath {
     animation: none;
   }
 }

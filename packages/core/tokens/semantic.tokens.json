@@ -787,7 +787,7 @@
             "unit": "px"
           },
           "lineHeight": {
-            "value": 28,
+            "value": 24,
             "unit": "px"
           }
         }
@@ -802,7 +802,7 @@
             "unit": "px"
           },
           "lineHeight": {
-            "value": 28,
+            "value": 24,
             "unit": "px"
           }
         }
@@ -813,7 +813,7 @@
           "fontFamily": "var(--font-sans)",
           "fontWeight": 400,
           "fontSize": {
-            "value": 13,
+            "value": 14,
             "unit": "px"
           },
           "lineHeight": {
@@ -843,7 +843,7 @@
           "fontFamily": "var(--font-mono)",
           "fontWeight": 400,
           "fontSize": {
-            "value": 13,
+            "value": 14,
             "unit": "px"
           },
           "lineHeight": {
@@ -894,7 +894,7 @@
             "unit": "px"
           },
           "lineHeight": {
-            "value": 22,
+            "value": 20,
             "unit": "px"
           }
         }
@@ -905,7 +905,7 @@
           "fontFamily": "var(--font-sans)",
           "fontWeight": 400,
           "fontSize": {
-            "value": 15,
+            "value": 16,
             "unit": "px"
           },
           "lineHeight": {
@@ -920,7 +920,7 @@
           "fontFamily": "var(--font-sans)",
           "fontWeight": 400,
           "fontSize": {
-            "value": 13,
+            "value": 14,
             "unit": "px"
           },
           "lineHeight": {
