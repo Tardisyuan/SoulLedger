@@ -56,13 +56,14 @@ export function usePermissions() {
 
   const isSystemAdmin = hallLessSystem && !viewing;
   const isCivilizationAdmin = user?.role === "ADMIN" && !user?.tenant && !viewing;
-  const ownsHall = (hallCode: string | null | undefined): boolean => {
+  /** `hallCivilization`:这一殿的文明(后端 `Tenant.civilization`,殿列表的行带着)。不给时只认得四个种子殿
+   *  (`TENANT_CODE_TO_CIVILIZATION`),别的殿答假(按钮不出,不会误开)。 */
+  const ownsHall = (hallCode: string | null | undefined, hallCivilization?: string | null): boolean => {
     if (isSystemAdmin) return true;
     if (!hallCode) return false;
     if (user?.tenant?.code === hallCode) return true;
-    // ponytail: 只认得四个种子殿的文明(`TENANT_CODE_TO_CIVILIZATION`);别的殿在这里答假(按钮不出,不会误开),
-    // 记录要是带上殿的文明再改读它。
-    return isCivilizationAdmin && !!user?.civilization && TENANT_CODE_TO_CIVILIZATION[hallCode] === user.civilization;
+    const civ = hallCivilization || TENANT_CODE_TO_CIVILIZATION[hallCode];
+    return isCivilizationAdmin && !!user?.civilization && civ === user.civilization;
   };
 
   return {

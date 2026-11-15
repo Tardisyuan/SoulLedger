@@ -311,3 +311,30 @@ def test_a_civilization_admin_enters_only_its_own_civilizations_halls():
     assert civ.post(f"/api/v1/tenants/{eg.code}/view/").status_code == 404
     assert civ.post(f"/api/v1/tenants/{unknown.code}/view/").status_code == 404
     assert system.post(f"/api/v1/tenants/{eg.code}/view/").status_code == 201
+
+
+def test_hall_stop_and_start_reach_only_the_callers_civilization():
+    """`POST /tenants/{code}/deactivate/` and `activate/` (`IsHallLessAdminPermission`, the hall through the scoped
+    queryset): SYSTEM_ADMIN any hall; a civilization ADMIN its civilization's halls, a hall it made included; another
+    civilization's hall and a hall of unknown civilization do not exist for it (404, and nothing changes); a hall's
+    own ADMIN is refused even its own hall (403). The web draws the buttons by the same rule (tenants/page.tsx)."""
+    cn, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})
+    made = Tenant.objects.create(code="CN_MADE", display_name="made", declared_civilization="CHINESE")
+    eg, _ = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "EG"})
+    unknown = Tenant.objects.create(code="UNKNOWN_HALL", display_name="unknown")
+    civ = _client(User.objects.create_user(username="civ-t", password="x", role=UserRole.ADMIN, tenant=None,
+                                           civilization="CHINESE"))
+    system = _client(User.objects.create_user(username="sys-t", password="x", role=UserRole.SYSTEM_ADMIN, tenant=None))
+    bound = _client(User.objects.create_user(username="adm-t", password="x", role=UserRole.ADMIN, tenant=cn), cn)
+
+    def active(hall):
+        return Tenant.objects.get(pk=hall.pk).is_active
+
+    for hall in (cn, made):
+        assert civ.post(f"/api/v1/tenants/{hall.code}/deactivate/").status_code == 200 and not active(hall)
+        assert civ.post(f"/api/v1/tenants/{hall.code}/activate/").status_code == 200 and active(hall)
+    for hall in (eg, unknown):
+        assert civ.post(f"/api/v1/tenants/{hall.code}/deactivate/").status_code == 404 and active(hall)
+    assert bound.post(f"/api/v1/tenants/{cn.code}/deactivate/").status_code == 403 and active(cn)
+    for hall in (eg, unknown):
+        assert system.post(f"/api/v1/tenants/{hall.code}/deactivate/").status_code == 200 and not active(hall)

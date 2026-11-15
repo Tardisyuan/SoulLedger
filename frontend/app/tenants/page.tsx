@@ -34,8 +34,11 @@ function TenantsPageContent() {
   const [creating, setCreating] = useState(false);
   const [deactivating, setDeactivating] = useState<Tenant | null>(null);
   const activate = useHallActiveMutation();
-  // 建殿 / 停用 / 启用是 `IsGlobalAdminPermission`(tenants/views.py):绑殿 ADMIN 点下去 403,所以只给 SYSTEM_ADMIN 画(P-07;分殿 1A 起文明 ADMIN 也不行)。
-  const { isSystemAdmin } = usePermissions();
+  // 建殿是 `IsGlobalAdminPermission`(tenants/views.py):只有 SYSTEM_ADMIN。停用 / 启用是 `IsHallLessAdminPermission`,
+  // 对象经 `get_queryset`(`scope_to_tenant(field="pk")`)取:SYSTEM_ADMIN 每一殿,文明 ADMIN 本文明各殿(别的文明 404),
+  // 绑殿 ADMIN 403 —— 按钮照这个画(P-07;分殿 1A)。
+  const { isSystemAdmin, isCivilizationAdmin, ownsHall } = usePermissions();
+  const mayToggle = (tenant: Tenant) => isSystemAdmin || (isCivilizationAdmin && ownsHall(tenant.code, tenant.civilization));
 
   const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: tenantKeys.page(page),
@@ -104,7 +107,7 @@ function TenantsPageContent() {
               <SealGlyphsCell tenant={tenant} />
             </td>
             <td className="px-4 py-3 text-right">
-              {!isSystemAdmin ? null : tenant.is_active === false ? (
+              {!mayToggle(tenant) ? null : tenant.is_active === false ? (
                 <Button
                   type="button"
                   variant="secondary"
