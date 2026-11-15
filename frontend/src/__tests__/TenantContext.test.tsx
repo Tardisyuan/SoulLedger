@@ -217,6 +217,7 @@ describe("TenantContext refresh on window focus", () => {
     const { result } = renderHook(() => useTenant(), { wrapper });
     await waitFor(() => expect(result.current.user?.permissions).toEqual(["soul.read"]));
     expect(mockMyRolePermissions).toHaveBeenCalledTimes(1);
+    expect(result.current.user?.civilization).toBeUndefined(); // the stored envelope had none; nor did this answer
 
     act(() => void window.dispatchEvent(new Event("focus")));
     expect(mockMyRolePermissions).toHaveBeenCalledTimes(1); // throttled: the load-time fetch was just now
@@ -225,6 +226,7 @@ describe("TenantContext refresh on window focus", () => {
       data: {
         role: "JUDGE", permissions: ["soul.read", "dispatch.read"], details: [],
         id: 1, tenant: { code: "EU_HEAVEN_HELL", display_name: "欧洲" }, extra_roles: ["GUARDIAN"],
+        civilization: "EUROPEAN",
       },
     });
     act(() => void jest.advanceTimersByTime(30_001));
@@ -233,6 +235,7 @@ describe("TenantContext refresh on window focus", () => {
     await waitFor(() => expect(result.current.user?.permissions).toEqual(["soul.read", "dispatch.read"]));
     expect(result.current.tenantCode).toBe("EU_HEAVEN_HELL");
     expect(result.current.user?.extra_roles).toEqual(["GUARDIAN"]);
+    expect(result.current.user?.civilization).toBe("EUROPEAN");
   });
 
   it("a failed focus refetch keeps the last answer instead of closing every gate", async () => {

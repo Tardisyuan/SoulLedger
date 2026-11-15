@@ -16352,7 +16352,7 @@ export interface components {
         };
         /**
          * @description `get_role_permissions` only: the caller's own answer also carries who they are now —
-         *     id, tenant (same shape as the login payload) and extra roles — so the web can refresh
+         *     id, tenant (same shape as the login payload), extra roles and civilization — so the web can refresh
          *     them on window focus instead of trusting a 24-hour cached envelope (rbac-web M-3).
          */
         MyRolePermissions: {
@@ -16362,6 +16362,7 @@ export interface components {
             id: number;
             tenant: components["schemas"]["LoginTenantRef"] | null;
             extra_roles: string[];
+            civilization: string | null;
         };
         NegativeConfessionList: {
             /** @description False: this case is not weighed and hears no denials. */

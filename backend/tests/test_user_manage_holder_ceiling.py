@@ -95,3 +95,20 @@ def test_an_account_holding_more_than_the_caller_is_out_of_reach(world):
     judge.refresh_from_db()
     peer.refresh_from_db()
     assert judge.is_active and judge.has_usable_password() and not peer.is_active
+
+
+def test_only_system_admin_may_be_given_system_admin_by_this_gate():
+    """`may_assign_role(caller, "SYSTEM_ADMIN")`: no for every caller that is not SYSTEM_ADMIN — a hall's ADMIN, a
+    civilization ADMIN, anyone below. SYSTEM_ADMIN ranks 0 like ADMIN, so the rank alone answered yes for every ADMIN
+    (stage 1A review); `is_assignable_role` refusing it elsewhere is a second gate, not this one's excuse."""
+    from apps.authentication.serializers import may_assign_role
+
+    hall = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})[0]
+    callers = {
+        "hall ADMIN": User(username="a", role="ADMIN", tenant=hall),
+        "civilization ADMIN": User(username="c", role="ADMIN", tenant=None, civilization="CHINESE"),
+        "GUARDIAN": User(username="g", role="GUARDIAN", tenant=hall),
+    }
+    assert {name: may_assign_role(u, "SYSTEM_ADMIN") for name, u in callers.items()} == dict.fromkeys(callers, False)
+    assert may_assign_role(User(username="s", role="SYSTEM_ADMIN", tenant=None), "SYSTEM_ADMIN")
+    assert may_assign_role(callers["civilization ADMIN"], "ADMIN")  # the gate next to it is unchanged

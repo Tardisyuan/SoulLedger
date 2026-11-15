@@ -313,6 +313,21 @@ def test_a_civilization_admin_enters_only_its_own_civilizations_halls():
     assert system.post(f"/api/v1/tenants/{eg.code}/view/").status_code == 201
 
 
+def test_my_role_permissions_carry_the_civilization_i_administer():
+    """`GET /perm/role-permissions/` (the web refreshes the signed-in user from it on focus) says which civilization
+    a civilization ADMIN administers, and null for everyone else — the web's `ownsHall` reads it."""
+    hall, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})
+    users = {
+        "CHINESE": User.objects.create_user(username="rp-civ", password="x", role=UserRole.ADMIN, tenant=None,
+                                            civilization="CHINESE"),
+        None: User.objects.create_user(username="rp-sys", password="x", role=UserRole.SYSTEM_ADMIN, tenant=None),
+    }
+    bound = User.objects.create_user(username="rp-hall", password="x", role=UserRole.ADMIN, tenant=hall)
+    for expected, user in users.items():
+        assert _client(user).get("/api/v1/perm/role-permissions/").json()["civilization"] == expected
+    assert _client(bound, hall).get("/api/v1/perm/role-permissions/").json()["civilization"] is None
+
+
 def test_hall_stop_and_start_reach_only_the_callers_civilization():
     """`POST /tenants/{code}/deactivate/` and `activate/` (`IsHallLessAdminPermission`, the hall through the scoped
     queryset): SYSTEM_ADMIN any hall; a civilization ADMIN its civilization's halls, a hall it made included; another

@@ -108,6 +108,10 @@ def may_assign_role(caller, role) -> bool:
     role drawer."""
     if role_rank(getattr(caller, 'role', None)) > role_rank(role):
         return False
+    # SYSTEM_ADMIN ranks 0 like ADMIN, so the rank lets every ADMIN through. `is_assignable_role` also refuses it on
+    # every path; this gate does not lean on that one (stage 1A review).
+    if role == 'SYSTEM_ADMIN' and not is_tenant_exempt(caller):
+        return False
     if role not in ROLE_HIERARCHY and not holds_at_least(caller, role):
         return False
     return role != 'ADMIN' or is_hall_less_admin(caller)

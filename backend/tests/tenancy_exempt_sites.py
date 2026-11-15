@@ -60,8 +60,9 @@ SITES = [
      "foreign_workflows: a civilization ADMIN gets workflows with a segment in any of its halls, above the call"),
     ("apps/menus/views.py", 1, "SYSTEM_ONLY",
      "MenuViewSet.all: the menu tree is shared by every hall"),
-    ("apps/authentication/serializers.py", 1, "SYSTEM_ONLY",
-     "UserCreateSerializer.validate: only SYSTEM_ADMIN appoints a civilization ADMIN (sets `civilization`)"),
+    ("apps/authentication/serializers.py", 2, "SYSTEM_ONLY",
+     "UserCreateSerializer.validate: only SYSTEM_ADMIN appoints a civilization ADMIN (sets `civilization`) ‖ "
+     "may_assign_role: only SYSTEM_ADMIN may give the SYSTEM_ADMIN role"),
     ("apps/authentication/serializers.py", 1, "CIVILIZATION",
      "UserCreateSerializer.validate: a civilization ADMIN creates in a hall of its civilization (branch above)"),
     ("apps/authentication/views.py", 2, "CIVILIZATION",
