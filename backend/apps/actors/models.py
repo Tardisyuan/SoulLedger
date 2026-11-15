@@ -118,6 +118,14 @@ class Actor(AuditUserFields, models.Model):
         Live data is clean: 115's 42 assessor rows are all ints (measured
         2026-08-31). This is the guard that keeps it that way.
         """
+        # `realm` is constrained and the actor's shard must hold it: a realm of another civilization's hall
+        # is refused here, so the admin form says so (the pre_save guard in apps.core.sharding covers the
+        # rest of the constrained keys; VERIFY-stage2 item 1).
+        from apps.core.sharding import cross_civilization_keys
+
+        crossing = cross_civilization_keys(self, fields=[self._meta.get_field("realm")])
+        if crossing:
+            raise ValidationError(crossing)
         payload = self.powers_json or {}
         if "assessor_index" not in payload:
             return

@@ -29,7 +29,7 @@ from django.db.models import F
 from django.test import override_settings
 from django.utils import timezone
 
-from apps.core.shard_sync import DEBOUNCE_KEY, compared_models, fingerprints, shard_aliases
+from apps.core.shard_sync import DEBOUNCE_KEY, DEBOUNCE_SECONDS, compared_models, fingerprints, shard_aliases
 from apps.core.sharding import CONTROL, REFERENCE, SHARD, alias_for_civilization, placement, tenant_path
 
 CIVS = ("CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK")
@@ -49,7 +49,10 @@ def sharded(test):
 class World:
     """Rows built field by field from the model metadata and written with bulk_create (no save(), no
     signals: the world is data, not behaviour). A foreign key to a hall-owned model takes a row of the
-    same hall, so every row's `tenant_path` ends in the hall it was built for."""
+    same hall, so every row's `tenant_path` ends in the hall it was built for. That makes "nothing is
+    dangling" (a) true by construction for the constrained keys; what keeps them inside one civilization
+    is the pre_save guard (`apps.core.sharding.same_civilization_keys`), and
+    `test_every_constrained_key_of_the_world_refuses_another_civilization` points each one across."""
 
     def __init__(self, rng):
         self.rng = rng
@@ -253,6 +256,9 @@ def world():
         _dispatch_across(w, mover, w.rng.choice(abroad(mover.home_tenant.civilization)))
     w.returned = soul.pk
     w.halls = halls
+    # A soul with no hall whose home hall is set: in no shard, its home's included (D2; (c) checks it).
+    hallless = Soul._base_manager.filter(tenant__isnull=True).first()
+    Soul._base_manager.filter(pk=hallless.pk).update(home_tenant=w.rng.choice(known))
     return w
 
 
@@ -349,6 +355,48 @@ def test_after_sync_each_shard_holds_its_civilization_and_reconcile_is_clean(wor
     assert sum(_executed_cross_civ(s.pk, s.home_tenant.civilization) for s in Soul._base_manager.filter(home_tenant__isnull=False).select_related("home_tenant")) >= 3
 
 
+@pytest.mark.django_db
+def test_every_constrained_key_of_the_world_refuses_another_civilization(world):
+    """The keys the world keeps inside one hall, pointed across: every constrained SHARD -> SHARD key that is
+    not the row's own hall hop (derived, not listed) is refused at save time when it names a row of another
+    civilization, and accepted for a row of the same hall. Runs without shard databases."""
+    from django.db.models.signals import pre_save
+
+    from apps.core.sharding import CrossCivilizationKeyError, _refuse_cross_civilization, same_civilization_keys
+
+    keys = [(m, f) for m in compared_models() for f in same_civilization_keys(m)]
+    assert len(keys) >= 50, len(keys)
+    wired = {r[0][0] for r in pre_save.receivers}
+    assert {f"same_civ:{m._meta.label}" for m, _ in keys} <= wired, "a model with such a key has no guard"
+    known = [h for h in world.halls if h.declared_civilization]
+    accepted, untried = [], []
+    for model, f in keys:
+        tried = False
+        for here in world.rng.sample(known, len(known)):
+            rows = world.pool[(model, here.pk)]
+            same = world.pool[(f.related_model, here.pk)]
+            other = [r for h in known if h.civilization != here.civilization for r in world.pool[(f.related_model, h.pk)]]
+            if not (rows and same and other):
+                continue
+            obj = model._base_manager.get(pk=world.rng.choice(rows).pk)
+            setattr(obj, f.attname, world.rng.choice(same).pk)
+            # Only this key: the world moves souls afterwards, so a row's other keys may already be stale.
+            _refuse_cross_civilization(model, obj, update_fields={f.name})  # same hall: accepted
+            setattr(obj, f.attname, world.rng.choice(other).pk)
+            try:
+                _refuse_cross_civilization(model, obj, update_fields={f.name})
+            except CrossCivilizationKeyError as e:
+                assert list(e.message_dict) == [f.name], e.message_dict
+            else:
+                accepted.append(f"{model._meta.label}.{f.name}")
+            tried = True
+            break
+        if not tried:
+            untried.append(f"{model._meta.label}.{f.name}")
+    assert not accepted, f"pointed at another civilization and accepted: {accepted}"
+    assert not untried, f"the world had no rows to point across: {untried}"
+
+
 # ---- (d) a write that sends no signal ------------------------------------------------------------------
 
 def _reported(out):
@@ -385,14 +433,17 @@ def test_a_random_update_on_control_is_reported_exactly_and_fixed(world):
     civ = rng.choice(CIVS)
     alias = alias_for_civilization(civ)
     candidates = [m for m in compared_models() if _changeable(m) and m._base_manager.using(alias).count() >= 2]
-    model = rng.choice(candidates)
-    field = rng.choice(_changeable(model))
-    held = sorted(_shard_pks(alias, model))
-    new = world.value(field)
-    picked = [pk for pk in rng.sample(held, rng.randint(1, min(3, len(held))))
-              if model._base_manager.filter(pk=pk).values_list(field.attname, flat=True).get() != new]
-    if not picked:
-        pytest.skip(f"seed drew a value equal to every picked row's ({model._meta.label}.{field.name})")
+    picked = []
+    for _ in range(50):  # a draw equal to every picked row's value (a boolean, `{}`) is drawn again, never skipped
+        model = rng.choice(candidates)
+        field = rng.choice(_changeable(model))
+        held = sorted(_shard_pks(alias, model))
+        new = world.value(field)
+        picked = [pk for pk in rng.sample(held, rng.randint(1, min(3, len(held))))
+                  if model._base_manager.filter(pk=pk).values_list(field.attname, flat=True).get() != new]
+        if picked:
+            break
+    assert picked, "fifty draws and every one equal to the rows' values"
     print(f"update {model._meta.label}.{field.name} on {picked}")
     model._base_manager.filter(pk__in=picked).update(**{field.attname: new})
     others = [a for a in ["default", *shard_aliases()] if a != alias]
@@ -446,9 +497,73 @@ def test_shard_to_control_brings_a_shard_write_back(world):
 
     code, out = _reconcile("--civ", civ, "--direction", "shard-to-control")
     assert code == 1 and _reported(out) == {(Soul._meta.label, str(soul.pk))}, out
-    assert _reconcile("--civ", civ, "--direction", "shard-to-control", "--fix")[0] == 0
+    with override_settings(SHARD_READ_CIVS=[civ], SHARD_WRITE_CIVS=[civ]):  # stage 4: the shard is the master
+        assert _reconcile("--civ", civ, "--direction", "shard-to-control", "--fix")[0] == 0
     assert Soul._base_manager.get(pk=soul.pk).name == "written-on-the-shard"
     assert _reconcile("--all")[0] == 0
+
+
+@sharded
+def test_shard_to_control_fix_is_refused_while_control_is_the_master():
+    """VERIFY-stage2 item 2 (the reviewer's probe, inverted): before a civilization's writes are cut over,
+    `--direction shard-to-control --fix` would revert control's newer value and raw-delete its new row."""
+    from apps.realms.models import Realm
+    from apps.tenants.models import Tenant
+
+    hall = Tenant.objects.create(code="S2C_GR", display_name="g", declared_civilization="GREEK")
+
+    def realm(name):
+        return Realm.all_objects.create(realm_code=f"R{uuid.uuid4().hex[:8]}", name_en=name, name_local=name,
+                                        civilization="GREEK", realm_type="HELL", tenant=hall)
+
+    kept = realm("before")
+    _sync()
+    Realm.all_objects.filter(pk=kept.pk).update(name_en="newer-on-control")
+    fresh = realm("written-after-the-sync")
+    out = io.StringIO()
+    with pytest.raises(CommandError, match=r"refused for \['GREEK'\]: not in SHARD_WRITE_CIVS"):
+        call_command("reconcile_shards", "--civ", "GREEK", "--direction", "shard-to-control", "--fix", stdout=out)
+    assert Realm.all_objects.get(pk=kept.pk).name_en == "newer-on-control"
+    assert Realm.all_objects.filter(pk=fresh.pk).exists()
+    with pytest.raises(CommandError, match="refused"):  # --all names it too
+        call_command("reconcile_shards", "--all", "--direction", "shard-to-control", "--fix", stdout=io.StringIO())
+    assert _reconcile("--civ", "GREEK", "--direction", "shard-to-control")[0] == 1  # reporting is still allowed
+
+
+@sharded
+def test_the_retry_window_rechecks_and_reports_only_what_did_not_settle(monkeypatch):
+    """`--retry-window`: a row still differing is re-checked until the window ends; one an in-flight write
+    settles inside it is not reported, one still differing at the end is. The clock is a fake one."""
+    from apps.core import shard_sync
+    from apps.realms.models import Realm
+    from apps.tenants.models import Tenant
+
+    hall = Tenant.objects.create(code="RW_GR", display_name="g", declared_civilization="GREEK")
+    settles, stays = (Realm.all_objects.create(realm_code=f"R{uuid.uuid4().hex[:8]}", name_en="old", name_local="o",
+                                               civilization="GREEK", realm_type="HELL", tenant=hall) for _ in range(2))
+    _sync()
+    Realm.all_objects.filter(pk__in=[settles.pk, stays.pk]).update(name_en="new")
+
+    class Clock:
+        now, slept = 0.0, []
+
+        def monotonic(self):
+            return self.now
+
+        def sleep(self, s):
+            self.now += max(s, 0.01)
+            self.slept.append(s)
+            if len(self.slept) == 2:  # the in-flight write reaches the shard during the window
+                Realm._base_manager.using("civ_greek").filter(pk=settles.pk).update(name_en="new")
+
+    clock = Clock()
+    monkeypatch.setattr(shard_sync, "time", clock)
+    code, out = _reconcile("--civ", "GREEK", "--retry-window", "5")
+    assert code == 1 and _reported(out) == {(Realm._meta.label, str(stays.pk))}, out
+    assert len(clock.slept) >= 3 and clock.now >= 5  # it kept re-checking until the window ended
+    Realm._base_manager.using("civ_greek").filter(pk=settles.pk).update(name_en="old")
+    code, out = _reconcile("--civ", "GREEK")  # no window: both, at once
+    assert code == 1 and _reported(out) == {(Realm._meta.label, str(p)) for p in (settles.pk, stays.pk)}, out
 
 
 def _leaf(model):
@@ -514,6 +629,18 @@ def test_a_row_pointing_out_of_its_shard_is_reported(world, monkeypatch):
 
 # ---- production shape and the on-commit trigger (no shard databases needed) ----------------------------
 
+#: Column types `_digest` (json.dumps(default=str)) cannot read stably: a BinaryField comes back from
+#: PostgreSQL as a memoryview, whose str() names a memory address (every row would differ on every run);
+#: pgvector's vectors are numpy arrays, whose str() elides the middle past 1000 values (a change there
+#: would not be seen). None is compared today (soul_assist.HelpChunk is CONTROL); teach `_digest` first.
+UNDIGESTIBLE = {"BinaryField", "VectorField", "HalfVectorField", "SparseVectorField"}
+
+
+def test_no_compared_column_is_one_the_digest_cannot_read():
+    found = sorted(f"{m._meta.label}.{f.name} ({type(f).__name__})" for m in compared_models()
+                   for f in m._meta.concrete_fields if {c.__name__ for c in type(f).__mro__} & UNDIGESTIBLE)
+    assert not found, f"compared by shard sync but not digestible as a string: {found}"
+
 @pytest.mark.django_db
 def test_without_shard_databases_the_command_and_the_task_do_nothing():
     from apps.tenants.tasks import sync_shards
@@ -530,6 +657,7 @@ def test_without_shard_databases_the_command_and_the_task_do_nothing():
 def test_one_commit_burst_queues_one_sync(monkeypatch, django_capture_on_commit_callbacks):
     from django.core.cache import cache
 
+    from apps.core import shard_sync
     from apps.realms.models import Realm
     from apps.tenants import tasks
     from apps.tenants.models import Tenant
@@ -558,8 +686,13 @@ def test_one_commit_burst_queues_one_sync(monkeypatch, django_capture_on_commit_
     with override_settings(DATABASES=with_shard):
         with django_capture_on_commit_callbacks(execute=True) as burst, transaction.atomic():
             realms(3)
-        assert len(ours(burst)) == 1 and len(queued) == 1
+        assert len(ours(burst)) == 1 and queued == [{"countdown": DEBOUNCE_SECONDS}]  # sent after the window
         committed()
+        cache.delete(DEBOUNCE_KEY)
+        with django_capture_on_commit_callbacks(execute=True) as on_shard:
+            shard_sync._on_write(Realm, using="civ_greek")  # a write on a shard alias is not control's
+        assert not ours(on_shard) and len(queued) == 1
+        cache.add(DEBOUNCE_KEY, 1)  # back inside the first burst's window
         with django_capture_on_commit_callbacks(execute=True) as later:
             realms(2)  # another commit inside the debounce window
         assert len(ours(later)) == 1 and len(queued) == 1

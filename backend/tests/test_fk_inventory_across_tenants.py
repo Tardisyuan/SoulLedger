@@ -224,3 +224,40 @@ def test_each_audit_model_really_has_the_three_columns(label):
     model = apps.get_model(label)
     names = {f.name for f in model._meta.concrete_fields}
     assert names >= AUDIT_FIELDS, f"{label} inherits AuditUserFields but lacks {AUDIT_FIELDS - names}"
+
+
+# --- stage 2 review: Meta.ordering never joins through a bare id ----------------
+
+def _ordering_through_bare_ids(model, depth=0):
+    """Meta.ordering terms of `model` that JOIN through a bare id: a relation named by its field name (Django
+    then orders by the target's own ordering, i.e. a JOIN), or a `rel__col` lookup. `rel_id` is the column."""
+    from django.core.exceptions import FieldDoesNotExist
+
+    found = []
+    for term in model._meta.ordering or []:
+        name = getattr(getattr(term, "expression", term), "name", term)
+        if not isinstance(name, str) or name == "?":
+            continue
+        opts, parts = model._meta, name.lstrip("-").split("__")
+        for i, part in enumerate(parts):
+            try:
+                f = opts.get_field(part)
+            except FieldDoesNotExist:
+                break
+            if not f.is_relation or not f.concrete or part == f.attname != f.name:
+                break  # a column of this table: no join
+            if not getattr(f, "db_constraint", True):
+                found.append(f"{model._meta.label} ordering {model._meta.ordering}: {name} joins through bare id {f.name}")
+                break
+            opts = f.related_model._meta
+            if i == len(parts) - 1 and depth < 3:  # ordered by the target's own ordering
+                found += [f"{model._meta.label} -> {x}" for x in _ordering_through_bare_ids(f.related_model, depth + 1)]
+    return found
+
+
+def test_no_default_ordering_joins_through_a_bare_id():
+    """A bare id's target may be in another database (a crossing key, or a control row read on a shard), and
+    an INNER JOIN there drops the row from every default read (VERIFY-stage2 item 3: WorkflowSegment,
+    SoulPathEntry, SoulAccount ordered by `workflow` / `soul`). Order by the `*_id` column instead."""
+    found = [x for m in apps.get_models(include_auto_created=True) for x in _ordering_through_bare_ids(m)]
+    assert not found, "\n  ".join(found)

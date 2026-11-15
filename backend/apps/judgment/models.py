@@ -1210,12 +1210,15 @@ class EvidenceAdmission(AuditUserFields, models.Model):
 
     `record` is RESTRICT, not CASCADE: a hard delete of a record a court has
     ruled on is refused, while deleting the soul (which cascades to both the
-    record and the judgment) still goes through.
+    record and the judgment) still goes through. It is a bare id (stage 2
+    review): a soul residing in another civilization is judged there and the
+    court rules on records its home hall wrote, so the two rows can sit in
+    different shards. The RESTRICT is applied by `apps.core.bare_ids`.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="evidence_admissions")
     record = models.ForeignKey(
-        "souls.SoulRecord", on_delete=models.RESTRICT, related_name="admissions",
+        "souls.SoulRecord", on_delete=models.DO_NOTHING, db_constraint=False, related_name="admissions",
     )
     admitted = models.BooleanField(default=True)
     reason = models.TextField(blank=True, help_text="Why the record is not admitted. Required when admitted is false.")

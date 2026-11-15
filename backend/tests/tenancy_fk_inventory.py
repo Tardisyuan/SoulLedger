@@ -77,7 +77,7 @@ EDGES = {
     'judgment.NegativeConfession.judgment->judgment.Judgment': ('S->S', 'DB', 'same hall by convention; the row copies the judgment tenant at creation'),
     'judgment.NegativeConfession.statute->judgment.Statute': ('S->S', 'DB', "same hall: confessions.record looks the article up in the case's own hall"),
     'judgment.EvidenceAdmission.judgment->judgment.Judgment': ('S->S', 'DB', 'same hall by convention; nothing in the database checks that the two rows share a tenant'),
-    'judgment.EvidenceAdmission.record->souls.SoulRecord': ('S->S', 'DB', 'same hall by convention; nothing in the database checks that the two rows share a tenant'),
+    'judgment.EvidenceAdmission.record->souls.SoulRecord': ('S->S', 'BARE', "crosses by design: a soul residing in another civilization is judged there, and EvidenceAdmissionService.rule picks the record by soul + cycle, so the court rules on records the home hall wrote (stage 2 review)"),
     'judgment.Judgment.draft_destination_realm->realms.Realm': ('S->S', 'DB', 'same hall by convention (resolve_placement filters tenant_id)'),
     'judgment.Judgment.judge->actors.Actor': ('S->S', 'DB', "the sitting judge's actor; same hall by convention"),
     'judgment.Judgment.realm->realms.Realm': ('S->S', 'DB', 'same hall by convention'),

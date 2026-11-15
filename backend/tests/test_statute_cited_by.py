@@ -33,7 +33,8 @@ def judge_headers(judge_user):
 def _cite(tenant, statute, court, name):
     soul = Soul.objects.create(name=name, current_state=SoulState.JUDGING, tenant=tenant)
     case = Judgment.objects.create(soul=soul, civilization=Civilization.CHINESE, court=court, tenant=tenant)
-    JudgmentCitation.objects.create(judgment=case, statute=statute, tenant=tenant)
+    # bulk_create: a cross-tenant row (below) is refused by save()'s civilization guard as well as by the service.
+    JudgmentCitation.objects.bulk_create([JudgmentCitation(judgment=case, statute=statute, tenant=tenant)])
     return case
 
 

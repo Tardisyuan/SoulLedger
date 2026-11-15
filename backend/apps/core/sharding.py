@@ -17,6 +17,7 @@ from functools import cache
 
 from django.apps import apps
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 CONTROL = "CONTROL"
@@ -216,3 +217,90 @@ def fanout():
     """Aliases a cross-civilization read must visit: control, then every civilization whose reads are
     cut over (settings.SHARD_READ_CIVS). Stage 0: just ["default"]. No caller yet."""
     return ["default", *(alias_for_civilization(c) for c in settings.SHARD_READ_CIVS)]
+
+
+# ---- keys that must stay inside one civilization ---------------------------------------------------------
+
+class CrossCivilizationKeyError(ValidationError):
+    """A constrained SHARD -> SHARD key names a row of another civilization's hall: once the shards are
+    split that row is in another database and the key cannot hold (shard sync reports such a row as
+    "dangling"). A key that crosses by design is a bare id instead (tests/tenancy_fk_inventory.py)."""
+
+
+@cache
+def same_civilization_keys(model):
+    """The constrained foreign keys from a SHARD model to a SHARD model, except the hop the row reaches its
+    own hall through (that one drags the row along): on a shard the target row must be there too. Derived
+    from the placements and `_meta`; the keys that may cross civilizations are bare ids and are not here."""
+    model = model._meta.concrete_model
+    if placement(model) != SHARD:
+        return ()
+    first = tenant_path(model).split("__")[0]
+    return tuple(f for f in model._meta.concrete_fields
+                 if isinstance(f, models.ForeignKey) and f.db_constraint and f.name != first
+                 and placement(f.related_model) == SHARD)
+
+
+def _hall_id(obj, path):
+    """The tenant id at the end of `path` from `obj`, following the in-memory objects (None where a link
+    is empty or names no row)."""
+    *hops, last = path.split("__")
+    for hop in hops:
+        obj = getattr(obj, hop, None)  # RelatedObjectDoesNotExist is an AttributeError
+        if obj is None:
+            return None
+    return getattr(obj, obj._meta.get_field(last).attname)
+
+
+def cross_civilization_keys(instance, using="default", fields=None):
+    """{field name: message} for each of `same_civilization_keys` (or `fields`) on `instance` that names a
+    row whose hall is of another civilization than the instance's. An empty key, and a row with no hall on
+    either side (it stays in control, D2), are not checked."""
+    model = type(instance)._meta.concrete_model
+    keys = same_civilization_keys(model) if fields is None else fields
+    mine = _hall_id(instance, tenant_path(model)) if keys else None
+    if mine is None:
+        return {}
+    out = {}
+    for f in keys:
+        value = getattr(instance, f.attname)
+        if value is None:
+            continue
+        target = f.related_model._meta.concrete_model
+        cached = f.get_cached_value(instance, None)
+        if cached is not None and cached.pk == value:
+            theirs = _hall_id(cached, tenant_path(target))
+        else:
+            theirs = (target._base_manager.using(using).filter(pk=value)
+                      .values_list(tenant_path(target), flat=True).first())
+        pk = _tenant_model()._meta.pk
+        mine, theirs = pk.to_python(mine), pk.to_python(theirs)  # a hall id set from a string (TaskRun: "5")
+        if theirs is None or theirs == mine:
+            continue
+        civ = {t.pk: t.civilization for t in _tenant_model()._base_manager.using(using).filter(pk__in=[mine, theirs])}
+        if civ.get(mine) != civ.get(theirs):
+            out[f.name] = (f"{target._meta.label} {value} is a row of a {civ.get(theirs)} hall and this "
+                           f"{model._meta.label} belongs to a {civ.get(mine)} one: the key would cross shards")
+    return out
+
+
+def _refuse_cross_civilization(sender, instance, raw=False, using="default", update_fields=None, **kwargs):
+    if raw:  # fixtures / loaddata: the rows as given
+        return
+    keys = same_civilization_keys(sender)
+    if update_fields is not None:
+        keys = [f for f in keys if f.name in update_fields or f.attname in update_fields]
+    bad = cross_civilization_keys(instance, using, keys)
+    if bad:
+        raise CrossCivilizationKeyError(bad)
+
+
+def connect():
+    """`pre_save` on every model with a key in `same_civilization_keys`. Connected per live model, so a
+    migration's historical models are not checked. bulk_create and queryset.update() send no pre_save:
+    those rows are caught by shard sync's dangling report (apps/core/shard_sync.py `_dangling`)."""
+    from django.db.models.signals import pre_save
+
+    for m in apps.get_models():
+        if same_civilization_keys(m):
+            pre_save.connect(_refuse_cross_civilization, sender=m, dispatch_uid=f"same_civ:{m._meta.label}")

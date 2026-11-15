@@ -1082,9 +1082,11 @@ class TestCitationCount:
             court="別殿",
             tenant=eg_tenant,
         )
-        JudgmentCitation.objects.create(
+        # bulk_create: save() refuses a statute of another civilization too (the pre_save guard in
+        # apps.core.sharding); the ORM write this test defends against is one that skips both.
+        JudgmentCitation.objects.bulk_create([JudgmentCitation(
             judgment=other, statute=cited_statute, tenant=eg_tenant
-        )
+        )])
 
         response = api_client.get("/api/v1/judgment/statutes/", **judge_headers)
 

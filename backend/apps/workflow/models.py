@@ -1362,7 +1362,8 @@ class WorkflowSegment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["workflow", "order"]
+        # `workflow_id`: `workflow` is a bare id and ordering by it JOINs the workflow (VERIFY-stage2 item 3).
+        ordering = ["workflow_id", "order"]
         constraints = [
             models.UniqueConstraint(fields=["workflow", "order"], name="uniq_wf_segment_order"),
         ]

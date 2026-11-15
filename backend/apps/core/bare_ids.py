@@ -79,6 +79,8 @@ ON_DELETE = {
     "workflow.ApprovalNode.segment": models.CASCADE,
     "workflow.ApprovalWorkflow.soul": models.CASCADE,
     "workflow.WorkflowSegment.workflow": models.CASCADE,
+    # Stage 2 review: a residence court rules on records the home hall wrote (`*_bare_ids_stage2_review`).
+    "judgment.EvidenceAdmission.record": models.RESTRICT,
 }
 
 
@@ -124,10 +126,14 @@ def clear_bare_ids(target, pks, aliases):
     on = {alias: [f for f in fields if router.allow_migrate_model(alias, f.model)] for alias in aliases}
     for alias in aliases:
         for f in on[alias]:
-            if rule(f) is models.PROTECT:
+            # RESTRICT is refused like PROTECT unless an enclosing bare-id delete already weighed it against
+            # everything it deletes (`_restrict_bare` below, e.g. a purged soul's records and judgments).
+            how = rule(f)
+            if how is models.PROTECT or (how is models.RESTRICT and not _settled.get()):
                 held = list(f.model._base_manager.using(alias).filter(**{f"{f.attname}__in": pks})[:5])
                 if held:
-                    raise ProtectedError(f"{label(f)} still points at {target._meta.label} {list(pks)}", set(held))
+                    error = ProtectedError if how is models.PROTECT else RestrictedError
+                    raise error(f"{label(f)} still points at {target._meta.label} {list(pks)}", set(held))
     for alias in aliases:
         # One collector for every CASCADE on the alias, as Django's own would have been: a RESTRICT met on
         # the way (EvidenceAdmission.record -> SoulRecord) is lifted when the restricting row goes in the
@@ -141,11 +147,34 @@ def clear_bare_ids(target, pks, aliases):
                 collector.collect(rows, fail_on_restricted=False)
             elif how is models.SET_NULL:
                 rows.update(**{f.attname: None})
+        _restrict_bare(collector, alias)
         _refuse_restricted(collector)
-        _, per_model = collector.delete()
+        token = _settled.set(True)
+        try:
+            _, per_model = collector.delete()
+        finally:
+            _settled.reset(token)
         tally = _tally.get()
         if tally is not None:
             tally.update(per_model)
+
+
+#: True while a bare-id collector deletes what `_restrict_bare` already checked: the pre_delete of each row
+#: it deletes calls `clear_bare_ids` again, and that call must not refuse a RESTRICT the outer one lifted.
+_settled = ContextVar("bare_id_restrict_settled", default=False)
+
+
+def _restrict_bare(collector, alias):
+    """Register the bare RESTRICT ids pointing at what `collector` holds as Django's own RESTRICT would be,
+    so `_refuse_restricted` lifts them when the restricting rows go in the same delete.
+    ponytail: only a delete that starts in bare_ids sees the whole set; a plain Django delete that removes a
+    record and its admission together (a Tenant hard delete; none in the code) is refused by the nested
+    check instead. Teach the Django collector path if one appears."""
+    for model, instances in list(collector.data.items()):
+        for f in bare_ids_to().get(model._meta.concrete_model, []):
+            if rule(f) is models.RESTRICT and router.allow_migrate_model(alias, f.model):
+                refs = f.model._base_manager.using(alias).filter(**{f"{f.attname}__in": [o.pk for o in instances]})
+                collector.add_restricted_objects(f, list(refs))
 
 
 def _refuse_restricted(collector):

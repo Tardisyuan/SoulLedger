@@ -7,6 +7,7 @@ docs/audit/2026-11-15-sharding/PLAN.md). Sync is this command with --fix.
 Which rows a shard holds and how they are compared: apps/core/shard_sync.py. Prints one line per row that
 differs (model, pk, which side lacks or disagrees), exits 1 when any is left -- with --fix, rows
 still differing when it re-checks after the fix. No shard alias configured: says so and exits 0.
+`--direction shard-to-control --fix` is refused for a civilization not in SHARD_WRITE_CIVS.
 """
 from django.core.management.base import BaseCommand, CommandError
 
@@ -41,7 +42,18 @@ class Command(BaseCommand):
             if alias not in shards:
                 raise CommandError(f"no shard database {alias!r} is configured; configured: {shards}")
             shards = [alias]
-        report = reconcile(shards, fix=fix, direction=direction, retry_window=retry_window)
+        if fix and direction == SHARD_TO_CONTROL:
+            # Until a civilization's writes are cut over (stage 4) control is its master: copying the shard
+            # back would revert control's newer writes and raw-delete its new rows (VERIFY-stage2 item 2).
+            from django.conf import settings
+
+            from apps.core.shard_sync import civilization_of
+
+            early = sorted(civilization_of(a) for a in shards if civilization_of(a) not in settings.SHARD_WRITE_CIVS)
+            if early:
+                raise CommandError(f"--direction {SHARD_TO_CONTROL} --fix refused for {early}: not in SHARD_WRITE_CIVS "
+                                   f"{list(settings.SHARD_WRITE_CIVS)}, so control is still the master of their rows")
+        report =reconcile(shards, fix=fix, direction=direction, retry_window=retry_window)
         for alias, diffs in report.items():
             src, dst = ("control", alias) if direction == CONTROL_TO_SHARD else (alias, "default")
             for d in diffs:

@@ -351,8 +351,10 @@ def test_the_backfill_reopens_rebirth_for_souls_parked_in_diyu_heaven(cn):
     eu = sp.tenant("EU_HEAVEN_HELL")
     european = Soul.objects.create(name="欧魂", tenant=eu)
     Soul.all_objects.filter(pk=european.pk).update(current_state=SoulState.SETTLED)
-    Disposition.objects.create(soul=european, tenant=eu, destination_realm=heaven, is_eternal=True,
-                               is_executed=True, executed_at=timezone.now())
+    planted = Disposition.objects.create(soul=european, tenant=eu, is_eternal=True,
+                                         is_executed=True, executed_at=timezone.now())
+    # A realm of another civilization's hall: save() refuses it (apps.core.sharding), so it is planted.
+    Disposition.all_objects.filter(pk=planted.pk).update(destination_realm=heaven)
 
     migration = importlib.import_module("apps.souls.migrations.0051_backfill_diyu_acquitted_to_rebirth")
 

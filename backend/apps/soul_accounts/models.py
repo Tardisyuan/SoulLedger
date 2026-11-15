@@ -61,7 +61,8 @@ class SoulAccount(models.Model):
     welcomed_civilizations = models.JSONField(default=list, blank=True)
 
     class Meta:
-        ordering = ["soul", "cycle"]
+        # `soul_id`: `soul` is a bare id into a shard and ordering by it JOINs souls (VERIFY-stage2 item 3).
+        ordering = ["soul_id", "cycle"]
         constraints = [
             models.UniqueConstraint(fields=["soul", "cycle"], name="soul_account_one_per_life"),
             # 同一时刻只有一个可登录的账号。与上一条互补:上一条挡并发死亡同步,

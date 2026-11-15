@@ -62,6 +62,7 @@ def test_moving_a_soul_to_another_tenant_re_derives_on_next_save():
     soul.tenant = Tenant.objects.get_or_create(
         code="EG_DUAT", defaults={"display_name": "EG_DUAT"}
     )[0]
+    soul.owner_org = None  # a move takes the unit along (DispatchService); the CN unit would cross shards
     soul.save()
     record.soul.refresh_from_db()
     record.save()

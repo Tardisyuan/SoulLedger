@@ -54,9 +54,10 @@ def test_a_planted_crossing_is_caught():
     a, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "A"})
     b, _ = Tenant.objects.get_or_create(code="EU_HEAVEN_HELL", defaults={"display_name": "B"})
     parent = Organization.objects.create(name="A 根", code="X_ROOT", category="CHINESE", level=0, tenant=a)
-    Organization.objects.create(
-        name="B 子", code="X_CHILD", category="EUROPEAN", level=1, tenant=b, parent=parent
-    )
+    child = Organization.objects.create(name="B 子", code="X_CHILD", category="EUROPEAN", level=1, tenant=b)
+    # save() refuses a parent of another civilization (apps.core.sharding pre_save guard); a queryset
+    # update, like a bulk write or a migration, does not -- that is the crossing this guard is for.
+    Organization.objects.filter(pk=child.pk).update(parent=parent)
     crossing = [
         o.code
         for o in Organization.objects.select_related("parent").filter(parent__isnull=False)

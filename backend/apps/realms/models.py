@@ -301,7 +301,8 @@ class SoulPathEntry(models.Model):
     )
 
     class Meta:
-        ordering = ["soul", "sequence"]
+        # `soul_id`, not `soul`: `soul` is a bare id and ordering by it JOINs souls (VERIFY-stage2 item 3).
+        ordering = ["soul_id", "sequence"]
         verbose_name = "Soul path entry"
         verbose_name_plural = "Soul path entries"
         indexes = [

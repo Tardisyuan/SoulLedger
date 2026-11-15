@@ -135,6 +135,29 @@ def test_purging_a_soul_whose_record_a_court_ruled_on_goes_through(hall):
     assert manifest.get("judgment.EvidenceAdmission") == 1 and manifest.get("souls.SoulRecord") == 1, manifest
 
 
+def test_a_hard_delete_of_a_record_a_court_ruled_on_is_refused(hall):
+    """The other half of RESTRICT, now applied by bare_ids (EvidenceAdmission.record is a bare id since the
+    stage 2 review): the record alone does not go, and nothing changes."""
+    from django.db.models import RestrictedError
+
+    from apps.judgment.models import EvidenceAdmission, Judgment
+    from apps.souls.models import Soul
+    from apps.souls.record_models import SoulRecord
+
+    soul = Soul.objects.create(name="ruled-on-alone", tenant=hall)
+    record = SoulRecord.objects.create(soul=soul, tenant=hall, record_type="DEMERIT", civilization="CHINESE")
+    judgment = Judgment.objects.create(soul=soul, tenant=hall, case_number="BARE-RESTRICT-2", civilization="CHINESE")
+    admission = EvidenceAdmission.objects.create(judgment=judgment, record=record, tenant=hall)
+    unruled = SoulRecord.objects.create(soul=soul, tenant=hall, record_type="DEMERIT", civilization="CHINESE")
+
+    with pytest.raises(RestrictedError, match="EvidenceAdmission.record"), transaction.atomic():
+        SoulRecord._base_manager.filter(pk=record.pk).delete()
+    assert SoulRecord._base_manager.filter(pk=record.pk).exists()
+    assert EvidenceAdmission._base_manager.filter(pk=admission.pk, record_id=record.pk).exists()
+    SoulRecord._base_manager.filter(pk=unruled.pk).delete()  # a record nobody ruled on still goes
+    assert not SoulRecord._base_manager.filter(pk=unruled.pk).exists()
+
+
 def test_a_purged_souls_manifest_still_counts_what_went_through_bare_ids(hall):
     """Soul.purge reports every row it removed (tests/test_soul_purge.py). The soul's accounts, and their
     letters identity, now go through bare ids, which Django's own delete() count cannot see."""
@@ -177,7 +200,8 @@ def test_check_bare_ids_names_an_orphan_and_passes_without_one(hall):
 #: The batches of AlterField migrations that made keys bare, by name suffix, and how many each has: 1B (the
 #: control / shard boundary) and stage 2 (SHARD -> SHARD edges across civilizations). A new batch is a
 #: new line here, so its rules are checked against the state just before it.
-BARE_ID_STAGES = [("_bare_ids_across_databases", 24, 150), ("_bare_ids_across_civilizations", 12, 20)]
+BARE_ID_STAGES = [("_bare_ids_across_databases", 24, 150), ("_bare_ids_across_civilizations", 12, 20),
+                  ("_bare_id_stage2_review", 1, 0)]
 
 
 @pytest.mark.parametrize(("suffix", "migrations", "at_least"), BARE_ID_STAGES)
@@ -287,6 +311,15 @@ def _crossing_orphan_source(edge, hall, user):
         realm = _realm(hall, "ORT", user)
         rec = DispatchRecord.objects.create(source_tenant=hall, target_realm=realm)
         return DispatchRecord.objects.filter(pk=rec.pk), "target_realm_id", _gone(realm)
+    if edge == "judgment.EvidenceAdmission.record":
+        from apps.judgment.models import EvidenceAdmission, Judgment
+        from apps.souls.record_models import SoulRecord
+
+        soul = Soul.objects.create(name="orph-ev", tenant=hall)
+        record = SoulRecord.objects.create(soul=soul, tenant=hall, record_type="DEMERIT", civilization="CHINESE")
+        judgment = Judgment.objects.create(soul=soul, tenant=hall, case_number="ORPH-EV", civilization="CHINESE")
+        row = EvidenceAdmission.objects.create(judgment=judgment, record=record, tenant=hall)
+        return EvidenceAdmission.objects.filter(pk=row.pk), "record_id", _gone(record)
     if edge == "dispatch.CrossTenantJudgmentParticipant.judgment":
         joint = CrossTenantJudgment.objects.create(title="o", description="o", initiating_tenant=hall)
         seat = CrossTenantJudgmentParticipant.objects.create(judgment=joint, participant_tenant=hall)
@@ -307,6 +340,7 @@ CROSS_CIVILIZATION_EDGES = [
     "dispatch.CrossTenantJudgmentParticipant.judgment",   # -> CrossTenantJudgment
     "workflow.WorkflowSegment.workflow",                  # -> ApprovalWorkflow
     "workflow.ApprovalNode.segment",                      # -> WorkflowSegment
+    "judgment.EvidenceAdmission.record",                  # -> SoulRecord (stage 2 review)
 ]
 
 #: One edge per target model of a bare id (the next test holds that every target is reached), plus

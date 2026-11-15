@@ -95,7 +95,7 @@ def owned(model, alias, civ, halls, *, copies=True):
         return qs.all()
     q = Q(**{f"{tenant_path(model)}__in": halls})
     if is_soul and copies:
-        q |= Q(home_tenant__in=halls)
+        q |= Q(home_tenant__in=halls, tenant__isnull=False)  # a soul with no hall is in no shard (D2)
     return qs.filter(q)
 
 
