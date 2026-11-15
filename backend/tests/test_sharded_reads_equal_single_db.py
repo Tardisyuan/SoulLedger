@@ -346,6 +346,12 @@ def _diff(base, cut):
     if "results" in a and "results" in b:
         da = {json.dumps(r, sort_keys=True, default=str) for r in a["results"]}
         db = {json.dumps(r, sort_keys=True, default=str) for r in b["results"]}
+        by_id = {r.get("id"): r for r in b["results"] if isinstance(r, dict)}
+        for row in a["results"]:
+            other = by_id.get(row.get("id")) if isinstance(row, dict) else None
+            if other is not None and other != row:  # the same row, answered differently: which keys
+                keys = sorted(k for k in set(row) | set(other) if row.get(k) != other.get(k))
+                return f"row {row.get('id')}: " + "; ".join(f"{k}: {row.get(k)!r} | {other.get(k)!r}" for k in keys)[:900]
         return (f"count {a.get('count')} vs {b.get('count')}; only single db: {sorted(da - db)[:2]}; "
                 f"only cut over: {sorted(db - da)[:2]}")[:900]
     keys = [k for k in sorted(set(a) | set(b)) if a.get(k) != b.get(k)]

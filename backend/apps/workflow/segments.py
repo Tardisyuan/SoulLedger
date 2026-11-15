@@ -909,11 +909,24 @@ def foreign_workflows(qs, scope):
     tenant = getattr(scope, "tenant", None)
     if user is not None and getattr(user, "is_authenticated", False) and is_civilization_admin(user):
         # 文明管理员:本文明任一殿作为参与域有一段的流程(与那几殿各自的外域读之并相同)。
-        return qs.filter(pk__in=WorkflowSegment.objects.filter(
-            tenant__in=user_civilization_halls(user)).values("workflow_id"))
+        return qs.filter(pk__in=_segment_workflows(tenant__in=user_civilization_halls(user)))
     if user is None or not getattr(user, "is_authenticated", False) or is_tenant_exempt(user) or tenant is None:
         return qs.none()
-    return qs.filter(pk__in=WorkflowSegment.objects.filter(tenant=tenant).values("workflow_id"))
+    return qs.filter(pk__in=_segment_workflows(tenant=tenant))
+
+
+def _segment_workflows(**lookup):
+    """The workflow ids of the segments `lookup` names, as a subquery -- or, with civilizations cut over (stage 3),
+    read on every leg first: the segment lives in its realm's civilization, the workflow in the home hall's, so a
+    subquery run on the workflow's shard finds no segment there."""
+    from django.conf import settings
+
+    from apps.core.shard_reads import with_fanout
+
+    ids = WorkflowSegment.objects.filter(**lookup).values("workflow_id")
+    if not settings.SHARD_READ_CIVS:
+        return ids
+    return list(with_fanout(ids.order_by()).values_list("workflow_id", flat=True))
 
 
 def is_party(workflow, tenant):

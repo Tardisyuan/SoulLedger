@@ -15,6 +15,7 @@ from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
+from apps.core.shard_reads import with_fanout
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.perm.filters import DataScopeFilter
@@ -294,7 +295,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if self.action not in segments.FOREIGN_ACTIONS:
             return own
         # A participating realm reaches the workflow through its own segment, for these actions only (第四十三批).
-        return own | segments.foreign_workflows(qs, self.request)
+        # Every leg once civilizations are cut over: a foreign segment's workflow is in the home hall's shard.
+        return with_fanout(own | segments.foreign_workflows(qs, self.request))
 
     def get_serializer_class(self):
         if self.action == "list":

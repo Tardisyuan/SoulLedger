@@ -163,7 +163,7 @@ def in_write_transaction():
 def reads_control():
     """Stage 3 writes go to control, so a read that may act on what was just written reads control too: inside
     the code's own transaction, and anywhere in a write request (any method but GET / HEAD / OPTIONS)."""
-    if in_write_transaction():
+    if in_write_transaction() or _context.get() == CONTROL_ALIAS:  # or the code said so: read_context("default")
         return True
     from apps.core.request_local import get_current_request
 
