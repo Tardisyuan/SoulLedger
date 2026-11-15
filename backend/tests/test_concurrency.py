@@ -1399,7 +1399,7 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 只在 PostgreSQL 上存在。同文件另两条(列清单、表达式)每个引擎都跑。
         "tests/test_soul_search_trigram.py::test_the_indexes_exist_on_postgresql",
         # (2026-11-15 分库阶段 2:tests/test_control_boundary.py 的六条不再只在 PG 上 —— 它们改到
-        # `--ds=config.settings_sharded -m sharded`,SQLite 上有分库引擎 config/shard_db/sqlite3,两个引擎都跑。)
+        # `--ds=config.settings_sharded -m sharded`,两个引擎都跑。)
         # 2026-10-31 加密 JSON 列(review A2):列的 PostgreSQL 类型与 jsonb_typeof 只在 PG 上有;
         # SQLite 上同文件的往返测试读原始列，每个引擎都跑。
         "tests/test_encrypted_json_column.py::test_the_postgresql_column_is_text_holding_a_token_or_a_json_object",

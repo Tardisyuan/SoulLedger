@@ -6,8 +6,10 @@ under any other settings a `sharded` test skips (root conftest.py).
 PostgreSQL: each shard is a copy of `default` on the shard engine, NAME `<default NAME>_<alias>`; its TEST
 NAME is left to the root conftest, which appends the per-run suffix (config/testdb.py) and, under xdist,
 clones it from a per-alias template like every other PostgreSQL alias.
-SQLite: each shard is its own in-memory database on the SQLite shard engine, so it is migrated once into
-the cached template (config/sqlite_template.py) like `default`, not four times per run into files.
+SQLite: each shard is its own in-memory database on the plain SQLite engine, migrated once into the cached
+template (config/sqlite_template.py) like `default`, not four times per run into files. No shard engine is
+needed there: SQLite rebuilds a table on every AlterField from the current model, so 1B's bare keys come out
+bare (tests/test_control_boundary.py holds it: no foreign key to a missing table).
 """
 import copy
 
@@ -25,6 +27,5 @@ for _alias in SHARD_ALIASES:
         _shard["ENGINE"] = "config.shard_db.postgresql"
         _shard["NAME"] = f"{_shard['NAME']}_{_alias}"
     else:
-        _shard["ENGINE"] = "config.shard_db.sqlite3"
         _shard["NAME"] = ":memory:"
     DATABASES[_alias] = _shard

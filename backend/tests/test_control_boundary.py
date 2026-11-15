@@ -11,8 +11,8 @@ A civilization shard is migrated from the same migrations as the control databas
     `select_related` from a shard, and the error is the guard against a query that silently reads
     across databases.
 
-Under the sharded settings (stage 2: the four `civ_*` aliases exist only there), on SQLite (the shard
-engine in `config/shard_db/sqlite3/`) and on PostgreSQL:
+Under the sharded settings (stage 2: the four `civ_*` aliases exist only there), on SQLite and on
+PostgreSQL:
 
     cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true \
       DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 .venv/bin/python -m pytest \
