@@ -317,7 +317,7 @@ def _fetch_pages(client, url):
         if "json" not in ctype:  # CSV, YAML, a PDF: the bytes, but the trace id a problem body carries
             body = getattr(res, "content", b"") if not getattr(res, "streaming", False) else b"".join(res.streaming_content)
             text = body.decode(errors="replace") if b"\x00" not in body[:1024] else str(len(body))
-            text = re.sub(r'nonce="[^"]*"', "", text)  # a page's CSP nonce is new on every request
+            text = re.sub(r'nonce="[^"]*"|"X-CSRFTOKEN"] = "[^"]*"', "", text)  # a page's nonce and CSRF token are new on every request
             return status, (ctype, "\n".join(ln for ln in text.splitlines() if not ln.startswith("instance:")))
         try:
             body = res.json()

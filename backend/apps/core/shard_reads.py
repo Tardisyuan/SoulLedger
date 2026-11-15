@@ -599,6 +599,17 @@ def _combiner(name, expr):
     for kind, fn in _COMBINE.items():
         if type(expr) is kind:
             return fn
+    from django.db.models.functions import Coalesce
+
+    if isinstance(expr, Coalesce) and expr.source_expressions[0].contains_aggregate:
+        inner, *rest = expr.source_expressions
+        if all(isinstance(r, models.Value) for r in rest):
+            combine = _combiner(name, inner)
+
+            def coalesced(values):
+                value = combine(values)
+                return value if value is not None else next((r.value for r in rest if r.value is not None), None)
+            return coalesced
     raise NotImplementedError(f"{name}: {type(expr).__name__} cannot be combined across shards")
 
 

@@ -43,8 +43,16 @@ def _cut_over_and_post(monkeypatch):
         yield
 
 
+def _own_database_mark(fn):
+    """A race that names its own `django_db` mark (transactional ones) keeps to "default": the shards are not
+    its databases, so it cannot run here. Left to tests/test_concurrency.py."""
+    return any(m.name == "django_db" for m in getattr(fn, "pytestmark", ()))
+
+
 def _cut_over(cls):
-    return type(cls.__name__, (cls,), {"__doc__": f"{cls.__doc__}\n\n(every civilization's reads cut over)"})
+    body = {"__doc__": f"{cls.__doc__}\n\n(every civilization's reads cut over)"}
+    body.update({name: None for name in dir(cls) if name.startswith("test_") and _own_database_mark(getattr(cls, name))})
+    return type(cls.__name__, (cls,), body)
 
 
 _PG_ONLY = [c for c in vars(races).values() if isinstance(c, type) and c.__name__.startswith("Test")]
