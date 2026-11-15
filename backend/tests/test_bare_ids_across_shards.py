@@ -37,7 +37,12 @@ def greek(settings):
                                                                      "declared_civilization": "GREEK"})[0]
     Tenant._base_manager.using(SHARD).bulk_create(
         [Tenant(**{f.attname: getattr(hall, f.attname) for f in Tenant._meta.concrete_fields})])
-    return hall
+    # The test body sets up rows outside any request or task, as control's writes; with Greek reads cut over
+    # (stage 3) it says so -- otherwise the save hooks' reads (a soul's root unit) have no shard context.
+    from apps.core.shard_reads import CONTROL_ALIAS, read_context
+
+    with read_context(CONTROL_ALIAS):
+        yield hall
 
 
 def _user(name):
