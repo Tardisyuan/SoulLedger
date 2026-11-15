@@ -357,11 +357,17 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
                    if a.soul.tenant.civilization in CIVS and a.soul.tenant_id == a.soul.home_tenant_id)
     soul, here = account.soul, alias_for_civilization(account.soul.tenant.civilization)
     elsewhere = next(h for h in world.halls if h.declared_civilization and h.civilization != soul.tenant.civilization)
-    Soul._base_manager.filter(pk=soul.pk).update(tenant=elsewhere, home_tenant=elsewhere)
+    from apps.org.models import Organization
+
+    Soul._base_manager.filter(pk=soul.pk).update(
+        tenant=elsewhere, home_tenant=elsewhere, owner_org=world.row(Organization, elsewhere).pk)
     control_before = _snapshot(["default"])
 
     code, out = _reconcile("--all", "--fix")
-    assert code == 0, out
+    # What may be left is a row that followed the soul and still points into its old hall (dangling).
+    left = [line for line in out.splitlines() if line.startswith("still")]
+    assert all("not copied" in line and f"pk={soul.pk} " not in line for line in left), out
+    assert code == (1 if left else 0), out
     assert (Soul._meta.label, str(soul.pk)) in _reported(out)
     assert not Soul._base_manager.using(here).filter(pk=soul.pk).exists()
     assert _snapshot(["default"]) == control_before
