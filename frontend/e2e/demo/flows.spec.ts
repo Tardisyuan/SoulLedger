@@ -70,7 +70,9 @@ async function recordSealAnimations(page: Page): Promise<void> {
 const sealAnimations = (page: Page) => page.evaluate(() => (window as unknown as { __sealAnims: SealAnimation[] }).__sealAnims);
 
 for (const reduced of [false, true]) {
-  test(`the verdict seal throws its glow after the press${reduced ? " — and nothing under reduced motion" : ""}`, async ({ page, context }) => {
+  // Batch 53 G1: one CSS stamp (`.stamp-in`) everywhere — 1.18× → 1 in 200ms, no halo; reduced motion = a 120ms fade.
+  // No script animation at all any more (the 1.7× WAAPI drop and its box-shadow glow are gone).
+  test(`the verdict seal stamps once with no glow${reduced ? " — a plain fade under reduced motion" : ""}`, async ({ page, context }) => {
     const seen = watch(context, page);
     await page.emulateMedia({ reducedMotion: reduced ? "reduce" : "no-preference" });
     await recordSealAnimations(page);
@@ -80,16 +82,11 @@ for (const reduced of [false, true]) {
     const layer = page.getByTestId("confirm-layer");
     await expect(layer.getByText("判决已写入记录。")).toBeVisible();
     const seal = layer.getByTestId("seal");
-    await expect(seal).toBeVisible(); // 印真的落了 —— 不然下面「一段都没有」量的是一枚不存在的印
-    if (reduced) {
-      expect(await sealAnimations(page)).toEqual([]);
-      expect(await seal.evaluate((el) => el.getAnimations().length)).toBe(0);
-    } else {
-      await expect.poll(() => sealAnimations(page)).toEqual([
-        { props: ["opacity", "transform"], listed: true },
-        { props: ["boxShadow"], listed: true },
-      ]);
-    }
+    await expect(seal).toBeVisible(); // 印真的落了 —— 不然下面量的是一枚不存在的印
+    await expect(seal).toHaveClass(/\bstamp-in\b/);
+    expect(await sealAnimations(page)).toEqual([]); // no Element.animate() on the seal — and so no glow keyframes
+    expect(await seal.evaluate((el) => getComputedStyle(el).animationName)).toBe(reduced ? "seal-fade" : "seal-stamp");
+    expect(await seal.evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
     clean(seen, "the verdict seal");
   });
 }
