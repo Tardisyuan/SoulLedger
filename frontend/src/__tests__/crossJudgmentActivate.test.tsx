@@ -24,7 +24,9 @@ jest.mock("next/navigation", () => ({
 }));
 
 const HOLDS = ["cross_judgment.read", "cross_judgment.create"];
-const mockTenant: { user: { id: number; username: string; role?: string; permissions?: string[]; tenant: { code: string } | null } } = {
+const mockTenant: {
+  user: { id: number; username: string; role?: string; permissions?: string[]; tenant: { code: string } | null; civilization?: string };
+} = {
   user: { id: 1, username: "u", role: "JUDGE", permissions: HOLDS, tenant: { code: "CN_DIYU" } },
 };
 jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
@@ -202,7 +204,7 @@ describe("cross-judgment detail — back to the original judgment", () => {
     expect(judgmentApi.get).not.toHaveBeenCalled();
   });
 
-  it("a hall-bound ADMIN of a participant hall fetches nothing; an ADMIN with no hall gets the links", async () => {
+  it("a hall-bound ADMIN of a participant hall fetches nothing; SYSTEM_ADMIN gets the links", async () => {
     mockTenant.user = { id: 3, username: "eu_admin", role: "ADMIN", tenant: { code: "EU_HEAVEN_HELL" } };
     const bound = renderPage(judgment({ judgment: "j-7" }));
     await screen.findByText("Joint");
@@ -211,7 +213,23 @@ describe("cross-judgment detail — back to the original judgment", () => {
     bound.unmount();
 
     judgmentApi.get.mockResolvedValue({ data: { id: "j-7", soul: "s-3", soul_name: "李四" } });
-    mockTenant.user = { id: 4, username: "admin", role: "ADMIN", tenant: null };
+    mockTenant.user = { id: 4, username: "sysadmin", role: "SYSTEM_ADMIN", tenant: null };
+    renderPage(judgment({ judgment: "j-7" }));
+    expect(await screen.findByTestId("cross-origin")).toBeInTheDocument();
+    expect(judgmentApi.get).toHaveBeenCalledWith("j-7");
+  });
+
+  // 文明 ADMIN(无殿 ADMIN,分殿 1A):发起殿在本文明才算发起方(`ownsHall`,后端 `reaches_hall`)。
+  it("a civilization ADMIN gets the links only when the initiating hall is in its civilization", async () => {
+    mockTenant.user = { id: 5, username: "eu_civ", role: "ADMIN", tenant: null, civilization: "EUROPEAN" };
+    const other = renderPage(judgment({ judgment: "j-7" }));
+    await screen.findByText("Joint");
+    expect(screen.queryByTestId("cross-origin")).toBeNull();
+    expect(judgmentApi.get).not.toHaveBeenCalled();
+    other.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: { id: "j-7", soul: "s-3", soul_name: "李四" } });
+    mockTenant.user = { id: 6, username: "cn_civ", role: "ADMIN", tenant: null, civilization: "CHINESE" };
     renderPage(judgment({ judgment: "j-7" }));
     expect(await screen.findByTestId("cross-origin")).toBeInTheDocument();
     expect(judgmentApi.get).toHaveBeenCalledWith("j-7");
