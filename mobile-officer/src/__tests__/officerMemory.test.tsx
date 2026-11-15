@@ -167,7 +167,7 @@ describe("D8b: the last three reject reasons", () => {
     // 第五十二批 F1: an outlined full-width row, 40 high, ↺ in --faint, one line; read as 「填入：…」.
     const row = screen.getByTestId("decision-recent-1");
     expect(row.props.accessibilityLabel).toBe("填入：先退回");
-    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ height: 40, borderWidth: 1, borderRadius: 8 });
+    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ minHeight: 44, borderWidth: 1, borderRadius: 8 });
     expect(screen.getByTestId("decision-recent-1-icon", { includeHiddenElements: true })).toHaveTextContent("↺");
     fireEvent.press(screen.getByTestId("decision-recent-1"));
     expect(screen.getByTestId("decision-reason").props.value).toBe("先退回");

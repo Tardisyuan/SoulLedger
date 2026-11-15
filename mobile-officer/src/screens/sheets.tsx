@@ -219,7 +219,7 @@ export function DecisionSheet({
                   paddingHorizontal: space[3],
                   borderWidth: 1,
                   borderColor: theme.hair2,
-                  borderRadius: radius.control,
+                  borderRadius: 8, // 第五十二批 F1:圆角 8(高按触控区 44)
                   backgroundColor: pressed ? theme.hair : undefined,
                 })}
               >
