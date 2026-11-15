@@ -711,12 +711,17 @@ def _participants_with_names():
     )
 
 
-def _seated_in(halls):
-    """Ids of the joint benches with a seat of `halls`. Read separately, not joined: a seat is a row of its own
-    hall and the bench one of the initiating hall's, so on a civilization's shard the join would lose every
-    bench another civilization opened (stage 3)."""
-    return list(with_fanout(CrossTenantJudgmentParticipant._base_manager.filter(
-        participant_tenant__in=halls).order_by()).values_list("judgment_id", flat=True))
+def _seated_in(halls, lookup="participant_tenant__in"):
+    """A `Q` on the bench: one of its seats is a hall of `halls`. With civilizations cut over (stage 3) the seat
+    ids are read separately, not joined: a seat is a row of its own hall and the bench one of the initiating
+    hall's, so on a civilization's shard the join would lose every bench another civilization opened."""
+    from django.conf import settings
+    from django.db.models import Q
+
+    if not settings.SHARD_READ_CIVS:
+        return Q(**{f"participants__{lookup}": halls})
+    return Q(pk__in=list(with_fanout(CrossTenantJudgmentParticipant._base_manager.filter(
+        **{lookup: halls}).order_by()).values_list("judgment_id", flat=True)))
 
 
 class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
@@ -832,7 +837,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             return qs
         if is_civilization_admin(user):
             halls = civilization_halls(request_civilization(self.request))
-            return qs.filter(Q(initiating_tenant__in=halls) | Q(pk__in=_seated_in(halls))).distinct()
+            return qs.filter(Q(initiating_tenant__in=halls) | _seated_in(halls)).distinct()
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             # `.distinct()`: the right-hand `Q` joins `participants`, and a row
@@ -841,7 +846,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             # judgment sees that judgment twice — in the page body and in the
             # paginated `count`, which is the number the UI prints.
             qs = qs.filter(
-                Q(initiating_tenant=tenant) | Q(pk__in=_seated_in([tenant]))
+                Q(initiating_tenant=tenant) | _seated_in(tenant, "participant_tenant")
             ).distinct()
             # 数据范围也要过(rbac-scope 第 9 条):同文件 DispatchRecord 补过,这里覆写后一直没补。
             return DataScopeFilter.filter_queryset(self.request, qs, CrossTenantJudgment)
