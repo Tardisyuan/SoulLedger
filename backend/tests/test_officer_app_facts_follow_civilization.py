@@ -43,3 +43,43 @@ def test_the_requesters_name_reaches_only_readers_of_its_hall():
     expected = {label: ("Asker of the Duat",) * 2 if sees else (None, None)
                 for label, (_u, _h, sees) in readers.items()}
     assert got == expected
+
+
+def test_a_decided_steps_approver_is_named_only_to_readers_of_its_segments_hall():
+    """Batch 43 on the history's decided steps: the approver of a segment in another hall is not named.
+    The flow is Diyu's; its first segment was decided in Diyu, its second in the Duat."""
+    from apps.workflow.models import ApprovalNode, NodeStatus, SegmentState, WorkflowSegment
+
+    cn, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})
+    eg, _ = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "EG"})
+
+    def user(name, **kw):
+        return User.objects.create_user(username=name, password="x", **kw)
+
+    cn_approver = user("h-cn-approver", role=UserRole.JUDGE, tenant=cn, display_name="Approver of Diyu")
+    eg_approver = user("h-eg-approver", role=UserRole.JUDGE, tenant=eg, display_name="Approver of the Duat")
+    wf = ApprovalWorkflow.objects.create(number="WF-FACTS-2", workflow_name="flow", tenant=cn,
+                                         soul=Soul.objects.create(name="s2", tenant=cn))
+    for order, (hall, approver) in enumerate([(cn, cn_approver), (eg, eg_approver)], 1):
+        segment = WorkflowSegment.objects.create(workflow=wf, order=order, tenant=hall, civilization="CHINESE",
+                                                 name=f"seg{order}", state=SegmentState.PICKED)
+        ApprovalNode.objects.create(workflow=wf, segment=segment, node_name=f"step{order}", node_order=order,
+                                    node_type="TRIAL", status=NodeStatus.APPROVED, approver=approver)
+
+    both = ["Approver of Diyu", "Approver of the Duat"]
+    readers = {  # label -> (user, the hall it reads as, decided-step names it is shown)
+        "SYSTEM_ADMIN": (user("h-sys", role=UserRole.SYSTEM_ADMIN, tenant=None), None, both),
+        "CHINESE ADMIN": (user("h-cn", role=UserRole.ADMIN, tenant=None, civilization="CHINESE"), None,
+                          ["Approver of Diyu", None]),
+        "EGYPTIAN ADMIN": (user("h-eg", role=UserRole.ADMIN, tenant=None, civilization="EGYPTIAN"), None,
+                           [None, "Approver of the Duat"]),
+        "ADMIN of no civilization": (user("h-blank", role=UserRole.ADMIN, tenant=None), None, [None, None]),
+        "Diyu judge": (user("h-cnj", role=UserRole.JUDGE, tenant=cn), cn, ["Approver of Diyu", None]),
+        "Duat judge": (user("h-egj", role=UserRole.JUDGE, tenant=eg), eg, [None, "Approver of the Duat"]),
+    }
+    got, expected = {}, {}
+    for label, (reader, hall, names) in readers.items():
+        history = workflow_facts(wf, reader, hall, reason="")["history"]
+        got[label] = [step["actor"] for step in history if step["kind"] == "decided"]
+        expected[label] = names
+    assert got == expected

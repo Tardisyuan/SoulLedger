@@ -174,6 +174,21 @@ describe("isSystemAdmin / isCivilizationAdmin / ownsHall (后端 is_tenant_exemp
     expect(p.ownsHall("EG_DUAT")).toBe(false);
   });
 
+  it("a civilization ADMIN whose session has no civilization field owns no unknown hall either", () => {
+    // An envelope from before 1A has no `civilization` key at all. A hall this build does not know, asked without
+    // the row's civilization, also resolves to undefined: undefined === undefined must not read as "same civilization".
+    const { civilization: _dropped, ...userWithoutCivilization } = { ...mockUser("ADMIN"), tenant: null, civilization: null };
+    mockUseTenant.mockReturnValue({ ...mockContext("ADMIN"), user: userWithoutCivilization } as never);
+    const p = renderHook(() => usePermissions()).result.current;
+    expect(p.isCivilizationAdmin).toBe(true);
+    expect(p.ownsHall("EG_NEW_HALL")).toBe(false);
+    expect(p.ownsHall("EG_NEW_HALL", null)).toBe(false);
+    expect(p.ownsHall("EG_NEW_HALL", "")).toBe(false);
+    // the seeded hall and a row that names its civilization stay refused too
+    expect(p.ownsHall("EG_DUAT")).toBe(false);
+    expect(p.ownsHall("EG_NEW_HALL", "EGYPTIAN")).toBe(false);
+  });
+
   it("a hall-bound ADMIN and a no-hall non-ADMIN are neither; the bound one owns its own hall", () => {
     const bound = as("ADMIN", { code: "CN_DIYU" });
     expect(bound.isSystemAdmin).toBe(false);
