@@ -489,11 +489,16 @@ def _dispatch_record(home, other, soul, status="PROPOSED", from_home=False):
     gate or the serializer's read-only fields.
 
     Built in this direction on purpose. The view's own checks require the
-    caller's tenant to be the target before approve/reject/execute will run,
-    and `tenant` must equal the caller's tenant for TenantPermission's object
-    check to pass. Pointing it the other way would produce a 403 from the
-    tenant layer and the snapshot would be measuring tenant isolation instead
-    of the missing codename gate.
+    caller's tenant to be the target before approve/reject/execute will run;
+    pointing it the other way would produce a 403 from the party check and the
+    snapshot would be measuring tenant isolation instead of the codename gate.
+
+    `tenant` is the proposing (source) hall, as `DispatchService.propose` /
+    `save_draft` write it. It used to be `home` (the target) here, which the
+    product never writes: with the soul's `owner_org` in the source hall,
+    execute then stamped `source_owner_org` (a source-hall unit) on a row of
+    the target's civilization, and the stage-2 guard refused it
+    (`apps/core/sharding.py`). `DispatchPartyPermission` admits either party.
     """
     from apps.dispatch.models import DispatchRecord
 
@@ -504,7 +509,7 @@ def _dispatch_record(home, other, soul, status="PROPOSED", from_home=False):
         soul=soul,
         status=status,
         reason="write-snapshot fixture",
-        tenant=home,
+        tenant=source,
     )
 
 

@@ -20,7 +20,7 @@ from apps.chat.models import ChatImage, Conversation
 from apps.chat.services import IMAGE_KEY, IMAGE_LABEL
 from apps.soul_push.models import PushDelivery
 from tests.chat_support import FakeMatrix, deliver_hooks, matrix, mutual, mxid  # noqa: F401
-from tests.soul_account_support import officer_client, ready_soul
+from tests.soul_account_support import move_soul, officer_client, ready_soul
 from tests.soul_push_support import TOKEN_B, register
 
 pytestmark = pytest.mark.django_db
@@ -213,8 +213,7 @@ class TestSending:
     def test_a_soul_who_left_the_hall_cannot_send_images_there(self, hall, eu_tenant, matrix):  # noqa: F811
         account, client, cid = hall
         image_id = uploaded(client, cid)["id"]
-        account.soul.tenant = eu_tenant
-        account.soul.save()
+        move_soul(account.soul, eu_tenant)
         for res in (upload(client, cid), send(client, image_id)):
             assert (res.status_code, res.json()["code"]) == (403, "not_current_hall")
         assert matrix.sent == []

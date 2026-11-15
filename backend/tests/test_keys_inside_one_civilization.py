@@ -100,3 +100,76 @@ def test_a_residence_court_rules_on_a_record_the_home_hall_wrote(halls):
     row = EvidenceAdmissionService.rule(judgment, home_record.pk, admitted=False, reason="x")
     assert row.tenant.civilization == "EGYPTIAN" and row.record.tenant.civilization == "CHINESE"
     assert not EvidenceAdmission._meta.get_field("record").db_constraint
+
+
+def test_a_refused_key_inside_a_drf_view_is_a_400_problem_not_a_500(halls):
+    """Through DRF's own dispatch (settings EXCEPTION_HANDLER): the guard's refusal names the field (re-review D).
+    Mutation: drop the CrossCivilizationKeyError branch in `problems.exception_handler` -> the error escapes, red."""
+    from rest_framework.permissions import AllowAny
+    from rest_framework.response import Response
+    from rest_framework.test import APIRequestFactory
+    from rest_framework.views import APIView
+
+    from apps.judgment.models import Judgment
+    from apps.souls.models import Soul
+
+    cn, _, eg = halls
+    soul = Soul.objects.create(name="k-drf", tenant=cn)
+    duat = _realm(eg, "KEY_DUAT4", "EGYPTIAN")
+
+    class _Writes(APIView):
+        authentication_classes = ()
+        permission_classes = (AllowAny,)
+
+        def post(self, request):
+            Judgment.objects.create(soul=soul, tenant=cn, civilization="CHINESE", case_number="KEY-J2", realm=duat)
+            return Response(status=201)
+
+    response = _Writes.as_view()(APIRequestFactory().post("/", {}, format="json"))
+    assert response.status_code == 400
+    assert response.content_type == "application/problem+json"
+    assert [(e["field"], e["code"]) for e in response.data["errors"]] == [("realm", "cross_civilization")]
+    assert not Judgment._base_manager.filter(case_number="KEY-J2").exists()
+
+
+def test_a_partial_save_that_moves_the_hall_checks_the_keys_it_leaves_behind(halls):
+    """`save(update_fields=["tenant"])` moves the row to another civilization while `owner_org` stays a unit of
+    the old hall: every key is judged against the new hall, not only the ones written (stage 2 re-review A).
+    Mutation: drop the hop clause in `_refuse_cross_civilization` -> this save goes through, red."""
+    from apps.org.ownership import tenant_root
+    from apps.souls.models import Soul
+
+    cn, cn2, eg = halls
+    soul = Soul.objects.create(name="k-move", tenant=cn)
+    assert soul.owner_org_id == tenant_root(cn).pk
+    soul.tenant = eg
+    with pytest.raises(CrossCivilizationKeyError) as e:
+        soul.save(update_fields=["tenant"])
+    assert list(e.value.message_dict) == ["owner_org"]
+    # Absence of over-reach: another hall of the same civilization, by name or by attname.
+    soul.tenant = cn2
+    soul.save(update_fields=["tenant"])
+    soul.tenant_id = cn.pk
+    soul.save(update_fields=["tenant_id"])
+    # Moving both together, as DispatchService.execute does, is the product.
+    soul.tenant, soul.owner_org = eg, tenant_root(eg)
+    soul.save(update_fields=["tenant", "owner_org"])
+
+
+def test_a_partial_save_is_not_blocked_by_a_stale_key_it_does_not_write(halls):
+    """A row already carrying a cross-civilization key (planted with update(), as a pre-guard row would be) can
+    still have other columns saved; writing that key, or the whole row, is refused (stage 2 re-review B)."""
+    from apps.org.ownership import tenant_root
+    from apps.souls.models import Soul
+
+    cn, _, eg = halls
+    soul = Soul.objects.create(name="k-stale", tenant=cn)
+    Soul._base_manager.filter(pk=soul.pk).update(owner_org=tenant_root(eg))
+    soul.refresh_from_db()
+    soul.name = "k-stale-renamed"
+    soul.save(update_fields=["name"])
+    assert Soul._base_manager.get(pk=soul.pk).name == "k-stale-renamed"
+    with pytest.raises(CrossCivilizationKeyError):
+        soul.save(update_fields=["owner_org"])
+    with pytest.raises(CrossCivilizationKeyError):
+        soul.save()

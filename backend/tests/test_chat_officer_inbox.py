@@ -10,7 +10,7 @@ from apps.audit.models import AuditLog
 from apps.authentication.models import User
 from apps.chat.models import ChatIdentity, Conversation, ConversationKind
 from tests.chat_support import can_speak, matrix, mxid, room_of  # noqa: F401
-from tests.soul_account_support import officer_client, ready_soul
+from tests.soul_account_support import move_soul, officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
 
@@ -34,8 +34,7 @@ def test_a_soul_writes_to_the_hall_it_is_in_now(cn_tenant, eu_tenant, matrix):  
     """暂居:写给暂居地的殿司,而不是原属殿司。
     变异:`open_officer_inbox` 里把 `soul.tenant_id` 换成 `soul.home_tenant_id` → 红。"""
     account, client = ready_soul(eu_tenant, name="Beatrice")
-    account.soul.tenant = cn_tenant  # 暂居中国
-    account.soul.save()
+    move_soul(account.soul, cn_tenant)  # 暂居中国
 
     data = _write_to_hall(client)
     conversation = Conversation.objects.get(pk=data["id"])
@@ -78,11 +77,9 @@ def test_the_hall_keeps_its_letters_after_the_soul_goes_home(cn_tenant, eu_tenan
     """暂居结束回归原文明后,当初写给暂居地殿司的信仍归暂居地殿司。
     变异:让 `get_queryset` 按 `soul_a__tenant` 而不是会话自己的 `tenant` 过滤 → 红。"""
     account, client = ready_soul(eu_tenant, name="Beatrice")
-    account.soul.tenant = cn_tenant
-    account.soul.save()
+    move_soul(account.soul, cn_tenant)
     data = _write_to_hall(client)
-    account.soul.tenant = eu_tenant  # 回归
-    account.soul.save()
+    move_soul(account.soul, eu_tenant)  # 回归
 
     cn_officer = officer_client(_moderator(cn_tenant, "cn_mod"))
     eu_officer = officer_client(_moderator(eu_tenant, "eu_mod"))

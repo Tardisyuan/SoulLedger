@@ -140,6 +140,18 @@ def test_validation_errors_become_errors_with_field_paths_and_codes():
     ]
 
 
+def test_a_key_across_civilizations_is_a_400_naming_the_field():
+    """The pre_save guard raises a Django ValidationError; unconverted, DRF let it through as a 500."""
+    from apps.core.sharding import CrossCivilizationKeyError
+
+    response = _handled(CrossCivilizationKeyError({"realm": ["realms.Realm 3 is a row of a EGYPTIAN hall"]}))
+    assert response.status_code == 400 and response.content_type == CONTENT_TYPE
+    data = response.data
+    assert (data["status"], data["code"]) == (400, "invalid")
+    assert data["errors"] == [{"field": "realm", "code": "cross_civilization",
+                               "detail": "realms.Realm 3 is a row of a EGYPTIAN hall"}]
+
+
 def test_drf_exceptions_keep_their_code():
     data = _handled(exceptions.NotAuthenticated()).data
     assert (data["status"], data["code"], data["title"]) == (401, "not_authenticated", "Unauthorized")

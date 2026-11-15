@@ -288,7 +288,11 @@ def _refuse_cross_civilization(sender, instance, raw=False, using="default", upd
     if raw:  # fixtures / loaddata: the rows as given
         return
     keys = same_civilization_keys(sender)
-    if update_fields is not None:
+    hop = tenant_path(sender).split("__")[0] if keys else None
+    hop_field = sender._meta.get_field(hop) if hop else None
+    # A partial save checks the keys it writes, unless it moves the row's hall: then every key it keeps is
+    # judged against the new hall (Soul.save(update_fields=["tenant"]) leaving owner_org behind).
+    if update_fields is not None and not (hop_field and {hop_field.name, hop_field.attname} & set(update_fields)):
         keys = [f for f in keys if f.name in update_fields or f.attname in update_fields]
     bad = cross_civilization_keys(instance, using, keys)
     if bad:

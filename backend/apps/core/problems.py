@@ -76,6 +76,12 @@ class Problem(exceptions.APIException):
 
 
 def exception_handler(exc, context):
+    from apps.core.sharding import CrossCivilizationKeyError
+
+    if isinstance(exc, CrossCivilizationKeyError):
+        # A save the pre_save guard refused (a key naming another civilization's row): the request named it, so
+        # 400 with the field, not a 500. Other Django ValidationErrors keep their current handling.
+        exc = exceptions.ValidationError(exc.message_dict, code="cross_civilization")
     response = drf_exception_handler(exc, context)
     if response is None:
         return None

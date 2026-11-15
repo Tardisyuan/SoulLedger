@@ -15,7 +15,7 @@ from apps.chat.models import ChatBlock, Conversation, ConversationKind
 from apps.social import moderation
 from apps.soul_push.models import PushDelivery
 from tests.chat_support import FakeMatrix, can_speak, follow, matrix, mutual, mxid  # noqa: F401
-from tests.soul_account_support import officer_client, ready_soul
+from tests.soul_account_support import move_soul, officer_client, ready_soul
 from tests.soul_push_support import TOKEN_B, register
 
 pytestmark = pytest.mark.django_db
@@ -233,8 +233,7 @@ def test_the_hall_a_soul_has_left_cannot_write_into_its_old_letter(cn_tenant, eu
     assert officer.get(f"{INBOX}{opened['id']}/").data["can_reply"] is True
     assert officer.get(f"{INBOX}folders/").data["awaiting_reply"] == 1
 
-    account.soul.tenant = eu_tenant  # 调走
-    account.soul.save()
+    move_soul(account.soul, eu_tenant)  # 调走
     before = len(matrix.sent)
     refused = officer.post(f"{INBOX}{opened['id']}/reply/", {"body": "已收到"}, format="json")
     assert refused.status_code == 409 and refused.data["code"] == "not_current_hall"
@@ -243,8 +242,7 @@ def test_the_hall_a_soul_has_left_cannot_write_into_its_old_letter(cn_tenant, eu
     # 回不了的信不留在「待回复」里催人(官员端待办读的是同一个文件夹)。变异:`folder_q` 删掉 tenant 条件 → 1,红。
     assert officer.get(f"{INBOX}folders/").data["awaiting_reply"] == 0
 
-    account.soul.tenant = cn_tenant  # 回归
-    account.soul.save()
+    move_soul(account.soul, cn_tenant)  # 回归
     assert officer.get(f"{INBOX}folders/").data["awaiting_reply"] == 1
     assert officer.post(f"{INBOX}{opened['id']}/reply/", {"body": "已收到"}, format="json").status_code == 201
     assert Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).count() == 1

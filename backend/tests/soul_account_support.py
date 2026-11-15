@@ -31,6 +31,17 @@ def ready_soul(tenant, name="亡魂甲", state=SoulState.JUDGING, **fields):
     return account, soul_client(account)
 
 
+def move_soul(soul, tenant):
+    """把灵魂挪到 `tenant`(暂居或回归),像 `DispatchService.execute` / `end_residence` 那样:`tenant` 与
+    `owner_org` 一起改(归属机构是所在殿的单位,数据范围 B1)。只改 `tenant` 是产品写不出的状态 ——
+    原来那个殿的单位挂在另一个文明的灵魂上,分库的守卫(`apps/core/sharding.py`)拒绝它。"""
+    from apps.org.ownership import tenant_root
+
+    soul.tenant = tenant
+    soul.owner_org = tenant_root(tenant)
+    soul.save()
+
+
 def sentence_served(account):
     """本世的受刑计划已完成、灵魂在轮回中 —— 转生申请开放的前提(Q6,
     docs/ARCHITECTURE-sentence-plan.md §6)。只写记录,不走推进;要走真实推进的测试

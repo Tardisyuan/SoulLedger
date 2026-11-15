@@ -158,6 +158,61 @@ def test_a_hard_delete_of_a_record_a_court_ruled_on_is_refused(hall):
     assert not SoulRecord._base_manager.filter(pk=unruled.pk).exists()
 
 
+def _ruled_on_by_another_souls_case(hall, case_number):
+    """A record of soul A that a court admitted in soul B's judgment: the admission does not go with A."""
+    from apps.judgment.models import EvidenceAdmission, Judgment
+    from apps.souls.models import Soul
+    from apps.souls.record_models import SoulRecord
+
+    a = Soul.objects.create(name=f"{case_number}-a", tenant=hall)
+    b = Soul.objects.create(name=f"{case_number}-b", tenant=hall)
+    record = SoulRecord.objects.create(soul=a, tenant=hall, record_type="DEMERIT", civilization="CHINESE")
+    judgment = Judgment.objects.create(soul=b, tenant=hall, case_number=case_number, civilization="CHINESE")
+    admission = EvidenceAdmission.objects.create(judgment=judgment, record=record, tenant=hall)
+    return a, record, admission
+
+
+def test_purging_a_soul_whose_record_another_souls_court_ruled_on_is_refused(hall):
+    """RESTRICT is lifted only when the restricting row goes in the same delete. B's admission does not go
+    when A is purged, so A's purge is refused and nothing of A is removed (stage 2 re-review C).
+    Mutation: `_refuse_restricted` returning early -> the purge goes through, red."""
+    from django.db.models import RestrictedError
+
+    from apps.judgment.models import EvidenceAdmission
+    from apps.souls.models import Soul
+    from apps.souls.record_models import SoulRecord
+
+    a, record, admission = _ruled_on_by_another_souls_case(hall, "BARE-RESTRICT-3")
+    with pytest.raises(RestrictedError):
+        a.purge()
+    assert Soul.all_objects.filter(pk=a.pk).exists()
+    assert SoulRecord._base_manager.filter(pk=record.pk).exists()
+    assert EvidenceAdmission._base_manager.filter(pk=admission.pk, record_id=record.pk).exists()
+
+
+def test_after_a_purge_lifted_a_restrict_a_hard_delete_of_another_admitted_record_is_still_refused(hall):
+    """The lift is scoped to the purge that weighed it (`_settled` is reset): once a purge went through, a plain
+    hard delete of a record another soul's court admitted is refused as before (stage 2 re-review C).
+    Mutation: never reset `_settled` in `clear_bare_ids` -> the delete goes through, red."""
+    from django.db.models import RestrictedError
+
+    from apps.judgment.models import EvidenceAdmission, Judgment
+    from apps.souls.models import Soul
+    from apps.souls.record_models import SoulRecord
+
+    purged = Soul.objects.create(name="restrict-purged", tenant=hall)
+    own = SoulRecord.objects.create(soul=purged, tenant=hall, record_type="DEMERIT", civilization="CHINESE")
+    own_case = Judgment.objects.create(soul=purged, tenant=hall, case_number="BARE-RESTRICT-4", civilization="CHINESE")
+    EvidenceAdmission.objects.create(judgment=own_case, record=own, tenant=hall)
+    _, record, admission = _ruled_on_by_another_souls_case(hall, "BARE-RESTRICT-5")
+
+    purged.purge()  # its own admission goes with it: lifted
+    with pytest.raises(RestrictedError, match="EvidenceAdmission.record"), transaction.atomic():
+        SoulRecord._base_manager.filter(pk=record.pk).delete()
+    assert SoulRecord._base_manager.filter(pk=record.pk).exists()
+    assert EvidenceAdmission._base_manager.filter(pk=admission.pk, record_id=record.pk).exists()
+
+
 def test_a_purged_souls_manifest_still_counts_what_went_through_bare_ids(hall):
     """Soul.purge reports every row it removed (tests/test_soul_purge.py). The soul's accounts, and their
     letters identity, now go through bare ids, which Django's own delete() count cannot see."""

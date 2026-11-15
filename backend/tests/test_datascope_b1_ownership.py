@@ -129,6 +129,31 @@ def test_dispatch_moves_ownership_to_the_target_root_and_back(cn, eg):
     assert (soul.tenant_id, soul.owner_org_id) == (cn.pk, unit.pk)
 
 
+def test_a_soul_dispatched_across_civilizations_twice_keeps_every_key_inside_its_rows_civilization(cn, eg):
+    """Stage 2 guard (apps/core/sharding.py) over the real flow: CN unit -> EG -> home -> GR -> home. At every
+    step `owner_org` is a unit of the hall the soul is in, and `source_owner_org` a unit of the record's own hall
+    (the source, as `propose` writes `tenant`); a residing soul is not dispatched onward. Each save runs the guard,
+    so a step that wrote another civilization's unit would raise here."""
+    gr = _tenant("GR_HADES")
+    assert len({cn.known_civilization, eg.known_civilization, gr.known_civilization}) == 3
+    unit = _unit(cn, "D6")
+    soul = Soul.objects.create(name="游魂", tenant=cn, owner_org=unit, current_state="JUDGING")
+    for target in (eg, gr):
+        record = DispatchRecord.objects.create(
+            source_tenant=cn, target_tenant=target, soul=soul, status=DispatchStatus.APPROVED, reason="受罚", tenant=cn,
+        )
+        DispatchService.execute(record, "executor")
+        soul.refresh_from_db()
+        record.refresh_from_db()
+        assert (soul.tenant_id, soul.owner_org_id) == (target.pk, tenant_root(target).pk)
+        assert (record.tenant_id, record.source_owner_org_id) == (cn.pk, unit.pk)
+        with pytest.raises(ValueError, match="residing"):  # onward from the residence: home first
+            DispatchService.propose(target, gr if target == eg else eg, soul, None, "再调")
+        DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_MANUAL)
+        soul.refresh_from_db()
+        assert (soul.tenant_id, soul.owner_org_id) == (cn.pk, unit.pk)
+
+
 def test_residence_ends_at_the_home_root_when_the_source_unit_is_gone(cn, eg):
     unit = _unit(cn, "D5")
     soul = Soul.objects.create(name="客魂二", tenant=cn, owner_org=unit, current_state="JUDGING")
