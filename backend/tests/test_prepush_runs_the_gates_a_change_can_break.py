@@ -2129,7 +2129,7 @@ class TestRemoteTimeLimits:
         # (The gates' run also prunes unused trees between taking the lock and starting: TestUnusedRemoteTreesAreDeleted.)
         # The gates have two slots (fd 9 run.lock, fd 8 run.2.lock; TestTwoGateSlots): either free one, or a wait for either.
         assert re.search(rf" fake-host \( flock -n {first_fd} (\|\| flock -n 8 )?\|\| \{{ echo .*; "
-                         r"(flock 9|until flock -n 9 \|\| flock -n 8; do sleep 10; done); \} \|\| exit 1; "
+                         r"(flock 9|while :; do .*?; sleep 10; flock -n 9 \|\| flock -n 8 && break; done); \} \|\| exit 1; "
                          r"(remote_prune \(\).*\n\}; \( flock 7; remote_prune \S+ \S+ \d+ [01] \) 7>\S+/prune\.lock; )?docker run", remote, re.S), remote
         assert remote.rstrip().endswith(f" 9>/srv/appdata/sl-gates/{lock}"), remote
         # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
@@ -2293,7 +2293,7 @@ class TestTwoGateSlots:
         assert m, f"no {name} in run-gates.sh"
         return m.group(0)
 
-    def _take(self, tmp_path, free: set[str], frees_later: str = "", slots: str = "2"):
+    def _take(self, tmp_path, free: set[str], frees_later: str = "", slots: str = "2", orphaned: bool = False):
         """`free`: the fds whose `flock -n` succeeds; `frees_later`: an fd that succeeds from its second try on."""
         b = tmp_path / "bin"
         b.mkdir()
@@ -2304,6 +2304,7 @@ class TestTwoGateSlots:
             f'if [ "$2" = "{frees_later}" ]; then [ -e "{tmp_path}/tried" ] && exit 0; touch "{tmp_path}/tried"; fi\n'
             '[ "$1" = -n ] && exit 1\nexit 0\n')
         (b / "sleep").write_text(f'#!/bin/bash\necho "sleep $*" >> "{tmp_path}/flock.log"\n')
+        (b / "ps").write_text(f'#!/bin/bash\necho {"1" if orphaned else "4242"}\n')
         (b / "docker").write_text('#!/bin/bash\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
@@ -2329,7 +2330,13 @@ class TestTwoGateSlots:
         assert proc.stdout == ("gates: both gate slots are taken on that machine, held by: "
                                "sl-gates-A-1 (Up 3 hours),sl-gates-B-2 (Up 1 minute)\nRAN\n"), proc.stdout
         # Never a blocking `flock 9`: that would sit behind slot 1 while slot 2 frees.
-        assert log == "flock -n 9\nflock -n 8\nflock -n 9\nflock -n 8\n", log
+        assert log == "flock -n 9\nflock -n 8\nsleep 10\nflock -n 9\nflock -n 8\n", log
+
+    def test_a_waiter_whose_ssh_is_gone_gives_up(self, tmp_path):
+        # ssh without a tty sends no SIGHUP: the remote shell is re-parented to init and would run when a slot frees.
+        proc, log = self._take(tmp_path, set(), frees_later="8", orphaned=True)
+        assert proc.returncode == 1 and "RAN" not in proc.stdout, proc.stdout
+        assert "sleep" not in log, log
 
     def test_one_slot_is_the_single_lock_as_it_was(self, tmp_path):
         proc, log = self._take(tmp_path, set(), slots="1")
