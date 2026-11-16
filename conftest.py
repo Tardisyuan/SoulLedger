@@ -12,14 +12,18 @@ LocMem gives each test process its own cache, and clearing it between tests
 keeps counters and cached permission lookups from leaking across cases.
 """
 import pytest
-from django.core.cache import cache
 from django.test import override_settings
 
 TEST_CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "soulledger-tests",
-    }
+    },
+    # The pure-cache alias (apps/core/cache.py), apart from state as in production.
+    "data": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "soulledger-tests-data",
+    },
 }
 
 
@@ -134,12 +138,18 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
     def invalidate_all_permissions():
         get_permission_cache().invalidate_all()
 
+    from django.core.cache import caches
+
+    def clear_caches():  # both LocMem aliases: state (`default`) and the pure cache (`data`)
+        for c in caches.all():
+            c.clear()
+
     # `TenantMiddleware`'s per-worker hall copies: a rolled-back test leaves no signal behind to drop them.
-    cache.clear()
+    clear_caches()
     invalidate_all_permissions()
     clear_tenant_cache()
     yield
-    cache.clear()
+    clear_caches()
     invalidate_all_permissions()
     clear_tenant_cache()
 

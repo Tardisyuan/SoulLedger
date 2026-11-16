@@ -13,7 +13,7 @@ against the vantage point of a life's end plainly does.
 import datetime
 import math
 
-from django.core.cache import cache
+from apps.core.cache import data_cache as cache  # a pure cache: may be flushed (apps/core/cache.py)
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import APIException
