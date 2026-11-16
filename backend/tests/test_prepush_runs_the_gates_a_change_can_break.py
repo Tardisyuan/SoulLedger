@@ -2130,8 +2130,8 @@ class TestRemoteTimeLimits:
         # (so a wait can be announced), then waited for; either way nothing runs without it.
         # (The gates' run also prunes unused trees between taking the lock and starting: TestUnusedRemoteTreesAreDeleted.)
         # The gates have two slots (fd 9 run.lock, fd 8 run.2.lock; TestTwoGateSlots): either free one, or a wait for either.
-        assert re.search(rf" fake-host \( flock -n {first_fd} (\|\| flock -n 8 )?\|\| \{{ echo .*; "
-                         r"(flock 9|while :; do .*?; sleep 10; flock -n 9 \|\| flock -n 8 && break; done); \} \|\| exit 1; "
+        assert re.search(rf" fake-host \( (flock -n {first_fd} |\{{ flock -n 9 && S=1; \}} \|\| \{{ flock -n 8 && S=2; \}} )\|\| \{{ echo .*; "
+                         r"(flock 9|while :; do .*?; sleep 10; \{ \{ flock -n 9 && S=1; \} \|\| \{ flock -n 8 && S=2; \}; \} && break; done); \} \|\| exit 1; "
                          r"(remote_prune \(\).*\n\}; \( flock 7; remote_prune \S+ \S+ \d+ [01] \) 7>\S+/prune\.lock; )?docker run", remote, re.S), remote
         assert remote.rstrip().endswith(f" 9>/srv/appdata/sl-gates/{lock}"), remote
         # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
@@ -2295,7 +2295,7 @@ class TestTwoGateSlots:
         assert m, f"no {name} in run-gates.sh"
         return m.group(0)
 
-    def _take(self, tmp_path, free: set[str], frees_later: str = "", slots: str = "2", orphaned: bool = False):
+    def _take(self, tmp_path, free: set[str], frees_later: str = "", slots: str = "2", orphaned: bool = False, show: str = ""):
         """`free`: the fds whose `flock -n` succeeds; `frees_later`: an fd that succeeds from its second try on."""
         b = tmp_path / "bin"
         b.mkdir()
@@ -2312,7 +2312,7 @@ class TestTwoGateSlots:
             f.chmod(0o755)
         script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition('run-gates.sh')}"
                   f"{self._definition('remote_slots')}"
-                  f'eval "( $(remote_slots sl-gates-); echo RAN ) 8>{tmp_path}/lock2 9>{tmp_path}/lock"\n')
+                  f'eval "( $(remote_slots sl-gates-); echo RAN{show} ) 8>{tmp_path}/lock2 9>{tmp_path}/lock"\n')
         env = _clean_env()
         env["PATH"] = f"{b}:{env['PATH']}"
         proc = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60)
@@ -2333,6 +2333,14 @@ class TestTwoGateSlots:
                                "sl-gates-A-1 (Up 3 hours),sl-gates-B-2 (Up 1 minute)\nRAN\n"), proc.stdout
         # Never a blocking `flock 9`: that would sit behind slot 1 while slot 2 frees.
         assert log == "flock -n 9\nflock -n 8\nsleep 10\nflock -n 9\nflock -n 8\n", log
+
+    def test_the_slot_taken_reaches_the_container_command(self, tmp_path):
+        for i, (free, later, want) in enumerate((({"9"}, "", "1"), ({"8"}, "", "2"), (set(), "8", "2"), (set(), "9", "1"))):
+            (tmp_path / str(i)).mkdir()
+            proc, log = self._take(tmp_path / str(i), free, frees_later=later, show="\\$S")
+            assert proc.stdout.endswith(f"RAN{want}\n"), (free, later, proc.stdout, log)
+        text = RUNNER.read_text(encoding="utf-8")
+        assert "-e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\\${S:-1} " in text
 
     def test_a_waiter_whose_ssh_is_gone_gives_up(self, tmp_path):
         # ssh without a tty sends no SIGHUP: the remote shell is re-parented to init and would run when a slot frees.
@@ -2434,7 +2442,7 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
         proc, remote, log = self._run(main, tmp_path, slots="busy", win="game: YuanShen.exe")
         assert "slot: fake-host slot 2, or its queue (fake-host slot 1 busy, fake-win not used: game: YuanShen.exe)" \
             in proc.stdout, proc.stdout
-        assert "flock -n 9 || flock -n 8 ||" in remote and remote.rstrip().endswith("9>/srv/appdata/sl-gates/run.lock")
+        assert "{ flock -n 9 && S=1; } || { flock -n 8 && S=2; } ||" in remote and remote.rstrip().endswith("9>/srv/appdata/sl-gates/run.lock")
         assert log.count("win_probe /") == 1, "the PC was asked again"
 
     def test_a_gate_run_on_the_pc_gets_its_lock_watcher_ram_and_database(self, checkouts, tmp_path):

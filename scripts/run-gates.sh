@@ -220,6 +220,8 @@ remote_flock() {
 # both). Free slot first, without waiting; both taken: say who holds them, then try both every 10 s. A copy of
 # this script from before the second slot takes run.lock only, so old and new share the machine correctly.
 # GATES_REMOTE_SLOTS=1 is the single lock as it was (remote_flock 9 run.lock).
+# The slot taken is left in $S (1 or 2; unset with one slot = 1) and goes to the container as SL_GATE_SLOT, which
+# names the kept PG templates (config/testdb.py): a slot prunes only its own.
 # A waiter whose ssh is gone gives up: ssh without a tty sends no SIGHUP, so on 2026-11-16 three runs whose agents
 # had stopped them still sat in `flock 9` on that machine (parent: init) and would have started the moment the
 # lock freed — one on the same tree as its agent's new run. Each retry checks the remote shell is not orphaned.
@@ -229,7 +231,7 @@ remote_slots() {
     if [ "${GATES_REMOTE_SLOTS:-2}" = 1 ]; then remote_flock 9 run.lock "$@"; return; fi
     local filters="" n
     for n in "$@"; do filters="$filters --filter name=$n"; done
-    printf '%s' "flock -n 9 || flock -n 8 || { echo \"$P: both gate slots are taken on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; while :; do [ \"\$(ps -o ppid= -p \$\$ | tr -d ' ')\" != 1 ] || exit 1; sleep 10; flock -n 9 || flock -n 8 && break; done; } || exit 1"
+    printf '%s' "{ flock -n 9 && S=1; } || { flock -n 8 && S=2; } || { echo \"$P: both gate slots are taken on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; while :; do [ \"\$(ps -o ppid= -p \$\$ | tr -d ' ')\" != 1 ] || exit 1; sleep 10; { { flock -n 9 && S=1; } || { flock -n 8 && S=2; }; } && break; done; } || exit 1"
 }
 case "${GATES_REMOTE_SLOTS:-2}" in 1) SLOT_CPUS=12 SLOT_MEM=24g SLOT_WORKERS=6 ;; 2) SLOT_CPUS=10 SLOT_MEM=20g SLOT_WORKERS=5 ;;
     *) echo "gates: GATES_REMOTE_SLOTS=${GATES_REMOTE_SLOTS} — 1 or 2"; exit 2 ;; esac
@@ -1270,7 +1272,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
     ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY ) 7>$RDIR/prune.lock; $(win_bg $RNAME ${GATES_REMOTE_CPUS:-$SLOT_CPUS})docker run --rm --init --name $RNAME$RUN_EXTRA \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM} \
-        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
+        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\${S:-1} -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS} \
         -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
         -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $RLIMIT bash -c '
