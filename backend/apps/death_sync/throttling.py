@@ -8,8 +8,7 @@ from rest_framework.throttling import BaseThrottle
 
 class ApiKeyRateThrottle(BaseThrottle):
     """
-    Per-API-key rate limiting using Redis INCR for atomicity.
-    Falls back to in-memory if Redis unavailable.
+    Per-API-key rate limiting: `cache.add` + `cache.incr`, atomic in Redis, fixed window from the first call.
 
     NOT WIRED UNTIL 2026-08-30. This class existed, was correct-looking, and was
     referenced by nothing: `DEFAULT_THROTTLE_CLASSES` held only `AnonRateThrottle`
@@ -56,20 +55,17 @@ class ApiKeyRateThrottle(BaseThrottle):
 
         cache_key = self.get_cache_key(request, view)
 
-        # Use Redis INCR for atomic counter (falls back to memory if Redis unavailable)
-        try:
-            from django_redis import get_redis_connection
-            conn = get_redis_connection("default")
-            count = conn.incr(cache_key)
-            if count == 1:
-                conn.expire(cache_key, period)
-        except Exception:
-            # Fallback: non-atomic but safe for single-process.
-            # `count` is the value **after** this request, matching what
-            # `conn.incr` returns above -- the two paths have to agree on what
-            # they are comparing or they enforce two different limits.
-            count = cache.get(cache_key, 0) + 1
-            cache.set(cache_key, count, period)
+        # `add` then `incr`: atomic in Redis, and neither moves the expiry -- the window runs from the first call.
+        # (Was a `django_redis` branch that could never import here, falling back every time to `get` + `set`,
+        # whose `set` restarted the window on every call: a caller that kept calling was never let through again.)
+        if cache.add(cache_key, 1, period):
+            count = 1
+        else:
+            try:
+                count = cache.incr(cache_key)
+            except ValueError:  # expired between the two calls
+                cache.add(cache_key, 1, period)
+                count = 1
 
         if count > limit:
             self._wait = period
@@ -99,13 +95,7 @@ class ApiKeyRateThrottle(BaseThrottle):
             else api_key.rate_limit_per_hour
         )
         cache_key = f"{cls.cache_key_prefix}:{api_key.id}:{scope}"
-        try:
-            from django_redis import get_redis_connection
-
-            raw = get_redis_connection("default").get(cache_key)
-            used = int(raw) if raw is not None else 0
-        except Exception:
-            used = cache.get(cache_key)
-            if used is None:
-                return None
+        used = cache.get(cache_key)
+        if used is None:
+            return None
         return max(0, limit - used)
