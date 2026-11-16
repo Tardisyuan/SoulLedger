@@ -442,8 +442,8 @@ describe("useReducedMotionDurations", () => {
 });
 
 describe("timings (v3) and corners (v4)", () => {
-  it("a toast stays 4s (v3 B2 Toast 停留 4s); a sheet opens over 240 and closes over 180", () => {
-    expect([motion.toastHold, motion.sheetIn, motion.sheetOut]).toEqual([4000, 240, 180]);
+  it("a toast stays 4s (v3 B2 Toast 停留 4s); a sheet opens over 240 and closes over 160 (Design v3 batch 4: 180 is not a tier)", () => {
+    expect([motion.toastHold, motion.sheetIn, motion.sheetOut]).toEqual([4000, 240, 160]);
   });
 
   it("controls 4 (inputs, buttons), panels and dialogs 6 (user decision 2026-11-06), sheets 12 (Design batch 55)", async () => {

@@ -1,17 +1,15 @@
 import { soulApi, soulErrorMessage, type MeRebirthApplicationList, type SoulErrorMessage } from "@soulledger/core/api/soul";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { daysLeft, formatStamp } from "../rules";
 import { radius, space } from "../theme";
-import { Button, Input, Interp, Notice, Txt, useReducedMotion, useTheme } from "../ui";
+import { Button, Input, Interp, Notice, Txt, useLandingFade, useReducedMotion, useTheme } from "../ui";
 
 /** 6% ink over the page, as an 8-digit hex (the theme's ink is `#RRGGBB`): 0.06 × 255 ≈ 0x0F. */
 const WASH = "0F";
-/** The wash fades over 1.2s (A11 「从推送进入时的高亮」); not scrolled to, not moved, not flashed. */
-const FADE_MS = 1200;
 
 /**
  * A11: a glyph column (16) and the sentence, 8 apart. The spec has 10; the spacing scale
@@ -30,17 +28,14 @@ function StatusLine({ glyph, children }: { glyph: string; children: ReactNode })
 
 /**
  * The light wash behind the block when the page was opened from a tapped push: ink at 6%,
- * 8pt beyond the block on every side, gone over 1.2s. Under reduce-motion there is no fade —
+ * 8pt beyond the block on every side (A11 「从推送进入时的高亮」), on the shared landing recipe (`useLandingFade`: held
+ * 1600, faded over 400, 2s in all; 第四十批 S-e). Not scrolled to, not moved. Under reduce-motion there is no fade —
  * the wash is simply not drawn.
  */
 function LandingWash({ on, children }: { on: boolean; children: ReactNode }) {
   const theme = useTheme();
   const reduced = useReducedMotion();
-  const [opacity] = useState(() => new Animated.Value(1));
-  useEffect(() => {
-    if (!on || reduced) return;
-    Animated.timing(opacity, { toValue: 0, duration: FADE_MS, useNativeDriver: true }).start();
-  }, [on, opacity, reduced]);
+  const opacity = useLandingFade(on, reduced);
   return (
     <View testID="cooldown-block">
       {on && !reduced ? (

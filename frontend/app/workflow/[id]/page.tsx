@@ -25,7 +25,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
-import { Spinner } from "@/src/components/ui/Spinner";
+import { PageSpinner } from "@/src/components/ui/Spinner";
 import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
 import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
 import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
@@ -309,14 +309,7 @@ export default function WorkflowDetailPage() {
     </Link>
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-3 py-8 text-sm text-[oklch(var(--color-ink-muted))]">
-        <Spinner label={t("workflow.detail.loading")} />
-        {t("workflow.detail.loading")}
-      </div>
-    );
-  }
+  if (isLoading) return <PageSpinner label={t("workflow.detail.loading")} />;
 
   // Split from the not-found branch below. `error || !workflow` told an
   // approver whose request 500'd, or who lacked permission on this tenant,

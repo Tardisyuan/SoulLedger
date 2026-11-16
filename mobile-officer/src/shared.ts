@@ -20,6 +20,7 @@
  */
 export {
   Button,
+  EASE,
   FieldError,
   Input,
   Loader,
@@ -35,6 +36,7 @@ export {
   useLayout,
   GUTTER,
   GoneState,
+  useLandingFade,
   useReducedMotion,
   useReducedMotionDurations,
   useRemote,

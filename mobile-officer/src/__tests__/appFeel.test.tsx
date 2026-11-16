@@ -5,13 +5,15 @@
  * 变异(本轮验过):kit.tsx `tab` 的 `minHeight: 56` 改回 `height: 56` →「随字号长高」红;
  * `EdgeBack` 的 `width / 3` 改成 `width` →「过三分之一」红。
  */
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { act, render, screen, within } from "@testing-library/react-native";
 import { State, type PanGesture } from "react-native-gesture-handler";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { AccessibilityInfo, Animated, Platform, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 
 import { EdgeBack, LoadingRows, TAB_FONT_SCALE, TabBar } from "../kit";
-import { themeFor } from "../shared";
+import { motion, themeFor } from "../shared";
 import { renderOfficer } from "./harness";
 
 const flat = (node: { props: { style?: unknown } }): ViewStyle => StyleSheet.flatten(node.props.style as StyleProp<ViewStyle>) ?? {};
@@ -96,5 +98,35 @@ describe("the loading line travels (Design batch 48 A9: the head's top line turn
     const line = StyleSheet.flatten(screen.getByTestId("state-loading-line").props.style);
     expect(line).toMatchObject({ height: 2, width: "30%", backgroundColor: themeFor("CHINESE", "light").plaque });
     expect(loop).toHaveBeenCalledTimes(loops);
+  });
+
+  // A9: a loading line inside content (the dossier's tabs) is ink at 60%; only the top-line one keeps the colour.
+  // Mutation seen red: `inContent ? t.ink : t.plaque` → `t.plaque`.
+  it("inside content it is ink at 60%, never the civilization's colour", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    renderOfficer(<LoadingRows inContent />);
+    await act(async () => {});
+    lay();
+    const theme = themeFor("CHINESE", "light");
+    const line = StyleSheet.flatten(screen.getByTestId("state-loading-line").props.style);
+    expect(line).toMatchObject({ backgroundColor: theme.ink, opacity: 0.6 });
+    expect(line.backgroundColor).not.toBe(theme.plaque);
+  });
+
+  it("the dossier's four in-content waits ask for it", () => {
+    const src = readFileSync(path.join(__dirname, "..", "screens", "soulDetail.tsx"), "utf8");
+    expect(src.match(/<LoadingRows inContent \/>/g)).toHaveLength(4);
+    expect(src).not.toMatch(/<LoadingRows \/>/);
+  });
+
+  // One pass of the line is the web's loading-line period (motion.loadingLine, 1200), not the Loader's breath.
+  it("one pass takes motion.loadingLine", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    const timing = jest.spyOn(Animated, "timing");
+    renderOfficer(<LoadingRows />);
+    await act(async () => {});
+    lay();
+    expect(timing.mock.calls.some(([, c]) => c.duration === motion.loadingLine)).toBe(true);
+    expect(motion.loadingLine).toBe(1200);
   });
 });
