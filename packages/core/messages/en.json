@@ -10031,6 +10031,7 @@
     "month_done_pct": "{{pct}}% concluded this month",
     "open_queue": "Open the queue",
     "stat": {
+      "concluded": "This hall, concluded this month",
       "avg_time": "Average time",
       "returned": "Sent back for retrial"
     },

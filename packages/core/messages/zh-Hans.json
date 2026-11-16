@@ -10031,6 +10031,7 @@
     "month_done_pct": "本月已结 {{pct}}%",
     "open_queue": "打开队列",
     "stat": {
+      "concluded": "本殿本月结案",
       "avg_time": "平均用时",
       "returned": "退回重审"
     },

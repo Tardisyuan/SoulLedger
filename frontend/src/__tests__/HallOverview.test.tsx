@@ -4,7 +4,7 @@
  * 失败不说「已清空」(errorIsNotAnEmptyState 同一条约定)。
  */
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi } from "@soulledger/core/api";
+import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi, officerAppApi } from "@soulledger/core/api";
 import { HallOverview } from "@/src/components/dashboard/HallOverview";
 import { renderWithProviders } from "./support/render";
 import { tZh } from "./support/zhBundle";
@@ -21,7 +21,10 @@ jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { hallStats: jest.fn(), list: jest.fn(), next: jest.fn(), claim: jest.fn() },
   judgmentAppealsApi: { list: jest.fn() },
   crossTenantJudgmentsApi: { list: jest.fn() },
+  officerAppApi: { stats: jest.fn() },
 }));
+let mockViewing: object | null = null;
+jest.mock("@/src/components/impersonation/useImpersonation", () => ({ useImpersonation: () => mockViewing }));
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ zh: "per-call", locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 // 缩略图本身(compact 模式)在 UnderworldMapLayout.test 里测;这里只看概览给它什么、包在哪里。
@@ -41,6 +44,8 @@ const next = judgmentApi.next as jest.Mock;
 const claim = judgmentApi.claim as jest.Mock;
 const appeals = judgmentAppealsApi.list as jest.Mock;
 const joint = crossTenantJudgmentsApi.list as jest.Mock;
+const myStats = officerAppApi.stats as jest.Mock;
+const MINE = { concluded_this_month: 5, concluded_total: 41, open_claims: 2, appeals_reviewed: 9, appeals_in_review: 1 };
 
 const weeks = Array.from({ length: 12 }, (_, i) => ({
   week_start: `2026-${String(8 + Math.floor(i / 4)).padStart(2, "0")}-${String(1 + (i % 4) * 7).padStart(2, "0")}`,
@@ -68,6 +73,8 @@ beforeEach(() => {
   mockPerms = ["judgment.read", "cross_judgment.read"];
   mockUser = OFFICER;
   hallStats.mockResolvedValue({ data: STATS });
+  myStats.mockResolvedValue({ data: MINE });
+  mockViewing = null;
   list.mockResolvedValue(
     page([
       { id: "j1", case_number: "DY-2026-0391", deadline_remaining_seconds: 3600 },
@@ -316,5 +323,54 @@ describe("冥界图缩略", () => {
       expect(document.querySelector("[data-overview-map]")).toBeNull();
       r.unmount();
     }
+  });
+});
+
+describe("我的数", () => {
+  const mine = () => document.querySelector("[data-overview-mine]") as HTMLElement;
+
+  it("本人的五个数在自己的卡里,写明只数本人;主卡的本月结案标成本殿的,两个数不混", async () => {
+    renderIt();
+    await waitFor(() => expect(mine()).toHaveTextContent("41"));
+    const card = mine();
+    expect(card).toHaveTextContent("我的数");
+    expect(card).toHaveTextContent("只数本人的，所有殿合在一起");
+    for (const [label, n] of [["本月结案", "5"], ["累计结案", "41"], ["认领未结", "2"], ["已有结论", "9"], ["复核中", "1"]]) {
+      expect(within(card).getByText(label).nextSibling).toHaveTextContent(new RegExp(`^${n}$`));
+    }
+    // 认领未结去案卷台(那里第一组就是我认领的)。
+    expect(card.querySelector("[data-overview-mine-open]")).toHaveAttribute("href", "/desk");
+    // 本殿的 138 不在我的数里;主卡里那一格叫「本殿本月结案」,不借用 App「我的数」的「本月结案」。
+    expect(card).not.toHaveTextContent("138");
+    const hero = document.querySelector("[data-overview-hero]") as HTMLElement;
+    await waitFor(() => expect(hero).toHaveTextContent("138"));
+    expect(within(hero).getByText("本殿本月结案").nextSibling).toHaveTextContent(/^138$/);
+    expect(within(hero).queryByText("本月结案")).toBeNull();
+    expect(hero).not.toHaveTextContent("41");
+  });
+
+  it("五个都是 0:写一句话,不画五个 0", async () => {
+    myStats.mockResolvedValue({ data: { concluded_this_month: 0, concluded_total: 0, open_claims: 0, appeals_reviewed: 0, appeals_in_review: 0 } });
+    renderIt();
+    await waitFor(() => expect(mine()).toHaveTextContent("还没有数"));
+    expect(within(mine()).queryByText("累计结案")).toBeNull();
+  });
+
+  it("取失败:说没取到并能重试,不画旧数也不说还没有数", async () => {
+    myStats.mockRejectedValueOnce(new Error("x"));
+    renderIt();
+    await waitFor(() => expect(within(mine()).getByRole("alert")).toHaveTextContent("数没取到"));
+    expect(mine()).not.toHaveTextContent("还没有数");
+    fireEvent.click(within(mine()).getByRole("button", { name: "重试" }));
+    await waitFor(() => expect(mine()).toHaveTextContent("41"));
+    expect(myStats).toHaveBeenCalledTimes(2);
+  });
+
+  it("代看时不取、不画(接口拒代看令牌,数也不是被代看的人的)", async () => {
+    mockViewing = { username: "someone" };
+    renderIt();
+    await waitFor(() => expect(document.querySelector("[data-overview-hero]")).toHaveTextContent("138"));
+    expect(mine()).toBeNull();
+    expect(myStats).not.toHaveBeenCalled();
   });
 });
