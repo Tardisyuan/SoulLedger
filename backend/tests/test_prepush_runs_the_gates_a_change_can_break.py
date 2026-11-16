@@ -2442,7 +2442,7 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
         proc, remote, log = self._run(main, tmp_path)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "win_watch sl-gates-" in remote and " /srv/sl-gates 16 4 YuanShen.exe GenshinImpact.exe" in remote, remote
-        assert "--tmpfs /root:rw,exec,size=4g --tmpfs /tmp:rw,exec,size=4g" in remote and "--memory 32g" in remote, remote
+        assert "--tmpfs /root:rw,exec,size=4g --tmpfs /tmp:rw,exec,size=4g" in remote and "--memory 24g" in remote, remote
         assert "DATABASE_URL='postgres://sl:pcpw@sl-pg-test:5432/soulledger'" in remote, "the PC's own database"
         # One job at a time on the PC: the single lock, run.lock, which E2E there takes too.
         assert "flock -n 9 || { echo" in remote and "flock -n 8" not in remote, remote
