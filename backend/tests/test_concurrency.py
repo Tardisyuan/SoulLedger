@@ -1414,6 +1414,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_numbers_run_per_prefix_and_year_without_gaps 每个引擎都跑。
         "tests/test_judgment_case_number.py::"
         "test_eight_cases_opened_at_once_get_eight_consecutive_numbers",
+        # 2026-11-16 分库阶段 4 缺口 4b:两个文明的分库同时建审批流,都在控制库的 `WF` 计数行上发号,
+        # 后到的在行锁上等,号不重复(只在 `--ds=config.settings_sharded -m sharded` 下跑)。串行版
+        # test_a_shard_workflow_takes_its_number_from_the_control_counter_and_a_rollback_does_not_reuse_it 同文件,两个引擎都跑。
+        "tests/test_global_codes_across_shards.py::"
+        "test_two_civilizations_creating_workflows_at_once_get_distinct_numbers",
         # 2026-10-29 数据范围 B2:范围过滤后的灵魂列表走 (tenant, owner_org) 索引。EXPLAIN 的计划与
         # 统计只在 PostgreSQL 上有意义;同文件的五种范围断言每个引擎都跑。
         "tests/test_data_scope_solver.py::test_the_scoped_soul_list_uses_the_tenant_owner_index",

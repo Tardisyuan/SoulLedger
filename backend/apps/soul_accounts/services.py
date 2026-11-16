@@ -125,14 +125,22 @@ def _new_soul_code():
 
 
 def _ensure_soul_code(soul):
-    """首次开号时分配,之后不变。碰撞(31^10 空间里几乎不会)就换一个再试。"""
-    from apps.souls.models import Soul
+    """首次开号时分配,之后不变。碰撞(31^10 空间里几乎不会)就换一个再试。
 
+    编号先在控制库的登记表里占号,再写灵魂行(分库阶段 4,`apps/tenants/global_codes.py`):行在控制库时
+    两步同一个事务(写失败,占号一起回滚);行在分库时占号在控制库先提交,分库写失败留下空号,不复用。"""
+    from apps.souls.models import Soul
+    from apps.tenants import global_codes
+
+    alias = global_codes.row_alias(soul)
     while not soul.soul_code:
         code = _new_soul_code()
         try:
-            with transaction.atomic():
-                updated = Soul.all_objects.filter(pk=soul.pk, soul_code__isnull=True).update(soul_code=code)
+            with transaction.atomic(using=alias):
+                global_codes.claim(global_codes.SOUL_CODE, code, soul.tenant_id, using=alias)
+                updated = Soul.all_objects.using(alias).filter(pk=soul.pk, soul_code__isnull=True).update(soul_code=code)
+                if not updated:  # someone else's code is already there: give this one back (control path)
+                    transaction.set_rollback(True, using=alias)
         except IntegrityError:
             continue
         soul.refresh_from_db(fields=["soul_code"])

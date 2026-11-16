@@ -321,8 +321,9 @@ class JudgmentCaseCounter(models.Model):
     def bump(cls, key: str) -> int:
         """把 `key` 这一行加一并返回新值。必须在写入编号的同一个事务里调:行锁握到提交,回滚则号一起回滚。
 
-        审批编号(`ApprovalWorkflow.number`,`WF-0582`)也从这里发,键是不带年份的 `WF`(案号的键都是
-        `<prefix>-<year>`,带连字符,碰不到它)。"""
+        审批编号(`ApprovalWorkflow.number`,`WF-0582`)用同一张表不带年份的 `WF` 行(案号的键都是
+        `<prefix>-<year>`,带连字符,碰不到它),但经 `apps/tenants/global_codes.py::next_workflow_number`
+        发:那里决定行写到分库时号在控制库先提交(分库阶段 4 缺口 4b)。"""
         cls.objects.get_or_create(key=key)
         cls.objects.filter(key=key).update(last=F("last") + 1)
         return cls.objects.get(key=key).last

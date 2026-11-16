@@ -150,3 +150,24 @@ def _drop_cached_halls(**_kwargs):
 
 models.signals.post_save.connect(_drop_cached_halls, sender=Tenant, dispatch_uid="tenants.drop_cached_halls.save")
 models.signals.post_delete.connect(_drop_cached_halls, sender=Tenant, dispatch_uid="tenants.drop_cached_halls.delete")
+
+
+class GlobalCode(models.Model):
+    """The control database's registry of codes that must stay unique once their rows are written to four
+    civilization databases (sharding stage 4, docs/audit/2026-11-15-sharding/PLAN.md "全局唯一";
+    tests/tenancy_global_uniqueness.py STRATEGY = REGISTRY). Claimed by `apps/tenants/global_codes.py` before
+    the row is written; `manage.py check_global_codes` compares it with the rows on every alias.
+
+    `tenant_id` is the claiming hall as a bare id with no foreign key, so the row has no path to a hall and stays
+    in control (apps.core.sharding: CONTROL). It records who claimed; it is not part of the key."""
+
+    kind = models.CharField(max_length=20)
+    value = models.CharField(max_length=64)
+    tenant_id = models.BigIntegerField(null=True, blank=True)
+    claimed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["kind", "value"], name="global_code_one_claim_per_value")]
+
+    def __str__(self):
+        return f"{self.kind}:{self.value}"
