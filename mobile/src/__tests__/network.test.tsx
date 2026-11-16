@@ -70,11 +70,12 @@ describe("the offline bar", () => {
     // No promise of old content: the app has none to show.
     expect(screen.queryByText(/上次同步/)).toBeNull();
     await restore();
-    expect(screen.queryByTestId("offline-bar")).toBeNull();
+    // 第五十八批 M13: it folds away over 160, then is gone.
+    await waitFor(() => expect(screen.queryByTestId("offline-bar")).toBeNull());
     expect(screen.getByTestId("login-submit")).toBeTruthy();
   });
 
-  it.each([false, true])("v3: the bar opens from 0 to its height over 200ms (reduce motion %s: at once)", async (reduced) => {
+  it.each([false, true])("M13: the bar opens from 0 to its height over 160 (reduce motion %s: at once)", async (reduced) => {
     const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
     renderApp();
     await screen.findByTestId("login-submit");
@@ -85,13 +86,42 @@ describe("the offline bar", () => {
       spy.mockResolvedValue(false);
       return;
     }
+    expect(motion.offlineBar).toBe(160);
     expect(flat(screen.getByTestId("grow"))).toMatchObject({ height: 0, overflow: "hidden" });
-    fireEvent(screen.getByTestId("offline-inset").parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: TOP + 40 } } });
+    // The status-bar inset is outside the growth: only the bar itself grows.
+    expect(flat(screen.getByTestId("offline-inset"))).toMatchObject({ paddingTop: TOP });
+    fireEvent(screen.getByTestId("offline-bar").parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 40 } } });
     await act(async () => {
       await new Promise((r) => setTimeout(r, motion.offlineBar + 150));
     });
     expect(screen.queryByTestId("grow")).toBeNull();
     expect(screen.getByTestId("offline-bar")).toBeTruthy();
+    spy.mockResolvedValue(false);
+  });
+
+  it.each([false, true])("M13: back online it folds over 160 and only then goes (reduce motion %s: at once)", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    renderApp();
+    await screen.findByTestId("login-submit");
+    await drop();
+    fireEvent(screen.getByTestId("offline-bar").parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 40 } } });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.offlineBar + 150));
+    });
+    await restore();
+    if (reduced) {
+      expect(screen.queryByTestId("offline-bar")).toBeNull();
+      spy.mockResolvedValue(false);
+      return;
+    }
+    // Still there, clipped, on its way to 0 — not cut.
+    expect(screen.getByTestId("offline-bar")).toBeTruthy();
+    expect(flat(screen.getByTestId("grow"))).toMatchObject({ overflow: "hidden" });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.offlineBar + 150));
+    });
+    expect(screen.queryByTestId("offline-bar")).toBeNull();
+    expect(screen.queryByTestId("offline-inset")).toBeNull();
     spy.mockResolvedValue(false);
   });
 
@@ -119,7 +149,7 @@ describe("the offline bar", () => {
     // The network is back but no event has come yet: the retry is what notices.
     net.getNetworkStateAsync.mockResolvedValueOnce({ isConnected: true, isInternetReachable: true });
     await act(async () => fireEvent.press(screen.getByTestId("offline-retry")));
-    expect(screen.queryByTestId("offline-bar")).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId("offline-bar")).toBeNull());
   });
 
   it("the bar takes the status-bar inset; the header under it does not take it again", async () => {
@@ -132,7 +162,7 @@ describe("the offline bar", () => {
     expect(flat(screen.getByTestId("offline-inset"))).toMatchObject({ paddingTop: TOP });
     expect(flat(screen.getByTestId("plaque")).paddingTop).toBe(0);
     await restore();
-    expect(flat(screen.getByTestId("plaque")).paddingTop).toBe(TOP);
+    await waitFor(() => expect(flat(screen.getByTestId("plaque")).paddingTop).toBe(TOP));
   });
 
   it("back online, a life tab that failed loads again without being pulled; staying offline does not", async () => {
@@ -147,6 +177,7 @@ describe("the offline bar", () => {
     expect(lifeCalls()).toBe(1);
     await restore();
     expect(lifeCalls()).toBe(2);
+    await waitFor(() => expect(screen.queryByTestId("offline-bar")).toBeNull()); // the bar's fold (M13) has played
   });
 
   // opt-apps2 N3: every page re-asked everything on each return to the network, loaded or not.
@@ -160,6 +191,7 @@ describe("the offline bar", () => {
     await drop();
     await restore();
     expect(lifeCalls()).toBe(loaded);
+    await waitFor(() => expect(screen.queryByTestId("offline-bar")).toBeNull()); // the bar's fold (M13) has played
   });
 
   // The bug as reported: reduce motion on, the network drops, and the life tab's three requests

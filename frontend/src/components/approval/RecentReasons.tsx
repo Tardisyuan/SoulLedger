@@ -38,7 +38,9 @@ export function RecentReasons({
           <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">
             ↺
           </span>
-          <span className="min-w-0 flex-1 truncate">{r}</span>
+          <span className="min-w-0 flex-1 truncate" title={r}>
+            {r}
+          </span>
         </button>
       ))}
     </div>

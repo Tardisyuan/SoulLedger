@@ -210,6 +210,14 @@ function appPx(p) {
   if (r.type !== "dimension" || v.unit !== "px") throw new Error(`app: ${p} is not a px dimension`);
   return v.value;
 }
+/** A plain number (an alpha the app multiplies by), from `:root`. */
+function appNumber(p) {
+  const e = byPath.get(p);
+  if (!e) throw new Error(`app: no token ${p}`);
+  const { e: r, v } = resolve(e, ROOT_SEL);
+  if (r.type !== "number") throw new Error(`app: ${p} is not a number`);
+  return v;
+}
 const D = ROOT_SEL;
 const L = LIGHT;
 const pick = (table, sel) => Object.fromEntries(Object.entries(table).map(([k, p]) => [k, appValue(p, sel)]));
@@ -266,6 +274,7 @@ function buildApp() {
     semantic: { dark: pick(SEMANTIC, D), light: pick(SEMANTIC, L) },
     seal: Object.fromEntries(CIVS.map((c) => [c, { dark: appValue(`color.civ.${c}.seal`, D), light: appValue(`color.civ.${c}.seal`, L) }])),
     radius: { sheet: appPx("radius-sheet") },
+    alpha: { highlight: appNumber("highlight-alpha") },
     motionTokens: { ...group("motion", appMs), ease: group("ease", (p) => byPath.get(p).t.$value) },
   };
   return (

@@ -7,13 +7,13 @@
 import { soulApi, type SoulSignInRecord, type SoulSignInSession } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
-import { Modal, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
-import { Button, Empty, OneLine, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
+import { Button, Empty, FadeModal, OneLine, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
 import { useBiometry } from "../useBiometry";
 import type { AppStackParams } from "../navTypes";
 
@@ -181,7 +181,7 @@ export function SignInsScreen() {
         </Txt>
         <Button testID="sign-ins-change-password" title={t("profile.change_password")} onPress={() => navigation.navigate("AccountPassword")} />
       </View>
-      <Modal visible={asking} transparent animationType="fade" onRequestClose={() => setAsking(false)}>
+      <FadeModal visible={asking} onRequestClose={() => setAsking(false)}>
         <View style={[styles.scrim, { backgroundColor: theme.scrim }]}>
           <View testID="sign-out-others-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.s1, borderTopColor: theme.negStrong }]}>
             <Txt variant="bodyLg" style={styles.bold}>
@@ -200,7 +200,7 @@ export function SignInsScreen() {
             <Button testID="sign-out-others-cancel" kind="secondary" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
           </View>
         </View>
-      </Modal>
+      </FadeModal>
     </Screen>
   );
 }

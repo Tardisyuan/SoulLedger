@@ -1023,7 +1023,9 @@
     "export_scope": "Ini Mi Setep · {{n}}",
     "export_too_many": "10 000 Er Hry: Setep Nedjes",
     "name_en": "Ren · Medu Europa",
-    "description_en": "Medu-N · Medu Europa"
+    "description_en": "Medu-N · Medu Europa",
+    "handled_by": "Iri-N {{name}} · {{time}}",
+    "handled_by_hall": "Iri-N {{hall}} · {{time}}"
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} (Sesh {{count}})",
@@ -1694,7 +1696,6 @@
       "waiting_on_me": "Nen Iri-I Djer",
       "row_legend": "▌ = Nen Iri-I Djer · Iwen = Sekhet Pen",
       "not_reached": "Nen Shem Djer",
-      "last_step": "Wedja Pehwy",
       "template": "Senn",
       "status": "Kheperu",
       "advance_needs_reason": "Semawy: Sesh Khet Em Tepy",
@@ -1715,7 +1716,10 @@
       "terminate_needs_reason": "Khetem Wat Wedja: Sesh Khet Em Tepy",
       "terminate_reason_label": "Khet Khetem",
       "terminate_reason_placeholder": "Sesh Khet: Khetem Wat Pen.",
-      "terminate_success": "Wat Wedja Khetem-N"
+      "terminate_success": "Wat Wedja Khetem-N",
+      "deadline_line": "Hru {{time}} · {{left}} Wenen · Er Khet: Seshem Er Hery",
+      "deadline_overdue": "Khet Hru {{late}} · Seshem Er Hery-N",
+      "deadline": "Hru {{time}}"
     },
     "verdicts": {
       "passed": "Menkh",
@@ -2507,7 +2511,8 @@
       "duat_barred_short": "Nen Shem Er Wesekhet Maaty · Nen Shesep",
       "unferried": "Nen Shesep: Ba Nen Qeres Er Nen Redi Er Itru · Em Smen Em Acheron.",
       "not_yours_readonly": "Shesep: {{name}}. Semawy: Djes-Ef Wa. Maa Wenen.",
-      "override_recorded": "Shesep: {{name}}. Semawy-Ek Sesh Em Medu Maa."
+      "override_recorded": "Shesep: {{name}}. Semawy-Ek Sesh Em Medu Maa.",
+      "release_for_hint": "Redi Er Hat: Er «Nen Shesep Djer». {{name}} Maa Khet Pen."
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -4512,7 +4517,6 @@
         "remaining": "Tera Qebeh Khery",
         "approved_days": "Hru Khery Er Khet Hesy",
         "note": "Medu Er Ba",
-        "decided_by": "Wedja In",
         "created_at": "Dbh Em",
         "cooldown_until": "Tera Qebeh Er",
         "remaining_after": "Er Khet Hesy: Tera Qebeh Khery"
@@ -10031,7 +10035,8 @@
     "open_queue": "Wen Wat Wedja",
     "stat": {
       "avg_time": "Hesb Hru",
-      "returned": "Wehem Wedja"
+      "returned": "Wehem Wedja",
+      "concluded": "Wesekhet Pen · Abed Pen: Khetem-N"
     },
     "todo": {
       "appeal": "Sepret · {{soul}}",

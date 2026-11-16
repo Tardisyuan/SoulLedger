@@ -4,16 +4,16 @@
  * 排法与灵魂端一致:一条消息一张图、不带文字;按原比例、宽不超过线程宽度的 60%;点开是黑底全屏,
  * 左右滑动看线程里的每一张,点一下关闭,没有保存。官员回信暂不支持发图 —— 这里只有显示,没有选图与上传。
  *
- * 官员端没有 expo-image(不为这一处加原生模块),用 React Native 自带的 `Image`、`Modal`、`ScrollView`。
+ * 官员端没有 expo-image(不为这一处加原生模块),用 React Native 自带的 `Image`、`ScrollView`(弹层是共用的 `FadeModal`)。
  * 地址是服务器在消息里签给当前官员的短时路径(取文件时再按码名与殿司查一次),每次打开线程重新取;
  * 取不到(过期、失去权限)就写「图片加载失败」,不留空白。
  */
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import { useState } from "react";
-import { Image, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Txt, space, useI18n, useOnline, useTheme, Press } from "../shared";
+import { FadeModal, Txt, space, useI18n, useOnline, useTheme, Press } from "../shared";
 
 export interface LetterImageRef {
   id: string;
@@ -79,10 +79,10 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
 /** 黑底、左右滑动、点一下关闭。`index` 为 null 时不显示。 */
 export function LetterImageViewer({ images, index, onClose }: { images: LetterImageRef[]; index: number | null; onClose: () => void }) {
   return (
-    <Modal visible={index !== null} animationType="fade" transparent={false} onRequestClose={onClose} statusBarTranslucent>
+    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始。 */}
       {index !== null ? <Pages key={index} images={images} start={index} onClose={onClose} /> : null}
-    </Modal>
+    </FadeModal>
   );
 }
 

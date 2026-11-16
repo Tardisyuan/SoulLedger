@@ -176,6 +176,8 @@ const CONVENTION_MODULES = [
  * entry names that place. Anything else must use the component.
  */
 const ENUM_STRING_CONTEXTS: Record<string, string> = {
+  [path.join("src", "components", "workflow", "detail", "AddCosignerDialog.tsx")]:
+    "The role is joined into the picker row's detail line (a plain string the select renders); an unknown member falls back to the raw role, so it stays recoverable.",
   [path.join("app", "audit", "page.tsx")]:
     "The action and resource filters are <select> options, which hold text only; the option's value is the raw member, so it stays recoverable.",
   [path.join("src", "components", "workflow", "StartWorkflowDialog.tsx")]:

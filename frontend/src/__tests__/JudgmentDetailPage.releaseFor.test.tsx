@@ -94,6 +94,9 @@ describe("releasing someone else's case from the judgment page", () => {
     fireEvent.click(await screen.findByTestId("desk-release-for", {}, TIMEOUT));
     const dialog = await screen.findByRole("dialog");
     const confirm = within(dialog).getByRole("button", { name: "officer_app.case.release_for(崔判官)" });
+    // 第五十九批 N6: the hint says what happens next; the label already marks the box required.
+    expect(within(dialog).getByText("judgment.claim.release_for_hint(崔判官)")).toBeInTheDocument();
+    expect(within(dialog).queryByText(/officer_app\.reassign\.reason/)).toBeNull();
     fireEvent.click(confirm);
     expect(await within(dialog).findByText("judgment.claim.reason_required")).toBeInTheDocument();
     expect(mockRelease).not.toHaveBeenCalled();

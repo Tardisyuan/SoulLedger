@@ -60,9 +60,10 @@ export interface SearchSelectFieldProps {
   /**
    * The server's answer for `searchText`. Rendered verbatim; never filtered here.
    * `group` draws a header row above the first option of each run of the same group (罪目按殿分组,第五十七批 D-1);
-   * the caller keeps a group's options together.
+   * the caller keeps a group's options together. `detail` is a second, smaller line under the label (加签选人
+   * 「用户名 · 角色」,第五十九批 N10); the label alone is what the input echoes on a pick.
    */
-  options: (SelectOption & { group?: string })[];
+  options: (SelectOption & { group?: string; detail?: string })[];
   /** Raw query text. Owned by the caller so it can debounce before fetching. */
   searchText: string;
   onSearchTextChange: (text: string) => void;
@@ -256,7 +257,7 @@ export function SearchSelectField({
                       </p>
                     ) : null}
                     <Combobox.List>
-                      {(option: SelectOption & { group?: string }, index: number) => (
+                      {(option: SelectOption & { group?: string; detail?: string }, index: number) => (
                         <React.Fragment key={option.value}>
                           {option.group && option.group !== options[index - 1]?.group ? (
                             <div
@@ -272,7 +273,14 @@ export function SearchSelectField({
                             className="flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-2))] data-selected:font-semibold"
                           >
                             <Combobox.ItemIndicator className="w-3 shrink-0" aria-hidden="true">✓</Combobox.ItemIndicator>
-                            {option.label}
+                            {option.detail ? (
+                              <span className="flex min-w-0 flex-col py-1">
+                                <span className="font-medium">{option.label}</span>
+                                <span data-option-detail="" className="text-xs text-[oklch(var(--color-ink-muted))]">{option.detail}</span>
+                              </span>
+                            ) : (
+                              option.label
+                            )}
                           </Combobox.Item>
                         </React.Fragment>
                       )}

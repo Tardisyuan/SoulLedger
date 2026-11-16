@@ -23,6 +23,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { badgeVariants } from "@/src/components/ui/Badge";
+import { HandledBy } from "@/src/components/ui/HandledBy";
 import { PageSection } from "@/components/ui/page-section";
 import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 import { responseCode } from "@soulledger/core/api/client";
@@ -272,7 +273,18 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       variant="page"
       backLink={backLink}
       title={t("dispatch.detail_title")}
-      actions={statusBadge}
+      actions={
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {statusBadge}
+          {/* 第五十九批 N14. A name the reader may not see (decision 24) is the deciding hall's: approve / reject are
+              the target hall's. A withdrawal is either side's, or the system's, so without a name it names no one. */}
+          <HandledBy
+            name={dispatch.decided_by_name}
+            hall={dispatch.status !== "CANCELLED" ? dispatch.target_tenant_code : null}
+            at={dispatch.decided_at}
+          />
+        </div>
+      }
     >
       {/* 规范 v3 详情(灵魂详情同一种分法):两栏面板,393 px 折单栏;面板是 surface-1 底 +
           结构线,标题 20 px 界面字体。v2 的分节纹撤掉。时间一律等宽。 */}

@@ -31,8 +31,8 @@ import { civSkinOf } from "@/src/lib/civSkin";
  * ACCESSIBILITY. A spinner is either an announcement or a decoration, and it
  * has to say which. Pass `label` and it becomes `role="status"` with visually
  * hidden text, so a screen reader says something instead of nothing while the
- * route streams in. Omit `label` — the right call inside a `<Button loading>`,
- * where the button's own text is already the announcement — and it is
+ * route streams in. Omit `label` — the right call beside a control whose own text is already the announcement
+ * (`<Button loading>` itself no longer spins: batch 58 M10 gave it a bottom-edge line) — and it is
  * `aria-hidden`, contributing no duplicate chatter.
  *
  * MOTION. `motion-reduce:animate-none` is not decoration-trimming; a
@@ -116,8 +116,8 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
  * and the spinner size are decided once.
  *
  * THE LABEL IS NOT OPTIONAL HERE, and that is the difference between this and
- * `Spinner`. An unlabelled `Spinner` is the right call inside `<Button
- * loading>`, where the button's own text already says what is happening. A
+ * `Spinner`. An unlabelled `Spinner` is the right call beside a control
+ * whose own text already says what is happening. A
  * whole route replaced by a spinner has no such neighbour: there is nothing
  * else on the screen. 32 files import this and exactly one of them was passing
  * `label`, so 31 routes were replacing their entire contents with silence.

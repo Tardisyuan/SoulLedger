@@ -1021,7 +1021,9 @@ describe("egy 词表规则", () => {
     // 「上诉」(第五十四批第二批,Design):灵魂把复核送进上级的申诉流程,与工作流的「上报」同一个 Seshem Er Hery。
     // 「超度」(第五十八批,Design):城隍把亡魂送上莲花台,「引领、送上去」,与「上诉」同一个 Seshem;
     //  第五十一批「超度回向」(阳间回向功德)用的是 Redi Nefer,两件事不混。
-    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级|上诉|超度/.test(ZH[k] ?? ""))).toEqual([]);
+    // 「转交上级」(第五十九批 N11,Design):审批页截止那行「到时转交上级 / 已转交上级」写 Seshem Er Hery,同「上报」。
+    //  编辑器里的超时动作 `workflow.editor.timeout.action.ESCALATE` 仍是 Hab Er It(选项名,不是这一行)。
+    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级|上诉|超度|转交上级/.test(ZH[k] ?? ""))).toEqual([]);
   });
 
   it("Sekhem 只表密码:中文不含「密码」的键不出现 Sekhem(白名单除外)", () => {

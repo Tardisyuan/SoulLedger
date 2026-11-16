@@ -1027,7 +1027,9 @@
     "export_failed": "导出失败",
     "export_csv": "导出 CSV",
     "export_scope": "按当前筛选导出，共 {{n}} 条",
-    "export_too_many": "超过 1 万条，请缩小筛选"
+    "export_too_many": "超过 1 万条，请缩小筛选",
+    "handled_by": "{{name}} · {{time}} 处理",
+    "handled_by_hall": "{{hall}} · {{time}} 处理"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
@@ -1703,7 +1705,6 @@
       "waiting_on_me": "待我处理",
       "row_legend": "行首竖条 = 待我处理 · 底色 = 当前节点",
       "not_reached": "未走",
-      "last_step": "最近一步",
       "template": "模板",
       "status": "状态",
       "refusals": {
@@ -1722,7 +1723,9 @@
       "terminate_confirm_message": "结束后不能再推进或裁决。理由会记入审计日志。",
       "terminate_success": "流程已结束",
       "terminate_error": "结束流程失败",
-      "deadline": "{{time}} 截止"
+      "deadline": "{{time}} 截止",
+      "deadline_line": "{{time}} 截止 · 还有 {{left}} · 到时转交上级",
+      "deadline_overdue": "已过截止 {{late}} · 已转交上级"
     },
     "verdicts": {
       "passed": "通过",
@@ -2519,7 +2522,8 @@
       "duat_barred_short": "到不了殿，不能认领",
       "unferried": "这桩审判不能认领：亡魂未葬或没有渡资，滞留在阿刻戎岸边。",
       "not_yours_readonly": "此案由{{name}}认领，只有认领人能改；你可以查看。",
-      "override_recorded": "你不是认领人（此案由{{name}}认领），此操作会留痕。"
+      "override_recorded": "你不是认领人（此案由{{name}}认领），此操作会留痕。",
+      "release_for_hint": "放回后回到「待认领」，{{name}}会收到这条理由。"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -4534,7 +4538,6 @@
         "remaining_after": "批后剩余冷却",
         "approved_days": "批准后剩余天数",
         "note": "给灵魂的说明",
-        "decided_by": "决定人",
         "created_at": "提交于",
         "cooldown_until": "冷却截止"
       },

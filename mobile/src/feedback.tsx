@@ -1,7 +1,8 @@
 /**
  * Transient feedback: the toast (第三十批: card2 with a 3px rule on its left in the semantic colour, above the
  * tab bar, 16 from the sides; a success stays 4s, a notice 6s, a failure until it is closed; at most 3 stacked,
- * the newest at the bottom). It only fades — 160ms, or 0 under reduce-motion. And `Sheet`, v2's bottom sheet, at the end. The sign-out
+ * the newest at the bottom). It rises 8 as it fades in over 160 on the enter curve and sinks back as it fades out over 160
+ * on the exit curve, as the web's toast (第五十八批 M2); under reduce motion an 80 fade, no rise (M3). And `Sheet`, v2's bottom sheet, at the end. The sign-out
  * confirmation is in `logout.tsx`: it reads `loginRules`, which the officer app (it shares this
  * file) has no use for.
  */
@@ -23,7 +24,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "./emblems";
 import { useI18n } from "./i18n";
 import { curves, radius, touch } from "./theme";
-import { EASE, InSheetContext, SheetRevealContext, Txt, useReducedMotionDurations, useTheme, Press } from "./ui";
+import { EASE, InSheetContext, SheetRevealContext, Txt, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./ui";
+
+/** 第五十八批 M2: the web's toast rise, in pt. */
+export const TOAST_RISE_PT = 8;
 
 type ToastKind = "success" | "info" | "failure";
 /**
@@ -75,6 +79,7 @@ function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: 
   const t = useTheme();
   const { t: tr } = useI18n();
   const durations = useReducedMotionDurations();
+  const reduced = useReducedMotion();
   const [opacity] = useState(() => new Animated.Value(0));
   const failure = item.kind === "failure";
   const bar = failure ? t.neg : item.kind === "success" ? t.pos : t.hair2;
@@ -94,7 +99,11 @@ function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: 
       pointerEvents={failure ? "box-none" : "none"}
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
-      style={[styles.toast, { opacity, backgroundColor: t.s2, borderColor: t.hair2, borderLeftColor: bar }]}
+      style={[
+        styles.toast,
+        { opacity, backgroundColor: t.s2, borderColor: t.hair2, borderLeftColor: bar },
+        reduced ? null : { transform: [{ translateY: opacity.interpolate({ inputRange: [0, 1], outputRange: [TOAST_RISE_PT, 0] }) }] },
+      ]}
     >
       <View style={styles.toastIcon}>
         <Icon name={icon} size={15} color={failure ? t.neg : item.kind === "success" ? t.pos : t.inkMuted} strokeWidth={1.5} />

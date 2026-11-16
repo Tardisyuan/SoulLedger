@@ -19,6 +19,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { HandledBy } from "@/src/components/ui/HandledBy";
 import { Field, TextAreaField, fieldControl } from "@/src/components/ui/Field";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { cooldownEnded, cooldownTone, failureKey, isoDay, lifeNumber } from "./soulAccountsView";
@@ -54,6 +55,9 @@ export function CooldownShorteningDetail({
   const [note, setNote] = useState("");
   const [daysError, setDaysError] = useState<string | null>(null);
   const [noteError, setNoteError] = useState<string | null>(null);
+  // 第五十九批 N9: the recent reject reasons wait for 驳回 (as on the approval page) -- shown in the shared note
+  // box from the start, they read as if approving would reject.
+  const [rejecting, setRejecting] = useState(false);
   const daysBox = useRef<HTMLDivElement>(null);
   const noteBox = useRef<HTMLDivElement>(null);
 
@@ -86,6 +90,7 @@ export function CooldownShorteningDetail({
     approve.mutate({ id: r.id, days: n, note }, { onSuccess, onError });
   };
   const doReject = () => {
+    setRejecting(true);
     if (!note.trim()) {
       setNoteError(t("soul_accounts.cooldown.note_required"));
       noteBox.current?.querySelector("textarea")?.focus();
@@ -176,7 +181,11 @@ export function CooldownShorteningDetail({
           {field(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(r.cycle) }))}
           {field(
             t("soul_accounts.fields.status"),
-            <DomainEnum namespace="soul_accounts.cooldown_status" value={r.status} className={badgeVariants({ tone: cooldownTone(r.status) })} />
+            // 第五十九批 N14: the decider beside the tag, in place of the old 「决定人」 cell.
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <DomainEnum namespace="soul_accounts.cooldown_status" value={r.status} className={badgeVariants({ tone: cooldownTone(r.status) })} />
+              <HandledBy name={r.decided_by_username} at={r.decided_at} />
+            </span>
           )}
           {field(t("soul_accounts.cooldown.fields.created_at"), <span className="font-mono">{formatDateTime(r.created_at)}</span>)}
           {field(
@@ -197,13 +206,6 @@ export function CooldownShorteningDetail({
           )}
           {r.status === "APPROVED" &&
             field(t("soul_accounts.cooldown.fields.approved_days"), t("soul_accounts.cooldown.remaining_days", { n: String(r.approved_days ?? 0) }))}
-          {r.decided_at &&
-            field(
-              t("soul_accounts.cooldown.fields.decided_by"),
-              <span>
-                {r.decided_by_username ?? "-"} · <span className="font-mono">{formatDateTime(r.decided_at)}</span>
-              </span>
-            )}
         </dl>
 
         <section>
@@ -255,7 +257,7 @@ export function CooldownShorteningDetail({
               </Field>
             </div>
             <div ref={noteBox} className="space-y-3">
-              <RecentReasons userId={me?.id} value={note} onChange={(v) => { setNote(v); setNoteError(null); }} max={2000} />
+              {rejecting && <RecentReasons userId={me?.id} value={note} onChange={(v) => { setNote(v); setNoteError(null); }} max={2000} />}
               <TextAreaField
                 label={t("soul_accounts.cooldown.note_label")}
                 description={noteError ? undefined : t("soul_accounts.cooldown.note_hint")}

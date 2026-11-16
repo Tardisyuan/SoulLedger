@@ -94,6 +94,10 @@ it("remembers a reject the server took, and offers it as a row next time", async
     return { data: rows.c1 };
   });
   const dialog = await openDetail();
+  // 第五十九批 N9: the shared note box offers no reject reasons until 驳回 is pressed.
+  expect(within(dialog).queryByTestId("recent-reason-0")).toBeNull();
+  fireEvent.click(within(dialog).getByTestId("shortening-reject"));
+  expect(soulAccountsApi.rejectCooldownShortening).not.toHaveBeenCalled();
   fireEvent.click(within(dialog).getByTestId("recent-reason-0"));
   expect(within(dialog).getByTestId("shortening-note")).toHaveValue("上次的理由");
   fireEvent.change(within(dialog).getByTestId("shortening-note"), { target: { value: "不合规" } });

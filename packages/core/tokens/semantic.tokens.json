@@ -735,6 +735,11 @@
       }
     }
   },
+  "highlight-alpha": {
+    "$type": "number",
+    "$description": "A changed row / a push's landing ground: ink at this alpha, one strength on all three surfaces (Design batch 59: web accent 0.22 and apps ink 0.06-0.07 -> ink 0.10).",
+    "$value": 0.1
+  },
   "shadow-card": {
     "$type": "string",
     "$value": "none",
@@ -1051,16 +1056,16 @@
       }
     },
     "dismiss": {
-      "$description": "A toast leaving (it enters over `fast`).",
+      "$description": "A toast leaving (it enters over `fast`). Design batch 58 M2 / 59: 140 -> 160, no odd number outside the four tiers.",
       "$value": {
-        "value": 140,
+        "value": 160,
         "unit": "ms"
       }
     },
     "reveal": {
-      "$description": "Skeleton -> content cross-fade.",
+      "$description": "Skeleton -> content fade (Design batch 58 M7 / 59: 200 -> 160 on all three surfaces).",
       "$value": {
-        "value": 200,
+        "value": 160,
         "unit": "ms"
       }
     },
@@ -1154,6 +1159,40 @@
       "$description": "The last part of motion.highlight: the ground fades out over this after holding (2000 - 400 = 1600 held).",
       "$value": {
         "value": 400,
+        "unit": "ms"
+      }
+    },
+    "reduced": {
+      "$description": "Under reduce motion: the opacity-only fade kept for pages, dialogs, sheets, toasts, content after a skeleton and the system modals (Design batch 58 M3 / M4).",
+      "$value": "{transition-duration.reduced}"
+    },
+    "band-compact": {
+      "$description": "The soul app's life band compacting (Design batch 59: 200 -> 160).",
+      "$value": "{transition-duration.fast}"
+    },
+    "offline-bar": {
+      "$description": "The offline bar expanding and collapsing (Design batch 58 M13 / 59: 200 -> 160).",
+      "$value": "{transition-duration.fast}"
+    },
+    "pull-release": {
+      "$description": "A released pull going back, or to its hold (Design batch 59: 200 -> 160).",
+      "$value": "{transition-duration.fast}"
+    },
+    "busy-delay": {
+      "$description": "A busy button shows its bottom-edge line only after this (Design batch 58 M10: a quick answer shows nothing).",
+      "$value": "{transition-duration.state}"
+    },
+    "skeleton-delay": {
+      "$description": "A skeleton appears only after this wait (Design batch 58 M6, as the web's). A wait, not a transition.",
+      "$value": {
+        "value": 400,
+        "unit": "ms"
+      }
+    },
+    "skeleton-hold": {
+      "$description": "A skeleton, once shown, stays at least this long (Design batch 58 M6). A wait, not a transition.",
+      "$value": {
+        "value": 300,
         "unit": "ms"
       }
     }

@@ -80,6 +80,40 @@ Snapshot = Mapping[str, Any]
 _MISSING = object()
 
 
+#: SQLite only: this process's test database as it was at the latest migration, taken before the first
+#: `migrate_to` moved it (see `restore_latest_snapshot`).
+_LATEST = None
+
+
+def _snapshot_latest(executor) -> None:
+    global _LATEST
+    if _LATEST is not None or connection.vendor != "sqlite":
+        return
+    if executor.migration_plan(executor.loader.graph.leaf_nodes()):
+        return  # not at the latest schema: nothing worth keeping
+    import sqlite3
+
+    connection.ensure_connection()
+    _LATEST = sqlite3.connect(":memory:", check_same_thread=False)
+    connection.connection.backup(_LATEST)
+
+
+def restore_latest_snapshot() -> bool:
+    """SQLite: put back the database `_snapshot_latest` kept, in one `backup` call; False when there is none.
+
+    Migrating back to the latest schema re-applies every migration the round trip unapplied (hundreds by
+    2026-11: `executor.migrate` spends ~90% of it re-rendering model states, not in SQL), and asserts
+    nothing: the round trip's own step 4 re-applies the migration under test, and the template build
+    applies the whole graph forward. The rows come back too; the transactional teardown flushes them.
+    PostgreSQL still migrates for real.
+    """
+    if _LATEST is None or connection.vendor != "sqlite":
+        return False
+    connection.ensure_connection()
+    _LATEST.backup(connection.connection)
+    return True
+
+
 def migrate_to(targets: list[Target]):
     """Migrate the live test connection to `targets`; return its apps registry.
 
@@ -87,15 +121,16 @@ def migrate_to(targets: list[Target]):
     changes what the recorder says is applied.
     """
     executor = MigrationExecutor(connection)
-    executor.loader.build_graph()
+    _snapshot_latest(executor)
     state = executor.migrate(targets)
     return state.apps
 
 
 def migrate_to_latest():
     """Put the schema back where the rest of the session expects to find it."""
+    if restore_latest_snapshot():
+        return None
     executor = MigrationExecutor(connection)
-    executor.loader.build_graph()
     return migrate_to(executor.loader.graph.leaf_nodes())
 
 

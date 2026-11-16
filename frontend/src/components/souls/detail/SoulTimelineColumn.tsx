@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import type { Disposition, Judgment, LedgerSummary, Reincarnation, Soul, SoulEvent } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadMoreSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
 import { SoulLedgerSections } from "./SoulLedgerSections";
 import { SoulLedgerProgress } from "./SoulLedgerProgress";
@@ -114,9 +114,18 @@ export function SoulTimelineColumn({
           // since been concluded, so a stale link is never a dead end.
           onOpenJudgmentQueue={onOpenJudgmentQueue}
         />
+        {/* 第五十八批 M9:加载更多进行中,列表底部两行骨架;按钮不转圈、不置灰,只是再按无效。 */}
+        {hasMore && onLoadMore && loadingMore ? <LoadMoreSkeleton /> : null}
         {hasMore && onLoadMore ? (
           <div className="mt-4 flex items-center gap-3">
-            <Button type="button" variant="secondary" size="sm" data-testid="timeline-load-more" loading={loadingMore} onClick={onLoadMore}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              data-testid="timeline-load-more"
+              aria-disabled={loadingMore || undefined}
+              onClick={loadingMore ? undefined : onLoadMore}
+            >
               {t("souls.detail.load_more")}
             </Button>
             {loadMoreFailed ? (

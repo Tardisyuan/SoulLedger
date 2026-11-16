@@ -7146,6 +7146,10 @@ paths:
         schema:
           type: integer
       - in: query
+        name: reassign_requested
+        schema:
+          type: boolean
+      - in: query
         name: returned
         schema:
           type: boolean
@@ -7831,6 +7835,10 @@ paths:
         schema:
           type: integer
       - in: query
+        name: reassign_requested
+        schema:
+          type: boolean
+      - in: query
         name: returned
         schema:
           type: boolean
@@ -8279,6 +8287,10 @@ paths:
         schema:
           type: boolean
       - in: query
+        name: reassign_requested
+        schema:
+          type: boolean
+      - in: query
         name: returned
         schema:
           type: boolean
@@ -8514,6 +8526,10 @@ paths:
           type: string
       - in: query
         name: overdue
+        schema:
+          type: boolean
+      - in: query
+        name: reassign_requested
         schema:
           type: boolean
       - in: query

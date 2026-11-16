@@ -6,6 +6,9 @@
  * Navigation is a state, not a navigator: five tabs and one level of detail do not need a stack,
  * and a push landing is just "set the detail". A detail reached by a push remembers its item; going
  * back to the list washes that row for 2 s (kit.tsx `Highlight`; none under reduce-motion).
+ *
+ * 第五十八批 M1: a tab cross-fades in (240); a detail, 我的's sub-screens and 滑卡 slide in from the right (240);
+ * leaving by the iOS edge swipe the screen follows the finger off (kit.tsx `PageEnter`, `EdgeBack`).
  */
 import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "@soulledger/core/api/notifications";
@@ -13,7 +16,7 @@ import { BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
 import { BioAsk } from "./bioLogin";
-import { EdgeBack, IdentityBand, PageSwitch, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
+import { EdgeBack, IdentityBand, PageEnter, PageSwitch, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
 import { listenForArrivals, listenForLandings, registerDevice } from "./push";
@@ -218,6 +221,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const left = at >= 0 ? sequence!.length - at - 1 : 0;
   // A one-visit filter only applies while 待办 is the current tab; every other way into 待办 clears it (above).
   const todoFilterOnce = current === "todo" ? todoOnce : null;
+  // What fills the page, as `PageEnter`'s key: a change plays its entrance once (M1).
+  const shown = swipe ? "swipe" : account ? `account:${account}` : detail ? `detail:${goneKey(detail)}` : `tab:${current}`;
   // A door in the bar or a page in the switch under the top bar: either way the officer moves to that page.
   const go = (next: TabKey) => {
     if (locked) return; // the recovery codes are on screen and not yet confirmed saved
@@ -249,6 +254,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       )}
       {account || detail || swipe ? null : <PageSwitch current={current} tabs={tabs} unread={unread} onSelect={go} />}
       <View style={{ flex: 1 }}>
+        <PageEnter key={shown} slide={!shown.startsWith("tab:")}>
         {swipe ? (
           // No edge swipe here: the cards themselves are dragged sideways.
           <SwipeScreen onBack={closeSwipe} />
@@ -314,6 +320,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         ) : (
           <MeTab onOpen={setAccount} />
         )}
+        </PageEnter>
       </View>
       <TabBar
         current={current}
