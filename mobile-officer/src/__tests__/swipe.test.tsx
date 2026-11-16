@@ -8,7 +8,7 @@ import { AccessibilityInfo, Animated, AppState, StyleSheet, type AppStateStatus 
 import { PASS_UNDO_MS, SwipeScreen } from "../screens/swipe";
 import { sealReadbackWished, setSealReadbackWished } from "../prefs";
 import { READBACK_BUTTON_H, READBACK_SEAL_FLEX } from "../screens/rejectSheet";
-import { ToastProvider, themeFor } from "../shared";
+import { EASE, ToastProvider, themeFor } from "../shared";
 import { renderOfficer } from "./harness";
 
 const mockList = jest.fn();
@@ -234,25 +234,11 @@ it("手上没有能判的:空状态", async () => {
 
 describe("落印失败时卡片回原位", () => {
   afterEach(() => jest.restoreAllMocks());
+  // 第五十八批 M12:回位 160、出曲线、不回弹 —— 不再有 spring。变异:snapBack 换回 `Animated.spring(...)` → 两条都红。
   const failOnce = async (reduced: boolean) => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
-    // 弹回的 spring 要跑一秒多,每一帧都更新 Animated(View):记下它何时停,等它停了才结束测试(否则 act 警告)。
-    const realSpring = Animated.spring;
-    const springsDone: Promise<void>[] = [];
-    const spring = jest.spyOn(Animated, "spring").mockImplementation((value, config) => {
-      const anim = realSpring(value, config);
-      const start: typeof anim.start = (cb) => {
-        springsDone.push(
-          new Promise<void>((done) =>
-            anim.start((r) => {
-              cb?.(r);
-              done();
-            })
-          )
-        );
-      };
-      return { ...anim, start };
-    });
+    const spring = jest.spyOn(Animated, "spring");
+    const timing = jest.spyOn(Animated, "timing");
     serve();
     mockConclude.mockRejectedValue(new Error("offline"));
     renderOfficer(<SwipeScreen onBack={() => {}} />);
@@ -262,20 +248,18 @@ describe("落印失败时卡片回原位", () => {
     await act(async () => void (await new Promise((r) => setTimeout(r, PASS_UNDO_MS))));
     await waitFor(() => expect(mockConclude).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
-    // 拒绝早于飞出(200ms)结束:旧 pan 被 detach、飞出以 finished=false 收尾,不能再把弹回来的卡拿走
+    // 拒绝早于飞出结束:旧 pan 被 detach、飞出以 finished=false 收尾,不能再把回位的卡拿走
     // (flyOut 里不看 `finished` 就会拿走 —— 这条断言守的是那一处)。
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 400));
-      await Promise.all(springsDone);
-    });
+    await act(async () => void (await new Promise((r) => setTimeout(r, 400))));
     expect(screen.getByTestId("swipe-card-j-1")).toBeTruthy();
-    return spring;
+    expect(spring).not.toHaveBeenCalled();
+    return timing.mock.calls.map((c) => c[1]).filter((c) => c.toValue === 0 && c.easing === EASE.exit && c.duration === 160);
   };
-  it("平常:弹回去(spring)", async () => {
-    expect(await failOnce(false)).toHaveBeenCalled();
+  it("平常:160 出曲线回位,不弹", async () => {
+    expect(await failOnce(false)).not.toHaveLength(0);
   });
-  it("减少动态效果:直接回原位，不弹 —— spring 没有 duration,`ms()` 管不到它", async () => {
-    expect(await failOnce(true)).not.toHaveBeenCalled();
+  it("减少动态效果:直接回原位,没有回位动画", async () => {
+    expect(await failOnce(true)).toHaveLength(0);
   });
 });
 

@@ -114,7 +114,8 @@ export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, tag: 28, top
  */
 export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.sheet, pill: 999 } as const;
 /**
- * ms; reduce-motion sets every one to 0 (holds excepted, `useReducedMotionDurations`).
+ * ms; reduce-motion sets every one to 0 (holds and waits excepted, and the fades that stay at `reduced` 80:
+ * `useReducedMotionDurations`).
  * Opacity and translate only — the one scale is the cold start's mark receding (0.96),
  * which does not play under reduce motion at all.
  *
@@ -127,12 +128,16 @@ export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.
  *                            the home is usable from 480 and the splash layer is gone at 720
  *   sheetIn / sheetOut       a bottom sheet (and 问一问's drawer) opens 240 / closes 160 — the web's drawer-in / -out
  *                            (Design v3 batch 4: close 160, "180 is not a tier"; it was 180 here until 2026-11-16)
- *   toastIn / toastOut       160 / 140, the web's toast-in / dismiss
+ *   toastIn / toastOut       160 / 160, the web's toast-in / dismiss (第五十八批 M2: exit 140 -> 160)
  *   toastHold                v3 B2 Toast「停留 4s」 (until 2026-10-03 1.9s) — a success; `toastInfoHold` 6s a notice
  *   sectionIn / sectionOut   a section's body appears / goes: the web's collapse pair, 240 / 160 (was 200 / 120);
  *                            `sectionGrow` its height, 240 (was 220)
  *   tabFade                  a tab's content cross-fades: the web's page change, 240 (was 180)
- *   fade                     content arriving after its skeleton: the web's reveal, 200 (was 120)
+ *   fade                     content arriving after its skeleton: the web's reveal, 160 (第五十八批 M7; was 200, before that 120)
+ *   reduced                  under reduce motion, the one opacity-only fade pages / dialogs / toasts / content keep (M3), 80
+ *   bandCompact / offlineBar / pullRelease  160 (第五十九批: the last three 200s)
+ *   skeletonDelay / skeletonHold  a skeleton shows only after 400, then stays at least 300 (M6): waits, not transitions
+ *   busyDelay                a busy button's bottom-edge line shows only after 160 (M10)
  *   loadingLine              one pass of the 2px loading line, 1200 as the web's (it ran on `breath`, 1600, until 2026-11-16)
  *   highlight / highlightFade  a push's landing ground: held, then faded over the last 400, 2000 in all (第四十批 S-e)
  */
@@ -155,16 +160,19 @@ export const motion = {
   coldStart: 720,
   sheetIn: m.sheetIn,
   sheetOut: m.sheetOut,
+  // 第五十八批 M4: a system modal (a confirmation, a viewer) fades in 240 / out 160; 80 under reduce motion.
+  dialogIn: m.dialogIn,
+  dialogOut: m.dialogOut,
   sectionIn: m.collapseIn,
   sectionOut: m.collapseOut,
   // v3 MotionSpec, App rows (round 7): a tab's content cross-fades; a ledger row's body
   // grows (height and opacity); the life band compacts.
   tabFade: m.pageChange,
   sectionGrow: m.collapseIn,
-  bandCompact: 200,
-  offlineBar: 200,
-  // v3 B2 App「下拉刷新」: released, the content goes back (or to the 56 hold) over 200.
-  pullRelease: 200,
+  bandCompact: m.bandCompact,
+  offlineBar: m.offlineBar,
+  // v3 B2 App「下拉刷新」: released, the content goes back (or to the 56 hold) over 160 (第五十九批, was 200).
+  pullRelease: m.pullRelease,
   // The 56 hold with ↻ stays at least this long, even when the reload answers in 40ms (a local
   // backend does): shorter, the hold is a one-frame flash and reads as "did not refresh" (真机 2026-10-03).
   pullMinHold: 600,
@@ -174,7 +182,14 @@ export const motion = {
   // The landing ground's hold is `highlight - highlightFade`; under reduce motion it is not drawn at all.
   highlight: m.highlight,
   highlightFade: m.highlightFade,
+  reduced: m.reduced,
+  skeletonDelay: m.skeletonDelay,
+  skeletonHold: m.skeletonHold,
+  busyDelay: m.busyDelay,
 } as const;
+
+/** 第五十九批: a changed row / a push's landing ground is ink at this alpha on all three surfaces (the web's --highlight-alpha). */
+export const HIGHLIGHT_ALPHA = generated.alpha.highlight;
 
 /**
  * The brand mark's two colours (v3 第三批 品牌色令牌): the gold balance on the deep canvas. For

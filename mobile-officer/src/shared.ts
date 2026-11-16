@@ -19,8 +19,14 @@
  * them like any source outside `node_modules`.
  */
 export {
+  BusyLine,
   Button,
   EASE,
+  FadeModal,
+  Grow,
+  Skeleton,
+  runTopline,
+  useAfter,
   FieldError,
   Input,
   Loader,
@@ -78,6 +84,7 @@ export {
   type CredentialRead,
 } from "../../mobile/src/deviceCredential";
 export {
+  HIGHLIGHT_ALPHA,
   civKeyOf,
   motion,
   radius,

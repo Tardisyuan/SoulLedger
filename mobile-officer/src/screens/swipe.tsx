@@ -24,7 +24,7 @@ import Svg, { Circle } from "react-native-svg";
 import { submitVerdict } from "../decisions";
 import { DECISION_TOAST, confirmedDecision, decisionFailureKind, notConfirmedKey } from "../deviceCheck";
 import { ActionButton } from "../kit";
-import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast, useDismissToast, Press } from "../shared";
+import { EASE, Icon, Txt, motion, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast, useDismissToast, Press } from "../shared";
 import { BLOCKED_DRAG, SWIPE_FRACTION, blockedSide, deadlineText, passPayload, waitedDays, type Side } from "../verdict";
 import { ReasonSheet } from "./judgmentActions";
 import { AccountSheet, RejectSheet, SealReadbackSheet } from "./rejectSheet";
@@ -154,10 +154,10 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     hold.setValue(0);
   }, [topId, hold]);
 
-  // 减少动态效果时直接回原位:spring 没有 duration,motion 令牌管不到它，此前照样弹两下。
+  // 第五十八批 M12:松手回位 160、出曲线、不回弹(此前是 spring,轻弹两下)。减少动态效果时直接回原位。
   const snapBack = useCallback(() => {
     if (reduced) pan.setValue(0);
-    else Animated.spring(pan, { toValue: 0, useNativeDriver: false, bounciness: 6 }).start();
+    else Animated.timing(pan, { toValue: 0, duration: motion.sheetOut, easing: EASE.exit, useNativeDriver: false }).start();
   }, [pan, reduced]);
   // 已经亮着就不再设:否则每一帧拖动都重排一次 2 秒。
   const flashBlocked = () => {

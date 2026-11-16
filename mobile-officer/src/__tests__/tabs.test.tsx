@@ -64,7 +64,7 @@ describe("the to-do tab", () => {
   it("draws five skeleton rows, aria-busy, while loading", async () => {
     mockTodo.mockReturnValue(new Promise(() => {}));
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
-    expect(screen.getByTestId("state-loading").props.accessibilityState).toEqual({ busy: true });
+    expect((await screen.findByTestId("state-loading")).props.accessibilityState).toEqual({ busy: true }); // after 400 (M6)
   });
 
   it("groups by kind and titles each group with its count", async () => {

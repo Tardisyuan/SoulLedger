@@ -25,9 +25,10 @@ const CSS = readFileSync(GLOBALS_CSS, "utf8");
 const REPO = path.join(__dirname, "..", "..", "..");
 // The apps' table, as they play it (theme.ts maps the generated values onto the names the screens read). Required by
 // path: the frontend tsconfig's rootDir stops a static import of mobile/, and jest transforms the file either way.
-const { curves, motion } = require(path.join(REPO, "mobile", "src", "theme")) as {
+const { curves, motion, HIGHLIGHT_ALPHA } = require(path.join(REPO, "mobile", "src", "theme")) as {
   curves: Record<string, readonly number[]>;
   motion: Record<string, number>;
+  HIGHLIGHT_ALPHA: number;
 };
 
 const declared = (name: string) => {
@@ -70,29 +71,45 @@ describe("each named use: the web's composition is the apps' number", () => {
     expect(web()).toBe(app);
   });
 
-  it("the values Design set: sheet 240 / 160, toast 160 / 140, highlight 2000", () => {
-    expect([motion.sheetIn, motion.sheetOut, motion.toastIn, motion.toastOut, motion.highlight]).toEqual([240, 160, 160, 140, 2000]);
+  it("the values Design set: sheet 240 / 160, toast 160 / 160, reveal 160, highlight 2000 (第五十八 / 五十九批)", () => {
+    expect([motion.sheetIn, motion.sheetOut, motion.toastIn, motion.toastOut, motion.fade, motion.highlight]).toEqual([240, 160, 160, 160, 160, 2000]);
+  });
+
+  it("第五十九批: the last three 200s are 160, and every app transition sits on the four tiers 80 / 160 / 240 / 320", () => {
+    expect([motion.bandCompact, motion.offlineBar, motion.pullRelease]).toEqual([160, 160, 160]);
+    const tiers = new Set([80, 160, 240, 320]);
+    const named = new Set([...OWN, "highlight", "loadingLine"]);
+    expect(Object.entries(motion).filter(([k, v]) => !named.has(k) && !tiers.has(v))).toEqual([]);
+  });
+
+  it("under reduce motion the apps' kept fade is the web's --transition-duration-reduced (80)", () => {
+    expect(motion.reduced).toBe(ms(declared("--transition-duration-reduced")));
+    expect(motion.reduced).toBe(80);
   });
 });
 
+// Sequences and waits Design numbered on their own: a hold is not a transition, and the cold start, the welcome and the
+// Loader's breath are single choreographies (C18, the welcome, 文明气质 1h). The landing fade is the tail of `highlight`.
+// The skeleton's 400 wait and 300 stay are waits too (第五十八批 M6).
+const OWN: ReadonlySet<string> = new Set([
+  "toastHold",
+  "toastInfoHold",
+  "breath",
+  "welcomeIn",
+  "welcomeHold",
+  "welcomeOut",
+  "coldStartDraw",
+  "coldStartHold",
+  "coldStartInteractive",
+  "coldStart",
+  "pullMinHold",
+  "pullSpin",
+  "highlightFade",
+  "skeletonDelay",
+  "skeletonHold",
+]);
+
 describe("no app transition is off the web's set", () => {
-  // Sequences and waits Design numbered on their own: a hold is not a transition, and the cold start, the welcome and the
-  // Loader's breath are single choreographies (C18, the welcome, 文明气质 1h). The landing fade is the tail of `highlight`.
-  const OWN = new Set([
-    "toastHold",
-    "toastInfoHold",
-    "breath",
-    "welcomeIn",
-    "welcomeHold",
-    "welcomeOut",
-    "coldStartDraw",
-    "coldStartHold",
-    "coldStartInteractive",
-    "coldStart",
-    "pullMinHold",
-    "pullSpin",
-    "highlightFade",
-  ]);
   it.each(Object.entries(motion).filter(([k]) => !OWN.has(k)))("%s (%d ms)", (_k, v) => {
     expect(webDurations).toContain(v);
   });
@@ -134,6 +151,11 @@ describe("the changed-row / landing highlight: one recipe, 2 s", () => {
     expect(hold).toBe(80);
     expect(frames).toMatch(new RegExp(`from,\\s*${hold}% \\{`));
     expect(frames).toMatch(/to \{\s*background-color: transparent;/);
+  });
+
+  it("第五十九批: one strength, ink at 10% — the web's --highlight-alpha is the apps' HIGHLIGHT_ALPHA", () => {
+    expect(Number(declared("--highlight-alpha"))).toBe(HIGHLIGHT_ALPHA);
+    expect(HIGHLIGHT_ALPHA).toBe(0.1);
   });
 
   it("the row hook drops the class when the animation ends", () => {

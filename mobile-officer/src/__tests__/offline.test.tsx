@@ -16,6 +16,7 @@ import { LetterImage } from "../screens/letterImages";
 import { Detail } from "../screens/detail";
 import { TodoTab } from "../screens/todo";
 import { SessionProvider, USER_KEY, useSession } from "../session";
+import { motion } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockTodo = jest.fn();
@@ -158,6 +159,12 @@ describe("the banner", () => {
       expect(screen.getByTestId("restored-banner")).toBeTruthy();
       act(() => jest.advanceTimersByTime(1));
       expect(screen.queryByTestId("restored-banner")).toBeNull();
+      // 第五十八批 M13: after its 3 s it folds over 160 with its words still on it, then goes. Mutation seen red: the
+      // banner back on `return null` when closed (no `offline-folding`).
+      expect(screen.getByTestId("offline-folding")).toBeTruthy();
+      expect(screen.getByText("✓ 已恢复网络 · 发出了 2 封回信")).toBeTruthy();
+      await act(() => jest.advanceTimersByTimeAsync(motion.offlineBar + 100));
+      expect(screen.queryByTestId("offline-folding")).toBeNull();
     } finally {
       jest.useRealTimers();
     }

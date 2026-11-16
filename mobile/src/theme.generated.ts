@@ -144,20 +144,30 @@ export const seal = {
 export const radius = {
   "sheet": 12
 } as const;
+export const alpha = {
+  "highlight": 0.1
+} as const;
 export const motionTokens = {
   "sheetIn": 240,
   "sheetOut": 160,
   "dialogIn": 240,
   "dialogOut": 160,
   "toastIn": 160,
-  "toastOut": 140,
+  "toastOut": 160,
   "collapseIn": 240,
   "collapseOut": 160,
   "pageChange": 240,
-  "reveal": 200,
+  "reveal": 160,
   "highlight": 2000,
   "loadingLine": 1200,
   "highlightFade": 400,
+  "reduced": 80,
+  "bandCompact": 160,
+  "offlineBar": 160,
+  "pullRelease": 160,
+  "busyDelay": 160,
+  "skeletonDelay": 400,
+  "skeletonHold": 300,
   "ease": {
     "standard": [
       0.2,
