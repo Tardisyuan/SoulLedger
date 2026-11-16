@@ -22,8 +22,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
 import { useI18n } from "./i18n";
-import { radius, touch } from "./theme";
-import { InSheetContext, SheetRevealContext, Txt, useReducedMotionDurations, useTheme, Press } from "./ui";
+import { curves, radius, touch } from "./theme";
+import { EASE, InSheetContext, SheetRevealContext, Txt, useReducedMotionDurations, useTheme, Press } from "./ui";
 
 type ToastKind = "success" | "info" | "failure";
 /**
@@ -80,10 +80,10 @@ function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: 
   const bar = failure ? t.neg : item.kind === "success" ? t.pos : t.hair2;
   const icon = failure ? "alert" : item.kind === "success" ? "check" : "info";
   const leave = useCallback(() => {
-    Animated.timing(opacity, { toValue: 0, duration: durations.toast, useNativeDriver: true }).start(() => onGone(item.id));
-  }, [opacity, durations.toast, onGone, item.id]);
+    Animated.timing(opacity, { toValue: 0, duration: durations.toastOut, easing: EASE.exit, useNativeDriver: true }).start(() => onGone(item.id));
+  }, [opacity, durations.toastOut, onGone, item.id]);
   useEffect(() => {
-    Animated.timing(opacity, { toValue: 1, duration: durations.toast, useNativeDriver: true }).start();
+    Animated.timing(opacity, { toValue: 1, duration: durations.toastIn, easing: EASE.enter, useNativeDriver: true }).start();
     // A failure often leaves a draft for the person to deal with: it stays until it is closed.
     if (failure) return;
     const timer = setTimeout(leave, item.kind === "success" ? durations.toastHold : durations.toastInfoHold);
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
 
 /**
  * A bottom sheet (v2 动效, 交互与动效 第 2 轮 原型 06) on @gorhom/bottom-sheet: it opens
- * over 200ms (`motion.sheetIn`), closes over 120 (`motion.sheetOut`; both 0 under
+ * over 240ms on the enter curve (`motion.sheetIn`), closes over 160 on the exit curve (`motion.sheetOut`; both 0 under
  * reduce-motion), drags down to close past 90pt or 0.6pt/ms (`useSheetGestures`), and also
  * closes on the scrim, on Android's back key, and from whatever button the caller puts
  * in it. Controlled — `open` in, `onClose` out, whichever way it was closed — so a
@@ -151,9 +151,10 @@ const styles = StyleSheet.create({
 export const SHEET_CLOSE_DRAG_PT = 90;
 export const SHEET_CLOSE_SPEED_PT_PER_MS = 0.6;
 
-/** 第 2 轮 §一 ease.exit / ease.standard. */
-const EASE_EXIT = Easing.bezier(0.4, 0, 1, 1);
-const EASE_STANDARD = Easing.bezier(0.2, 0, 0, 1);
+/** 第 2 轮 §一 ease.enter / ease.exit / ease.standard: the shared curves (the web's --ease-*), as Reanimated easings (the sheet runs them in worklets). */
+const EASE_ENTER = Easing.bezier(...curves.enter);
+const EASE_EXIT = Easing.bezier(...curves.exit);
+const EASE_STANDARD = Easing.bezier(...curves.standard);
 
 /** `velocityY` is Gesture Handler's, in pt per SECOND. */
 export function sheetReleaseCloses(translationY: number, velocityY: number): boolean {
@@ -164,7 +165,7 @@ export function sheetReleaseCloses(translationY: number, velocityY: number): boo
 /**
  * The library's own drag handling, with its release swapped for the prototype's: it
  * decides by snap-point projection, which has no distance or speed to name. Closing
- * runs `sheetOut` (fast 120), springing back `sheetIn` (base 200); both 0 under
+ * runs `sheetOut` (close 160), springing back `sheetIn` (240); both 0 under
  * reduce-motion. The upward pull keeps the library's resistance (√d × 2.5: ≈16pt at 40).
  */
 export function useSheetGestures() {
@@ -191,7 +192,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
   const t = useTheme();
   const ref = useRef<BottomSheetModal>(null);
   const { sheetIn, sheetOut } = useReducedMotionDurations();
-  const timing = useBottomSheetTimingConfigs({ duration: sheetIn, easing: Easing.bezier(0, 0, 0.2, 1) });
+  const timing = useBottomSheetTimingConfigs({ duration: sheetIn, easing: EASE_ENTER });
   // Dismiss only a sheet that is up. Calling `dismiss()` on one that never opened (the mount,
   // `open` false) or already closed itself (a drag, the scrim) left @gorhom's modal status stuck at
   // DISMISSING, and every later `present()` rendered an empty portal: the long-lamp confirm did

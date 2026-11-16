@@ -12,7 +12,7 @@ import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
-import { Spinner } from "@/src/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
@@ -190,7 +190,7 @@ export default function PermissionChangesPage() {
 
   let body: ReactNode;
   if (isError && !data) body = <QueryError onRetry={() => void refetch()} error={listError} detail={t("audit.timeline.failed")} />;
-  else if (isPending) body = <Spinner />;
+  else if (isPending) body = null; // PageShell shows the skeleton under the running top line (第三十批 一.5: no spinner)
   else if (logs.length === 0) body = <EmptyState title={t(datePreset ? "audit.timeline.empty" : "audit.timeline.empty_all")} />;
   else
     body = (
@@ -224,6 +224,8 @@ export default function PermissionChangesPage() {
       variant="full"
       title={title}
       tabs={<AuditTabs />}
+      isLoading={isPending}
+      skeleton={<ListSkeleton count={5} />}
       filters={
         <>
           <FilterChipSelect

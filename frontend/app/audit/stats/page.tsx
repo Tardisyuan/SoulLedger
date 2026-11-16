@@ -13,7 +13,7 @@ import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
-import { Spinner } from "@/src/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
@@ -81,7 +81,7 @@ export default function AuditStatsPage() {
 
   let body: ReactNode;
   if (isError) body = <QueryError onRetry={() => void refetch()} error={listError} detail={t("audit.stats.failed")} />;
-  else if (isPending) body = <Spinner />;
+  else if (isPending) body = null; // PageShell shows the skeleton under the running top line (第三十批 一.5: no spinner)
   else if (data.total_logs === 0) body = <EmptyState title={t("audit.no_logs")} />;
   else {
     const max = actions[0]?.count ?? 1;
@@ -140,7 +140,7 @@ export default function AuditStatsPage() {
   }
 
   return (
-    <PageShell variant="full" title={title} tabs={<AuditTabs />}>
+    <PageShell variant="full" title={title} tabs={<AuditTabs />} isLoading={isPending} skeleton={<ListSkeleton count={5} />}>
       {body}
     </PageShell>
   );

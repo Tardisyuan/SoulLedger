@@ -15,7 +15,7 @@ import { auditApi, ledgerApi, type AuditLogEntry, type LedgerStatsOverview } fro
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RoleName } from "@/src/components/users/RoleName";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-import { Spinner } from "@/src/components/ui/Spinner";
+import { ContentLoading } from "@/src/components/ui/Spinner";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { PageHead } from "@/src/components/ui/PageShell";
 import { WelcomeSetup, loadOnboarded } from "@/src/components/welcome/WelcomeSetup";
@@ -396,12 +396,11 @@ export default function WelcomePage() {
 
   return (
     <div className="bg-[oklch(var(--color-canvas))]">
-      <PageHead title={greeting} meta={today} />
+      <PageHead title={greeting} meta={today} loading={userId !== null && !setupKnown} />
       <div className="px-4 py-6 md:p-6">
         {userId !== null && !setupKnown ? (
-          <div className="flex justify-center py-12" data-testid="welcome-loading">
-            <Spinner size="lg" label={t("common.loading")} />
-          </div>
+          // 第三十批 一.5: the head's top line runs (PageHead `loading`) over skeleton rows, never a spinner.
+          <ContentLoading testId="welcome-loading" />
         ) : setupAt !== null && user ? (
           <WelcomeSetup user={user} startAt={setupAt} onDone={() => setSetupAt(null)} />
         ) : (

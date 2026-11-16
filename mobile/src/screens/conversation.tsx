@@ -49,7 +49,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
-import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useReducedMotion, useTheme, Press } from "../ui";
+import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
@@ -752,12 +752,8 @@ const Bubble = memo(function Bubble({ m, mine, read, landed, now }: { m: ChatMes
   const t = useTheme();
   const { t: tr } = useI18n();
   const reduced = useReducedMotion();
-  const [fade] = useState(() => new Animated.Value(1));
-  useEffect(() => {
-    if (!landed || reduced) return;
-    const timer = setTimeout(() => Animated.timing(fade, { toValue: 0, duration: 400, useNativeDriver: true }).start(), 1200);
-    return () => clearTimeout(timer);
-  }, [landed, reduced, fade]);
+  // The tag goes on the shared landing recipe (held 1600, faded over 400; 第四十批 S-e).
+  const fade = useLandingFade(!!landed, reduced);
   return (
     <View style={[styles.bubbleRow, mine && styles.mineRow]}>
       <View

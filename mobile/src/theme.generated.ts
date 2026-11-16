@@ -144,3 +144,44 @@ export const seal = {
 export const radius = {
   "sheet": 12
 } as const;
+export const motionTokens = {
+  "sheetIn": 240,
+  "sheetOut": 160,
+  "dialogIn": 240,
+  "dialogOut": 160,
+  "toastIn": 160,
+  "toastOut": 140,
+  "collapseIn": 240,
+  "collapseOut": 160,
+  "pageChange": 240,
+  "reveal": 200,
+  "highlight": 2000,
+  "loadingLine": 1200,
+  "highlightFade": 400,
+  "ease": {
+    "standard": [
+      0.2,
+      0,
+      0,
+      1
+    ],
+    "enter": [
+      0.2,
+      0.8,
+      0.2,
+      1
+    ],
+    "exit": [
+      0.4,
+      0,
+      1,
+      1
+    ],
+    "drop": [
+      0.2,
+      0.8,
+      0.3,
+      1
+    ]
+  }
+} as const;
