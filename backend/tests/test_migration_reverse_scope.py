@@ -39,7 +39,7 @@ from importlib import import_module
 
 import pytest
 
-from tests.migration_roundtrip import migrate_to, migrate_to_latest, snapshot_rows
+from tests.migration_roundtrip import migrate_to, migrate_to_latest, restore_latest_snapshot, snapshot_rows
 from tests.migration_schema_editor import SCHEMA_EDITOR
 
 AUTH_0010 = import_module("apps.authentication.migrations.0010_populate_rbac_role")
@@ -361,7 +361,10 @@ def _scope_rows(manager):
 
 def _latest_without_row_scopes():
     """Back to the latest schema. perm/0031 (数据范围 B7) refuses while the scope table has rows, and these
-    tests leave some, so empty it at the last state that still has the table first."""
+    tests leave some, so empty it at the last state that still has the table first. SQLite skips both:
+    the snapshot it restores predates those rows."""
+    if restore_latest_snapshot():
+        return
     state = migrate_to([("perm", "0030_split_business_codenames")])
     state.get_model("perm", "RowLevelDataScope")._base_manager.all().delete()
     migrate_to_latest()
