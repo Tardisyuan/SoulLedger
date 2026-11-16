@@ -442,7 +442,10 @@ def _kept_or_fresh_templates(config, fresh):
 
 @pytest.hookimpl(optionalhook=True)
 def pytest_configure_node(node):
-    """xdist controller: tell each worker the run suffix and the templates."""
+    """xdist controller: tell each worker the run suffix, the templates, and where gw0 writes the kinds."""
+    from config.worksteal import WORKERINPUT_KEY
+
+    node.workerinput[WORKERINPUT_KEY] = _kinds_path(node.config)
     templates = node.config.stash.get(_templates_key, {})
     if templates:
         node.workerinput[_SUFFIX_KEY] = node.config.stash[_SUFFIX_KEY_STASH]
@@ -457,6 +460,11 @@ def pytest_sessionfinish(session):
 
     if not hasattr(session.config, "workerinput"):
         _drop_pg_templates(session.config)
+        if _kinds_key in session.config.stash:
+            import os
+            import shutil
+
+            shutil.rmtree(os.path.dirname(session.config.stash[_kinds_key]), ignore_errors=True)
     else:
         # xdist sends workeroutput to the controller after every sessionfinish impl has run
         session.config.workeroutput[sqlite_template.WORKER_KEY] = list(sqlite_template.RECORDS)
@@ -602,8 +610,9 @@ def pytest_collection_modifyitems(config, items):
     chunk ended with the transactional tail steals plain tests from a busier worker and runs them after the
     flush. 2026-11-16: gw4 ran ``test_ws_*`` / ``test_workflow_number`` (transactional), then stole
     ``test_judgment_request_reassign`` and failed on a missing seeded SYSTEM_ADMIN; on real PostgreSQL the same
-    steal failed eight perm / scheduler tests. Every one passed alone. ``_reseed_after_a_flush`` below is what
-    makes the order not matter on a worker; this check still keeps the collected order honest.
+    steal failed eight perm / scheduler tests. Every one passed alone. ``config/worksteal.py`` (the
+    scheduler ``pytest_xdist_make_scheduler`` below returns) keeps it per worker; this check still keeps the
+    collected order honest, and that scheduler relies on it.
     """
     _skip_sharded_without_shards(items)
     seen_tx = None
@@ -619,53 +628,59 @@ def pytest_collection_modifyitems(config, items):
             )
 
 
-#: This worker's databases as the data migrations left them ({alias: serialized rows}), taken once before its first
-#: transactional test; `_FLUSHED` is set once a transactional test has run (its teardown truncates every table).
-_SEEDED_ROWS: dict = {}
-_FLUSHED = []
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _seeded_rows_snapshot(request):
-    """Snapshot the seeded rows at session start, on a worker that has any transactional test to run (0.1 s and
-    ~200 KB on SQLite, measured 2026-11-16). Session scope, so before any test of this worker wrote a row."""
-    if not any(_db_kind(item) == "tx" for item in request.session.items):
-        return
-    request.getfixturevalue("django_db_setup")
-    from django.db import connections
-    from pytest_django.fixtures import _get_databases_for_setup
-
-    aliases, _ = _get_databases_for_setup(request.session.items)  # the test databases, never a real one
-    with request.getfixturevalue("django_db_blocker").unblock():
-        for alias in sorted(aliases):
-            _SEEDED_ROWS[alias] = connections[alias].creation.serialize_db_to_string()
+_RAN_TX = []  # the first transactional test this process ran
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
-    """`_reseed_after_a_flush`: before a plain database test that runs after a transactional one on this worker (a
-    worksteal hand-off, see `pytest_collection_modifyitems`), put back the rows the data migrations seed. Done here,
-    before pytest-django opens the test's transaction, so it is not rolled back with the test."""
+    """The same rule, per process: a plain database test after a transactional one errors here, naming both,
+    instead of failing later on a missing seeded row. Under xdist this is what notices if the scheduler below
+    ever hands a worker that order."""
     kind = _db_kind(item)
-    if kind == "tx":
-        _FLUSHED[:] = [item.nodeid]
-    elif kind == "db" and _FLUSHED and _SEEDED_ROWS:
-        _reseed_after_a_flush(item.config)
+    if kind == "tx" and not _RAN_TX:
+        _RAN_TX.append(item.nodeid)
+    elif kind == "db" and _RAN_TX:
+        pytest.fail(
+            f"{item.nodeid} (plain database test) runs after {_RAN_TX[0]} (transactional) in this process, "
+            "whose teardown truncated the rows data migrations seed. See config/worksteal.py.",
+            pytrace=False,
+        )
 
 
-def _reseed_after_a_flush(config):
-    from django.core.management import call_command
-    from django.db import connections
-    from pytest_django.plugin import blocking_manager_key
+@pytest.hookimpl(optionalhook=True)
+def pytest_xdist_make_scheduler(config, log):
+    """xdist controller: worksteal that keeps plain tests before transactional ones on every worker
+    (config/worksteal.py; the hand-off `pytest_collection_modifyitems` cannot see)."""
+    if config.getvalue("dist") == "worksteal":
+        from config.worksteal import TxLastWorkStealing
 
-    with config.stash[blocking_manager_key].unblock():
-        for alias, rows in _SEEDED_ROWS.items():
-            # Empty it again (the flush's post_migrate may have re-created some rows), keep the sequences past the
-            # restored pks, then load the seed back.
-            call_command("flush", database=alias, interactive=False, inhibit_post_migrate=True,
-                         reset_sequences=False, verbosity=0)
-            connections[alias].creation.deserialize_db_from_string(rows)
-    _FLUSHED.clear()
+        return TxLastWorkStealing(config, log, _kinds_path(config))
+    return None
+
+
+_kinds_key = pytest.StashKey[str]()
+
+
+def _kinds_path(config):
+    """Controller: where gw0 writes the collection's database kinds for the scheduler (one per run)."""
+    import os
+    import tempfile
+
+    if _kinds_key not in config.stash:
+        config.stash[_kinds_key] = os.path.join(tempfile.mkdtemp(prefix="soulledger-kinds-"), "kinds.json")
+    return config.stash[_kinds_key]
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_finish(session):
+    """gw0: write the kinds before xdist reports the collection to the controller (hence `tryfirst`)."""
+    workerinput = getattr(session.config, "workerinput", None)
+    if workerinput is None:
+        return
+    from config.worksteal import WORKERINPUT_KEY, write_kinds
+
+    if WORKERINPUT_KEY in workerinput and workerinput.get("workerid") == "gw0":
+        write_kinds(workerinput[WORKERINPUT_KEY], [_db_kind(item) for item in session.items])
 
 
 
