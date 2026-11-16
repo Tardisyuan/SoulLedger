@@ -207,7 +207,7 @@ describe("paged pages are one FlatList each, read to their end one page at a tim
     await endReached();
     await endReached();
     expect(pagesAsked(calls, "/me/social/feed/")).toEqual([1, 2]);
-    expect(screen.getByTestId("circle-more-loading").props.accessibilityLabel).toBe("加载中…");
+    expect((await screen.findByTestId("circle-more-loading")).props.accessibilityLabel).toBe("加载中…");
     await act(async () => held.answer(pageOf([post("p2"), post("p3")], null)));
     // p2 came again (the list moved under the pages): held once.
     expect(screen.getAllByTestId("post-p2")).toHaveLength(1);
@@ -247,7 +247,7 @@ describe("paged pages are one FlatList each, read to their end one page at a tim
     await endReached();
     await endReached();
     expect(pagesAsked(calls, "/me/social/followers/")).toEqual([1, 2]);
-    expect(screen.getByTestId("follows-more-loading")).toBeTruthy();
+    expect(await screen.findByTestId("follows-more-loading")).toBeTruthy(); // after its 400 wait (M6)
     expect(screen.queryByTestId("follows-more")).toBeNull();
     await act(async () => held.answer(pageOf([card(4)], null)));
     expect(screen.getByTestId("soul-4")).toBeTruthy();

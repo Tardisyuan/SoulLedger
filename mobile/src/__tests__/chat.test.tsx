@@ -1719,8 +1719,9 @@ describe("letters after the network comes back", () => {
   // The provider's first `getNetworkStateAsync` answers after mount; let it land before the
   // test changes the network, or its stale "connected" reads as a return.
   const online = async (chat: Chat) => {
+    // No bar: these are about the letters' reload; the bar's own fold (第五十八批 M13) is network.test.tsx's.
     renderSoul(
-      <NetworkProvider>
+      <NetworkProvider bar={false}>
         <ChatContext.Provider value={chat}>
           <NavigationContainer>
             <LettersScreen />

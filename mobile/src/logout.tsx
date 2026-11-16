@@ -6,13 +6,13 @@
  */
 import { platform } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useI18n } from "./i18n";
 import { BIO_KEY, logoutBody } from "./loginRules";
 import { radius } from "./theme";
-import { Button, GUTTER, Txt, useReducedMotion, useTheme } from "./ui";
+import { Button, FadeModal, GUTTER, Txt, useTheme } from "./ui";
 
 const LogoutContext = createContext<() => void>(() => {});
 /** Opens the sign-out confirmation. Signing out is never one tap away. */
@@ -26,7 +26,6 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
   const [visible, setVisible] = useState(false);
   const ask = useCallback(() => setVisible(true), []);
   const cancel = () => setVisible(false);
@@ -35,7 +34,7 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
   return (
     <LogoutContext.Provider value={ask}>
       {children}
-      <Modal visible={visible} transparent animationType={reduced ? "none" : "fade"} onRequestClose={cancel}>
+      <FadeModal visible={visible} onRequestClose={cancel}>
         <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={cancel} accessibilityLabel={tr("soul_app.logout.cancel")} />
           <View
@@ -66,7 +65,7 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
             </View>
           </View>
         </View>
-      </Modal>
+      </FadeModal>
     </LogoutContext.Provider>
   );
 }

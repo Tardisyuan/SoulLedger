@@ -87,7 +87,7 @@ function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
           onClick={() => void queryClient.invalidateQueries({ queryKey: soulAccountKeys.all })}
           aria-busy={list.isFetching}
         >
-          <RefreshCw aria-hidden="true" className={`w-4 h-4 mr-1 inline ${list.isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} />
+          <RefreshCw aria-hidden="true" className="w-4 h-4 mr-1 inline" />
           {t("soul_accounts.refresh")}
         </Button>
       }

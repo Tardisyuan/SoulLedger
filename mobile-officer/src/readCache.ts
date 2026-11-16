@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 
 import { currentOwner, readOwned } from "./owner";
 import { clearRecent } from "./recentOpened";
-import { useOnline, useReloadOnReconnect, useRemote } from "./shared";
+import { runTopline, useOnline, useReloadOnReconnect, useRemote } from "./shared";
 
 export const CACHE_KEY = "officer_read_cache";
 export const DETAIL_KEEP = 20;
@@ -207,6 +207,8 @@ export function useOnBump(bump: number | undefined, run: () => unknown): void {
   useEffect(() => {
     if (bump === seen.current) return;
     seen.current = bump;
+    // 第五十八批 M8: a reload in place of what is on screen runs the top line once (no spinner).
+    runTopline();
     void latest.current();
   }, [bump]);
 }

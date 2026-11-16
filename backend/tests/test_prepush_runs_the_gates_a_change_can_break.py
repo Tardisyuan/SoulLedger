@@ -84,8 +84,10 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -2353,6 +2355,179 @@ class TestTwoGateSlots:
             assert proc.returncode == rc, (slots, proc.stdout)
         assert "GATES_REMOTE_SLOTS=3" in subprocess.run(["bash", "-c", f"GATES_REMOTE_SLOTS=3\n{sizing.group(0)}"],
                                                         env=_clean_env(), capture_output=True, text=True).stdout
+
+
+class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
+    """2026-11-17 (user decisions): a gate run takes unRAID slot 1, else the PC (GATES_REMOTE_WIN, its WSL) when it is
+    idle — no game, no job of ours — else unRAID slot 2 or its queue. --e2e: the PC only when unRAID's e2e.lock is held.
+    The PC takes one job at a time; a game during the run lowers it (nice 19, fewer CPUs) and never stops it.
+    Whenever the PC is not used, the unRAID command is byte-for-byte the one without GATES_REMOTE_WIN."""
+
+    def _bin(self, tmp_path: Path, slots="busy", win="idle") -> Path:
+        """`slots`: what unRAID's slot-1 (or e2e.lock) probe prints; `win`: what the PC's win_probe prints, or "down"."""
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        down = "exit 255" if win == "down" else ":"
+        (b / "ssh").write_text(
+            "#!/bin/bash\n"
+            f'echo "$*" >> "{tmp_path}/ssh.log"\n'
+            f'case "$*" in *fake-win*) {down} ;; esac\n'
+            'case "$*" in\n'
+            f'  *"win_probe /"*) echo "{win}"; exit 0 ;;\n'
+            '  *"cat /etc/sl-gates/pg.url"*) echo "postgres://sl:pcpw@sl-pg-test:5432/soulledger"; exit 0 ;;\n'
+            f'  *"&& echo free || echo busy"*) echo "{slots}"; exit 0 ;;\n'
+            '  *"docker image inspect"*) exit 0 ;;\n'
+            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; exit 0 ;;\n'
+            "esac\nexit 0\n")
+        (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
+        for f in ("ssh", "rsync"):
+            (b / f).chmod(0o755)
+        return b
+
+    def _run(self, repo, tmp_path, *args, slots="busy", win="idle", use_win=True):
+        b = self._bin(tmp_path, slots, win)
+        env = _clean_env(GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@sl-pg-test:5432/s",
+                         GATES_STAMP_FILE=str(tmp_path / "passed"), PREPUSH_CHANGED="backend/apps/souls/views.py",
+                         FORCE="1", **({"GATES_REMOTE_WIN": "fake-win"} if use_win else {}))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        cmd = ["bash", str(repo / "scripts" / "run-gates.sh"), *(args or ("--prepush",))]
+        proc = subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True, timeout=120)
+        remote = (tmp_path / "remote-run").read_text() if (tmp_path / "remote-run").exists() else ""
+        (tmp_path / "remote-run").unlink(missing_ok=True)
+        log = (tmp_path / "ssh.log").read_text() if (tmp_path / "ssh.log").exists() else ""
+        (tmp_path / "ssh.log").unlink(missing_ok=True)
+        # The container's name ends in this run's pid.
+        return proc, re.sub(r"(sl-(?:gates|e2e)-\S+)-\d+\b", r"\1-PID", remote), log
+
+    @pytest.mark.parametrize("args", [(), ("--e2e",)], ids=["gate", "e2e"])
+    @pytest.mark.parametrize("slots,win", [("busy", "down"), ("busy", "game: YuanShen.exe"),
+                                           ("busy", "already running a job of ours"), ("free", "idle")],
+                             ids=["pc-down", "pc-gaming", "pc-busy", "unraid-has-room"])
+    def test_when_the_pc_is_not_used_the_unraid_command_is_untouched(self, checkouts, tmp_path, args, slots, win):
+        """Mutation: RUN_EXTRA set before the idle check (or win_bg not gated on WIN_WATCH) → the command differs, red."""
+        main, _ = checkouts
+        p0, before, _ = self._run(main, tmp_path, *args, use_win=False)
+        p1, after, log = self._run(main, tmp_path, *args, slots=slots, win=win)
+        assert p0.returncode == 0 and p1.returncode == 0, p0.stdout + p1.stdout + p1.stderr
+        assert before and before == after, f"{before}\n---\n{after}"
+        assert "fake-host" in after and "fake-win" not in after and "win_watch" not in after
+        assert "--tmpfs /root" not in after and "/srv/sl-gates" not in after, "the PC's settings leaked into unRAID's run"
+        if slots == "free":
+            assert "fake-win" not in log, "the PC was asked although unRAID had a free slot"
+        else:
+            assert "fake-win not used: " + ("unreachable" if win == "down" else win) in p1.stdout, p1.stdout
+
+    def test_the_order_is_unraid_slot_1_then_the_idle_pc_then_unraid_slot_2(self, checkouts, tmp_path):
+        """The order guard. Proven red by swapping it (2026-11-17): the PC asked before slot 1 (`[ "$state" != busy ]`
+        → `false`) → step 1 red; slot 2 tried before the PC (probe `run.2.lock` too, the earlier rule) → step 2 red."""
+        main, _ = checkouts
+        # 1. Slot 1 free: unRAID, and the PC is never asked.
+        proc, remote, log = self._run(main, tmp_path, slots="free")
+        assert "slot: fake-host (fake-host slot 1 free)" in proc.stdout and "fake-win" not in log, proc.stdout + log
+        assert "fake-host" in remote and "win_watch" not in remote
+        # 2. Slot 1 busy, the PC idle: the PC — slot 2 is not even looked at.
+        proc, remote, log = self._run(main, tmp_path, slots="busy")
+        assert "slot: fake-win (fake-host slot 1 busy, win idle)" in proc.stdout, proc.stdout
+        assert "run.2.lock true" not in log and "flock -n /srv/appdata/sl-gates/run.lock true" in log, log
+        assert "win_watch sl-gates-" in remote
+        # 3. Slot 1 busy, a game on the PC: unRAID, where remote_slots takes slot 2 or queues; nothing re-asks the PC.
+        proc, remote, log = self._run(main, tmp_path, slots="busy", win="game: YuanShen.exe")
+        assert "slot: fake-host slot 2, or its queue (fake-host slot 1 busy, fake-win not used: game: YuanShen.exe)" \
+            in proc.stdout, proc.stdout
+        assert "flock -n 9 || flock -n 8 ||" in remote and remote.rstrip().endswith("9>/srv/appdata/sl-gates/run.lock")
+        assert log.count("win_probe /") == 1, "the PC was asked again"
+
+    def test_a_gate_run_on_the_pc_gets_its_lock_watcher_ram_and_database(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc, remote, log = self._run(main, tmp_path)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "win_watch sl-gates-" in remote and " /srv/sl-gates 16 4 YuanShen.exe GenshinImpact.exe" in remote, remote
+        assert "--tmpfs /root:rw,exec,size=4g --tmpfs /tmp:rw,exec,size=4g" in remote and "--memory 24g" in remote, remote
+        assert "DATABASE_URL='postgres://sl:pcpw@sl-pg-test:5432/soulledger'" in remote, "the PC's own database"
+        # One job at a time on the PC: the single lock, run.lock, which E2E there takes too.
+        assert "flock -n 9 || { echo" in remote and "flock -n 8" not in remote, remote
+        assert remote.rstrip().endswith("9>/srv/sl-gates/run.lock"), remote
+        assert 'kill $W 2>/dev/null; docker rm -f' in remote, "the watcher outlives the run"
+
+    def test_e2e_goes_to_the_pc_only_when_unraids_e2e_lock_is_held_and_shares_the_gate_lock_there(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc, remote, log = self._run(main, tmp_path, "--e2e")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "flock -n /srv/appdata/sl-gates/e2e.lock true" in log, log
+        assert "slot: fake-win (fake-host e2e.lock busy, win idle)" in proc.stdout, proc.stdout
+        assert "win_watch sl-e2e-" in remote and "sl-gates-e2e:1" in remote, remote
+        assert remote.rstrip().endswith("9>/srv/sl-gates/run.lock"), "E2E on the PC must take the gate's lock"
+
+    @staticmethod
+    def _definitions(*names: str) -> str:
+        text = RUNNER.read_text(encoding="utf-8")
+        out = []
+        for n in names:
+            m = re.search(rf"^{n}\(\) \{{\n.*?^\}}\n", text, re.M | re.S)
+            assert m, f"no {n} in run-gates.sh"
+            out.append(m.group(0))
+        return "".join(out)
+
+    def test_a_game_lowers_the_run_and_its_end_restores_it(self, tmp_path):
+        """win_watch with a fake docker: pass 1 sees the game (the flag file), pass 2 no game, pass 3 the container
+        is gone. Mutation: drop the `docker update --cpus "$lo"` → red; drop the restore branch → red."""
+        b = tmp_path / "bin"
+        b.mkdir()
+        log = tmp_path / "log"
+        (b / "docker").write_text(
+            "#!/bin/bash\n"
+            f'echo "docker $*" >> "{log}"\n'
+            f'case "$1" in inspect) [ "$(cat "{tmp_path}/n" 2>/dev/null || echo 0)" -lt 2 ]; exit ;;\n'
+            '  top) printf "PID\\n101\\n102\\n" ;; esac\n')
+        (b / "renice").write_text(f'#!/bin/bash\necho "renice $*" >> "{log}"\n')
+        (b / "sleep").write_text(
+            "#!/bin/bash\n"
+            f'n=$(( $(cat "{tmp_path}/n" 2>/dev/null || echo 0) + 1 )); echo $n > "{tmp_path}/n"\n'
+            f'rm -f "{tmp_path}/game-running"\n')
+        for f in b.iterdir():
+            f.chmod(0o755)
+        (b / "tasklist.exe").write_text('#!/bin/bash\necho \'"svchost.exe","1","Services","0","8 K"\'\n')
+        (b / "timeout").write_text('#!/bin/bash\nshift; exec "$@"\n')
+        for f in b.iterdir():
+            f.chmod(0o755)
+        short = Path(tempfile.mkdtemp(dir="/tmp"))  # a socket path is limited to ~104 bytes; tmp_path is longer
+        sock = socket.socket(socket.AF_UNIX)
+        sock.bind(str(short / "i"))  # stands in for /run/WSL/<n>_interop
+        (tmp_path / "game-running").touch()
+        script = self._definitions("win_exe", "win_game", "win_watch") + f"win_watch sl-gates-x {tmp_path} 16 4 YuanShen.exe\n"
+        env = _clean_env(WSL_INTEROP=str(short / "i"), WIN_TASKLIST=str(b / "tasklist.exe"))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60)
+        sock.close()
+        shutil.rmtree(short)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        calls = [c for c in log.read_text().splitlines() if not c.startswith(("docker inspect", "docker top"))]
+        assert calls == ["renice -n 19 -p 101 102", "docker update --cpus 4 sl-gates-x",
+                         "renice -n 0 -p 101 102", "docker update --cpus 16 sl-gates-x"], calls
+        assert "docker stop" not in log.read_text() and "docker kill" not in log.read_text(), "a game must never stop the run"
+        assert "drops to nice 19 and 4 CPUs" in proc.stdout and "back to 16 CPUs" in proc.stdout, proc.stdout
+
+    def test_the_probe_says_why_the_pc_is_not_idle(self, tmp_path):
+        """Mutation: drop the lock check from win_probe → the second case prints the game line instead, red."""
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "docker").write_text("#!/bin/bash\nexit 0\n")
+        (b / "flock").write_text(f'#!/bin/bash\n[ -e "{tmp_path}/held" ] && exit 1; exit 0\n')
+        for f in b.iterdir():
+            f.chmod(0o755)
+        script = self._definitions("win_exe", "win_game", "win_probe") + f"win_probe {tmp_path} img YuanShen.exe\n"
+        env = _clean_env()
+        env["PATH"] = f"{b}:{env['PATH']}"
+        def probe():
+            return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60).stdout.strip()
+        (tmp_path / "game-running").touch()
+        assert probe() == "game: game-running flag"
+        (tmp_path / "held").touch()
+        assert probe() == "already running a job of ours"
+        (tmp_path / "held").unlink()
+        (tmp_path / "game-running").unlink()
+        # No Windows to ask (this machine, or interop gone): never idle.
+        assert probe() == "game: cannot ask Windows"
 
 
 class TestUnusedRemoteTreesAreDeleted:

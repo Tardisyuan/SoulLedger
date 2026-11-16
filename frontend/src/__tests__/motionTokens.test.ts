@@ -143,9 +143,9 @@ describe("v3 general motion rows", () => {
     expect(css).toMatch(/\.toast-leaving\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(8px\);/);
   });
 
-  it("skeleton → content: PageShell fades the body in over `reveal` once the skeleton goes", () => {
+  it("skeleton → content: PageShell fades the body in over 160 (`fast`, batch 58 M7) once the skeleton goes", () => {
     expect(themeValue("--animate-content-in")).toBe(
-      "content-in var(--transition-duration-reveal) var(--ease-enter) backwards"
+      "content-in var(--transition-duration-fast) var(--ease-enter) backwards"
     );
     expect(src("src/components/ui/PageShell.tsx")).toMatch(/skeleton && !showingSkeleton && "animate-content-in"/);
   });

@@ -82,3 +82,24 @@ describe("前面几步", () => {
     expect(list).not.toHaveTextContent(tZh("officer_app.detail.history_yours"));
   });
 });
+
+// 第五十九批 N14: the item's `handled_by` / `handled_at`, as one line beside the status tag.
+describe("who handled it", () => {
+  const handled = (over: Record<string, unknown>) => ({ data: { ...item({}).data, handled_by: null, handled_at: null, ...over } });
+
+  it("names who acted last, with the time, next to the status", async () => {
+    officerAppApi.item.mockResolvedValue(handled({ handled_by: { id: 4, name: "孟判官" }, handled_at: "2026-09-18T00:00:00Z" }));
+    renderDetail();
+    const line = await screen.findByTestId("handled-by");
+    expect(line.textContent).toBe(tZh("common.handled_by", { name: "孟判官", time: "dt(2026-09-18T00:00:00Z)" }));
+    expect(line.parentElement).toContainElement(screen.getByText(tZh("soul_accounts.rebirth_status.UNDER_REVIEW")));
+  });
+
+  it("draws nothing while nobody has handled it", async () => {
+    officerAppApi.item.mockResolvedValue(handled({}));
+    renderDetail();
+    await screen.findByText(tZh("soul_accounts.rebirth_status.UNDER_REVIEW"));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByTestId("handled-by")).toBeNull();
+  });
+});

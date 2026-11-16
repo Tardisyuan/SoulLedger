@@ -105,11 +105,12 @@ describe("the loader (1h)", () => {
     expect(flat().opacity).toBe(1);
   });
 
-  it("a busy button waits with it, not with a spinner", async () => {
+  // 第五十八批 M10 replaced the breathing emblem in a busy button with a line along its foot (buttonBusy.test.tsx).
+  it("a busy button waits with neither a spinner nor the breathing emblem", async () => {
     wrap(<Button title="正在核验…" busy onPress={jest.fn()} />, "cn");
     await act(async () => {});
     expect(screen.UNSAFE_queryAllByType(ActivityIndicator)).toEqual([]);
-    expect(screen.getByRole("progressbar")).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
 });
 

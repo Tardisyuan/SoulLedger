@@ -11,7 +11,8 @@ import {
   REJECTION_REASON_FOR_SOUL_MAX,
 } from "@soulledger/core/api";
 import { workflowKeys } from "@soulledger/core/query_keys";
-import { useI18n } from "@/src/contexts/I18nContext";
+import { toIntlLocale, useI18n } from "@/src/contexts/I18nContext";
+import { HandledBy } from "@/src/components/ui/HandledBy";
 import { useToast } from "@/src/contexts/ToastContext";
 import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import Link from "next/link";
@@ -47,7 +48,7 @@ import { NextTodoBar } from "@/src/components/approval/NextTodoBar";
 import { rememberReason } from "@/src/lib/recentRejectReasons";
 import { AddCosignerDialog } from "@/src/components/workflow/detail/AddCosignerDialog";
 import { useApprovalRef } from "@/src/components/workflow/detail/useApprovalRef";
-import { decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
+import { deadlineDistance, decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
 import { tenantLabel } from "@/src/lib/domainNames";
 
 /**
@@ -325,6 +326,7 @@ export default function WorkflowDetailPage() {
   // Over decision steps only, as the officer App counts (通知 / 结束 are not steps).
   const step = decisionStepPosition(sortedNodes, currentNode?.id);
   const deadline = nodeDeadline(currentNode);
+  const distance = deadline ? deadlineDistance(deadline, Date.now(), toIntlLocale(locale)) : null;
   // 殿名:当前节点的殿(A1「酆都 · 第三殿」);已结束、没有当前节点就写规制司。
   const hall = useHall(courtLabel(t, currentNode?.court_code, locale) || t("plaque.office.rules"));
   usePlaque({
@@ -428,10 +430,17 @@ export default function WorkflowDetailPage() {
   // 结束节点没有东西可裁决:`can_approve` 只看「是不是当前站、是不是指定的人」,不看节点种类。
   const canDecide = workflow.can_approve === true && currentNode?.kind !== "END";
   const waitingOnMe = workflow.status !== "COMPLETED" && hasPermission("workflow.approve") && canDecide;
-  // 最近一步: the node decided last, by `decided_at`.
+  // 「{name} · {time} 处理」 beside the status tag (第五十九批 N14, in place of the old 「最近一步」 panel; the timeline
+  // below keeps the verdict and the words): the node decided last, by `decided_at`, and who decided it as the
+  // server's `decision_codes.handled_by` reads it -- the approver, else a countersign's latest signer. An approver
+  // whose name this reader may not see is written as the node's hall; a node nobody decided (skipped) names no one.
   const lastDecided = sortedNodes
     .filter((n) => n.decided_at)
     .sort((a, b) => new Date(b.decided_at!).getTime() - new Date(a.decided_at!).getTime())[0];
+  const lastHandler = lastDecided
+    ? lastDecided.approver_display_name || lastDecided.approver_username || lastDecided.signatures_json?.at(-1)?.user_name || null
+    : null;
+  const lastHandlerHall = lastDecided?.approver != null ? courtLabel(t, lastDecided.court_code, locale) || null : null;
   const decidedCount = sortedNodes.filter((n) => n.status !== "PENDING").length;
   const signatures = currentNode?.signatures_json ?? [];
   // 加签: while an added signer owes a signature, a passing verdict is refused (409 cosigners_pending);
@@ -456,6 +465,7 @@ export default function WorkflowDetailPage() {
             </span>
           ) : null}
           {statusBadge}
+          <HandledBy name={lastHandler} hall={lastHandlerHall} at={lastDecided?.decided_at} />
           {workflow.is_appeal && (
             <Badge className="text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry))]" glyph="↺">
               {t("workflow.detail.appeal")}
@@ -620,9 +630,21 @@ export default function WorkflowDetailPage() {
                     )}
                   </p>
                 </div>
-                {currentNode.timeout_hours ? (
+                {deadline && currentNode.timeout_action === "ESCALATE" ? (
+                  /* 第五十九批 N11: 「{time} 截止 · 还有 {left} · 到时转交上级」; once past it, 「已过截止 {late} · 已转交上级」 in warning ink.
+                     The two lines are Design's words for escalation only; the other actions keep the rule's own wording below. */
+                  <span
+                    data-testid="workflow-deadline"
+                    data-overdue={distance?.overdue ? "" : undefined}
+                    className={`font-mono text-xs ${distance?.overdue ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"}`}
+                  >
+                    {distance?.overdue
+                      ? t("workflow.detail.deadline_overdue", { late: distance.text })
+                      : t("workflow.detail.deadline_line", { time: formatDateTime(deadline), left: distance?.text ?? "" })}
+                  </span>
+                ) : currentNode.timeout_hours ? (
                   <span data-testid="workflow-deadline" className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
-                    {/* The real time it runs out, then the rule it comes from (「24 小时后 · 转交上级」). */}
+                    {/* The real time it runs out, then the rule it comes from (「24 小时后 · 自动驳回」). */}
                     {deadline && <>{t("workflow.detail.deadline", { time: formatDateTime(deadline) })} · </>}
                     {t("workflow.editor.timeout.summary", {
                       hours: String(currentNode.timeout_hours),
@@ -932,26 +954,6 @@ export default function WorkflowDetailPage() {
                   {t("workflow.detail.completed_at")}: <span className="font-mono">{formatDateTime(workflow.completed_at)}</span>
                 </p>
               )}
-            </section>
-          )}
-
-          {/* 最近一步 */}
-          {lastDecided && (
-            <section className="px-6 py-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
-              <div className="mb-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("workflow.detail.last_step")}</div>
-              <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-1">
-                <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{formatDateTime(lastDecided.decided_at!)}</span>
-                <span className="text-sm text-[oklch(var(--color-ink))]">
-                  {/* 跳过、越级的站没有判决:写节点的状态(已跳过 / 已升级 / 已经过)。 */}
-                  {localNodeName(lastDecided, locale, t)} · <span aria-hidden="true">{VERDICT_GLYPH[lastDecided.verdict ?? ""] ?? STATUS_GLYPH[lastDecided.status] ?? "?"} </span>
-                  {lastDecided.verdict
-                    ? <DomainEnum namespace="workflow.verdicts" value={lastDecided.verdict} />
-                    : <DomainEnum namespace="workflow.status" value={lastDecided.status} />}
-                </span>
-                {lastDecided.notes && (
-                  <p className="col-start-2 font-serif text-md leading-6 text-[oklch(var(--color-ink))] break-words">{lastDecided.notes}</p>
-                )}
-              </div>
             </section>
           )}
 

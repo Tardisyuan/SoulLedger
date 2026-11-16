@@ -6,7 +6,7 @@
  */
 import { screen, within } from "@testing-library/react";
 import WorkflowDetailPage from "@/app/workflow/[id]/page";
-import { decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
+import { deadlineDistance, decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
 import { tZh } from "./support/zhBundle";
 import { renderWithProviders } from "./support/render";
 
@@ -79,13 +79,51 @@ describe("who started it", () => {
 });
 
 describe("the deadline", () => {
-  it("is a date-time, with the hours rule kept", async () => {
+  const at = (iso: string) => jest.spyOn(Date, "now").mockReturnValue(new Date(iso).getTime());
+  afterEach(() => jest.restoreAllMocks());
+
+  // 第五十九批 N11: 「{time} 截止 · 还有 {left} · 到时转交上级」, not 「24 小时后」 (read as "due in 24 hours").
+  it("says the time it runs out and how long is left, then the escalation", async () => {
+    at("2026-11-01T08:20:00Z");
     workflowApi.get.mockResolvedValue(workflow());
     officerAppApi.item.mockResolvedValue(facts({}));
     renderPage();
     const line = await screen.findByTestId("workflow-deadline");
+    expect(line).toHaveTextContent(tZh("workflow.detail.deadline_line", { time: "dt(2026-11-02T08:00:00.000Z)", left: "23小时" }));
+    expect(line).not.toHaveTextContent("小时后");
+    expect(line).not.toHaveAttribute("data-overdue");
+    expect(line.className).not.toContain("color-warning");
+  });
+
+  it("past it, says how late and that it went up, in warning ink", async () => {
+    at("2026-11-02T11:00:00Z");
+    workflowApi.get.mockResolvedValue(workflow());
+    officerAppApi.item.mockResolvedValue(facts({}));
+    renderPage();
+    const line = await screen.findByTestId("workflow-deadline");
+    expect(line).toHaveTextContent(new RegExp(`^${tZh("workflow.detail.deadline_overdue", { late: "3小时" })}$`));
+    expect(line).toHaveAttribute("data-overdue");
+    expect(line.className).toContain("color-warning");
+  });
+
+  it("an action other than escalation keeps the rule's own words", async () => {
+    workflowApi.get.mockResolvedValue(workflow({ ...CURRENT, timeout_action: "AUTO_REJECT" }));
+    officerAppApi.item.mockResolvedValue(facts({}));
+    renderPage();
+    const line = await screen.findByTestId("workflow-deadline");
     expect(line).toHaveTextContent(tZh("workflow.detail.deadline", { time: "dt(2026-11-02T08:00:00.000Z)" }));
-    expect(line).toHaveTextContent(tZh("workflow.editor.timeout.summary", { hours: "24", action: tZh("workflow.editor.timeout.action.ESCALATE") }));
+    expect(line).toHaveTextContent(tZh("workflow.editor.timeout.summary", { hours: "24", action: tZh("workflow.editor.timeout.action.AUTO_REJECT") }));
+    expect(line).not.toHaveTextContent(tZh("workflow.editor.timeout.action.ESCALATE"));
+  });
+
+  it("deadlineDistance rounds down, in minutes / hours / days", () => {
+    const now = new Date("2026-11-01T00:00:00Z").getTime();
+    const later = (ms: number) => new Date(now + ms).toISOString();
+    expect(deadlineDistance(later(59 * 60_000 + 59_000), now, "zh-Hans")).toEqual({ overdue: false, text: "59分钟" });
+    expect(deadlineDistance(later(10_000), now, "zh-Hans").text).toBe("1分钟");
+    expect(deadlineDistance(later(47.9 * 3_600_000), now, "zh-Hans").text).toBe("47小时");
+    expect(deadlineDistance(later(49 * 3_600_000), now, "en").text).toBe("2 days");
+    expect(deadlineDistance(later(-2 * 3_600_000), now, "zh-Hans")).toEqual({ overdue: true, text: "2小时" });
   });
 
   it("without activated_at keeps only the rule", async () => {
@@ -121,5 +159,38 @@ describe("the step position", () => {
     // A current node that is not a step reads as the last one, as `workflow_facts` does.
     expect(decisionStepPosition(nodes, "n3")).toEqual({ k: 2, n: 2 });
     expect(decisionStepPosition(nodes, null)).toBeNull();
+  });
+});
+
+// 第五十九批 N14: 「{name} · {time} 处理」 beside the status tag, in place of the 「最近一步」 panel.
+describe("who handled it last", () => {
+  const withFirst = (over: Record<string, unknown>) => ({
+    data: { ...workflow().data, nodes: [NOTIFY, { ...FIRST, decided_at: "2026-11-01T07:00:00Z", verdict: "PASSED", ...over }, CURRENT, END] },
+  });
+  const time = "dt(2026-11-01T07:00:00Z)";
+
+  it("names the approver of the node decided last, with its time", async () => {
+    workflowApi.get.mockResolvedValue(withFirst({ approver: 7, approver_display_name: "孟判官", approver_username: "meng" }));
+    officerAppApi.item.mockResolvedValue(facts({}));
+    renderPage();
+    expect((await screen.findByTestId("handled-by")).textContent).toBe(tZh("common.handled_by", { name: "孟判官", time }));
+    expect(screen.queryByText(/最近一步/)).toBeNull();
+  });
+
+  it("writes the node's hall when the approver's name is withheld", async () => {
+    workflowApi.get.mockResolvedValue(withFirst({ approver: 7, approver_display_name: null, approver_username: null }));
+    officerAppApi.item.mockResolvedValue(facts({}));
+    renderPage();
+    const line = await screen.findByTestId("handled-by");
+    expect(line).toHaveTextContent(/^\S.* · dt\(2026-11-01T07:00:00Z\) 处理$/);
+    expect(line).not.toHaveTextContent("孟判官");
+  });
+
+  it("names no one for a node nobody decided", async () => {
+    workflowApi.get.mockResolvedValue(withFirst({ approver: null, approver_display_name: null, approver_username: null, status: "SKIPPED", verdict: null }));
+    officerAppApi.item.mockResolvedValue(facts({}));
+    renderPage();
+    await screen.findByTestId("workflow-deadline");
+    expect(screen.queryByTestId("handled-by")).toBeNull();
   });
 });

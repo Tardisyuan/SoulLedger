@@ -495,7 +495,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   // 城隍初审中(第五十三批 J-1):十殿不能认领、暂缓、结案(服务端 409 `at_city_god`),按钮置灰并说原因。
   const atCityGod = isAtCityGod(judgment?.city_god_status);
   // 有人请求改派:能改派的人在页头读到请求,主动作是「改派给…」(App O-a)。
-  const reassignAsked = !!judgment && reassignRequestShown(judgment, user?.id, hasPermission("judgment.assign"));
+  // 改派请求:谁都看到那一行;只有能改派的人(`judgment.assign`)页头有「改派给…」(第五十九批 N5)。
+  const reassignAsked = !!judgment && reassignRequestShown(judgment, user?.id);
+  const canReassignTo = reassignAsked && hasPermission("judgment.assign");
   // 别人手上的案子:持 judgment.assign 的人「替{name}放回」(App O-a)。
   const releaseFor = !!judgment && releaseForShown(judgment, user?.id, hasPermission("judgment.assign"));
   // 城隍以外的「还不能结案」(枉死城 / 木乃伊 / 到不了殿 / 未渡河):服务端算好的码,与结案的拒绝同一条规则。
@@ -945,9 +947,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       title={<DomainText value={soulName} />}
       subtitle={subtitle}
       actions={
-        previousId || nextId || isFinal || canDefer || reassignAsked || releaseFor ? (
+        previousId || nextId || isFinal || canDefer || canReassignTo || releaseFor ? (
           <span className="inline-flex items-center gap-4">
-            {reassignAsked && <ReassignToButton judgmentId={judgment.id} />}
+            {canReassignTo && <ReassignToButton judgmentId={judgment.id} />}
             {releaseFor && <ReleaseForButton judgmentId={judgment.id} holder={judgment.claimed_by_name ?? ""} />}
             {/* 「放进待定」是页头的一个动作,不是第五个裁决(Design 第十一批 1a);理由框见下(D5 仍必填)。 */}
             {canDefer && (

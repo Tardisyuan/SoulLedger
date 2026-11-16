@@ -5,17 +5,19 @@
  * (readCache.ts `useShownAt`). Back online: light, 「✓ 已恢复网络 · 发出了 N 封回信」, folding away after
  * FOLD_MS unless a queued reply failed (then it stays while a failure is on the list). It also runs the
  * outbox: once on mount and on every return of the network, so the count it shows is the count it sent.
+ * It opens over 160 and folds away over 160, the soul app's bar and the web's alike (第五十八批 M13): the restored line
+ * stands its 3 s, then folds. Reduce motion: in and out at once.
  *
  * The soul app's own bar (mobile/src/network.tsx) is off here (`<NetworkProvider bar={false}>`): it says
  * "offline" and nothing about cached content, which is the opposite of what this app promises.
  */
 import { hhmm } from "@soulledger/core/domain/dates";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { View } from "react-native";
 
 import { flushOutbox, useOutbox } from "./outbox";
 import { useShownAt } from "./readCache";
-import { Txt, space, useI18n, useOnline, useTheme } from "./shared";
+import { Grow, Txt, space, useI18n, useOnline, useReducedMotionDurations, useTheme } from "./shared";
 
 export const FOLD_MS = 3000;
 
@@ -45,6 +47,12 @@ export function OfflineBanner() {
   }, [offline, back]);
 
   const shownRestored = restored && restored.back === back ? restored : null;
+  const { offlineBar } = useReducedMotionDurations();
+  const open = offline || !!shownRestored;
+  // Mounted from the moment it opens until its fold has played; the last thing it said stays while it folds.
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
+  const [said, setSaid] = useState<{ dark: boolean; text: ReactNode } | null>(null);
 
   useEffect(() => {
     if (!shownRestored || failed) return;
@@ -52,20 +60,30 @@ export function OfflineBanner() {
     return () => clearTimeout(id);
   }, [shownRestored, failed]);
 
-  if (!offline && !shownRestored) return null;
-  const dark = offline;
-  const text = offline ? <ContentTime /> : `✓ ${shownRestored!.sent > 0 ? t("officer_app.offline.restored_sent", { n: String(shownRestored!.sent) }) : t("officer_app.offline.restored")}`;
+  const now = open
+    ? {
+        dark: offline,
+        text: offline ? <ContentTime /> : `✓ ${shownRestored!.sent > 0 ? t("officer_app.offline.restored_sent", { n: String(shownRestored!.sent) }) : t("officer_app.offline.restored")}`,
+      }
+    : null;
+  const nowKey = now ? `${now.dark}:${typeof now.text === "string" ? now.text : "time"}` : null;
+  const saidKey = said ? `${said.dark}:${typeof said.text === "string" ? said.text : "time"}` : null;
+  if (now && nowKey !== saidKey) setSaid(now);
+  if (!mounted) return null;
+  const { dark, text } = now ?? said ?? { dark: false, text: "" };
   return (
-    <View
-      testID={dark ? "offline-banner" : "restored-banner"}
-      accessibilityRole="alert"
-      accessibilityLiveRegion="polite"
-      style={{ paddingHorizontal: space[5], paddingVertical: space[2], backgroundColor: dark ? theme.ink : theme.s2 }}
-    >
-      <Txt variant="caption" style={{ color: dark ? theme.s0 : theme.ink }}>
-        {text}
-      </Txt>
-    </View>
+    <Grow ms={offlineBar} open={open} onClosed={() => setMounted(false)}>
+      <View
+        testID={open ? (dark ? "offline-banner" : "restored-banner") : "offline-folding"}
+        accessibilityRole={open ? "alert" : undefined}
+        accessibilityLiveRegion="polite"
+        style={{ paddingHorizontal: space[5], paddingVertical: space[2], backgroundColor: dark ? theme.ink : theme.s2 }}
+      >
+        <Txt variant="caption" style={{ color: dark ? theme.s0 : theme.ink }}>
+          {text}
+        </Txt>
+      </View>
+    </Grow>
   );
 }
 

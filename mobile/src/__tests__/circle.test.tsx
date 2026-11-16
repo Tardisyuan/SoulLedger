@@ -151,7 +151,7 @@ describe("feed paging (a FlatList read to its end)", () => {
     await endReached();
     expect(feedPages(calls)).toEqual([1, 2]);
     // While it is on its way the foot says so, and offers no second press.
-    expect(screen.getByTestId("circle-more-loading")).toBeTruthy();
+    expect(await screen.findByTestId("circle-more-loading")).toBeTruthy(); // after its 400 wait (M6)
     expect(screen.queryByTestId("circle-more")).toBeNull();
 
     await act(async () => held.answer(feedPage([post({ id: "p3" })], null)));

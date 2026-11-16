@@ -33,7 +33,7 @@ const CSS_ALLOWED: Record<string, Kind> = {
   "app/globals.css :: .page-wait-line::after": "TOPLINE",
   "app/globals.css :: .page-head-topline": "TOPLINE",
   'app/globals.css :: :is([data-civ="cn"], [data-civ="eu"], [data-civ="eg"], [data-civ="gr"]) .page-head-topline': "TOPLINE",
-  "app/globals.css :: .page-head-topline[data-loading]::after": "TOPLINE",
+  "app/globals.css :: .page-head-topline:is([data-loading], [data-refresh])::after": "TOPLINE",
   "app/globals.css :: .demo-inside-dossier": "TOPLINE",
   "src/components/desk/desk.module.css :: .stack": "TOPLINE",
   // 总簿四栏各自的顶线(栏上的 data-civ 是那一家)。归 TOPLINE 的依据是 Design 第四十八批:多殿并列时,每殿的栏或卡的
