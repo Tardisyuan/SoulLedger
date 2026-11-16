@@ -52,6 +52,7 @@ def world(db, django_user_model):
     souls = {k: Soul.objects.create(name=f"ds-{k}", tenant=cn, owner_org=o)
              for k, o in {"a": a, "a_child": a_child, "b": b}.items()}
     souls["eu"] = Soul.objects.create(name="ds-eu", tenant=eu, owner_org=eu_org)
+    souls["eu_child"] = Soul.objects.create(name="ds-eu-child", tenant=eu, owner_org=org(eu, "欧下", parent=eu_org))
     rule = scope("JUDGE", "ORG_CHILD")
     return {"judge": judge, "eu_judge": eu_judge, "souls": souls, "rule": rule, "orgs": {"a": a, "b": b, "eu": eu_org},
             "cn": cn}
@@ -67,7 +68,7 @@ def test_a_warm_request_reads_no_scope_rule_and_no_org_tree(world):
     with CaptureQueriesContext(connection) as ctx:
         visible = _ids(client.get(SOULS))
     assert _scope_queries(ctx) == []
-    assert visible & _sid(world, "a", "a_child") and not visible & _sid(world, "b", "eu")
+    assert visible & _sid(world, "a", "a_child") and not visible & _sid(world, "b", "eu", "eu_child")
 
 
 def test_narrowing_the_scope_is_seen_on_the_next_request(world):
@@ -102,8 +103,9 @@ def test_one_halls_warm_cache_never_answers_another_hall(world):
     cn_seen = _ids(cn_client.get(SOULS))
     eu_seen = _ids(eu_client.get(SOULS))
     assert eu_seen & _sid(world, "eu")
+    assert eu_seen & _sid(world, "eu_child"), "the EU judge was answered from the CN hall's org tree"
     assert not eu_seen & _sid(world, "a", "a_child", "b"), "a CN soul in the EU judge's answer"
-    assert not cn_seen & _sid(world, "eu")
+    assert not cn_seen & _sid(world, "eu", "eu_child")
     from apps.perm import data_scope
 
     cn_ids = data_scope.org_ids(world["judge"], "soul")
