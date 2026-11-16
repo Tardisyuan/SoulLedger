@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { OfficerRebirthApplication } from "@soulledger/core/api";
+import { useQuery } from "@tanstack/react-query";
+import { officerAppApi, type OfficerRebirthApplication } from "@soulledger/core/api";
+import { localName } from "@soulledger/core/domain/localName";
 import { classifySoulAccountError, useDecideCrossCivilization } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -28,6 +30,16 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
    * a second copy that nothing kept in step with the first. */
   const canDecide = a.can_decide_cross_civilization;
   const step = a.current_step;
+  // 功过结余 and the earlier steps: only the officer App's item detail carries them (`facts.merit_balance` /
+  // `facts.history`). Not readable (out of scope, impersonating, an older server): neither is drawn.
+  const item = useQuery({
+    queryKey: ["officer-app", "item", "rebirth", a.id],
+    queryFn: async () => (await officerAppApi.item("rebirth", a.id)).data,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const merit = item.data?.facts?.merit_balance;
+  const history = item.data?.facts?.history ?? [];
 
   // F-REB-11: crossing names the hall the soul is reborn into; the choices are the backend's
   // (`cross_civilization_targets`: rebirth-capable, not the soul's own civilization), never a local list.
@@ -76,6 +88,7 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
           {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(a.cycle) }))}
           {row(t("soul_accounts.fields.status"), <DomainEnum namespace="soul_accounts.rebirth_status" value={a.status} className={rebirthBadgeClass(a.status)} />)}
           {row(t("soul_accounts.rebirth.fields.desired_form"), <DomainEnum namespace="reincarnation.forms" value={a.desired_form} />)}
+          {merit != null && row(t("ledger.journal.col_balance"), <span data-testid="rebirth-merit" className="font-mono">{String(merit)}</span>)}
           {row(t("soul_accounts.rebirth.fields.current_step"), currentStep)}
           {row(t("soul_accounts.rebirth.fields.cross_civilization"), crossText)}
           {row(
@@ -110,6 +123,34 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
           <section>
             <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.rejection_reason")}</h3>
             <p className="text-sm whitespace-pre-wrap break-words">{a.rejection_reason}</p>
+          </section>
+        )}
+
+        {/* 前面几步, as the officer App draws it: 发起 → each decided node → the current one (◐). */}
+        {history.length > 0 && (
+          <section data-testid="rebirth-history">
+            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("officer_app.detail.history")}</h3>
+            <ol className="space-y-2 text-sm">
+              {history.map((s, i) => (
+                <li key={`${s.kind}-${i}`} data-step={s.kind} className="grid grid-cols-[16px_minmax(0,1fr)] gap-x-2">
+                  <span aria-hidden="true">{s.kind === "current" ? "◐" : "✓"}</span>
+                  <span className="min-w-0 break-words">
+                    {s.kind === "start" ? (
+                      [t("officer_app.detail.requester"), s.actor, s.at ? formatDateTime(s.at) : null].filter(Boolean).join(" · ")
+                    ) : s.kind === "current" ? (
+                      [localName(s, locale), s.mine ? t("officer_app.detail.history_yours") : null].filter(Boolean).join(" · ")
+                    ) : (
+                      <>
+                        {[localName(s, locale), s.actor].filter(Boolean).join(" · ")}
+                        {s.verdict && <> · <DomainEnum namespace="workflow.verdicts" value={s.verdict} /></>}
+                        {s.at && ` · ${formatDateTime(s.at)}`}
+                      </>
+                    )}
+                    {s.comment && <span className="block text-xs text-[oklch(var(--color-ink-muted))]">「{s.comment}」</span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
           </section>
         )}
 
