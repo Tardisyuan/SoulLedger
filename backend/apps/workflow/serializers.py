@@ -473,6 +473,11 @@ def _foreign_signature(sig):
     return {**sig, "user_id": None, "user_name": None, **({"notes": ""} if "notes" in sig else {})}
 
 
+def _segment_nodes(node):
+    """The stations of `node`'s segment, on the database `node` was read from (its instance hint)."""
+    return ApprovalNode.objects.using(node._state.db).filter(segment_id=node.segment_id)
+
+
 class ApprovalNodeSerializer(serializers.ModelSerializer):
     """Serializer for ApprovalNode.
 
@@ -541,8 +546,9 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             return None
         cache = self.context.setdefault("_order_in_segment", {})
         if node.segment_id not in cache:
-            ids = ApprovalNode.objects.filter(segment_id=node.segment_id).order_by("node_order", "pk").values_list(
-                "pk", flat=True)
+            # The segment's stations live with the node, in its workflow's database: read them there, not where the
+            # request routes (a foreign segment's reader routes to its own civilization's shard, stage 3).
+            ids = _segment_nodes(node).order_by("node_order", "pk").values_list("pk", flat=True)
             cache[node.segment_id] = {pk: i for i, pk in enumerate(ids, start=1)}
         return cache[node.segment_id].get(node.pk)
 
@@ -557,7 +563,7 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
         if node.segment_id not in cache:
             from apps.workflow.segments import jump_sources
 
-            cache[node.segment_id] = jump_sources(list(ApprovalNode.objects.filter(segment_id=node.segment_id)))
+            cache[node.segment_id] = jump_sources(list(_segment_nodes(node)))
         from apps.workflow.segments import jump_via
 
         return [{"key": str(s.pk), "node_name": s.node_name, "node_name_en": s.node_name_en,
