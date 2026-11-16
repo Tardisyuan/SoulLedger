@@ -3421,3 +3421,26 @@ class TestHelpSaysWhatTheScriptDoes:
             assert stale not in out, stale
         assert not out.startswith("#!") and "set -u" not in out
 
+
+
+class TestTheServiceProbeReadsTheHostFromTheUrl:
+    """The --real-pg probe runs the PROBE_PY heredoc in run-gates.sh. A regex for "word:digits"
+    once took "user:6…" from a password that began with a digit (the Windows PC, 2026-11-17)
+    and probed host "sl", port 6, so a healthy PostgreSQL read as down."""
+
+    def _probe(self, db_url):
+        text = RUNNER.read_text(encoding="utf-8")
+        body = text.split("<<'PROBE_PY'\n", 1)[1].split("\nPROBE_PY", 1)[0]
+        env = {**os.environ, "DB_URL": db_url, "RD_URL": "redis://127.0.0.1:9/0", "ENV_FILE": "/nonexistent"}
+        out = subprocess.run([sys.executable, "-c", body], env=env, capture_output=True, text=True, timeout=30)
+        return out.stdout.splitlines()
+
+    def test_a_password_that_starts_with_a_digit_is_not_the_host(self):
+        line = self._probe("postgres://sl:6abc123@127.0.0.1:1/soulledger")[0]
+        assert line == "db down 127.0.0.1:1", line
+        assert "sl:" not in line
+
+    def test_a_url_without_a_port_takes_the_scheme_default_and_never_prints_the_password(self):
+        line = self._probe("postgres://sl:9secret@127.0.0.1/soulledger")[0]
+        assert line.endswith("127.0.0.1:5432"), line
+        assert "9secret" not in line
