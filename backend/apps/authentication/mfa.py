@@ -134,14 +134,19 @@ def required_roles(tenant) -> list[str]:
     return [r for r in roles if isinstance(r, str)]
 
 
-def is_required(user) -> bool:
-    """ADMIN 始终要求;其余看殿设置。灵魂账号永远不要求。"""
+def is_required(user, hall=None) -> bool:
+    """ADMIN 始终要求;其余看殿设置。灵魂账号永远不要求。
+
+    `hall`:调用方手里已有的殿行(请求上的 `request.tenant`,中间件的进程内副本)。只在它就是本人的殿时才用,
+    否则照旧读 `user.tenant` —— 那是一次外键懒加载,每个官员请求一条 Tenant 查询(2026-11-16 实测)。"""
     role = getattr(user, "role", None)
     if role == UserRole.SOUL:
         return False
     if role in (UserRole.ADMIN, UserRole.SYSTEM_ADMIN):
         return True
-    return role in required_roles(getattr(user, "tenant", None))
+    if hall is None or hall.pk != getattr(user, "tenant_id", None):
+        hall = getattr(user, "tenant", None)
+    return role in required_roles(hall)
 
 
 #: 必需角色还没开两步验证时,令牌只开这几个口子:设置两步验证、退出、读自己(资料与偏好)、改密码
@@ -156,12 +161,12 @@ MFA_SETUP_ALLOWED = frozenset({
 })
 
 
-def setup_required(user) -> bool:
+def setup_required(user, hall=None) -> bool:
     """角色要求两步验证而本人还没开:登录照常成功,但除 `MFA_SETUP_ALLOWED` 外一概 403。
     `settings.MFA_SETUP_ENFORCED` 只为测试套件存在(根 conftest 默认关掉,专门的测试再打开);生产恒为真。"""
     from django.conf import settings
 
-    return bool(getattr(settings, "MFA_SETUP_ENFORCED", True)) and is_required(user) and not is_enabled(user)
+    return bool(getattr(settings, "MFA_SETUP_ENFORCED", True)) and is_required(user, hall) and not is_enabled(user)
 
 
 def status_of(user) -> dict:

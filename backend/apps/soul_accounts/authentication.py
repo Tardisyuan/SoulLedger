@@ -97,7 +97,7 @@ class OfficerJWTAuthentication(JWTAuthentication):
         (与上面改密码同一个形状;规则在 `apps/authentication/mfa.py::setup_required`)。"""
         from apps.authentication import mfa
 
-        if (request.method, request.path) in mfa.MFA_SETUP_ALLOWED or not mfa.setup_required(user):
+        if (request.method, request.path) in mfa.MFA_SETUP_ALLOWED or not mfa.setup_required(user, getattr(request, "tenant", None)):
             return
         raise PermissionDenied({"detail": "请先开启两步验证。", "code": "mfa_setup_required"})
 

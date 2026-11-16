@@ -86,8 +86,10 @@ class PermissionCache:
         try:
             import redis
             self._redis_client = redis.from_url(
-                settings.REDIS_URL,
-                decode_responses=True
+                getattr(settings, "CACHE_PERMISSION_REDIS_URL", None) or settings.REDIS_URL,
+                decode_responses=True,
+                socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+                socket_connect_timeout=settings.REDIS_SOCKET_TIMEOUT,
             )
             # Test connection
             self._redis_client.ping()

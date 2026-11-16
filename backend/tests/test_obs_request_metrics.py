@@ -217,7 +217,8 @@ def test_metrics_still_answers_when_the_counter_store_is_down(client):
 def test_ready_is_503_when_the_database_check_fails(client):
     broken = mock.MagicMock()
     broken.cursor.side_effect = Exception("db down")
-    with mock.patch.object(health, "connection", broken), mock.patch.object(health, "redis_ok", return_value=True):
+    with mock.patch.object(health, "connections", {"default": broken}), \
+            mock.patch.object(health, "redis_ok", return_value=True):
         response = client.get("/health/ready/")
     assert response.status_code == 503
     assert response.json() == {"status": "degraded"}  # which dependency failed is not public

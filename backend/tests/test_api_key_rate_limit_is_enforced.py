@@ -154,3 +154,30 @@ def test_health_reports_the_remaining_count_under_that_name(key):
     assert body["rate_limit_remaining"]["per_minute"] == 1, (
         f"用掉 2 个之后剩余应当是 1,报的是 {body['rate_limit_remaining']['per_minute']}"
     )
+
+
+@pytest.mark.django_db
+def test_the_window_ends_on_time_although_the_caller_keeps_calling(key, monkeypatch):
+    """The window is fixed from the first call, not pushed back by every later one (review 2026-11-16 #8).
+
+    The fallback did `cache.set(key, n + 1, period)` on every call, and each `set` restarted the expiry: a key that
+    kept calling -- refused, and still calling -- never saw its counter expire, so "3 per minute" became "3, then
+    silence until the caller pauses for a whole minute". Time is the cache's clock, moved by hand.
+    """
+    import time as _time
+
+    api_key, _ = key
+    request = type("_Req", (), {})()
+    request.api_key = api_key
+    now = [1_000_000.0]
+    monkeypatch.setattr(_time, "time", lambda: now[0])
+    throttle = ApiKeyRateThrottle()
+
+    def at(t):
+        now[0] = 1_000_000.0 + t
+        return throttle.allow_request(request, None)
+
+    assert [at(0), at(1), at(2)] == [True, True, True]
+    assert [at(30), at(59)] == [False, False], "the fourth and fifth call inside the minute are refused"
+    assert at(61) is True, "the minute from the first call is over: the caller is let through again"
+    assert [at(62), at(63), at(64)] == [True, True, False], "a fresh window of three"

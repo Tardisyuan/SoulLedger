@@ -82,12 +82,26 @@ def exception_handler(exc, context):
         # A save the pre_save guard refused (a key naming another civilization's row): the request named it, so
         # 400 with the field, not a 500. Other Django ValidationErrors keep their current handling.
         exc = exceptions.ValidationError(exc.message_dict, code="cross_civilization")
+    elif _is_redis_error(exc):
+        # The state cache (`default`: lockouts, one-time markers, idempotency keys, locks) is unreachable. It fails
+        # CLOSED -- answering without the lockout counter would let a password be guessed -- but as 503 with a code,
+        # not a bare 500 (apps/core/cache.py). The pure cache (`data`) and the default throttles never get here.
+        import logging
+
+        logging.getLogger(__name__).error("state cache unavailable: %s: %s", type(exc).__name__, exc)
+        exc = Problem(503, "unavailable", "A required service is temporarily unavailable; try again shortly.")
     response = drf_exception_handler(exc, context)
     if response is None:
         return None
     response.data = from_exception(exc, response.status_code, response.data)
     response.content_type = CONTENT_TYPE
     return response
+
+
+def _is_redis_error(exc) -> bool:
+    from redis.exceptions import RedisError
+
+    return isinstance(exc, RedisError)
 
 
 def from_exception(exc, status: int, data) -> dict:

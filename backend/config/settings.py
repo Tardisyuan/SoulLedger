@@ -143,13 +143,31 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# Redis
+# Redis. One instance, one database number per role (review 2026-11-16, ADVICE-redis-cache 4.1-4.2):
+#   REDIS_URL               db 0  STATE cache `default` (locks, counters, lockouts, one-time markers, idempotency,
+#                                 version keys): never cleared, never evicted, fails closed. Also the obs counters.
+#   CELERY_BROKER_URL       db 1  /  CELERY_RESULT_BACKEND db 2   (unchanged)
+#   REDIS_CACHE_URL         db 3  DATA cache `data` and the permission cache: may be flushed or evicted.
+#   CHANNEL_LAYER_REDIS_URL db 4  WebSocket channel layer.
+# 3 and 4 default to REDIS_URL's host with that db number; set the variable to move a role elsewhere (e.g. `data`
+# to an `allkeys-lru` instance of its own). Upgrading from the single shared db 0 loses the old keys once.
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-# Channel Layers (for WebSocket real-time events)
-import urllib.parse as _urlparse
+import urllib.parse as _urlparse  # noqa: E402
 
-_redis_parsed = _urlparse.urlparse(REDIS_URL)
+
+def _redis_db(url: str, db: int) -> str:
+    return _urlparse.urlunparse(_urlparse.urlparse(url)._replace(path=f"/{db}"))
+
+
+REDIS_CACHE_URL = os.getenv("REDIS_CACHE_URL") or _redis_db(REDIS_URL, 3)
+CHANNEL_LAYER_REDIS_URL = os.getenv("CHANNEL_LAYER_REDIS_URL") or _redis_db(REDIS_URL, 4)
+#: Seconds a cache call waits on Redis, to connect and to read. redis-py's default is 5 s, so a black-holed Redis
+#: made every request wait 5 s before failing; a local Redis answers in well under a millisecond.
+REDIS_SOCKET_TIMEOUT = float(os.getenv("REDIS_SOCKET_TIMEOUT", "0.5"))
+
+# Channel Layers (for WebSocket real-time events)
+_redis_parsed = _urlparse.urlparse(CHANNEL_LAYER_REDIS_URL)
 CHANNEL_LAYER_SOCKET_TIMEOUT = 15  # seconds; must exceed channels_redis's brpop_timeout (5)
 CHANNEL_LAYERS = {
     "default": {
@@ -208,6 +226,26 @@ from config.shard_db import databases_from_env  # noqa: E402
 
 DATABASES.update(databases_from_env(
     os.environ, disable_server_side_cursors=DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"]))
+
+
+def _apply_statement_timeout(databases: dict, ms: int) -> None:
+    """`-c statement_timeout=<ms>` in the libpq `options` of every PostgreSQL alias, in place; 0 = none.
+
+    Without it a slow leg of a fan-out read holds the request, and a stuck statement in a cross-database transaction
+    holds the locks of the other databases with it (sharding review 2026-11-16, 2.7). PgBouncer does not pass
+    `options` on (it refuses the connection), so the production compose, which connects through it, sets
+    DB_STATEMENT_TIMEOUT_MS=0 and puts the limit on the role instead (docs/DEPLOY.md「数据库超时」)."""
+    if not ms:
+        return
+    for db in databases.values():
+        if "postgresql" in db["ENGINE"]:
+            options = db.setdefault("OPTIONS", {})
+            options["options"] = f"{options.get('options', '')} -c statement_timeout={ms}".strip()
+
+
+#: Milliseconds; applies to the control database and every shard alias alike.
+DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "60000") or 0)
+_apply_statement_timeout(DATABASES, DB_STATEMENT_TIMEOUT_MS)
 # Civilizations (apps.souls.models.Civilization values, comma list) whose reads / writes are cut over
 # to their own alias. Empty = none; tests use override_settings (plan D8).
 SHARD_READ_CIVS = [c.strip() for c in os.getenv("SHARD_READ_CIVS", "").split(",") if c.strip()]
@@ -494,6 +532,8 @@ CACHE_PERMISSION_FALLBACK_TTL = int(
 # or `invalidate_all` each other's keys unless they also share a database. The
 # old unprefixed keys an upgrade orphans expire with the TTL (300 s). Set it
 # explicitly (even to "") to choose.
+#: The permission cache's own client (apps/perm/cache.py) is a pure cache: the `data` database by default.
+CACHE_PERMISSION_REDIS_URL = os.getenv("CACHE_PERMISSION_REDIS_URL") or REDIS_CACHE_URL
 CACHE_PERMISSION_KEY_PREFIX = os.getenv(
     "CACHE_PERMISSION_KEY_PREFIX", f"{DATABASES['default'].get('NAME') or 'soulledger'}:"
 )
@@ -502,12 +542,24 @@ CACHE_PERMISSION_KEY_PREFIX = os.getenv(
 # retrying, instead of reconnecting on every cache miss. See apps/perm/cache.py.
 CACHE_REDIS_RETRY_COOLDOWN = int(os.getenv("CACHE_REDIS_RETRY_COOLDOWN", "5"))  # seconds
 
-# Cache (Redis)
+# Cache (Redis): `default` is state, `data` is a pure cache -- apps/core/cache.py says what goes where.
+#: Prefix on every key of both aliases: two deployments on one Redis no longer read each other's state.
+CACHE_KEY_PREFIX = os.getenv("CACHE_KEY_PREFIX", DATABASES["default"].get("NAME") or "soulledger")
+_REDIS_CACHE_OPTIONS = {"socket_timeout": REDIS_SOCKET_TIMEOUT, "socket_connect_timeout": REDIS_SOCKET_TIMEOUT}
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": REDIS_URL,
-    }
+        "KEY_PREFIX": CACHE_KEY_PREFIX,
+        "OPTIONS": _REDIS_CACHE_OPTIONS,
+    },
+    "data": {
+        "BACKEND": "apps.core.cache.FailOpenRedisCache",
+        "LOCATION": REDIS_CACHE_URL,
+        "KEY_PREFIX": CACHE_KEY_PREFIX,
+        "TIMEOUT": 300,
+        "OPTIONS": _REDIS_CACHE_OPTIONS,
+    },
 }
 
 # Celery
