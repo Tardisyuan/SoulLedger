@@ -94,7 +94,7 @@ import { useArchiveJudgment, useCaseAttachments, useDeferJudgment, useJudgmentNe
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { OwnerOrgField } from "@/src/components/organizations/OwnerOrgField";
 import { DeferDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
-import { ReassignRequestLine, ReassignToButton, reassignRequestShown } from "@/src/components/judgment/ReassignRequest";
+import { ReassignRequestLine, ReassignToButton, ReleaseForButton, reassignRequestShown, releaseForShown } from "@/src/components/judgment/ReassignRequest";
 import {
   EMPTY_REASONS,
   RejectReasonPanel,
@@ -496,6 +496,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const atCityGod = isAtCityGod(judgment?.city_god_status);
   // 有人请求改派:能改派的人在页头读到请求,主动作是「改派给…」(App O-a)。
   const reassignAsked = !!judgment && reassignRequestShown(judgment, user?.id, hasPermission("judgment.assign"));
+  // 别人手上的案子:持 judgment.assign 的人「替{name}放回」(App O-a)。
+  const releaseFor = !!judgment && releaseForShown(judgment, user?.id, hasPermission("judgment.assign"));
   // 城隍以外的「还不能结案」(枉死城 / 木乃伊 / 到不了殿 / 未渡河):服务端算好的码,与结案的拒绝同一条规则。
   const concludeHeld = !!judgment?.conclude_refusal && !atCityGod;
   const buttonOn = useMenuButtonConfig();
@@ -943,9 +945,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       title={<DomainText value={soulName} />}
       subtitle={subtitle}
       actions={
-        previousId || nextId || isFinal || canDefer || reassignAsked ? (
+        previousId || nextId || isFinal || canDefer || reassignAsked || releaseFor ? (
           <span className="inline-flex items-center gap-4">
             {reassignAsked && <ReassignToButton judgmentId={judgment.id} />}
+            {releaseFor && <ReleaseForButton judgmentId={judgment.id} holder={judgment.claimed_by_name ?? ""} />}
             {/* 「放进待定」是页头的一个动作,不是第五个裁决(Design 第十一批 1a);理由框见下(D5 仍必填)。 */}
             {canDefer && (
               <Button type="button" variant="secondary" size="sm" className="gap-2" data-testid="desk-defer" onClick={() => setDeferAsking(true)}>

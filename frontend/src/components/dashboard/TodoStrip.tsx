@@ -154,6 +154,16 @@ export function TodoStrip() {
     enabled: canApprove || canLetters,
     staleTime: 60_000,
   });
+  // 改派请求(判官「请求改派」、还没批的):持 judgment.assign 的人才能批;口径是列表的 `?reassign_requested=true`,
+  // 链到待审队列的同一个筛选。和待我选站一样只在有的时候占一格。「以此人身份查看」时不显示:代看期间
+  // `hasPermission` 只认读码(`usePermissions`),judgment.assign 为假。
+  const canAssign = hasPermission("judgment.assign");
+  const reassignQ = useQuery({
+    queryKey: todoKeys.item("reassign-requests"),
+    queryFn: async () => (await judgmentApi.list({ reassign_requested: "true", page: "1" })).data.count,
+    enabled: canAssign,
+    staleTime: 60_000,
+  });
   const officerCount = (group: "approvals" | "rebirths" | "cooldowns" | "letters" | "unassigned_letters" | "pick_nodes") =>
     ({ ...officerQ, data: officerQ.data?.[group]?.count }) as UseQueryResult<number>;
   const canSentenceRequests = hasPermission("judgment.execute");
@@ -180,7 +190,7 @@ export function TodoStrip() {
   });
   // The cell reads a number; the link also needs the status the server counted.
   const deathCountQ = { ...deathSyncQ, data: deathSyncQ.data?.anomaly_count } as UseQueryResult<number>;
-  if (!canDispatch && !canJudge && !canDeathSync && !canResend && !canApprove && !canLetters && !canSentenceRequests && !canModerate)
+  if (!canDispatch && !canJudge && !canDeathSync && !canResend && !canApprove && !canLetters && !canSentenceRequests && !canModerate && !canAssign)
     return null;
   return (
     <div
@@ -213,6 +223,15 @@ export function TodoStrip() {
           linkText={t("dashboard.todo.go_view")}
           clearText={t("dashboard.todo.sync_ok")}
           alarm={t("dashboard.todo.unbooked")}
+        />
+      )}
+      {canAssign && (reassignQ.data ?? 0) > 0 && (
+        <TodoCell
+          label={t("dashboard.todo.reassign_requests")}
+          query={reassignQ}
+          href="/judgment?reassign_requested=true"
+          linkText={t("dashboard.todo.go_view")}
+          clearText={t("dashboard.todo.none")}
         />
       )}
       {canResend && (

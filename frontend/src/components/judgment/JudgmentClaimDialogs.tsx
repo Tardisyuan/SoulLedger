@@ -150,6 +150,31 @@ export function DeferDialog({
   );
 }
 
+/**
+ * 替别人放回(官员端 App O-a 的 `release_for` 底页在网页上的那一半):持 `judgment.assign` 的人放回别人手上的案子,
+ * 理由必填 —— 原经办人收到通知(服务端 `_tell_holder`),理由随通知走。文案与 App 同一组键。
+ */
+export function ReleaseForDialog({
+  holder,
+  ...rest
+}: {
+  isOpen: boolean;
+  holder: string;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <ReasonDialog
+      {...rest}
+      title={t("officer_app.case.release_for", { name: holder })}
+      hint={t("officer_app.reassign.reason", { name: holder })}
+      confirmText={t("officer_app.case.release_for", { name: holder })}
+    />
+  );
+}
+
 type RequestState = { kind: "idle" | "sent" | "failed" } | { kind: "limited"; minutes: number };
 
 /**

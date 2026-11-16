@@ -757,7 +757,11 @@ describe("审判队列", () => {
       await screen.findByText("陆晚晴");
       fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
       const items = await openRowMenu("陆晚晴");
-      expect(labels(items)).toEqual([tZh("judgment.queue.key_defer"), tZh("judgment.claim.reassign")]);
+      expect(labels(items)).toEqual([
+        tZh("judgment.queue.key_defer"),
+        tZh("judgment.claim.reassign"),
+        tZh("officer_app.case.release_for", { name: "秦广" }),
+      ]);
       fireEvent.click(items[1]);
       const dialog = await screen.findByRole("dialog");
       await waitFor(() => expect(judgmentApi.assignableOfficers).toHaveBeenCalledWith(["c"]));
@@ -765,6 +769,38 @@ describe("审判队列", () => {
       fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") }));
       await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "reassign", ids: ["c"], to: 7 }));
       expect(screen.getByTestId("batch-bar")).toBeInTheDocument();
+    });
+
+    it("「⋯ → 替{name}放回」:持 judgment.assign、在别人手上才有;理由必填,带着理由放回那一件", async () => {
+      mockUser = { ...mockUser, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      judgmentApi.release.mockResolvedValue({ data: {} });
+      renderPage();
+      await screen.findByText("陆晚晴");
+      const releaseFor = tZh("officer_app.case.release_for", { name: "秦广" });
+      // 自己手上的、没人认领的,都没有这一项。
+      expect(labels(await openRowMenu("沈青梧"))).toEqual([
+        tZh("judgment.claim.release"),
+        tZh("judgment.queue.key_defer"),
+        tZh("judgment.claim.reassign"),
+      ]);
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+      expect(labels(await openRowMenu("Marguerite Vey"))).toEqual([
+        tZh("judgment.claim.claim"),
+        tZh("judgment.queue.key_defer"),
+        tZh("judgment.claim.reassign"),
+      ]);
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+      const items = [...(await openRowMenu("陆晚晴"))];
+      fireEvent.click(items.find((el) => el.textContent === releaseFor)!);
+      const dialog = await screen.findByRole("dialog");
+      const confirm = within(dialog).getByRole("button", { name: releaseFor });
+      fireEvent.click(confirm);
+      expect(await within(dialog).findByText(tZh("judgment.claim.reason_required"))).toBeInTheDocument();
+      expect(judgmentApi.release).not.toHaveBeenCalled();
+      fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "交接" } });
+      fireEvent.click(confirm);
+      await waitFor(() => expect(judgmentApi.release).toHaveBeenCalledWith("c", "交接"));
+      await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("officer_app.case.done_released"), "success"));
     });
 
     it("改派层是 v3 的 390 宽、手机上从底部升起 78% 高(Drawer 的 layer)", async () => {
@@ -1113,6 +1149,33 @@ describe("已结案的筛选", () => {
       await waitFor(() => expect(judgmentApi.list).toHaveBeenCalledWith({ page: "2", has_verdict: "true", verdict: "PASSED" }));
       // 反面:没有一个请求带上地址里那个不认识的文明。
       for (const [params] of judgmentApi.list.mock.calls) expect(params.civilization).toBeUndefined();
+    });
+
+    it("?reassign_requested=true(待办条「改派请求」):待审四组与计数都带它,页上有标记;× 清掉后不再带,地址里也去掉", async () => {
+      mockSearch = "reassign_requested=true";
+      window.history.replaceState(null, "", `/judgment?${mockSearch}`);
+      renderPage();
+      const chip = await screen.findByTestId("reassign-requested-filter");
+      expect(chip).toHaveTextContent(tZh("dashboard.todo.reassign_requests"));
+      await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ reassign_requested: "true" }));
+      expect(judgmentApi.list).toHaveBeenCalledWith({ reassign_requested: "true", group: "others", page: "1", ordering: "created_at" });
+      for (const [params] of judgmentApi.list.mock.calls.filter(([p]) => p.group)) expect(params.reassign_requested).toBe("true");
+
+      judgmentApi.list.mockClear();
+      judgmentApi.queueCounts.mockClear();
+      fireEvent.click(within(chip).getByRole("button", { name: tZh("filter.clear_one", { name: tZh("dashboard.todo.reassign_requests") }) }));
+      expect(screen.queryByTestId("reassign-requested-filter")).toBeNull();
+      await waitFor(() => expect(judgmentApi.list).toHaveBeenCalledWith({ group: "others", page: "1", ordering: "created_at" }));
+      for (const [params] of judgmentApi.list.mock.calls) expect(params).not.toHaveProperty("reassign_requested");
+      await waitFor(() => expect(new URLSearchParams(window.location.search).has("reassign_requested")).toBe(false));
+    });
+
+    it("不认识的 ?reassign_requested= 值不用:没有标记,也没有请求带它", async () => {
+      mockSearch = "reassign_requested=yes";
+      renderPage();
+      await screen.findByText("沈青梧");
+      expect(screen.queryByTestId("reassign-requested-filter")).toBeNull();
+      for (const [params] of judgmentApi.list.mock.calls) expect(params).not.toHaveProperty("reassign_requested");
     });
 
     it("选了裁决就写回地址(替换当前一条,不新增历史),原有的 ?soul= 留着", async () => {

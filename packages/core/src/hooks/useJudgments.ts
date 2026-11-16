@@ -245,8 +245,11 @@ export function useClaimJudgment() {
   return useClaimMutation((id: string) => judgmentApi.claim(id));
 }
 
+/** A bare id releases your own claim; `{ id, reason }` releases someone else's (`judgment.assign`) and the reason reaches the holder. */
 export function useReleaseJudgment() {
-  return useClaimMutation((id: string) => judgmentApi.release(id));
+  return useClaimMutation((vars: string | { id: string; reason: string }) =>
+    typeof vars === "string" ? judgmentApi.release(vars) : judgmentApi.release(vars.id, vars.reason)
+  );
 }
 
 /** Needs `judgment.assign` (by default ADMIN only; MODERATOR held it until 2026-11-07, perm/0035). */
