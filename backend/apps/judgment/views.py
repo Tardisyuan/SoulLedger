@@ -148,6 +148,9 @@ class JudgmentFilter(filters.FilterSet):
     returned = filters.BooleanFilter(method="filter_returned")
     # 案卷台的来源(`apps/judgment/sources.py`)。不隐含「未结案」:来源是行本身的属性;案卷台总是同时带 `group`。
     source = filters.ChoiceFilter(choices=sources.CHOICES, method="filter_source")
+    # 有人请求改派、还没批的(`reassign_requested_at` 非空;认领人一变服务端就清掉)。隐含「未结案」。
+    # 网页待办条「改派请求」一格与它链到的队列同一个口径。
+    reassign_requested = filters.BooleanFilter(method="filter_reassign_requested")
 
     class Meta:
         model = Judgment
@@ -166,6 +169,11 @@ class JudgmentFilter(filters.FilterSet):
     def filter_returned(self, queryset, name, value):
         pending = queryset.filter(PENDING)
         return pending.filter(RETURNED) if value else pending.exclude(RETURNED)
+
+    def filter_reassign_requested(self, queryset, name, value):
+        pending = queryset.filter(PENDING)
+        asked = Q(reassign_requested_at__isnull=False)
+        return pending.filter(asked) if value else pending.exclude(asked)
 
     def filter_source(self, queryset, name, value):
         return queryset.filter(sources.q(value))
