@@ -504,6 +504,35 @@ describe("DashboardPage 更多 (the v3 overview, moved)", () => {
       expect(container.querySelectorAll("[data-todo]")).toHaveLength(11);
     });
 
+    it("城隍初审 / 枉死申诉 (the app's groups): from the same read, a cell only while it has something, each on its own code", async () => {
+      mockedOfficerTodo.mockResolvedValue({ data: { ...officerTodo().data, city_god: group(2), wangsi: group(3) } });
+      const { container } = renderPage();
+      const wangsi = (await screen.findByText("dashboard.todo.wangsi")).closest<HTMLElement>("[data-todo]")!;
+      await waitFor(() => expect(wangsi.querySelector("[data-todo-count]")).toHaveTextContent("3"));
+      expect(wangsi.querySelector("a")).toHaveAttribute("href", "/judgment/wangsi");
+      const cityGod = screen.getByText("dashboard.todo.city_god").closest<HTMLElement>("[data-todo]")!;
+      expect(cityGod.querySelector("[data-todo-count]")).toHaveTextContent("2");
+      expect(cityGod.querySelector("a")).toHaveAttribute("href", "/city-god-cases");
+      expect(container.querySelectorAll("[data-todo]")).toHaveLength(13);
+      expect(mockedOfficerTodo).toHaveBeenCalledTimes(1);
+      cleanup();
+
+      // Zero: no cell (an officer under no City God is never anything but 0).
+      mockedOfficerTodo.mockResolvedValue({ data: { ...officerTodo().data, city_god: group(0), wangsi: group(0) } });
+      renderPage();
+      await screen.findByText("dashboard.todo.approvals");
+      expect(screen.queryByText("dashboard.todo.wangsi")).not.toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.city_god")).not.toBeInTheDocument();
+      cleanup();
+
+      // Each on its own code: wangsi.execute alone reads the aggregate and shows only 枉死申诉.
+      mockUser = { role: "JUDGE", permissions: ["wangsi.execute"] };
+      mockedOfficerTodo.mockResolvedValue({ data: { ...officerTodo().data, city_god: group(2), wangsi: group(3) } });
+      renderPage();
+      expect(await screen.findByText("dashboard.todo.wangsi")).toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.city_god")).not.toBeInTheDocument();
+    });
+
     it("each new cell needs its own permission: letters without approvals, reports for a moderator only", async () => {
       mockUser = { role: "JUDGE", permissions: ["soul_inbox.reply"] };
       renderPage();

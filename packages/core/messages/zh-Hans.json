@@ -2011,7 +2011,9 @@
       "go_pick": "选站 →",
       "sentence_requests_by_civ": {
         "cn": "受刑请求待批"
-      }
+      },
+      "city_god": "城隍初审",
+      "wangsi": "枉死申诉待审"
     },
     "civ_empty": "尚未入册 · 去登记",
     "tab_ledger": "账本",
@@ -2732,7 +2734,10 @@
       "delivered_line": "枉死 · {{date}} 已超度",
       "deliver_sends_on": "案子还在城隍初审，超度时一并解送。",
       "uphold_late": "属实（只记结论）",
-      "late_hint": "阳寿已到或案子已结，亡魂已出城：审核只记结论，不再释放或超度。"
+      "late_hint": "阳寿已到或案子已结，亡魂已出城：审核只记结论，不再释放或超度。",
+      "queue_title": "枉死申诉",
+      "queue_hint": "只列你名下城隍的待审申诉；点灵魂名到审判页审核。",
+      "filed_at": "申诉时间"
     },
     "confessions": {
       "title": "四十二条否定告白",

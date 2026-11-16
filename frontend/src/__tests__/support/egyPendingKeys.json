@@ -5,6 +5,8 @@
   "auth.error_attempts_body",
   "auth.error_locked_body",
   "auth.error_locked_title",
+  "judgment.wangsi.filed_at",
+  "judgment.wangsi.queue_hint",
   "officer_app.bio_login.button",
   "officer_app.bio_login.enable_body",
   "officer_app.bio_login.expired",

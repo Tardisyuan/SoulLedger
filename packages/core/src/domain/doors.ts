@@ -84,6 +84,8 @@ export type DoorPage = {
   labelKey?: string;
   /** 借住在 `alt` 门里时的标签键(同一份数据的另一面,如律里只读的「冥界图」)。 */
   altLabelKey?: string;
+  /** 只有地府有这一页(同 Web 菜单的 `hideOutsideDiyu`):别的文明的殿不摆。 */
+  diyu?: true;
 };
 
 /**
@@ -103,6 +105,8 @@ export const PAGES: readonly DoorPage[] = [
   { path: "/judgment/appeals", door: "desk", section: "sources" },
   { path: "/cross-judgments", door: "desk", section: "sources" },
   { path: "/city-god-cases", door: "desk", section: "sources" },
+  // 枉死申诉(2026-11-16):不是菜单项(菜单在后端迁移里),按审核的码名给;只有地府有枉死城。
+  { path: "/judgment/wangsi", door: "desk", section: "sources", gate: { permission: "wangsi.execute" }, labelKey: "judgment.wangsi.queue_title", diyu: true },
   { path: "/judgment/capture-due", door: "desk", section: "sources", alt: "register" },
   { path: "/rebirth-applications", door: "desk", section: "sources" },
   // 册 · 名册与卷宗的几页(功过、事件、轮回、受刑)、年报。
@@ -171,10 +175,13 @@ export type Viewer = {
   hasPermission: (codename: string) => boolean;
   /** 这个人菜单里的页(摊平,`visible=false` 的已去掉)。 */
   menuPaths: ReadonlySet<string>;
+  /** 所在殿的文明;没有(系统管理员)时不按文明收。 */
+  civilization?: string;
 };
 
 /** 这个人能看见表里这一页吗:菜单项看菜单,不是菜单项的看它自己的读码。 */
 export function canSee(page: DoorPage, v: Viewer): boolean {
+  if (page.diyu && v.civilization && v.civilization !== "CHINESE") return false;
   if (page.gate === "admin") return v.isAdmin;
   if (page.gate) return v.hasPermission(page.gate.permission);
   return v.menuPaths.has(page.path);
