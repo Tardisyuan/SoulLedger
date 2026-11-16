@@ -9,13 +9,13 @@
 import { fetchFailureOf } from "@soulledger/core/api/client";
 import { DOOR_ICON, officerDoors, type OfficerDoorKey, type OfficerPage } from "@soulledger/core/domain/doors";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
-import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
+import { HIGHLIGHT_ALPHA, isDenied } from "./rules";
+import { Button, EASE, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -86,14 +86,40 @@ function GoneView() {
 }
 
 /** Five 72-high skeleton rows; `accessibilityState.busy` is the app's `aria-busy`. */
-export function LoadingRows() {
+/**
+ * `inContent`: the rows stand inside a screen's content (a dossier tab), not in the head's top-line position, so the
+ * line is ink at 60% (第四十八批第三节 A9: only a loading line in the top line keeps the civilization's colour).
+ */
+export function LoadingRows({ inContent = false }: { inContent?: boolean } = {}) {
   const t = useTheme();
   const { t: tr } = useI18n();
+  const reduced = useReducedMotion();
+  const [x] = useState(() => new Animated.Value(0));
+  const [width, setWidth] = useState(0);
+  // The 30% run travels left to right and starts again, as the soul app's `Skeleton` line and the web's page-head
+  // top line do; it stood still here from the start (found on the simulator 2026-11-16). Reduce motion: still.
+  useEffect(() => {
+    if (reduced || !width) return;
+    const run = Animated.loop(Animated.timing(x, { toValue: 1, duration: motion.loadingLine, easing: EASE.standard, useNativeDriver: true }));
+    run.start();
+    return () => run.stop();
+  }, [x, reduced, width]);
   return (
     <View testID="state-loading" accessible accessibilityLabel={tr("soul_app.common.loading")} accessibilityState={{ busy: true }}>
-      {/* 第三十批 一.5: a 2px line in the civilization's colour at the top, never a spinner. It takes the head's top line,
-          so it counts as the top line (第四十八批第三节 A9) and keeps the colour. */}
-      <View testID="state-loading-line" style={{ height: touch.topline, width: "30%", backgroundColor: t.plaque }} />
+      {/* 第三十批 一.5: a 2px line at the top, never a spinner. Where it takes the head's top line it counts as the top line
+          (第四十八批第三节 A9) and keeps the civilization's colour; inside content it is ink at 60%. */}
+      <View testID="state-loading-track" onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ height: touch.topline, overflow: "hidden" }}>
+        <Animated.View
+          testID="state-loading-line"
+          style={{
+            height: touch.topline,
+            width: "30%",
+            backgroundColor: inContent ? t.ink : t.plaque,
+            opacity: inContent ? 0.6 : 1,
+            transform: [{ translateX: reduced ? 0 : x.interpolate({ inputRange: [0, 1], outputRange: [-0.3 * width, width] }) }],
+          }}
+        />
+      </View>
       {[0, 1, 2, 3, 4].map((i) => (
         <View key={i} style={[styles.skeletonRow, { borderBottomColor: t.hair }]}>
           <View style={{ width: i % 2 ? "60%" : "78%", height: 12, backgroundColor: t.s2 }} />
@@ -268,19 +294,17 @@ export function Row({
   );
 }
 
-/** The pushed row's wash. Nothing is drawn under reduce-motion (spec §五). */
+/**
+ * The pushed row's wash: ink at .07 (spec §五), on the one landing recipe both apps and the web share (`useLandingFade`:
+ * held 1600, faded over 400, 2s in all; 第四十批 S-e). Nothing is drawn under reduce-motion (spec §五).
+ */
 export function Highlight() {
   const t = useTheme();
   const reduced = useReducedMotion();
-  const [alpha] = useState(() => new Animated.Value(HIGHLIGHT_ALPHA));
-  useEffect(() => {
-    if (reduced) return;
-    const run = Animated.timing(alpha, { toValue: 0, duration: HIGHLIGHT_MS, useNativeDriver: true });
-    run.start();
-    return () => run.stop();
-  }, [alpha, reduced]);
+  const fade = useLandingFade(true, reduced);
+  const [opacity] = useState(() => Animated.multiply(fade, HIGHLIGHT_ALPHA));
   if (reduced) return null;
-  return <Animated.View testID="row-highlight" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: t.ink, opacity: alpha }]} />;
+  return <Animated.View testID="row-highlight" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: t.ink, opacity }]} />;
 }
 
 // ── buttons ────────────────────────────────────────────────────────────
@@ -621,7 +645,7 @@ export function EdgeBack({ onBack, children }: { onBack?: () => void; children: 
       if (ok && (e.translationX > width / 3 || e.velocityX > 800)) {
         x.setValue(0);
         onBack?.();
-      } else Animated.timing(x, { toValue: 0, duration: durations.sheetOut, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: false }).start();
+      } else Animated.timing(x, { toValue: 0, duration: durations.sheetOut, easing: EASE.enter, useNativeDriver: false }).start();
     });
   return (
     <GestureDetector gesture={pan}>
@@ -724,7 +748,7 @@ const styles = StyleSheet.create({
   // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.
   segmentTight: { fontSize: 14, lineHeight: 20, fontVariant: ["tabular-nums"] },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
-  chipLg: { minHeight: 44, borderRadius: 22, paddingHorizontal: space[4] },
+  chipLg: { minHeight: 44, borderRadius: radius.control, paddingHorizontal: space[4] }, // 第五十六批：能点的东西一律 4,大号筛选签不再是胶囊
   chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },

@@ -54,7 +54,7 @@ import { useEffect, useRef, useState } from "react";
  * information, not decoration, and it is not the kind of thing to withhold
  * from someone who asked for less motion.
  */
-const HIGHLIGHT_MS = 2000;
+export const HIGHLIGHT_MS = 2000;
 
 /**
  * How long a departed row stays on screen before it is dropped.

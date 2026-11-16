@@ -30,7 +30,7 @@ import Animated, {
 import Svg, { ClipPath, Defs, G, Path } from "react-native-svg";
 
 import { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "./brandMark";
-import { motion } from "./theme";
+import { curves, motion } from "./theme";
 
 // The native splash goes the instant hideAsync is called. Its default exit is a 400ms fade,
 // and under it this mark is already lifting: two marks, offset, fading together — seen on
@@ -49,8 +49,8 @@ const BOX = 112;
 const LENGTHS = STROKES.map(([d]) => pathLength(d));
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-const EASE_EXIT = Easing.bezier(0.4, 0, 1, 1);
-const EASE_ENTER = Easing.bezier(0, 0, 0.2, 1);
+const EASE_EXIT = Easing.bezier(...curves.exit);
+const EASE_ENTER = Easing.bezier(...curves.enter);
 const EASE_WRITE = Easing.bezier(0.4, 0, 0.2, 1);
 
 type Phase = "wait" | "play" | "done";

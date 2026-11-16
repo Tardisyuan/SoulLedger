@@ -16,6 +16,7 @@ import {
   brand,
   oklchToHex,
   preLoginTheme,
+  radius,
   sealedTheme,
   semantic,
   themeFor,
@@ -129,6 +130,25 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     expect(notifications[1].color.toLowerCase()).toBe(NEUTRAL_PLAQUE.light.toLowerCase());
     // v3's neutral (#262925 / #656962) and v2's warm black / warm grey are gone.
     expect(Object.values(NEUTRAL_PLAQUE)).not.toEqual(expect.arrayContaining(["#262925", "#656962", "#2B2724", "#6E665E"]));
+  });
+
+  it("the scrim is the web's on every surface (Design batch 55): black .62 dark, ink #16171A .42 light, read from globals.css", () => {
+    const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
+    const web = (selector: string) => {
+      const b = css.split(`${selector} {`).slice(1).map((x) => x.split(/\n {2}\}/)[0]).find((x) => x.includes("--color-scrim:")) ?? "";
+      const [r, g, bl] = rgb(oklchToHex(b.match(/--color-scrim:\s*([^;]+);/)?.[1].trim() ?? ""));
+      return `rgba(${r},${g},${bl},${b.match(/--scrim-alpha:\s*([^;]+);/)?.[1].trim()})`;
+    };
+    expect({ dark: semantic.dark.scrim, light: semantic.light.scrim }).toEqual({ dark: "rgba(0,0,0,0.62)", light: "rgba(22,23,26,0.42)" });
+    expect({ dark: web(":root"), light: web(".light") }).toEqual({ dark: semantic.dark.scrim, light: semantic.light.scrim });
+    // Absence: v3's warm ink scrim is gone.
+    expect(Object.values(semantic).map((s) => s.scrim)).not.toContain("rgba(21,19,18,0.42)");
+  });
+
+  it("radius.sheet is the web's --radius-sheet, 12 (Design batch 55)", () => {
+    const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
+    expect(radius.sheet).toBe(12);
+    expect(css.match(/--radius-sheet:\s*([^;]+);/)?.[1]).toBe(`${radius.sheet}px`);
   });
 
   it.each(SCHEMES)("%s: the status colours — v4's pos / neg / onNeg, the rest as 规范 v2 §二 printed them", (scheme) => {

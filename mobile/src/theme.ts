@@ -105,31 +105,46 @@ export const GUTTER_PT = 20;
  */
 export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, tag: 28, topline: 2, toastBar: 3 } as const;
 /**
- * v4 (user decision 2026-11-06): controls 4 — inputs, buttons, tags / badges; panels, dialogs and
- * sheets 6 (a sheet rounds its top corners only; v3's 8 became 6). The pill (the lamp, a drawer
- * handle) and the circle (a radio, an avatar) are `pill`. `none` is left for what is still square
- * (a rule, a table cell). The focus ring follows its element's shape.
+ * v4 (user decision 2026-11-06): controls 4 — inputs, buttons, tags / badges; panels and dialogs 6.
+ * Design batch 55: the large mobile surfaces — bottom sheets (top corners only), the remembered-account
+ * card, the account list, the scan notice — are `sheet` 12, the web's --radius-sheet (generated from
+ * packages/core/tokens). The pill (the lamp, a drawer handle) and the circle (a radio, an avatar) are
+ * `pill`. `none` is left for what is still square (a rule, a table cell). The focus ring follows its
+ * element's shape.
  */
-export const radius = { none: 0, control: 4, dialog: 6, pill: 999 } as const;
+export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.sheet, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds excepted, `useReducedMotionDurations`).
  * Opacity and translate only — the one scale is the cold start's mark receding (0.96),
  * which does not play under reduce motion at all.
  *
+ * The transitions are the web's: `generated.motionTokens` comes from the same JSON as the web's
+ * --transition-duration-* (packages/core/tokens/semantic.tokens.json `motion`), and
+ * frontend/src/__tests__/motionParity.test.ts holds every transition here on the web's set.
+ *
  *   coldStart*               补足 C18: JS takes over from the native splash and writes the mark
  *                            (Draw), lets it stand (Hold), then it recedes: counted from there,
  *                            the home is usable from 480 and the splash layer is gone at 720
- *   sheetIn / sheetOut       a bottom sheet opens / closes: v3 --duration-layout 240, and 180 out
- *                            (v3 B2 改派弹层「240ms 进入 … 180ms 退出」; until 2026-10-03 200 / 120)
+ *   sheetIn / sheetOut       a bottom sheet (and 问一问's drawer) opens 240 / closes 160 — the web's drawer-in / -out
+ *                            (Design v3 batch 4: close 160, "180 is not a tier"; it was 180 here until 2026-11-16)
+ *   toastIn / toastOut       160 / 140, the web's toast-in / dismiss
  *   toastHold                v3 B2 Toast「停留 4s」 (until 2026-10-03 1.9s) — a success; `toastInfoHold` 6s a notice
- *   sectionIn / sectionOut   a section's body appears (base, 4px down) / goes (fast) — 第 2 轮 4b
+ *   sectionIn / sectionOut   a section's body appears / goes: the web's collapse pair, 240 / 160 (was 200 / 120);
+ *                            `sectionGrow` its height, 240 (was 220)
+ *   tabFade                  a tab's content cross-fades: the web's page change, 240 (was 180)
+ *   fade                     content arriving after its skeleton: the web's reveal, 200 (was 120)
+ *   loadingLine              one pass of the 2px loading line, 1200 as the web's (it ran on `breath`, 1600, until 2026-11-16)
+ *   highlight / highlightFade  a push's landing ground: held, then faded over the last 400, 2000 in all (第四十批 S-e)
  */
+const m = generated.motionTokens;
 export const motion = {
-  fade: 120,
-  toast: 160,
+  fade: m.reveal,
+  toastIn: m.toastIn,
+  toastOut: m.toastOut,
   toastHold: 4000,
   // 第三十批: a plain notice stays 6s; a success 4s (`toastHold`); a failure until it is closed.
   toastInfoHold: 6000,
+  // 文明气质 1h: the Loader's breath (not a loading line: those run `loadingLine`).
   breath: 1600,
   welcomeIn: 600,
   welcomeHold: 1200,
@@ -138,16 +153,14 @@ export const motion = {
   coldStartHold: 300,
   coldStartInteractive: 480,
   coldStart: 720,
-  sheetIn: 240,
-  sheetOut: 180,
-  sectionIn: 200,
-  sectionOut: 120,
+  sheetIn: m.sheetIn,
+  sheetOut: m.sheetOut,
+  sectionIn: m.collapseIn,
+  sectionOut: m.collapseOut,
   // v3 MotionSpec, App rows (round 7): a tab's content cross-fades; a ledger row's body
-  // grows (height and opacity); 问一问's drawer rises; the life band compacts.
-  tabFade: 180,
-  sectionGrow: 220,
-  drawerIn: 280,
-  drawerOut: 200,
+  // grows (height and opacity); the life band compacts.
+  tabFade: m.pageChange,
+  sectionGrow: m.collapseIn,
   bandCompact: 200,
   offlineBar: 200,
   // v3 B2 App「下拉刷新」: released, the content goes back (or to the 56 hold) over 200.
@@ -157,6 +170,10 @@ export const motion = {
   pullMinHold: 600,
   // One turn of the ↻ while it refreshes (user 2026-10-03).
   pullSpin: 900,
+  loadingLine: m.loadingLine,
+  // The landing ground's hold is `highlight - highlightFade`; under reduce motion it is not drawn at all.
+  highlight: m.highlight,
+  highlightFade: m.highlightFade,
 } as const;
 
 /**
@@ -165,6 +182,9 @@ export const motion = {
  * colour, so it sits outside both schemes and `Theme`. v4 leaves the mark alone, so these stay
  * (`ground` was v3's dark canvas; v4's is #111113) and neither the icons nor the splash move.
  */
+/** The general curves (the web's --ease-*), as cubic-bezier control points for `Easing.bezier(...)`. */
+export const curves = { standard: m.ease.standard, enter: m.ease.enter, exit: m.ease.exit } as const;
+
 export const brand = { mark: "#ECAA3D", ground: "#10120F" } as const;
 
 export interface Theme {

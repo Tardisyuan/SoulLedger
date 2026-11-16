@@ -76,6 +76,13 @@ const cases: Array<{
   { name: "useClaimJudgment", hook: useClaimJudgment as never, vars: "j-1", api: "claim", args: ["j-1"] },
   { name: "useReleaseJudgment", hook: useReleaseJudgment as never, vars: "j-1", api: "release", args: ["j-1"] },
   {
+    name: "useReleaseJudgment (for someone else)",
+    hook: useReleaseJudgment as never,
+    vars: { id: "j-1", reason: "交接" },
+    api: "release",
+    args: ["j-1", "交接"],
+  },
+  {
     name: "useReassignJudgment",
     hook: useReassignJudgment as never,
     vars: { id: "j-1", to: 7 },

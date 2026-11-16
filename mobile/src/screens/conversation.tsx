@@ -49,7 +49,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
-import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useReducedMotion, useTheme, Press } from "../ui";
+import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
@@ -752,12 +752,8 @@ const Bubble = memo(function Bubble({ m, mine, read, landed, now }: { m: ChatMes
   const t = useTheme();
   const { t: tr } = useI18n();
   const reduced = useReducedMotion();
-  const [fade] = useState(() => new Animated.Value(1));
-  useEffect(() => {
-    if (!landed || reduced) return;
-    const timer = setTimeout(() => Animated.timing(fade, { toValue: 0, duration: 400, useNativeDriver: true }).start(), 1200);
-    return () => clearTimeout(timer);
-  }, [landed, reduced, fade]);
+  // The tag goes on the shared landing recipe (held 1600, faded over 400; 第四十批 S-e).
+  const fade = useLandingFade(!!landed, reduced);
   return (
     <View style={[styles.bubbleRow, mine && styles.mineRow]}>
       <View
@@ -1029,7 +1025,7 @@ const styles = StyleSheet.create({
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
   subtitle: { fontSize: 12, lineHeight: 16 },
   rightSlot: { flexDirection: "row", alignItems: "center" },
-  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   hallHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 16 },

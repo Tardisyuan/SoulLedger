@@ -31,7 +31,7 @@ import { ThemeContext } from "../ui";
 /** Wait out the drawer's 200ms exit (v3 MotionSpec 问一问抽屉 出场). */
 const afterExit = () =>
   act(async () => {
-    await new Promise((r) => setTimeout(r, motion.drawerOut + 50));
+    await new Promise((r) => setTimeout(r, motion.sheetOut + 50));
   });
 
 type StreamEvent = Record<string, unknown> & { event: string };

@@ -203,9 +203,14 @@ if not DEBUG and "sqlite" in DATABASE_URL.lower():
         "SQLite must not be used in production (DEBUG=False). "
         "Set DATABASE_URL to a PostgreSQL connection string."
     )
+# Seconds a connection is kept per thread and per alias. Under `runserver` every request is a new thread, so
+# with the shard aliases a dev or test backend kept up to 5 connections per request for 10 minutes and filled
+# the test server's 100 (2026-11-16: 91 from one runserver, `too many clients already`). Set 0 there; workers
+# that reuse threads (gunicorn / uvicorn) keep the default. Each process holds threads x (1 + shards) at most.
+DB_CONN_MAX_AGE = int(os.getenv("DB_CONN_MAX_AGE", "600"))
 DATABASES = {
     "default": dj_database_url.parse(
-        DATABASE_URL, conn_max_age=600, conn_health_checks=True
+        DATABASE_URL, conn_max_age=DB_CONN_MAX_AGE, conn_health_checks=True
     )
 }
 # pgbouncer in transaction pool mode cannot hold a server-side cursor across
@@ -225,7 +230,8 @@ DATABASE_ROUTERS = ["config.sharding.ShardRouter"]
 from config.shard_db import databases_from_env  # noqa: E402
 
 DATABASES.update(databases_from_env(
-    os.environ, disable_server_side_cursors=DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"]))
+    os.environ, disable_server_side_cursors=DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"],
+    conn_max_age=DB_CONN_MAX_AGE))
 
 
 def _apply_statement_timeout(databases: dict, ms: int) -> None:

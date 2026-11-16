@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
-import { Spinner, PageSpinner } from "@/src/components/ui/Spinner";
+import { ContentLoading, Spinner, PageSpinner } from "@/src/components/ui/Spinner";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 
 // The hall the page is in; null is the neutral skin every test above renders in.
@@ -238,5 +238,55 @@ describe("a hall's wait says the hall's line (v4 第十批第 2 条)", () => {
     inProvider(<PageSpinner label="载入判词" />);
     expect(screen.getByRole("status")).toHaveTextContent("载入判词");
     expect(screen.queryByText("判官正在调卷…")).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * 第三十批 一.5 / 第四十八批第三节 A9 (2026-11-16): no spinner as a page body, and a loading line inside content is ink
+ * at 60% — only the head's top line keeps the civilization's colour. Mutations seen red: `<Spinner />` back in
+ * RunHistoryPanel (the no-spinner list); the `[data-in-content]` rule's colour → `--color-main-ink` (the colour test);
+ * `data-in-content` dropped from ContentLoading (the render test).
+ */
+describe("no spinner as a page body; a loading line in content is ink 60%", () => {
+  const read = (...p: string[]) => readFileSync(path.join(__dirname, "..", "..", ...p), "utf8");
+  const code = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const BODIES = [
+    "app/audit/permissions/page.tsx",
+    "app/audit/stats/page.tsx",
+    "app/workflow/[id]/page.tsx",
+    "app/welcome/page.tsx",
+    "src/components/scheduler/RunHistoryPanel.tsx",
+    "src/components/scheduler/TaskRunsDrawer.tsx",
+  ];
+
+  it.each(BODIES)("%s waits with the top line and a skeleton, not a <Spinner>", (file) => {
+    const src = code(read(file));
+    expect(src).not.toMatch(/<Spinner\b/);
+    expect(src).toMatch(/<PageSpinner\b|<ContentLoading\b|skeleton=\{<ListSkeleton/);
+  });
+
+  it("ContentLoading: the in-content line, a status, aria-busy, no ring", () => {
+    const { container } = render(
+      <I18nProvider>
+        <ContentLoading testId="x" label="载入运行记录" />
+      </I18nProvider>
+    );
+    expect(screen.getByTestId("x")).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelector(".page-wait-line")).toHaveAttribute("data-in-content", "");
+    expect(screen.getByRole("status")).toHaveTextContent("载入运行记录");
+    expect(container.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("the in-content line is ink at 60%; the page's top line stays the civilization's colour", () => {
+    const css = read("app", "globals.css");
+    expect(css).toMatch(/\.page-wait-line\[data-in-content\]::after \{\s*background: oklch\(var\(--color-ink\) \/ 0\.6\);/);
+    expect(css).toMatch(/\.page-wait-line::after \{[^}]*background: oklch\(var\(--color-main-ink\)\);/);
+  });
+
+  it("the global search progress bar is ink at 60%", () => {
+    const src = read("src", "components", "layout", "GlobalSearch.tsx");
+    const bar = /data-testid="search-progress" className="([^"]+)"/.exec(src)?.[1] ?? "";
+    expect(bar).toContain("bg-[oklch(var(--color-ink)/0.6)]");
+    expect(bar).not.toMatch(/bg-\[oklch\(var\(--color-(ink|main-ink)\)\)\]/);
   });
 });

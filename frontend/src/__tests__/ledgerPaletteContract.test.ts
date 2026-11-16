@@ -326,6 +326,39 @@ describe("read-back type and the two shadows (batch 54)", () => {
   });
 });
 
+/* 第五十五批:三端同一张遮罩;大面(回读层、演示预览卡)圆角 --radius-sheet 12,撤回条回到 --radius-panel 6。
+ * 变异:把 desk.module.css 的撤回条改回 8px → 第三条红。 */
+describe("scrim and the sheet radius (batch 55)", () => {
+  const css = (rel: string) => readFileSync(path.join(FRONTEND_ROOT, rel), "utf8");
+  const radiusOf = (src: string, selector: string) => src.split(`${selector} {`)[1]?.split("}")[0].match(/border-radius:\s*([^;]+);/)?.[1];
+  it.each([
+    ["dark", "0 0 0", "0.62"],
+    ["light", "0.204832 0.006141 271.1072", "0.42"],
+  ] as const)("%s scrim is %s at %s", (theme, triple, alpha) => {
+    expect([TOKENS_BY_THEME[theme]["--color-scrim"], TOKENS_BY_THEME[theme]["--scrim-alpha"]]).toEqual([triple, alpha]);
+  });
+  it("--radius-sheet is 12 and the old one-off radii are gone", () => {
+    // --radius-panel sits in the @theme block, not a :root one.
+    expect([ROOT_TOKENS["--radius-sheet"], CSS.match(/--radius-panel:\s*([^;]+);/)?.[1]]).toEqual(["12px", "6px"]);
+    expect([ROOT_TOKENS["--undo-radius"], ROOT_TOKENS["--readback-radius"]]).toEqual([undefined, undefined]);
+  });
+  it("undo strip → panel; read-back layer and demo preview card → sheet", () => {
+    expect(radiusOf(css("src/components/desk/desk.module.css"), ".undo")).toBe("var(--radius-panel)");
+    expect(radiusOf(css("src/components/judgment/sealReadback.module.css"), ".panel")).toBe("var(--radius-sheet)");
+    expect(radiusOf(CSS, ".demo-preview-card")).toBe("var(--radius-sheet)");
+  });
+  it("batch 56: what you tap is 4, large surfaces 12; no 14 / 8 left on the demo site", () => {
+    expect(radiusOf(CSS, ".demo-home-card")).toBe("var(--radius-sheet)");
+    expect(radiusOf(CSS, ".demo-peek")).toBe("var(--radius-sheet)");
+    expect(radiusOf(CSS, ".demo-home-enter")).toBe("var(--radius-control)");
+    expect(radiusOf(CSS, ".demo-peek-sheet,\n.demo-peek-phone")).toBe("var(--radius-sheet)");
+    // The phone's own block (after the shared one) no longer overrides it with a literal.
+    expect(CSS.split(".demo-peek-phone {")[2]?.split("}")[0]).not.toMatch(/border-radius/);
+    const demo = CSS.split("\n").filter((l) => /^\s*border-radius:\s*(14|8)px;/.test(l));
+    expect(demo).toEqual([]);
+  });
+});
+
 /** 文明皮的六个通用名(v4 五个 + 第三十批的印),`[data-civ="x"]` 把它们各自指到 `--color-civ-x` 加这个后缀。 */
 const CIV_SLOTS: Record<string, string> = {
   "--color-main": "",

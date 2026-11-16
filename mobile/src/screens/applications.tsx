@@ -48,6 +48,7 @@ import {
   enumText,
   useReloadOnRefocus,
   useReducedMotion,
+  useLandingFade,
   useRemote,
   useLayout,
   useTheme,
@@ -426,20 +427,16 @@ function Flow({ steps }: { steps: FlowStep[] }) {
 
 /**
  * Handoff 3c: the block a tapped notification points at — a 3px mark rule on
- * the left, the surface one step up, a "新结果" tag top right. After 1.2s the
- * surface and the tag fade; the rule stays, so the landing is still findable.
+ * the left, the surface one step up, a "新结果" tag top right. The surface and the tag
+ * fade on the shared landing recipe (`useLandingFade`: held 1600, faded over 400, 2s in
+ * all; 第四十批 S-e); the rule stays, so the landing is still findable.
  * Under reduce-motion nothing moves: only the rule is drawn.
  */
 function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }) {
   const theme = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
-  const [opacity] = useState(() => new Animated.Value(1));
-  useEffect(() => {
-    if (!on || reduced) return;
-    const timer = setTimeout(() => Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(), 1200);
-    return () => clearTimeout(timer);
-  }, [on, opacity, reduced]);
+  const opacity = useLandingFade(on, reduced);
   if (!on) return <>{children}</>;
   return (
     <View testID="landing-highlight">

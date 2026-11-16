@@ -20,6 +20,7 @@ import { FONT_ASSETS, quoteFamily, titleFamily } from "../fonts";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
+import { RememberedCard } from "../rememberedCard";
 import { motion, radius, themeFor } from "../theme";
 import {
   Button,
@@ -441,12 +442,12 @@ describe("useReducedMotionDurations", () => {
 });
 
 describe("timings (v3) and corners (v4)", () => {
-  it("a toast stays 4s (v3 B2 Toast 停留 4s); a sheet opens over 240 and closes over 180", () => {
-    expect([motion.toastHold, motion.sheetIn, motion.sheetOut]).toEqual([4000, 240, 180]);
+  it("a toast stays 4s (v3 B2 Toast 停留 4s); a sheet opens over 240 and closes over 160 (Design v3 batch 4: 180 is not a tier)", () => {
+    expect([motion.toastHold, motion.sheetIn, motion.sheetOut]).toEqual([4000, 240, 160]);
   });
 
-  it("controls 4 (inputs, buttons), panels, dialogs and sheets 6 (user decision 2026-11-06)", async () => {
-    expect(radius).toEqual({ none: 0, control: 4, dialog: 6, pill: 999 });
+  it("controls 4 (inputs, buttons), panels and dialogs 6 (user decision 2026-11-06), sheets 12 (Design batch 55)", async () => {
+    expect(radius).toEqual({ none: 0, control: 4, dialog: 6, sheet: 12, pill: 999 });
     wrap(<Input label="Name" testID="name" value="" onChangeText={jest.fn()} />);
     const box = screen.getByTestId("name").parent?.parent;
     expect(flat(box as never).borderRadius).toBe(4);
@@ -461,8 +462,15 @@ describe("timings (v3) and corners (v4)", () => {
     );
     await act(async () => {});
     fireEvent.press(screen.getByTestId("ask"));
-    expect(flat(screen.getByTestId("confirm-sheet"))).toMatchObject({ borderTopLeftRadius: 6, borderTopRightRadius: 6 });
+    expect(flat(screen.getByTestId("confirm-sheet"))).toMatchObject({ borderTopLeftRadius: 12, borderTopRightRadius: 12 });
     expect(flat(screen.getByTestId("confirm-sheet")).borderBottomLeftRadius).toBeUndefined();
+    screen.unmount();
+    // The remembered-account card is a sheet-sized surface too; its compact row (inside the account list) draws no frame.
+    wrap(<RememberedCard testID="card" name="Ada" masked="QU3-•••-W5F" />);
+    expect(flat(screen.getByTestId("card")).borderRadius).toBe(12);
+    screen.unmount();
+    wrap(<RememberedCard testID="row" compact name="Ada" masked="QU3-•••-W5F" />);
+    expect(flat(screen.getByTestId("row")).borderRadius).toBeUndefined();
   });
 });
 

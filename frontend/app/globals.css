@@ -147,6 +147,8 @@
    * 见那个块后面紧跟的第二个 @media。 */
   /* `@kind other`:Claude Design 的 design-sync 令牌分类器认不出动效令牌(缓动、时长、动画),
      报成「无法归类」;行尾这个注释告诉它归到 other。是给同步工具看的标注,不影响 CSS。 */
+  /* @tokens:start (motion) —— 缓动与时长的值由 scripts/build-tokens.mjs 从 packages/core/tokens/semantic.tokens.json
+     的 `ease` / `transition-duration` 写入,两个 App 的 `motion` 从同一份 JSON 生成(motionParity.test.ts 对账)。 */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* @kind other */
   --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
   --ease-exit: cubic-bezier(0.4, 0, 1, 1); /* @kind other */
@@ -172,6 +174,11 @@
   --transition-duration-reduced: 80ms; /* @kind other */
   /* v4 概览进页(第七批 `.roll` / `.ring`):数字滚动与进度环,900ms。只属于这一件事,所以按它起名(同上面三个)。 */
   --transition-duration-count: 900ms; /* @kind other */
+  /* 变了的行 / 推送落点的底色(第四十批 S-e「同其他推送的 2 秒底色」):停 1600、淡出 400,共 2s,三端同一下。
+     loading-line:一条 2px 加载线走一趟(页头顶线、全局搜索进度条、App 的骨架线)。 */
+  --transition-duration-highlight: 2000ms; /* @kind other */
+  --transition-duration-loading-line: 1200ms; /* @kind other */
+  /* @tokens:end (motion) */
 
   /* THE TABLE ROWS, and the one of the three that is not decoration.
    *
@@ -236,10 +243,10 @@
 
   --animate-row-enter: row-enter var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
   --animate-row-exit: row-exit var(--transition-duration-settle) var(--ease-exit) forwards; /* @kind other */
-  --animate-row-changed: row-changed 2000ms var(--ease-exit) both; /* @kind other */
+  --animate-row-changed: row-changed var(--transition-duration-highlight) var(--ease-exit) both; /* @kind other */
   /* 全局搜索(规范 v3 A8):第二次起的搜索不换结果、只在输入框下走一条 2px 进度条,前景宽 38% 来回滑。
    * 减少动态效果:上面那条 1ms + 只播一次 —— 播完回到原位,留一段不动的条,仍看得出「在搜」。 */
-  --animate-search-progress: search-progress 1200ms var(--ease-standard) infinite; /* @kind other */
+  --animate-search-progress: search-progress var(--transition-duration-loading-line) var(--ease-standard) infinite; /* @kind other */
 
   /* 'SoulLedger Shell Sans' / 'SoulLedger Title Serif' / 'Juan Latin':app/fonts-shell.css(生成,
      scripts/gen-font-subsets.mjs)。外壳字从一个子集文件出,其余汉字落到首帧后才挂上的分片(app/FontShards.tsx)。 */
@@ -879,8 +886,7 @@
     --glowA: 0.3;
     --field: rgba(255, 255, 255, 0.05);
     --verdict-rail-w: 288px;
-    --undo-radius: 8px;
-    --readback-radius: 12px;
+    --radius-sheet: 12px;
     --readback-name: 600 20px/28px var(--font-title);
     --readback-case: 400 16px/24px var(--font-mono);
     --readback-verdict: 600 24px/32px var(--font-title);
@@ -985,7 +991,12 @@
     inset: 0 auto 0 0;
     width: 32%;
     background: oklch(var(--color-main-ink));
-    animation: page-head-progress 1.2s var(--ease-standard) infinite;
+    animation: page-head-progress var(--transition-duration-loading-line) var(--ease-standard) infinite;
+  }
+  /* 内容里的加载线(`ContentLoading`:面板、抽屉、页头下的正文):墨 60%。第四十八批第三节 A9 —— 只有占着页头顶线的
+     加载线留文明色。 */
+  .page-wait-line[data-in-content]::after {
+    background: oklch(var(--color-ink) / 0.6);
   }
   .page-sk {
     display: block;
@@ -1064,7 +1075,7 @@
     inset: 0 auto 0 0;
     width: 32%;
     background: oklch(var(--color-main-ink));
-    animation: page-head-progress 1.2s var(--ease-standard) infinite;
+    animation: page-head-progress var(--transition-duration-loading-line) var(--ease-standard) infinite;
   }
   @media (prefers-reduced-motion: reduce) {
     .page-head-topline[data-loading]::after {
@@ -1611,7 +1622,10 @@ html.theme-switching *::after {
 /* Background only. A row that moved or resized as it was flagged would push
    the rows under it, which is the exact harm this is here to report. */
 @keyframes row-changed {
-  from {
+  /* Held for the first 1600 of the 2000 (80%), then faded over the last 400: motion.highlight /
+     motion.highlight-fade, the same recipe as the apps' landing grounds (motionParity.test.ts). */
+  from,
+  80% {
     background-color: oklch(var(--color-accent) / 0.22);
   }
   to {
@@ -3290,7 +3304,7 @@ li:last-child > .route-row {
 /* 预览卡:1px 线 + 一层柔影;换文明时淡入 400 ms。 */
 .demo-preview-card {
   border: 1px solid oklch(var(--color-line));
-  border-radius: 14px;
+  border-radius: var(--radius-sheet);
   background: oklch(var(--color-surface-1));
   box-shadow: var(--shadow-card);
 }
@@ -3349,7 +3363,7 @@ li:last-child > .route-row {
 }
 /* 四张卡:圆角 14;特点短语与缩略图用本文明的字色;入口 1px 描边(窄屏只是一行字)。 */
 .demo-home-card {
-  border-radius: 14px;
+  border-radius: var(--radius-sheet);
   /* 「从这里开始」按卡宽决定画不画(下面的容器查询)。 */
   container-type: inline-size;
 }
@@ -3383,7 +3397,7 @@ li:last-child > .route-row {
 @media (min-width: 48rem) {
   .demo-home-enter {
     border: 1px solid oklch(var(--color-line-strong));
-    border-radius: 8px;
+    border-radius: var(--radius-control);
   }
 }
 .demo-shape-walked,
@@ -3433,7 +3447,7 @@ li:last-child > .route-row {
   max-height: 100dvh;
   overflow-y: auto;
   border: 1px solid oklch(var(--color-line));
-  border-radius: 14px;
+  border-radius: var(--radius-sheet);
   background: oklch(var(--color-surface-1));
   box-shadow: var(--shadow-overlay);
 }
@@ -3473,13 +3487,12 @@ li:last-child > .route-row {
 .demo-peek-sheet,
 .demo-peek-phone {
   border: 1px solid oklch(var(--color-line-strong));
-  border-radius: 8px;
+  border-radius: var(--radius-sheet);
   background: oklch(var(--color-surface-2));
 }
 .demo-peek-phone {
   width: 72px;
   height: 140px;
-  border-radius: 12px;
 }
 .demo-peek-line {
   display: block;

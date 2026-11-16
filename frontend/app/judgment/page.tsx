@@ -69,6 +69,8 @@ const JUDGMENT_URL_FIELDS = {
   verdict: VERDICT_OPTIONS,
   civilization: CIVILIZATION_OPTIONS,
   ordering: /^-?created_at$/,
+  // 待办条「改派请求」带来的 `?reassign_requested=true`:待审一面只列有人请求改派的(服务端同名筛选)。
+  reassign_requested: ["true"],
 } satisfies Record<string, UrlFieldRule>;
 
 /** 「灵魂：某某 ×」。名字取不到时显示编号(`IdentifierChip`),不把裸 id 当名字印。× 是单独的按钮,不嵌在别的按钮里。 */
@@ -82,6 +84,23 @@ function SoulFilterChip({ soulId, onClear }: { soulId: string; onClear: () => vo
         <span>{t("judgment.soul_filter")} ·</span>
         {name ? <span>{name}</span> : <IdentifierChip id={soulId} />}
         <button type="button" aria-label={t("judgment.soul_filter_clear")} onClick={onClear} className="text-inherit">
+          ×
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/** 「✓ 改派请求 ×」:待审一面只列有人请求改派的;× 清掉回到整个队列。 */
+function ReassignRequestedChip({ onClear }: { onClear: () => void }) {
+  const { t } = useI18n();
+  const label = t("dashboard.todo.reassign_requests");
+  return (
+    <div className="pb-3">
+      <span data-filter-chip="" data-active="" data-testid="reassign-requested-filter" className={filterChipClass(true)}>
+        <span aria-hidden="true">✓</span>
+        <span>{label}</span>
+        <button type="button" aria-label={t("filter.clear_one", { name: label })} onClick={onClear} className="text-inherit">
           ×
         </button>
       </span>
@@ -120,12 +139,13 @@ function JudgmentQueuePageContent() {
   const [search, setSearch] = useState(q);
   const [verdict, setVerdict] = useState(fromUrl.verdict);
   const [civilization, setCivilization] = useState(fromUrl.civilization);
+  const [reassignRequested, setReassignRequested] = useState(fromUrl.reassign_requested);
   const debouncedSearch = useDebouncedValue(search.trim());
   useUrlFilters({
     storageKey: JUDGMENT_FILTERS_KEY,
     fields: JUDGMENT_URL_FIELDS,
     remember: ["verdict", "civilization", "ordering"],
-    values: { tab: tab === "concluded" ? "concluded" : "", q: search, verdict, civilization, ordering },
+    values: { tab: tab === "concluded" ? "concluded" : "", q: search, verdict, civilization, ordering, reassign_requested: reassignRequested },
     page,
     restore: (v, p) => {
       setTab(v.tab === "concluded" ? "concluded" : "pending");
@@ -133,6 +153,7 @@ function JudgmentQueuePageContent() {
       setVerdict(v.verdict);
       setCivilization(v.civilization);
       setOrdering(v.ordering);
+      setReassignRequested(v.reassign_requested);
       setPage(p);
     },
   });
@@ -236,11 +257,13 @@ function JudgmentQueuePageContent() {
       }
     >
       {soul && <SoulFilterChip soulId={soul} onClear={clearSoul} />}
+      {pending && reassignRequested && <ReassignRequestedChip onClear={() => setReassignRequested("")} />}
       {pending ? (
         <JudgmentClaimQueue
-          key={`${q}|${soul}`}
+          key={`${q}|${soul}|${reassignRequested}`}
           initialSearch={q}
           soul={soul}
+          reassignRequested={reassignRequested === "true"}
           onViewConcluded={() => {
             setTab("concluded");
             setPage(1);

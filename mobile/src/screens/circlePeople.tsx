@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
   smallFollowText: { fontSize: 12, letterSpacing: 0.4 },
   listRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, paddingVertical: 12 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
   menuNote: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },

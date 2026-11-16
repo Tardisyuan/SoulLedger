@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
+  officerAppApi,
   workflowApi,
   requiresReasonForSoul,
   REJECTION_REASON_FOR_SOUL_MAX,
@@ -25,7 +26,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
-import { Spinner } from "@/src/components/ui/Spinner";
+import { PageSpinner } from "@/src/components/ui/Spinner";
 import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
 import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
 import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
@@ -40,6 +41,14 @@ import { WorkflowSegmentList } from "@/src/components/workflow/segments/Workflow
 import { WorkflowSegmentHistory } from "@/src/components/workflow/segments/WorkflowSegmentHistory";
 import { WorkflowGateBanner } from "@/src/components/workflow/segments/WorkflowGateBanner";
 import { problemDetail, problemFieldErrors, responseCode, responseStatus } from "@soulledger/core/api/client";
+import { useTodoNextAfter } from "@soulledger/core/hooks/useTodoNext";
+import { RecentReasons } from "@/src/components/approval/RecentReasons";
+import { NextTodoBar } from "@/src/components/approval/NextTodoBar";
+import { rememberReason } from "@/src/lib/recentRejectReasons";
+import { AddCosignerDialog } from "@/src/components/workflow/detail/AddCosignerDialog";
+import { useApprovalRef } from "@/src/components/workflow/detail/useApprovalRef";
+import { decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
+import { tenantLabel } from "@/src/lib/domainNames";
 
 /**
  * 审批流 / 节点状态与节点结论的徽章:字形 + 文字 + ink,不靠颜色(规范 v4,用户 2026-11-07;与判决、灵魂状态
@@ -107,6 +116,9 @@ const useHash = () => useSyncExternalStore(subscribeHash, () => window.location.
 /** Coded refusals with a sentence of their own (`workflow.detail.refusals.<code>`, 2026-10-29): escalating past the
  *  final review (review A), approving a five-heinous case judged PASSED (review J), advancing past the last stop or
  *  past the final review. Others fall back to the server's `error`. */
+/** The verdicts that refuse: their notes are the reason the 「最近用过」 rows remember (officer App `refuseVerdictOf`). */
+const REFUSING_VERDICTS = ["FAILED", "REJECTED"];
+
 const CODED_REFUSALS = ["escalate_past_final", "five_heinous_must_fail", "no_successor", "final_review_required"] as const;
 
 function codedRefusal(err: unknown, t: (key: string) => string): string | null {
@@ -119,7 +131,8 @@ export default function WorkflowDetailPage() {
   const { t, formatDateTime, locale } = useI18n();
   const { showToast } = useToast();
   const { hasPermission, isAdmin } = usePermissions();
-  const myTenant = useTenant().user?.tenant?.code ?? null;
+  const me = useTenant().user;
+  const myTenant = me?.tenant?.code ?? null;
 
   // Falling back to the raw enum was the §4.6 leak in miniature: a status
   // the bundle didn't cover printed "IN_PROGRESS" at the user.
@@ -140,6 +153,10 @@ export default function WorkflowDetailPage() {
   // 推进也要写理由(2026-10-29):后端把被越过的那一站记 SKIPPED 并写审计,与越级推进同一个要求。
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [advanceReason, setAdvanceReason] = useState("");
+  // 「下一件」 shows once this officer's decision on THIS workflow went through (by id: the next one is the same page).
+  const [decidedId, setDecidedId] = useState<string | null>(null);
+  const decided = decidedId === id;
+  const [cosignOpen, setCosignOpen] = useState(false);
 
   // Fetch workflow detail.
   //
@@ -171,8 +188,11 @@ export default function WorkflowDetailPage() {
           ? { rejection_reason_for_soul: payload.rejection_reason_for_soul }
           : {}),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, payload) => {
       showToast(t("workflow.detail.approve_success"), "success");
+      // Only a refusal the server took is remembered (D8).
+      if (REFUSING_VERDICTS.includes(payload.verdict)) rememberReason(me?.id, payload.notes);
+      setDecidedId(id);
       setSelectedVerdict("");
       setNotes("");
       setReasonForSoul("");
@@ -264,12 +284,47 @@ export default function WorkflowDetailPage() {
     // Once per load or hash, not on every refetch: a WS-driven refresh must not yank the page back.
     if (loadedId && anchor.startsWith("node-")) document.getElementById(anchor)?.scrollIntoView?.({ block: "center" });
   }, [anchor, loadedId]);
+  // The to-do item this is, and the row after it in the to-do's order -- read while it still waits on me.
+  const waitsOnMe =
+    workflow?.status !== "COMPLETED" && workflow?.can_approve === true && currentNode?.kind !== "END" && hasPermission("workflow.approve");
+  // Known for every workflow, not only one waiting on me: the requester below is read through it.
+  const approvalRef = useApprovalRef(workflow, true);
+  const todoNext = useTodoNextAfter(approvalRef?.kind ?? "approval", approvalRef?.id, waitsOnMe || decided);
+  const nextItem = decided ? (todoNext?.next ?? null) : null;
+  // A rebirth row is named by its application; the page to open is its workflow's.
+  const nextRebirth = useQuery({
+    queryKey: ["officer-app", "item", "rebirth", nextItem?.target.id ?? ""],
+    queryFn: async () => (await officerAppApi.item("rebirth", nextItem!.target.id)).data,
+    enabled: approvalRef?.kind === "rebirth" && !!nextItem,
+    staleTime: 60_000,
+  });
+  const nextHref = !nextItem
+    ? null
+    : approvalRef?.kind === "rebirth"
+      ? nextRebirth.data?.workflow_id
+        ? `/workflow/${nextRebirth.data.workflow_id}`
+        : null
+      : `/workflow/${nextItem.target.id}`;
+  // 发起人与发起殿: only the officer App's item detail carries them (`facts.requester` / `requester_hall`; the name is
+  // null for another hall's person). Same key as the 「下一件」 lookup above: one item, one cache entry.
+  const item = useQuery({
+    queryKey: ["officer-app", "item", approvalRef?.kind ?? "", approvalRef?.id ?? ""],
+    queryFn: async () => (await officerAppApi.item(approvalRef!.kind, approvalRef!.id)).data,
+    enabled: !!approvalRef,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const facts = item.data?.facts;
+  const requester =
+    [facts?.requester, facts?.requester_hall ? tenantLabel(t, facts.requester_hall, locale) : null].filter(Boolean).join(" · ") || null;
   // By `case_type` from the serializer — never by the workflow's name.
   const needsReasonForSoul = requiresReasonForSoul(workflow?.case_type, selectedVerdict);
 
   // 身份带(A1 实例):题「审批实例」,右栏「<流程名> vN · 第 k / n 步」。版本只在跑的是已发布
   // 模板时有;没有当前节点(已结束)就不写步数。
-  const stepIndex = currentNode ? sortedNodes.findIndex((n) => n.id === currentNode.id) : -1;
+  // Over decision steps only, as the officer App counts (通知 / 结束 are not steps).
+  const step = decisionStepPosition(sortedNodes, currentNode?.id);
+  const deadline = nodeDeadline(currentNode);
   // 殿名:当前节点的殿(A1「酆都 · 第三殿」);已结束、没有当前节点就写规制司。
   const hall = useHall(courtLabel(t, currentNode?.court_code, locale) || t("plaque.office.rules"));
   usePlaque({
@@ -278,7 +333,7 @@ export default function WorkflowDetailPage() {
     meta: workflow
       ? [
           workflow.template_version_number ? `${workflowTitle(workflow, t, locale)} v${workflow.template_version_number}` : workflowTitle(workflow, t, locale),
-          stepIndex >= 0 ? t("plaque.step", { k: String(stepIndex + 1), n: String(sortedNodes.length) }) : null,
+          step ? t("plaque.step", { k: String(step.k), n: String(step.n) }) : null,
         ]
           .filter(Boolean)
           .join(" · ")
@@ -309,14 +364,7 @@ export default function WorkflowDetailPage() {
     </Link>
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-3 py-8 text-sm text-[oklch(var(--color-ink-muted))]">
-        <Spinner label={t("workflow.detail.loading")} />
-        {t("workflow.detail.loading")}
-      </div>
-    );
-  }
+  if (isLoading) return <PageSpinner label={t("workflow.detail.loading")} />;
 
   // Split from the not-found branch below. `error || !workflow` told an
   // approver whose request 500'd, or who lacked permission on this tenant,
@@ -546,6 +594,14 @@ export default function WorkflowDetailPage() {
           {/* 停在外域段门口等它选站(W-5a/b/c):这时没有当前节点,中栏就是这一块。 */}
           {gateSegment && <WorkflowGateBanner workflow={workflow} segment={gateSegment} myTenant={myTenant} />}
 
+          {decided && (
+            <NextTodoBar
+              todo={todoNext}
+              nextTarget={nextHref ? { href: nextHref } : null}
+              leave={{ label: t("officer_app.detail.back_to_todo"), target: { href: "/dashboard" } }}
+            />
+          )}
+
           {currentNode && workflow.status !== "COMPLETED" && (
             <section className="flex flex-col gap-4 px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -556,12 +612,18 @@ export default function WorkflowDetailPage() {
                   </h2>
                   <p className="text-xs text-[oklch(var(--color-ink-muted))]">
                     <DomainText value={courtLabel(t, currentNode.court_code, locale)} /> · <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} />
-                    {" · "}
-                    {t("workflow.detail.order")} <span className="font-mono">{currentNode.node_order}</span>
+                    {step && (
+                      <>
+                        {" · "}
+                        <span data-testid="workflow-step-position">{t("plaque.step", { k: String(step.k), n: String(step.n) })}</span>
+                      </>
+                    )}
                   </p>
                 </div>
                 {currentNode.timeout_hours ? (
-                  <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+                  <span data-testid="workflow-deadline" className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+                    {/* The real time it runs out, then the rule it comes from (「24 小时后 · 转交上级」). */}
+                    {deadline && <>{t("workflow.detail.deadline", { time: formatDateTime(deadline) })} · </>}
                     {t("workflow.editor.timeout.summary", {
                       hours: String(currentNode.timeout_hours),
                       action: currentNode.timeout_action ? t(`workflow.editor.timeout.action.${currentNode.timeout_action}`) : "",
@@ -655,6 +717,10 @@ export default function WorkflowDetailPage() {
                 </div>
               </fieldset>
 
+              {REFUSING_VERDICTS.includes(selectedVerdict) && (
+                <RecentReasons userId={me?.id} value={notes} onChange={setNotes} />
+              )}
+
               <TextAreaField
                 label={t("workflow.detail.notes")}
                 value={notes}
@@ -703,6 +769,14 @@ export default function WorkflowDetailPage() {
                     {approveMutation.isPending ? t("workflow.detail.processing") : t("workflow.detail.submit_decision")}
                   </Button>
                 </RequirePermission>
+                )}
+                {/* 加签(officer App `CosignSheet`): the approver of this stop adds a same-hall colleague; the server decides. */}
+                {canDecide && approvalRef && (
+                  <RequirePermission permissions="workflow.approve">
+                    <Button type="button" variant="secondary" data-testid="cosign-open" onClick={() => setCosignOpen(true)}>
+                      {t("officer_app.detail.cosign")}
+                    </Button>
+                  </RequirePermission>
                 )}
                 <RequirePermission permissions="workflow.advance">
                   <Button type="button" variant="secondary" onClick={() => setAdvanceOpen((v) => !v)} aria-expanded={advanceOpen}>
@@ -893,9 +967,10 @@ export default function WorkflowDetailPage() {
 
         {/* ── 3 · 信息 ── */}
         <div className="min-w-0 self-start max-lg:order-3">
-          <WorkflowInfoCard workflow={workflow} statusLabel={statusLabel} statusGlyph={STATUS_GLYPH[workflow.status] ?? "?"} />
+          <WorkflowInfoCard workflow={workflow} statusLabel={statusLabel} statusGlyph={STATUS_GLYPH[workflow.status] ?? "?"} requester={requester} />
         </div>
       </div>
+      {cosignOpen && approvalRef && <AddCosignerDialog target={approvalRef} onClose={() => setCosignOpen(false)} onAdded={() => void refetch()} />}
     </PageShell>
   );
 }

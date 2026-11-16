@@ -37,7 +37,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { CaseNumber, DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { StaleBadge } from "@/src/components/ui/StatusBadge";
 import { QueryError } from "@/src/components/ui/PageError";
-import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { DeferDialog, ReassignDialog, ReleaseForDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { OfficerHandoverDialog } from "@/src/components/users/OfficerHandoverDialog";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { Badge } from "@/src/components/ui/Badge";
@@ -187,12 +187,16 @@ export function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
   };
 }
 
-/** `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。`soul`:`?soul=`,只看这个灵魂的案子(列表与四组计数同用)。 */
+/**
+ * `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。`soul`:`?soul=`,只看这个灵魂的案子(列表与四组计数同用)。
+ * `reassignRequested`:`?reassign_requested=true`(待办条「改派请求」),只看有人请求改派的,同样进列表与计数。
+ */
 export function JudgmentClaimQueue({
   initialSearch = "",
   soul = "",
+  reassignRequested = false,
   onViewConcluded,
-}: { initialSearch?: string; soul?: string; onViewConcluded?: () => void } = {}) {
+}: { initialSearch?: string; soul?: string; reassignRequested?: boolean; onViewConcluded?: () => void } = {}) {
   const { t, locale, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
@@ -216,6 +220,8 @@ export function JudgmentClaimQueue({
   const [dialog, setDialog] = useState<"defer" | "reassign" | "restore" | "handover" | null>(null);
   /** 行内「⋯ → 改派…」作用的那一件;工具条与批量条的改派仍按勾选 / 焦点行。 */
   const [rowReassign, setRowReassign] = useState<string | null>(null);
+  /** 行内「⋯ → 替{name}放回」作用的那一件(持 judgment.assign、在别人手上)。 */
+  const [releaseFor, setReleaseFor] = useState<Judgment | null>(null);
   /** 已发出取消认领、服务端还没刷新到的 id:色标先退场(140ms),不等往返。 */
   const [releasing, setReleasing] = useState<ReadonlySet<string>>(new Set());
   // 服务端渲染时 `window` 不存在,读取在 try 里落成空表;这一页在权限门之后才挂,首帧就在浏览器里。
@@ -243,6 +249,7 @@ export function JudgmentClaimQueue({
   const filters: Record<string, string> = {};
   if (search) filters.search = search;
   if (soul) filters.soul = soul;
+  if (reassignRequested) filters.reassign_requested = "true";
   if (court) filters.court = court;
   if (civilization) filters.civilization = civilization;
   if (stale) filters.stale = stale;
@@ -384,6 +391,18 @@ export function JudgmentClaimQueue({
       },
     });
   };
+
+  const releaseForOne = (j: Judgment, reason: string) =>
+    release.mutate(
+      { id: j.id, reason },
+      {
+        onSuccess: () => {
+          setReleaseFor(null);
+          showToast(t("officer_app.case.done_released"), "success");
+        },
+        onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+      }
+    );
 
   /** 「恢复」:撤销服务端的暂缓(`undefer`),案子回到它按认领人所属的组。 */
   const undeferOne = (id: string) =>
@@ -942,6 +961,14 @@ export function JudgmentClaimQueue({
                               ...(canAssign
                                 ? [{ key: "reassign", label: t("judgment.claim.reassign"), onSelect: () => { setRowReassign(j.id); setDialog("reassign"); } }]
                                 : []),
+                              // App 同序:改派给… · 替{name}放回(Design 第四十批 O-a)。
+                              ...(canAssign && !mine && j.claimed_by != null
+                                ? [{
+                                    key: "release_for",
+                                    label: t("officer_app.case.release_for", { name: j.claimed_by_name ?? "" }),
+                                    onSelect: () => setReleaseFor(j),
+                                  }]
+                                : []),
                             ]}
                           />
                         </td>
@@ -990,6 +1017,13 @@ export function JudgmentClaimQueue({
         pending={batch.isPending}
         onCancel={closeDialog}
         onConfirm={(to) => runBatch("reassign", { to })}
+      />
+      <ReleaseForDialog
+        isOpen={releaseFor != null}
+        holder={releaseFor?.claimed_by_name ?? ""}
+        pending={release.isPending}
+        onCancel={() => setReleaseFor(null)}
+        onConfirm={(reason) => releaseFor && releaseForOne(releaseFor, reason)}
       />
       {dialog === "handover" && <OfficerHandoverDialog onClose={() => setDialog(null)} />}
       <ConfirmDialog

@@ -167,3 +167,28 @@ export function PageSpinner({ label }: { label?: string }) {
     </div>
   );
 }
+
+/**
+ * Loading inside content — a panel, a drawer, a page body under its own head (第三十批 一.5: never a spinner). The
+ * same 2px line as the page's wait, but in ink at 60%: only a loading line in the head's top-line position keeps the
+ * civilization's colour (第四十八批第三节 A9). Below it, list skeleton rows. Reduce motion: the line stands still.
+ */
+export function ContentLoading({ label, rows = 3, testId }: { label?: string; rows?: number; testId?: string }) {
+  const { t } = useI18n();
+  return (
+    <div data-testid={testId} aria-busy="true" className="grid gap-3 py-2">
+      <div aria-hidden="true" data-in-content="" className="page-wait-line" />
+      <div role="status" className="sr-only">
+        {label ?? t("common.loading")}
+      </div>
+      <div aria-hidden="true" className="grid gap-3">
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i} className="grid gap-2 border-b border-[oklch(var(--color-line))] pb-3">
+            <span className="page-sk h-4 w-48 max-w-full" />
+            <span className="page-sk h-3 w-80 max-w-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

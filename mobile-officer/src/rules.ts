@@ -495,9 +495,7 @@ export function isDenied(error: unknown): boolean {
   return (error as { response?: { status?: number } })?.response?.status === 403;
 }
 
-/** How long the pushed row's highlight takes to go (spec §五). */
-export const HIGHLIGHT_MS = 1200;
-/** Its peak: `ink / .07`. */
+/** The pushed row's highlight peak: `ink / .07` (spec §五). Its timing is the shared landing recipe (`motion.highlight`). */
 export const HIGHLIGHT_ALPHA = 0.07;
 
 /**

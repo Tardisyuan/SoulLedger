@@ -977,6 +977,187 @@
       }
     }
   },
+  "ease": {
+    "$description": "General motion curves (Design v3 B1). Web: --ease-* in the @theme block of globals.css (Tailwind ease-* utilities); apps: motionTokens.ease in theme.generated.ts. motionParity.test.ts holds the two equal.",
+    "$type": "cubicBezier",
+    "standard": {
+      "$description": "The same element going from A to B.",
+      "$value": [0.2, 0, 0, 1]
+    },
+    "enter": {
+      "$description": "Something arriving (v3: starts faster, longer tail than v2's (0,0,.2,1)).",
+      "$value": [0.2, 0.8, 0.2, 1]
+    },
+    "exit": {
+      "$description": "Something leaving.",
+      "$value": [0.4, 0, 1, 1]
+    },
+    "drop": {
+      "$description": "v3 emphasis; the web's seal drop only.",
+      "$value": [0.2, 0.8, 0.3, 1]
+    }
+  },
+  "transition-duration": {
+    "$description": "General motion durations (Design v3 B1 tiers 80 / 160 / 240 / 320, and the single-use names v3 / v4 gave their own number). Web: --transition-duration-* in the @theme block of globals.css (Tailwind duration-* utilities).",
+    "$type": "duration",
+    "instant": {
+      "$description": "0ms: no animation (switches, ticks). Not v3's 80ms instant, which is `press`.",
+      "$value": {
+        "value": 0,
+        "unit": "ms"
+      }
+    },
+    "fast": {
+      "$value": {
+        "value": 160,
+        "unit": "ms"
+      }
+    },
+    "base": {
+      "$value": {
+        "value": 240,
+        "unit": "ms"
+      }
+    },
+    "slow": {
+      "$value": {
+        "value": 320,
+        "unit": "ms"
+      }
+    },
+    "press": {
+      "$value": {
+        "value": 80,
+        "unit": "ms"
+      }
+    },
+    "state": {
+      "$value": {
+        "value": 160,
+        "unit": "ms"
+      }
+    },
+    "settle": {
+      "$value": {
+        "value": 240,
+        "unit": "ms"
+      }
+    },
+    "close": {
+      "$description": "A dialog / drawer / sheet closing (Design batch 4, 2026-10-03: 180 -> 160, \"180 is not a tier\").",
+      "$value": {
+        "value": 160,
+        "unit": "ms"
+      }
+    },
+    "dismiss": {
+      "$description": "A toast leaving (it enters over `fast`).",
+      "$value": {
+        "value": 140,
+        "unit": "ms"
+      }
+    },
+    "reveal": {
+      "$description": "Skeleton -> content cross-fade.",
+      "$value": {
+        "value": 200,
+        "unit": "ms"
+      }
+    },
+    "reduced": {
+      "$description": "The one fade kept under reduce motion (v3 B3), no translate.",
+      "$value": {
+        "value": 80,
+        "unit": "ms"
+      }
+    },
+    "count": {
+      "$description": "v4 overview figures rolling and rings sweeping (batch 7).",
+      "$value": {
+        "value": 900,
+        "unit": "ms"
+      }
+    },
+    "highlight": {
+      "$description": "A changed row / a push's landing: held, then faded over motion.highlight-fade, 2s in all (Design batch 40 S-e).",
+      "$value": {
+        "value": 2000,
+        "unit": "ms"
+      }
+    },
+    "loading-line": {
+      "$description": "One pass of a 2px loading line (the page head's top line, the search progress line, the apps' skeleton line).",
+      "$value": {
+        "value": 1200,
+        "unit": "ms"
+      }
+    }
+  },
+  "motion": {
+    "$description": "The named uses every surface shares, as aliases of the tiers above. App only (motionTokens in mobile/src/theme.generated.ts); on the web the same tiers are composed into the --animate-* lines, and motionParity.test.ts holds each pair equal.",
+    "$type": "duration",
+    "$extensions": {
+      "org.soulledger": {
+        "css": false
+      }
+    },
+    "sheet-in": {
+      "$description": "A bottom sheet / drawer opens (web drawer-in).",
+      "$value": "{transition-duration.settle}"
+    },
+    "sheet-out": {
+      "$description": "A bottom sheet / drawer closes (web drawer-out).",
+      "$value": "{transition-duration.close}"
+    },
+    "dialog-in": {
+      "$description": "A dialog opens (the web's dialogs use the drawer / scrim pair).",
+      "$value": "{transition-duration.settle}"
+    },
+    "dialog-out": {
+      "$description": "A dialog closes.",
+      "$value": "{transition-duration.close}"
+    },
+    "toast-in": {
+      "$description": "A toast enters (web toast-in).",
+      "$value": "{transition-duration.fast}"
+    },
+    "toast-out": {
+      "$description": "A toast leaves (web .toast exit).",
+      "$value": "{transition-duration.dismiss}"
+    },
+    "collapse-in": {
+      "$description": "A section / row body expands (web row-expand).",
+      "$value": "{transition-duration.settle}"
+    },
+    "collapse-out": {
+      "$description": "A section / row body collapses (web row-collapse).",
+      "$value": "{transition-duration.fast}"
+    },
+    "page-change": {
+      "$description": "A page or tab's content changes (web page-enter).",
+      "$value": "{transition-duration.base}"
+    },
+    "reveal": {
+      "$description": "Skeleton -> content.",
+      "$value": "{transition-duration.reveal}"
+    },
+    "highlight": {
+      "$description": "A changed row / a push's landing, in all.",
+      "$value": "{transition-duration.highlight}"
+    },
+    "loading-line": {
+      "$description": "One pass of a loading line.",
+      "$value": "{transition-duration.loading-line}"
+    },
+    "highlight-fade": {
+      "$type": "duration",
+      "$description": "The last part of motion.highlight: the ground fades out over this after holding (2000 - 400 = 1600 held).",
+      "$value": {
+        "value": 400,
+        "unit": "ms"
+      }
+    }
+  },
   "app": {
     "$description": "Values only the apps draw: v4's translucent hairlines (the web composites them into --color-line / surface-3), the app's scrim, and the app names warn / pos-bg (aliases of the web's color.warning / color.success-tint since Design batch 40). Never emitted to CSS.",
     "$type": "color",
@@ -1037,9 +1218,9 @@
           "modes": {
             ".light": {
               "colorSpace": "srgb",
-              "components": [0.082353, 0.07451, 0.070588],
+              "components": [0.086275, 0.090196, 0.101961],
               "alpha": 0.42,
-              "hex": "#151312"
+              "hex": "#16171A"
             }
           }
         }

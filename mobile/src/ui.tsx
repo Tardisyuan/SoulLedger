@@ -63,7 +63,7 @@ import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useOnline } from "./online";
 import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./layout";
-import { GUTTER_PT, motion, radius, space, themeFor, touch, type Theme } from "./theme";
+import { GUTTER_PT, curves, motion, radius, space, themeFor, touch, type Theme } from "./theme";
 
 // ── theme & motion ─────────────────────────────────────────────────────
 
@@ -116,7 +116,33 @@ export function useReducedMotionDurations(): Durations {
   return useReducedMotion() ? STILL : motion;
 }
 
-/** Fades its content in over 120ms when it mounts; instantly under reduce-motion. */
+/** The general curves (the web's --ease-*) as RN `Animated` easings. */
+export const EASE = {
+  standard: Easing.bezier(...curves.standard),
+  enter: Easing.bezier(...curves.enter),
+  exit: Easing.bezier(...curves.exit),
+} as const;
+
+/**
+ * A push's landing ground (第四十批 S-e, 「同其他推送的 2 秒底色」), one recipe on every landing in both apps and
+ * as the web's `row-changed`: opacity 1 held for `highlight - highlightFade` (1600), then 0 over `highlightFade`
+ * (400) on the exit curve, 2s in all. Each caller keeps its own colour. Under reduce motion the caller draws no ground.
+ */
+export function useLandingFade(on: boolean, reduced: boolean): Animated.Value {
+  const [opacity] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (!on || reduced) return;
+    const fade = Animated.timing(opacity, { toValue: 0, duration: motion.highlightFade, easing: EASE.exit, useNativeDriver: true });
+    const timer = setTimeout(() => fade.start(), motion.highlight - motion.highlightFade);
+    return () => {
+      clearTimeout(timer);
+      fade.stop();
+    };
+  }, [on, reduced, opacity]);
+  return opacity;
+}
+
+/** Fades its content in over `fade` (the web's reveal, 200) when it mounts; instantly under reduce-motion. */
 export function FadeIn({
   children,
   style,
@@ -129,7 +155,7 @@ export function FadeIn({
   const { fade } = useReducedMotionDurations();
   const [opacity] = useState(() => new Animated.Value(fade ? 0 : 1));
   useEffect(() => {
-    Animated.timing(opacity, { toValue: 1, duration: fade, useNativeDriver: true }).start();
+    Animated.timing(opacity, { toValue: 1, duration: fade, easing: EASE.enter, useNativeDriver: true }).start();
   }, [opacity, fade]);
   return (
     <Animated.View onLayout={onLayout} style={[{ opacity }, style]}>
@@ -276,7 +302,7 @@ export const GUTTER = GUTTER_PT;
 export const PULL_REFRESH_PT = 56;
 /** A drag this far down from a list at its top is a pull; this far up, or across, it is the list's. */
 const PULL_SLOP_PT = 10;
-const PULL_EASING = Easing.bezier(0.2, 0.8, 0.2, 1);
+const PULL_EASING = EASE.enter;
 
 /** The OS screen reader (VoiceOver / TalkBack), live — `useReducedMotion`'s twin. */
 export function useScreenReaderEnabled(): boolean {
@@ -538,7 +564,7 @@ export function Block({
 
 /**
  * 交互与动效 第 2 轮 4b: a section's body appears — opacity 0 → 1, 4pt down into place, over
- * `sectionIn` (base 200) — and goes over `sectionOut` (fast 120). Its height changes at
+ * `sectionIn` (240, the web's collapse in) — and goes over `sectionOut` (160). Its height changes at
  * once, never animated (no layout jump). A zero duration (reduce motion) is no animation.
  */
 export function sectionTransitions(inMs: number, outMs: number) {
@@ -546,7 +572,7 @@ export function sectionTransitions(inMs: number, outMs: number) {
     entering: inMs
       ? new Keyframe({
           0: { opacity: 0, transform: [{ translateY: -4 }] },
-          100: { opacity: 1, transform: [{ translateY: 0 }], easing: REasing.bezier(0, 0, 0.2, 1) },
+          100: { opacity: 1, transform: [{ translateY: 0 }], easing: REasing.bezier(...curves.enter) },
         }).duration(inMs)
       : undefined,
     exiting: outMs ? FadeOut.duration(outMs) : undefined,
@@ -684,8 +710,8 @@ export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
   useEffect(() => {
     if (natural === null || done) return;
     const run = Animated.parallel([
-      Animated.timing(height, { toValue: natural, duration: ms, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: false }),
-      Animated.timing(opacity, { toValue: 1, duration: ms, useNativeDriver: false }),
+      Animated.timing(height, { toValue: natural, duration: ms, easing: EASE.enter, useNativeDriver: false }),
+      Animated.timing(opacity, { toValue: 1, duration: ms, easing: EASE.enter, useNativeDriver: false }),
     ]);
     run.start(({ finished }) => finished && setDone(true));
     return () => run.stop();
@@ -699,10 +725,6 @@ export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
   );
 }
 
-/** How long a push's landing keeps its ground (第四十批 S-e: 「同其他推送的 2 秒底色」): held, then faded. */
-const LANDING_HOLD_MS = 1600;
-const LANDING_FADE_MS = 400;
-
 /**
  * The row a tapped push points at (a comment, a judgment, a disposition, the residence block): ink at 6%
  * behind it for two seconds, then gone. Not scrolled, not moved. Under reduce-motion it is not drawn.
@@ -710,12 +732,7 @@ const LANDING_FADE_MS = 400;
 export function LandingWash({ on, children, testID }: { on: boolean; children: ReactNode; testID?: string }) {
   const t = useTheme();
   const reduced = useReducedMotion();
-  const [opacity] = useState(() => new Animated.Value(1));
-  useEffect(() => {
-    if (!on || reduced) return;
-    const timer = setTimeout(() => Animated.timing(opacity, { toValue: 0, duration: LANDING_FADE_MS, useNativeDriver: true }).start(), LANDING_HOLD_MS);
-    return () => clearTimeout(timer);
-  }, [on, reduced, opacity]);
+  const opacity = useLandingFade(on, reduced);
   return (
     <View testID={testID}>
       {on && !reduced ? (
@@ -1487,7 +1504,7 @@ export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: strin
   const [width, setWidth] = useState(0);
   useEffect(() => {
     if (reduced || !width) return;
-    const run = Animated.loop(Animated.timing(x, { toValue: 1, duration: motion.breath, easing: Easing.inOut(Easing.ease), useNativeDriver: true }));
+    const run = Animated.loop(Animated.timing(x, { toValue: 1, duration: motion.loadingLine, easing: EASE.standard, useNativeDriver: true }));
     run.start();
     return () => run.stop();
   }, [x, reduced, width]);

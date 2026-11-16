@@ -24,6 +24,7 @@ import Svg, { Path } from "react-native-svg";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { INVALID_BANNER_MS } from "../loginRules";
+import { radius } from "../theme";
 import { Button, Screen, Txt, useTheme, Press } from "../ui";
 
 /** What the sign-in page receives: a fresh `at` per scan, so the same code twice still lands. */
@@ -102,9 +103,11 @@ export function ScanScreen() {
       setReading(false);
     }
   };
-  // The capsule: outlined, 44 high; white on the camera, the ink on the refused page's paper.
-  const album = (ink: string) => (
-    <Press testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={[styles.capsule, { borderColor: ink }]}>
+  // Outlined, 44 high; white on the camera, the ink on the refused page's paper. Design batch 57: over the camera
+  // image it stays a pill (it sits with the phone's own camera controls, and square corners read as the frame);
+  // on the refused page, an ordinary page, it is the control radius 4 like anything else you tap.
+  const album = (ink: string, onCamera: boolean) => (
+    <Press testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={[styles.capsule, { borderColor: ink }, !onCamera && { borderRadius: radius.control }]}>
       <PhotoGlyph color={ink} />
       <Txt variant="bodyLg" style={{ color: ink }}>
         {t("soul_app.scan.from_photos")}
@@ -147,7 +150,7 @@ export function ScanScreen() {
           <Txt variant="bodyLg">{t("soul_app.scan.denied_body")}</Txt>
           <Button testID="scan-open-settings" title={t("soul_app.scan.open_settings")} onPress={() => void Linking.openSettings()} />
           <Button testID="scan-manual" kind="secondary" title={t("soul_app.scan.manual")} onPress={close} />
-          {album(theme.ink)}
+          {album(theme.ink, false)}
           {invalid === "photo_none" ? (
             photoNone
           ) : (
@@ -198,7 +201,7 @@ export function ScanScreen() {
       </View>
       <View style={[styles.bottom, { bottom: 32 + insets.bottom }]}>
         <View testID="scan-capsules" style={styles.capsules}>
-          {album(WHITE)}
+          {album(WHITE, true)}
           <Press
             testID="scan-torch"
             accessibilityRole="switch"
@@ -252,7 +255,7 @@ const styles = StyleSheet.create({
   manual: { minHeight: 44, justifyContent: "center" },
   manualText: { color: WHITE, textDecorationLine: "underline" },
   privacy: { color: "#D8D8D2", textAlign: "center" },
-  notice: { alignSelf: "stretch", backgroundColor: NOTICE.ground, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
+  notice: { alignSelf: "stretch", backgroundColor: NOTICE.ground, borderRadius: radius.sheet, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
   noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   denied: { padding: 24, gap: 16 },
   deniedTitle: { fontFamily: family.ui[600], fontSize: 24, lineHeight: 32 },
