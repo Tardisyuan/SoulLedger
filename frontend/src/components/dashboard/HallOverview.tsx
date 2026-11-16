@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi } from "@soulledger/core/api";
+import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi, officerAppApi } from "@soulledger/core/api";
+import { pad2 } from "@soulledger/core/domain/dates";
 import type { JudgmentHallStats } from "@soulledger/core/api/judgment";
 import { localName } from "@soulledger/core/domain/localName";
 import { getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
@@ -13,6 +14,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
 import { useShellCommands, type ShellCommand } from "@/src/lib/shellCommands";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { MissingValue } from "@/src/components/ui/DomainValue";
@@ -198,7 +200,7 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
       <MapThumb />
       <div className="relative mt-auto flex flex-wrap gap-8 pt-6">
         <Figure
-          label={t("officer_app.stats.concluded_this_month")}
+          label={t("overview.stat.concluded")}
           value={value(stats?.concluded_this_month)}
           zero={!loading && stats?.concluded_this_month === 0 ? t("overview.zero.concluded") : undefined}
         />
@@ -462,6 +464,67 @@ function MapThumb() {
   );
 }
 
+/**
+ * 我的数(`GET /officer-app/stats/`,与官员端 `mobile-officer/src/screens/stats.tsx` 同一组五个数):只数本人的、所有殿合在一起,
+ * 所以和主卡的「本殿本月结案」分开放、各写各的标签。放在概览右栏第三格(主卡 `row-span-3` 本来就留着这一格),
+ * 不放个人中心:那里是账号设置,官员每天进的是概览。代看时不取(接口拒绝代看令牌,数也不是被代看的那个人的)。
+ */
+function MyStatsCard() {
+  const { t } = useI18n();
+  const viewing = useImpersonation() !== null;
+  const q = useQuery({
+    queryKey: [...judgmentKeys.all, "officer-stats"],
+    queryFn: async () => (await officerAppApi.stats()).data,
+    enabled: !viewing,
+    staleTime: 60_000,
+  });
+  if (viewing) return null;
+  const s = q.data;
+  const now = new Date();
+  const since = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-01`;
+  return (
+    <section data-overview-mine="" className={`${CARD} p-4`}>
+      <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("officer_app.stats.title")}</h2>
+      <p className="mb-3 text-xs text-[oklch(var(--color-ink-muted))]">{t("officer_app.stats.scope")}</p>
+      {q.isLoading ? (
+        <Skeleton className="h-12 w-full" />
+      ) : q.isError || !s ? (
+        <div className="flex items-center gap-3">
+          <span role="alert" className="text-sm text-[oklch(var(--color-danger))]">
+            <span aria-hidden="true">! </span>
+            {t("officer_app.stats.load_failed")}
+          </span>
+          <Button type="button" size="sm" variant="secondary" onClick={() => void q.refetch()}>
+            {t("common.retry")}
+          </Button>
+        </div>
+      ) : Object.values(s).every((x) => x === 0) ? (
+        <div data-zero="" className="text-sm text-[oklch(var(--color-ink))]">
+          <div>{t("officer_app.stats.empty_title")}</div>
+          <div className="text-[oklch(var(--color-ink-muted))]">{t("officer_app.stats.empty_body")}</div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t("officer_app.stats.section_judgments")}</div>
+          <div className="flex flex-wrap gap-6">
+            <Figure label={t("officer_app.stats.concluded_this_month")} value={s.concluded_this_month} />
+            <Figure label={t("officer_app.stats.concluded_total")} value={s.concluded_total} />
+            <Link href="/desk" data-overview-mine-open="" className="hover:underline">
+              <Figure label={t("officer_app.stats.open_claims")} value={s.open_claims} />
+            </Link>
+          </div>
+          <div className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("officer_app.stats.month_since", { date: since })}</div>
+          <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t("officer_app.stats.section_appeals")}</div>
+          <div className="flex flex-wrap gap-6">
+            <Figure label={t("officer_app.stats.appeals_reviewed")} value={s.appeals_reviewed} />
+            <Figure label={t("officer_app.stats.appeals_in_review")} value={s.appeals_in_review} />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** 概览的四张卡;只给能看审判的人(`hall-stats` 要 `judgment.read`)。 */
 export function HallOverview() {
   const { t } = useI18n();
@@ -481,6 +544,7 @@ export function HallOverview() {
       <HeroCard stats={statsQ.data} loading={statsQ.isLoading} failed={statsQ.isError} />
       <TrendCard stats={statsQ.data} loading={statsQ.isLoading} />
       <TodoCard />
+      <MyStatsCard />
     </div>
   );
 }

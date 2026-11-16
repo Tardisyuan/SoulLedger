@@ -177,3 +177,31 @@ class TestPersistentMarkerAndReason:
         response = admins.clients["mod"].patch(f"/api/v1/judgment/{case.pk}/", {"summary": "生前经商，账目不清"}, format="json")
         assert response.status_code == 200, response.data
         assert admins.clients["mod"].get(f"/api/v1/judgment/{case.pk}/").data["summary"] == "生前经商，账目不清"
+
+
+
+@pytest.mark.django_db
+class TestPendingRequestsList:
+    """`?reassign_requested=true`:网页待办条「改派请求」一格与它链到的队列。只算未结案、有请求的,在调用者的租户里。
+    变异:`filter_reassign_requested` 不加 PENDING → 已结案那件也在,红;不加 `asked` → 没请求的那件也在,红。"""
+
+    def test_lists_open_cases_with_a_request_in_the_callers_tenant_only(self, world):  # noqa: F811
+        from django.utils import timezone
+
+        from apps.judgment.models import Judgment
+
+        asked = _case(world.cn, name="请求中")
+        concluded = _case(world.cn, name="已结")
+        quiet = _case(world.cn, name="没请求")
+        elsewhere = _case(world.eu, name="别殿")
+        Judgment.all_objects.filter(pk__in=[asked.pk, concluded.pk, elsewhere.pk]).update(reassign_requested_at=timezone.now())
+        Judgment.all_objects.filter(pk=concluded.pk).update(verdict="PASSED", is_final=True)
+
+        def ids(client, params):
+            response = client.get("/api/v1/judgment/", params)
+            assert response.status_code == 200, response.data
+            return {r["id"] for r in response.data["results"]}
+
+        assert ids(world.clients["mod"], {"reassign_requested": "true"}) == {str(asked.pk)}
+        assert ids(world.clients["mod"], {"reassign_requested": "false"}) == {str(quiet.pk)}
+        assert ids(world.clients["eu_mod"], {"reassign_requested": "true"}) == {str(elsewhere.pk)}

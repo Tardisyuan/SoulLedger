@@ -1721,7 +1721,8 @@
       "terminate_confirm_title": "End this workflow?",
       "terminate_confirm_message": "It cannot be advanced or decided afterwards. The reason goes into the audit log.",
       "terminate_success": "Workflow ended",
-      "terminate_error": "Failed to end the workflow"
+      "terminate_error": "Failed to end the workflow",
+      "deadline": "Due {{time}}"
     },
     "verdicts": {
       "passed": "Passed",
@@ -2008,10 +2009,13 @@
       "sentence_requests": "Placement plan requests",
       "reports": "Reports to review",
       "pick_nodes": "Stations to pick · other realms' flows",
+      "reassign_requests": "Reassign requests",
       "go_pick": "Pick →",
       "sentence_requests_by_civ": {
         "cn": "Sentence plan requests"
-      }
+      },
+      "city_god": "City God review",
+      "wangsi": "Grievances to review"
     },
     "civ_empty": "No souls yet · register one",
     "tab_ledger": "Ledger",
@@ -2732,7 +2736,10 @@
       "delivered_line": "Untimely · delivered on {{date}}",
       "deliver_sends_on": "The case is still with the City God for first review; delivering sends it on in the same step.",
       "uphold_late": "Upheld (finding only)",
-      "late_hint": "The fated day has passed or the case is concluded, so the soul has already left the city: the review only records a finding."
+      "late_hint": "The fated day has passed or the case is concluded, so the soul has already left the city: the review only records a finding.",
+      "queue_title": "Wrongful-death grievances",
+      "queue_hint": "Only the pending grievances on cases of your City Gods. Open a soul to review it on its judgment page.",
+      "filed_at": "Filed"
     },
     "confessions": {
       "title": "The forty-two denials",
@@ -10057,6 +10064,7 @@
     "month_done_pct": "{{pct}}% concluded this month",
     "open_queue": "Open the queue",
     "stat": {
+      "concluded": "This hall, concluded this month",
       "avg_time": "Average time",
       "returned": "Sent back for retrial"
     },

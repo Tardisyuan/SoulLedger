@@ -20,10 +20,13 @@ export function WorkflowInfoCard({
   workflow,
   statusLabel,
   statusGlyph,
+  requester,
 }: {
   workflow: ApprovalWorkflow;
   statusLabel: (status?: string | null) => string;
   statusGlyph?: string;
+  /** 「发起人 · 发起殿」 from the officer App's item facts; null / absent (not yet read, or not readable) draws no row. */
+  requester?: string | null;
 }) {
   const { t, locale, formatDateTime } = useI18n();
 
@@ -60,6 +63,12 @@ export function WorkflowInfoCard({
         <dd className={DD}>
           <span className="font-mono">{workflow.priority}</span> · {priorityLabel}
         </dd>
+        {requester && (
+          <>
+            <dt className={DT}>{t("officer_app.detail.requester")}</dt>
+            <dd className={DD} data-testid="workflow-requester">{requester}</dd>
+          </>
+        )}
         <dt className={DT}>{t("workflow.detail.created_at")}</dt>
         <dd className={`${DD} font-mono text-xs`}>{formatDateTime(workflow.created_at)}</dd>
         <dt className={DT}>{t("workflow.detail.completed_at")}</dt>

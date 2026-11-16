@@ -176,7 +176,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   // `stopAnimation()` —— 这段飞出以 finished 为 false 收尾,所以下面只在 finished 时 `setAway`。
   const flyOut = <R,>(id: string, x: number, submit: () => Promise<R>): Promise<R> => {
     setOverlay(null);
-    Animated.timing(pan, { toValue: x, duration: durations.drawerOut, useNativeDriver: false }).start(({ finished }) => {
+    Animated.timing(pan, { toValue: x, duration: durations.sheetOut, useNativeDriver: false }).start(({ finished }) => {
       if (finished) setAway(id);
     });
     return submit();

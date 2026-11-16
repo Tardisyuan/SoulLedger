@@ -32,6 +32,10 @@ import { useHallCivilization } from "@/src/components/plaque/useHall";
  * 未分配的书信 —— 一次 `/officer-app/todo/`(官员端 App「待我处理」同一个数,服务端逐组按权限给空),
  * 受刑请求(`sentence-plans/?pending_request=true`,收件箱页同一个过滤)、社区举报(默认只数 OPEN,与审核页同一个 key)。
  * 管理员「以此人身份查看」时 `/officer-app/` 一律 403,那五格不显示。
+ * 城隍初审 / 枉死申诉(2026-11-16,官员端 App 有、网页缺;Design 未画,沿用同一格式):同一次 `/officer-app/todo/`,
+ * 只数我名下城隍的案子,所以与「待我选站」一样只在有的时候占一格 —— 不在任何城隍名下的人永远是 0。
+ * 「移交」(`reassignments`)不另起一格:它就是 `/dispatch/records/proposed/`,即第一格「调派待批」。
+ * 判官「请管理员改派」没有可查询的队列(`officer_app/todo.py` 开头),这里数不到,只在审判页头写。
  *
  * 每格的数取自它链接过去那一页自己读的接口,两边不会对不上:
  * `/dispatch/records/proposed/` 是审批收件箱(`target_tenant=<caller>`),`/judgment/next/`
@@ -148,13 +152,28 @@ export function TodoStrip() {
   const viewing = useImpersonation() !== null;
   const canApprove = hasPermission("workflow.approve") && !viewing;
   const canLetters = hasPermission("soul_inbox.reply") && !viewing;
+  // 与服务端 `_city_god_items` / `_wangsi_items` 同一码名。
+  const canCityGod = hasPermission("city_god.execute") && !viewing;
+  const canWangsi = hasPermission("wangsi.execute") && !viewing;
   const officerQ = useQuery({
     queryKey: todoKeys.item("officer"),
     queryFn: async () => (await officerAppApi.todo()).data,
-    enabled: canApprove || canLetters,
+    enabled: canApprove || canLetters || canCityGod || canWangsi,
     staleTime: 60_000,
   });
-  const officerCount = (group: "approvals" | "rebirths" | "cooldowns" | "letters" | "unassigned_letters" | "pick_nodes") =>
+  // 改派请求(判官「请求改派」、还没批的):持 judgment.assign 的人才能批;口径是列表的 `?reassign_requested=true`,
+  // 链到待审队列的同一个筛选。和待我选站一样只在有的时候占一格。「以此人身份查看」时不显示:代看期间
+  // `hasPermission` 只认读码(`usePermissions`),judgment.assign 为假。
+  const canAssign = hasPermission("judgment.assign");
+  const reassignQ = useQuery({
+    queryKey: todoKeys.item("reassign-requests"),
+    queryFn: async () => (await judgmentApi.list({ reassign_requested: "true", page: "1" })).data.count,
+    enabled: canAssign,
+    staleTime: 60_000,
+  });
+  const officerCount = (
+    group: "approvals" | "rebirths" | "cooldowns" | "letters" | "unassigned_letters" | "pick_nodes" | "city_god" | "wangsi"
+  ) =>
     ({ ...officerQ, data: officerQ.data?.[group]?.count }) as UseQueryResult<number>;
   const canSentenceRequests = hasPermission("judgment.execute");
   const sentenceRequestQ = useQuery({
@@ -180,7 +199,7 @@ export function TodoStrip() {
   });
   // The cell reads a number; the link also needs the status the server counted.
   const deathCountQ = { ...deathSyncQ, data: deathSyncQ.data?.anomaly_count } as UseQueryResult<number>;
-  if (!canDispatch && !canJudge && !canDeathSync && !canResend && !canApprove && !canLetters && !canSentenceRequests && !canModerate)
+  if (!canDispatch && !canJudge && !canDeathSync && !canResend && !canApprove && !canLetters && !canSentenceRequests && !canModerate && !canCityGod && !canWangsi && !canAssign)
     return null;
   return (
     <div
@@ -215,12 +234,39 @@ export function TodoStrip() {
           alarm={t("dashboard.todo.unbooked")}
         />
       )}
+      {canAssign && (reassignQ.data ?? 0) > 0 && (
+        <TodoCell
+          label={t("dashboard.todo.reassign_requests")}
+          query={reassignQ}
+          href="/judgment?reassign_requested=true"
+          linkText={t("dashboard.todo.go_view")}
+          clearText={t("dashboard.todo.none")}
+        />
+      )}
       {canResend && (
         <TodoCell
           label={t("dashboard.todo.resend_dispatch")}
           query={resendQ}
           href="/sentence-plans?awaiting_redispatch=true"
           linkText={t("dashboard.todo.go_resend")}
+          clearText={t("dashboard.todo.none")}
+        />
+      )}
+      {canWangsi && (officerQ.data?.wangsi?.count ?? 0) > 0 && (
+        <TodoCell
+          label={t("dashboard.todo.wangsi")}
+          query={officerCount("wangsi")}
+          href="/judgment/wangsi"
+          linkText={t("dashboard.todo.go_view")}
+          clearText={t("dashboard.todo.none")}
+        />
+      )}
+      {canCityGod && (officerQ.data?.city_god?.count ?? 0) > 0 && (
+        <TodoCell
+          label={t("dashboard.todo.city_god")}
+          query={officerCount("city_god")}
+          href="/city-god-cases"
+          linkText={t("dashboard.todo.go_view")}
           clearText={t("dashboard.todo.none")}
         />
       )}

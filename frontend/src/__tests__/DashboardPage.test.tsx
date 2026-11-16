@@ -31,10 +31,16 @@ jest.mock("@soulledger/core/api", () => ({
     statsTrends: jest.fn().mockResolvedValue({ data: { range: "30d", since: "2026-09-09", until: "2026-10-08", points: [] } }),
   },
   dispatchApi: { proposed: jest.fn() },
-  judgmentApi: { next: jest.fn() },
+  judgmentApi: { next: jest.fn(), list: jest.fn() },
   deathSyncApi: { summary: jest.fn() },
   officerAppApi: { todo: jest.fn() },
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
+}));
+
+let mockViewing: object | null = null;
+jest.mock("@/src/components/impersonation/useImpersonation", () => ({
+  ...jest.requireActual("@/src/components/impersonation/useImpersonation"),
+  useImpersonation: () => mockViewing,
 }));
 
 // The v4 overview cards (hall-stats, todo lists) have their own states in HallOverview.test.tsx.
@@ -79,6 +85,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 const mockedStats = ledgerApi.statsOverview as jest.Mock;
 const mockedProposed = dispatchApi.proposed as jest.Mock;
 const mockedNext = judgmentApi.next as jest.Mock;
+const mockedJudgmentList = judgmentApi.list as jest.Mock;
 const mockedDeathSummary = deathSyncApi.summary as jest.Mock;
 const mockedOfficerTodo = officerAppApi.todo as jest.Mock;
 const group = (count: number) => ({ count, items: [] });
@@ -151,6 +158,8 @@ beforeEach(() => {
   mockedStats.mockResolvedValue({ data: baseStats });
   mockedProposed.mockResolvedValue({ data: { count: 1, results: [] } });
   mockedNext.mockResolvedValue({ data: { total: 0 } });
+  mockedJudgmentList.mockResolvedValue({ data: { count: 0, results: [] } });
+  mockViewing = null;
   mockedDeathSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 3 } });
   mockedPlans.mockResolvedValue({ data: { count: 0, results: [] } });
   mockedOfficerTodo.mockResolvedValue(officerTodo());
@@ -502,6 +511,72 @@ describe("DashboardPage 更多 (the v3 overview, moved)", () => {
       expect(mockedOfficerTodo).toHaveBeenCalledTimes(1);
       expect(mockedPlans).toHaveBeenCalledWith({ pending_request: true, page: 1 });
       expect(container.querySelectorAll("[data-todo]")).toHaveLength(11);
+    });
+
+    it("城隍初审 / 枉死申诉 (the app's groups): from the same read, a cell only while it has something, each on its own code", async () => {
+      mockedOfficerTodo.mockResolvedValue({ data: { ...officerTodo().data, city_god: group(2), wangsi: group(3) } });
+      const { container } = renderPage();
+      const wangsi = (await screen.findByText("dashboard.todo.wangsi")).closest<HTMLElement>("[data-todo]")!;
+      await waitFor(() => expect(wangsi.querySelector("[data-todo-count]")).toHaveTextContent("3"));
+      expect(wangsi.querySelector("a")).toHaveAttribute("href", "/judgment/wangsi");
+      const cityGod = screen.getByText("dashboard.todo.city_god").closest<HTMLElement>("[data-todo]")!;
+      expect(cityGod.querySelector("[data-todo-count]")).toHaveTextContent("2");
+      expect(cityGod.querySelector("a")).toHaveAttribute("href", "/city-god-cases");
+      expect(container.querySelectorAll("[data-todo]")).toHaveLength(13);
+      expect(mockedOfficerTodo).toHaveBeenCalledTimes(1);
+      cleanup();
+
+      // Zero: no cell (an officer under no City God is never anything but 0).
+      mockedOfficerTodo.mockResolvedValue({ data: { ...officerTodo().data, city_god: group(0), wangsi: group(0) } });
+      renderPage();
+      await screen.findByText("dashboard.todo.approvals");
+      expect(screen.queryByText("dashboard.todo.wangsi")).not.toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.city_god")).not.toBeInTheDocument();
+      cleanup();
+
+      // Each on its own code: wangsi.execute alone reads the aggregate and shows only 枉死申诉.
+      mockUser = { role: "JUDGE", permissions: ["wangsi.execute"] };
+      mockedOfficerTodo.mockResolvedValue({ data: { ...officerTodo().data, city_god: group(2), wangsi: group(3) } });
+      renderPage();
+      expect(await screen.findByText("dashboard.todo.wangsi")).toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.city_god")).not.toBeInTheDocument();
+    });
+
+    it("改派请求: judgment.assign only, a cell only while there is one, linking to the queue filtered by it; not while viewing as someone", async () => {
+      mockUser = { role: "JUDGE", permissions: ["judgment.read", "judgment.assign"] };
+      mockedJudgmentList.mockResolvedValue({ data: { count: 2, results: [] } });
+      renderPage();
+      const cell = (await screen.findByText("dashboard.todo.reassign_requests")).closest<HTMLElement>("[data-todo]")!;
+      await waitFor(() => expect(cell.querySelector("[data-todo-count]")).toHaveTextContent("2"));
+      expect(cell.querySelector("a")).toHaveAttribute("href", "/judgment?reassign_requested=true");
+      expect(mockedJudgmentList).toHaveBeenCalledWith({ reassign_requested: "true", page: "1" });
+      cleanup();
+
+      // Zero: no cell.
+      mockedJudgmentList.mockResolvedValue({ data: { count: 0, results: [] } });
+      renderPage();
+      await screen.findByText("dashboard.todo.judgment_queue");
+      await waitFor(() => expect(mockedJudgmentList).toHaveBeenCalled());
+      expect(screen.queryByText("dashboard.todo.reassign_requests")).not.toBeInTheDocument();
+      cleanup();
+
+      // Without judgment.assign: not asked at all.
+      mockedJudgmentList.mockClear();
+      mockedJudgmentList.mockResolvedValue({ data: { count: 2, results: [] } });
+      mockUser = { role: "JUDGE", permissions: ["judgment.read"] };
+      renderPage();
+      await screen.findByText("dashboard.todo.judgment_queue");
+      expect(screen.queryByText("dashboard.todo.reassign_requests")).not.toBeInTheDocument();
+      expect(mockedJudgmentList).not.toHaveBeenCalled();
+      cleanup();
+
+      // Viewing as someone: hidden, like the other officer cells.
+      mockUser = { role: "JUDGE", permissions: ["judgment.read", "judgment.assign"] };
+      mockViewing = { username: "someone" };
+      renderPage();
+      await screen.findByText("dashboard.todo.judgment_queue");
+      expect(screen.queryByText("dashboard.todo.reassign_requests")).not.toBeInTheDocument();
+      expect(mockedJudgmentList).not.toHaveBeenCalled();
     });
 
     it("each new cell needs its own permission: letters without approvals, reports for a moderator only", async () => {

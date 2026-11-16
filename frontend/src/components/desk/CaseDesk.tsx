@@ -14,7 +14,9 @@ import { judgmentKeys } from "@soulledger/core/query_keys";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useInitialUrlFilters, useUrlFilters, type UrlFieldRule } from "@/src/lib/useUrlFilters";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
@@ -84,6 +86,13 @@ function concludeFailure(t: T, e: unknown): string {
   return claimRefusalMessage(e, t);
 }
 
+/**
+ * 来源 chip 进地址(`?source=`,2026-11-15 列表筛选进网址的规矩,与 /judgment 同一个 `useUrlFilters`):链接与刷新回到同一摞。
+ * 地址没写时用这位官员上次选的(本浏览器,按账号分开存;官员端 `memory.ts` 的 readQueueSource 同一个意思)。
+ */
+const DESK_URL_FIELDS = { source: ["queue", "city_god", "cross"] } satisfies Record<string, UrlFieldRule>;
+const asSource = (v: string): JudgmentQueueSource | "all" => (v ? (v as JudgmentQueueSource) : "all");
+
 const orEmpty = (s: string | null | undefined) => s ?? "";
 const reducedMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
@@ -95,7 +104,17 @@ export function CaseDesk() {
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();
   const canClaim = hasPermission("judgment.execute");
-  const [source, setSource] = useState<JudgmentQueueSource | "all">("all");
+  const { user } = useTenant();
+  const fromUrl = useInitialUrlFilters(DESK_URL_FIELDS).values;
+  const [source, setSource] = useState<JudgmentQueueSource | "all">(asSource(fromUrl.source));
+  useUrlFilters({
+    storageKey: `soulledger.desk.filters.${user?.id ?? ""}`,
+    fields: DESK_URL_FIELDS,
+    remember: ["source"],
+    values: { source: source === "all" ? "" : source },
+    page: 1,
+    restore: (v) => setSource(asSource(v.source)),
+  });
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   // 窄屏「点开一件」是一次导航(fe-mobile 3.2):`?case=<id>` 进历史,系统返回 / 边缘右滑回到摞,滚动位置由浏览器还原。
@@ -161,7 +180,14 @@ export function CaseDesk() {
     );
   }, [shownId]);
 
-  const caseHref = (id: string) => `${pathname}?case=${encodeURIComponent(id)}`;
+  /** 开 / 关一件只换 `?case=`,别的参数(`?source=`)留着。读 `window.location`:来源刚换时 `useUrlFilters` 还在防抖里。 */
+  const caseHref = (id: string | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (id) params.set("case", id);
+    else params.delete("case");
+    const qs = params.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  };
   const select = (id: string | null) => {
     if (!id) return;
     setPicked(id);
@@ -471,7 +497,7 @@ export function CaseDesk() {
               if (pushedCase.current) {
                 pushedCase.current = false;
                 router.back();
-              } else router.replace(pathname, { scroll: false });
+              } else router.replace(caseHref(null), { scroll: false });
             }}
             onNext={() => select(step(ids, currentId, 1))}
             onOpen={() => open(current.row.id)}

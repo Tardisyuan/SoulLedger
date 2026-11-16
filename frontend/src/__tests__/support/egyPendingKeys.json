@@ -5,6 +5,9 @@
   "auth.error_attempts_body",
   "auth.error_locked_body",
   "auth.error_locked_title",
+  "dashboard.todo.reassign_requests",
+  "judgment.wangsi.filed_at",
+  "judgment.wangsi.queue_hint",
   "officer_app.bio_login.button",
   "officer_app.bio_login.enable_body",
   "officer_app.bio_login.expired",
@@ -17,6 +20,7 @@
   "officer_app.bio_login.wrong_password",
   "officer_app.login.email_hint",
   "officer_app.search.first_only",
+  "overview.stat.concluded",
   "scheduler.jobs.sharding_sync_shards",
   "social_moderation.scope_civilization",
   "soul_app.login.email",
@@ -24,5 +28,6 @@
   "soul_app.login.reset_filled",
   "soul_app.login.use_code",
   "soul_app.login.use_email",
-  "users.roles.SYSTEM_ADMIN"
+  "users.roles.SYSTEM_ADMIN",
+  "workflow.detail.deadline"
 ]

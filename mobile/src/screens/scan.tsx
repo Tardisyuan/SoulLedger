@@ -103,9 +103,11 @@ export function ScanScreen() {
       setReading(false);
     }
   };
-  // The capsule: outlined, 44 high; white on the camera, the ink on the refused page's paper.
-  const album = (ink: string) => (
-    <Press testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={[styles.capsule, { borderColor: ink }]}>
+  // Outlined, 44 high; white on the camera, the ink on the refused page's paper. Design batch 57: over the camera
+  // image it stays a pill (it sits with the phone's own camera controls, and square corners read as the frame);
+  // on the refused page, an ordinary page, it is the control radius 4 like anything else you tap.
+  const album = (ink: string, onCamera: boolean) => (
+    <Press testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={[styles.capsule, { borderColor: ink }, !onCamera && { borderRadius: radius.control }]}>
       <PhotoGlyph color={ink} />
       <Txt variant="bodyLg" style={{ color: ink }}>
         {t("soul_app.scan.from_photos")}
@@ -148,7 +150,7 @@ export function ScanScreen() {
           <Txt variant="bodyLg">{t("soul_app.scan.denied_body")}</Txt>
           <Button testID="scan-open-settings" title={t("soul_app.scan.open_settings")} onPress={() => void Linking.openSettings()} />
           <Button testID="scan-manual" kind="secondary" title={t("soul_app.scan.manual")} onPress={close} />
-          {album(theme.ink)}
+          {album(theme.ink, false)}
           {invalid === "photo_none" ? (
             photoNone
           ) : (
@@ -199,7 +201,7 @@ export function ScanScreen() {
       </View>
       <View style={[styles.bottom, { bottom: 32 + insets.bottom }]}>
         <View testID="scan-capsules" style={styles.capsules}>
-          {album(WHITE)}
+          {album(WHITE, true)}
           <Press
             testID="scan-torch"
             accessibilityRole="switch"

@@ -520,7 +520,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
                 <Dialog.Close className="h-11 shrink-0 text-sm font-medium text-[oklch(var(--color-ink))] min-[769px]:hidden">{t("search.cancel")}</Dialog.Close>
               </div>
               <div aria-hidden="true" className="h-0.5 shrink-0 overflow-hidden bg-[oklch(var(--color-surface-2))]">
-                {busy && <div data-testid="search-progress" className="h-full w-[38%] animate-search-progress bg-[oklch(var(--color-ink))]" />}
+                {busy && <div data-testid="search-progress" className="h-full w-[38%] animate-search-progress bg-[oklch(var(--color-ink)/0.6)]" />}
               </div>
 
               <div role="listbox" id={listboxId} aria-label={t("search.dialog_label")} className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">

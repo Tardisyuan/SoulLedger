@@ -2007,7 +2007,9 @@
       "go_pick": "Setep Sekhet →",
       "sentence_requests_by_civ": {
         "cn": "Dbh Sekher · Nen Hesy Djer"
-      }
+      },
+      "city_god": "Chenghuang · Maa Tepy",
+      "wangsi": "Sepret · Nut Mut Nen Maat"
     },
     "civ_empty": "Nen Sesh Djer · Sesh",
     "tab_ledger": "Medjat",
@@ -2656,7 +2658,8 @@
       "delivered_line": "Mut Nen Maat · Seshem {{date}}",
       "uphold_late": "Maat (Sesh Wa)",
       "late_hint": "Hru Mut Smen Iyi-N Er Sep Khetem-N: Ba Per-N. Maa: Sesh Wa · Nen Per Tepy, Nen Seshem.",
-      "deliver_sends_on": "Sep Em Chenghuang Djer: Seshem Hena Hab Er Wesekhet 1 Er 10."
+      "deliver_sends_on": "Sep Em Chenghuang Djer: Seshem Hena Hab Er Wesekhet 1 Er 10.",
+      "queue_title": "Sepret · Nut Mut Nen Maat"
     },
     "ferry": {
       "barred_unburied": "Nen Qeres · Nen Shem Itru",

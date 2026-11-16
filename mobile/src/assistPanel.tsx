@@ -21,7 +21,7 @@ import { hhmm, mmdd } from "@soulledger/core/domain/dates";
 import { assistBlocks, assistShownText } from "@soulledger/core/api/assist-stream";
 import { assistAnswerLocale, isEmptyAnswer, type AssistConversation, type AssistMessage, type AssistScreen } from "@soulledger/core/api/soul-assist";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
@@ -31,7 +31,7 @@ import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./useCurrentHall";
-import { Button, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./ui";
+import { Button, EASE, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */
 const PAGE_PEEK = 56;
@@ -86,11 +86,12 @@ export function AssistPanel() {
   const { t: tr } = useI18n();
   const assist = useAssist();
   const insets = useSafeAreaInsets();
-  const { drawerIn, drawerOut } = useReducedMotionDurations();
+  // The bottom sheet's timings (feedback.tsx `Sheet`): in 240 on the enter curve, out 160 on the exit curve, settling back 240 on standard.
+  const { sheetIn: drawerIn, sheetOut: drawerOut } = useReducedMotionDurations();
   const { height: screenHeight } = useWindowDimensions();
   const { stack: full } = useLayout();
   const visible = !!assist?.openFrom;
-  // v3: the sheet rises (translateY 100% → 0, 280ms) over a fading scrim; RN Animated only.
+  // v3: the sheet rises (translateY 100% → 0, 240ms) over a fading scrim; RN Animated only.
   // `rise` 0 → 1 is the opening; `drag` is the soul's pull on the handle. Reduce motion: in place.
   const [rise] = useState(() => new Animated.Value(0));
   const [drag] = useState(() => new Animated.Value(0));
@@ -98,18 +99,18 @@ export function AssistPanel() {
     if (!visible) return;
     drag.setValue(0);
     rise.setValue(drawerIn ? 0 : 1);
-    const run = Animated.timing(rise, { toValue: 1, duration: drawerIn, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: true });
+    const run = Animated.timing(rise, { toValue: 1, duration: drawerIn, easing: EASE.enter, useNativeDriver: true });
     run.start();
     return () => run.stop();
   }, [visible, drawerIn, rise, drag]);
   // v3 出场: closed (the ✕, the scrim, back, a pull, or the caller), the drawer stays mounted
-  // for `drawerOut` (200ms) while the sheet sinks and the scrim fades — and takes no touches.
+  // for `drawerOut` (160ms) while the sheet sinks and the scrim fades — and takes no touches.
   // Reduce motion: gone at once.
   const [mounted, setMounted] = useState(visible);
   if (visible !== mounted && (visible || !drawerOut)) setMounted(visible);
   useEffect(() => {
     if (visible || !mounted) return;
-    const run = Animated.timing(rise, { toValue: 0, duration: drawerOut, easing: Easing.bezier(0.4, 0, 1, 1), useNativeDriver: true });
+    const run = Animated.timing(rise, { toValue: 0, duration: drawerOut, easing: EASE.exit, useNativeDriver: true });
     run.start();
     const done = setTimeout(() => setMounted(false), drawerOut);
     return () => {
@@ -129,10 +130,10 @@ export function AssistPanel() {
         onPanResponderMove: (_, g) => drag.setValue(Math.max(0, g.dy)),
         onPanResponderRelease: (_, g) => {
           if (g.dy > SHEET_CLOSE_DRAG_PT) close?.();
-          else Animated.timing(drag, { toValue: 0, duration: drawerOut, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: true }).start();
+          else Animated.timing(drag, { toValue: 0, duration: drawerIn, easing: EASE.standard, useNativeDriver: true }).start();
         },
       }),
-    [drag, drawerOut, close]
+    [drag, drawerIn, close]
   );
   if (!assist) return null;
   const translateY = Animated.add(rise.interpolate({ inputRange: [0, 1], outputRange: [screenHeight, 0] }), drag);

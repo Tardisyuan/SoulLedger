@@ -341,7 +341,7 @@ function JudgmentsTab({ soul, onOpen }: { soul: Soul; onOpen: (id: string) => vo
   const { data, error, reload } = useRemote(load);
   const fetchPage = useCallback((page: number) => judgmentApi.list({ soul: soulId, page: String(page) }).then((r) => r.data), [soulId]);
   const { rows, more, moreState } = useMoreRows<Judgment>(data?.page ?? null, fetchPage);
-  if (!data || !rows) return error ? <TabFailed onRetry={reload} /> : <LoadingRows />;
+  if (!data || !rows) return error ? <TabFailed onRetry={reload} /> : <LoadingRows inContent />;
   const plan = [...data.plans].sort((a, b) => b.cycle - a.cycle)[0];
   const verdict = (j: Judgment) => {
     if (!j.verdict) return t("souls.detail.ledger.verdict_pending");
@@ -407,7 +407,7 @@ function KarmaTab({ soul }: { soul: Soul }) {
   const { data, error, reload } = useRemote(load);
   // `/records/` is one unpaged array: the 20-a-time paging is on this side (`karmaView`).
   const [shown, setShown] = useState(SOUL_PAGE);
-  if (!data) return error ? <TabFailed onRetry={reload} /> : <LoadingRows />;
+  if (!data) return error ? <TabFailed onRetry={reload} /> : <LoadingRows inContent />;
   const view = karmaView(data, shown);
   if (view.total === 0) return <Empty testID="soul-karma-empty">{t("souls.detail.no_ledger")}</Empty>;
   return (
@@ -469,7 +469,7 @@ function FateTab({ soulId, dispositions, reincarnations }: { soulId: string; dis
   const rPage = useCallback((page: number) => reincarnationApi.list({ soul: soulId, page: String(page) }).then((x) => x.data), [soulId]);
   const d = useMoreRows<Disposition>(data?.d ?? null, dPage);
   const r = useMoreRows<Reincarnation>(data?.r ?? null, rPage);
-  if (!data || !d.rows || !r.rows) return error ? <TabFailed onRetry={reload} /> : <LoadingRows />;
+  if (!data || !d.rows || !r.rows) return error ? <TabFailed onRetry={reload} /> : <LoadingRows inContent />;
   const label = (ns: string, raw: string | null | undefined) => {
     const x = enumLabel(ns, raw);
     return x.state === "known" ? x.label : (raw ?? "—");
@@ -553,7 +553,7 @@ function EventsTab({ soulId, civilization }: { soulId: string; civilization?: st
   // Paged by the server (20 a page); 「加载更多」 asks for the next one.
   const fetchPage = useCallback((page: number) => eventsApi.list({ soul: soulId, page: String(page) }).then((r) => r.data), [soulId]);
   const { rows, more } = useMoreRows<SoulEvent>(data, fetchPage);
-  if (!data || !rows) return error ? <TabFailed onRetry={reload} /> : <LoadingRows />;
+  if (!data || !rows) return error ? <TabFailed onRetry={reload} /> : <LoadingRows inContent />;
   if (rows.length === 0) return <Empty testID="soul-events-empty">{t("events.empty_all")}</Empty>;
   return (
     <View testID="soul-events">

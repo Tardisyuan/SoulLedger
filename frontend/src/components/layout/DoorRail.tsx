@@ -65,7 +65,7 @@ export function useDoorViewer(): { viewer: Viewer; doors: DoorId[]; menus: Sideb
     walk(menus);
     return out;
   }, [menus]);
-  const viewer: Viewer = { role: user?.role, extraRoles: user?.extra_roles, isAdmin, hasPermission, menuPaths };
+  const viewer: Viewer = { role: user?.role, extraRoles: user?.extra_roles, isAdmin, hasPermission, menuPaths, civilization: user?.tenant?.civilization };
   return { viewer, doors: doorsFor(viewer), menus };
 }
 

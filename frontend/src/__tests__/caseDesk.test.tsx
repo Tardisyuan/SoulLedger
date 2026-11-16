@@ -16,6 +16,7 @@ const mockBack = jest.fn();
 const mockShowToast = jest.fn();
 /** The address bar's query: `?case=<id>` is the phone's 「打开一件」 (fe-mobile 3.2). */
 let mockSearch = "";
+let mockUserId = 7;
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack }),
@@ -23,7 +24,7 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(mockSearch),
 }));
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { role: "JUDGE", permissions: ["judgment.read", "judgment.execute"] } }),
+  useTenant: () => ({ user: { id: mockUserId, role: "JUDGE", permissions: ["judgment.read", "judgment.execute"] } }),
 }));
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
@@ -324,6 +325,79 @@ describe("CaseDesk", () => {
     expect(screen.getByTestId("desk-row-3")).toBeInTheDocument();
     // The group heading counts the filtered group; the chips still count every source.
     expect(screen.getByTestId("desk-source-queue")).toHaveTextContent("2");
+  });
+
+  describe("the source chip lives in the address (?source=), remembered per officer", () => {
+    const KEY = (id: number) => `soulledger.desk.filters.${id}`;
+    beforeEach(() => {
+      localStorage.clear();
+      mockUserId = 7;
+      window.history.replaceState(null, "", "/");
+    });
+    afterEach(() => window.history.replaceState(null, "", "/"));
+
+    it("opens on the address's source in the very first request", async () => {
+      mockSearch = "source=cross";
+      localStorage.setItem(KEY(7), JSON.stringify({ source: "queue" }));
+      renderWithProviders(<CaseDesk />);
+      expect(await screen.findByTestId("desk-source-cross")).toHaveAttribute("aria-pressed", "true");
+      expect(mockDesk.mock.calls[0]).toEqual(["cross"]);
+      // The address wins: the stored source is never asked for.
+      expect(mockDesk).not.toHaveBeenCalledWith("queue");
+    });
+
+    it("drops a source the address made up", async () => {
+      mockSearch = "source=bogus";
+      renderWithProviders(<CaseDesk />);
+      expect(await screen.findByTestId("desk-source-all")).toHaveAttribute("aria-pressed", "true");
+      expect(mockDesk).not.toHaveBeenCalledWith("bogus");
+    });
+
+    it("without one in the address, takes this officer's last source, not another officer's", async () => {
+      localStorage.setItem(KEY(7), JSON.stringify({ source: "city_god" }));
+      localStorage.setItem(KEY(8), JSON.stringify({ source: "cross" }));
+      renderWithProviders(<CaseDesk />);
+      await waitFor(() => expect(screen.getByTestId("desk-source-city_god")).toHaveAttribute("aria-pressed", "true"));
+      expect(mockDesk).toHaveBeenCalledWith("city_god");
+      expect(mockDesk).not.toHaveBeenCalledWith("cross");
+    });
+
+    it("a click writes the address (replace, no history entry) and this officer's memory", async () => {
+      const push = jest.spyOn(window.history, "pushState");
+      renderWithProviders(<CaseDesk />);
+      fireEvent.click(await screen.findByTestId("desk-source-cross"));
+      await waitFor(() => expect(window.location.search).toBe("?source=cross"));
+      expect(JSON.parse(localStorage.getItem(KEY(7)) ?? "null")).toEqual({ source: "cross" });
+      expect(localStorage.getItem(KEY(8))).toBeNull();
+      expect(push).not.toHaveBeenCalled();
+      // Back to 全部: the parameter and the memory are cleared, not left at the old source.
+      fireEvent.click(screen.getByTestId("desk-source-cross"));
+      await waitFor(() => expect(window.location.search).toBe(""));
+      expect(localStorage.getItem(KEY(7))).toBeNull();
+      push.mockRestore();
+    });
+
+    it("opening and closing a case on a phone keeps ?source=", async () => {
+      const realMatchMedia = window.matchMedia;
+      window.matchMedia = ((q: string) => ({ matches: q === "(max-width: 768px)", media: q })) as unknown as typeof window.matchMedia;
+      try {
+        mockSearch = "source=cross";
+        window.history.replaceState(null, "", "/desk?source=cross");
+        const view = renderWithProviders(<CaseDesk />);
+        fireEvent.click(await screen.findByTestId("desk-row-3"));
+        expect(mockPush).toHaveBeenCalledWith("/desk?source=cross&case=3");
+        mockSearch = "source=cross&case=3";
+        window.history.replaceState(null, "", "/desk?source=cross&case=3");
+        view.rerender(<CaseDesk />);
+        // A deep-link-shaped open (nothing pushed by this render): ‹ 案卷台 replaces, dropping only ?case=.
+        view.unmount();
+        renderWithProviders(<CaseDesk />);
+        fireEvent.click(await screen.findByTestId("desk-back"));
+        expect(mockReplace).toHaveBeenCalledWith("/desk?source=cross", { scroll: false });
+      } finally {
+        window.matchMedia = realMatchMedia;
+      }
+    });
   });
 
   it("keeps the in-place chips in one group and puts the › destinations behind 更多来源, same href and count", async () => {

@@ -13,7 +13,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { SelectField } from "@/src/components/ui/Field";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { QueryError } from "@/src/components/ui/PageError";
-import { Spinner } from "@/src/components/ui/Spinner";
+import { ContentLoading } from "@/src/components/ui/Spinner";
 import { durationParts } from "./schedulerView";
 import { RunStatusBadge } from "./SchedulerJobRow";
 
@@ -60,9 +60,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
           />
 
           {runs.isLoading ? (
-            <div className="flex justify-center py-6">
-              <Spinner />
-            </div>
+            <ContentLoading testId="runs-loading" />
           ) : runs.isError && !runs.data ? (
             <QueryError onRetry={() => runs.refetch()} error={runs.error} />
           ) : results.length === 0 ? (

@@ -5,7 +5,7 @@
  *
  * Navigation is a state, not a navigator: five tabs and one level of detail do not need a stack,
  * and a push landing is just "set the detail". A detail reached by a push remembers its item; going
- * back to the list washes that row for 1.2 s (kit.tsx `Highlight`; none under reduce-motion).
+ * back to the list washes that row for 2 s (kit.tsx `Highlight`; none under reduce-motion).
  */
 import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "@soulledger/core/api/notifications";
@@ -17,7 +17,7 @@ import { EdgeBack, IdentityBand, PageSwitch, StandingBanner, TabBar, visibleTabs
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
 import { listenForArrivals, listenForLandings, registerDevice } from "./push";
-import { HIGHLIGHT_MS, goneKey, hallLabel, type Landing } from "./rules";
+import { goneKey, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
 import { ChangePasswordScreen, DisplayNameScreen } from "./screens/account";
 import { DevicesScreen } from "./screens/devices";
@@ -34,7 +34,7 @@ import { SearchTab } from "./screens/search";
 import { TodoTab, type ItemRef } from "./screens/todo";
 import type { TodoKind } from "@soulledger/core/api/officer-app";
 import { needsMfaSetup, useSession } from "./session";
-import { onForeground, useI18n, useTheme } from "./shared";
+import { motion, onForeground, useI18n, useTheme } from "./shared";
 
 /** A row of the list a detail was opened from: what it opens, and the name the row shows. */
 type SequenceRow = { target: DetailTarget; name?: string };
@@ -178,7 +178,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
 
   useEffect(() => {
     if (!highlight) return;
-    const id = setTimeout(() => setHighlight(null), HIGHLIGHT_MS + 400);
+    const id = setTimeout(() => setHighlight(null), motion.highlight);
     return () => clearTimeout(id);
   }, [highlight]);
 
