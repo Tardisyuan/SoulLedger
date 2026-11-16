@@ -103,8 +103,11 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
 
         serializer = TenantCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # The hall and its civilization's seed are one unit (docs-others X-1): no empty shell is left behind.
-        with transaction.atomic():
+        # The hall and its civilization's seed are one unit (docs-others X-1): no empty shell is left behind. Stage 4:
+        # the seed of a write-cut civilization goes to its shard (`atomic()` is that shard's transaction there,
+        # apps/core/shard_reads.py) and the hall row to control, so control's transaction is opened here by name:
+        # both roll back together; the shard commits first (it holds the hall's copy, apps/core/shard_sync.py).
+        with transaction.atomic(using="default"), transaction.atomic():
             tenant = serializer.save()
             seed_hall(tenant)
         return Response(TenantSerializer(tenant).data, status=201)

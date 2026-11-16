@@ -581,11 +581,16 @@ def test_a_random_update_on_control_is_reported_exactly_and_fixed(world):
         new = world.value(field)
         picked = [pk for pk in rng.sample(held, rng.randint(1, min(3, len(held))))
                   if model._base_manager.filter(pk=pk).values_list(field.attname, flat=True).get() != new]
-        if picked:
+        if not picked:
+            continue
+        try:  # a value a constraint refuses (a second default city god of a hall: seed 418987) is drawn again too
+            with transaction.atomic(using="default"):
+                model._base_manager.filter(pk__in=picked).update(**{field.attname: new})
             break
-    assert picked, "fifty draws and every one equal to the rows' values"
+        except IntegrityError:
+            picked = []
+    assert picked, f"fifty draws and every one equal to the rows' values or refused; SHARD_SYNC_SEED={world.seed}"
     print(f"update {model._meta.label}.{field.name} on {picked}")
-    model._base_manager.filter(pk__in=picked).update(**{field.attname: new})
     others = [a for a in ["default", *shard_aliases()] if a != alias]
     before = _snapshot(others)
 
@@ -599,6 +604,18 @@ def test_a_random_update_on_control_is_reported_exactly_and_fixed(world):
     assert _snapshot(others) == before, "a fix on one shard changed another database"
 
 
+def _held_by_its_hall(soul):
+    """Whether a row owned by the soul's hall (not by the soul) names it through a constrained key (a capture warrant,
+    `CaptureWarrant.soul`). Moving such a soul's home -- which the product never does: a dispatch leaves a copy at
+    home (D6) -- strands that row in the old shard with a key to a soul it no longer holds ("not copied", seed
+    418987, 2026-11-16 gate). The test below moves the home, so it takes a soul nothing of its hall holds that way."""
+    from apps.core.sharding import same_civilization_keys
+
+    Soul = apps.get_model("souls", "Soul")
+    return any(f.model._base_manager.filter(**{f.attname: soul.pk}).exists()
+               for m in apps.get_models() for f in same_civilization_keys(m) if f.related_model is Soul)
+
+
 @sharded
 def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
     """The fix deletes on the shard without the bare-id delete rules (apps/core/bare_ids.py), which would
@@ -607,7 +624,8 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
 
     Soul = apps.get_model("souls", "Soul")
     account = next(a for a in SoulAccount._base_manager.filter(soul__tenant__isnull=False).select_related("soul__tenant")
-                   if a.soul.tenant.civilization in CIVS and a.soul.tenant_id == a.soul.home_tenant_id)
+                   if a.soul.tenant.civilization in CIVS and a.soul.tenant_id == a.soul.home_tenant_id
+                   and not _held_by_its_hall(a.soul))
     soul, here = account.soul, alias_for_civilization(account.soul.tenant.civilization)
     elsewhere = next(h for h in world.halls if h.declared_civilization and h.civilization != soul.tenant.civilization)
     from apps.org.models import Organization
@@ -617,9 +635,10 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
     control_before = _snapshot(["default"])
 
     code, out = _reconcile("--all", "--fix")
+    seed = f"SHARD_SYNC_SEED={world.seed}"  # in the failure itself, not only in a report section (2026-11-16)
     # Rows that followed the soul and still point into its old hall are bare ids: nothing is left.
-    assert code == 0 and "still" not in out, out
-    assert (Soul._meta.label, str(soul.pk)) in _reported(out)
+    assert code == 0 and "still" not in out, f"{seed}\n{out}"
+    assert (Soul._meta.label, str(soul.pk)) in _reported(out), seed
     assert not Soul._base_manager.using(here).filter(pk=soul.pk).exists()
     assert _snapshot(["default"]) == control_before
     assert SoulAccount._base_manager.filter(pk=account.pk, soul_id=soul.pk).exists()
@@ -636,6 +655,7 @@ def test_shard_to_control_brings_a_shard_write_back(world):
     code, out = _reconcile("--civ", civ, "--direction", "shard-to-control")
     assert code == 1 and _reported(out) == {(Soul._meta.label, str(soul.pk))}, out
     with override_settings(SHARD_READ_CIVS=[civ], SHARD_WRITE_CIVS=[civ]):  # stage 4: the shard is the master
+        call_command("assign_shard_id_ranges", "--civ", civ, stdout=io.StringIO())  # gap 4a: before writes cut over
         assert _reconcile("--civ", civ, "--direction", "shard-to-control", "--fix")[0] == 0
     assert Soul._base_manager.get(pk=soul.pk).name == "written-on-the-shard"
     assert _reconcile("--all")[0] == 0

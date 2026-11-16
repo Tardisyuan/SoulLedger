@@ -56,3 +56,10 @@ class SoulsConfig(AppConfig):
         from apps.core import shard_reads
 
         shard_reads.install()
+        # Stage 4: writes of a civilization in SHARD_WRITE_CIVS go to its shard, in its own id range (gap 4a).
+        from apps.core import shard_ids
+
+        shard_ids.connect()
+        # ... and nothing writes control's mirror of those rows, or a third database inside a transaction.
+        shard_reads.connect_write_guards()
+        shard_sync.connect_hall_copies()

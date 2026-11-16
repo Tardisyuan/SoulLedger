@@ -98,7 +98,9 @@ def _field(edge):
 
 
 def _constraint(f):
-    has = f.remote_field.db_constraint if f.many_to_many else f.db_constraint
+    # An M2M: the key of its through table to the other end (explicit or auto-created alike).
+    has = (f.remote_field.through._meta.get_field(f.m2m_reverse_field_name()).db_constraint if f.many_to_many
+           else f.db_constraint)
     return "DB" if has else "BARE"
 
 
@@ -136,14 +138,16 @@ def test_exactly_the_edges_across_databases_are_bare():
     """The rule, from the placements, over every FK / M2M of our models (the audit columns included):
     an edge across databases must be BARE -- across the control / shard boundary (placements) or across
     civilizations (CROSSING); any other must keep its constraint, except the audit trio, which is bare
-    everywhere from its one declaration."""
+    everywhere from its one declaration, and the owner side of an M2M's through table, bare like its other end
+    since 1B (stage 4 gap 4c made the table explicit without adding a constraint to it)."""
+    throughs = {f.remote_field.through for m in apps.get_models() for f in m._meta.local_many_to_many}
     must_be_bare, needlessly_bare = [], []
     for m in _our_models():
         for f in [*m._meta.concrete_fields, *m._meta.local_many_to_many]:
             if not isinstance(f, (models.ForeignKey, models.ManyToManyField)):
                 continue
             edge = _edge(f)
-            audit = f.name in AUDIT_FIELDS and issubclass(m, AuditUserFields)
+            audit = (f.name in AUDIT_FIELDS and issubclass(m, AuditUserFields)) or m in throughs
             crosses = _crosses(f) or _crosses_civilizations(f)
             if crosses and _constraint(f) != "BARE":
                 must_be_bare.append(edge)
