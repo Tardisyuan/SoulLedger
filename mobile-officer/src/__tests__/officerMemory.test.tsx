@@ -104,6 +104,8 @@ describe("D8a: 案卷台's source chip is kept", () => {
     expect(mockList).toHaveBeenCalledWith({ group: "mine", source: "city_god" });
     expect(mockList).not.toHaveBeenCalledWith({ group: "mine" });
     await waitFor(() => expect(screen.getByTestId("desk-sources-city_god").props.accessibilityState).toMatchObject({ selected: true }));
+    // 第五十六批：能点的东西一律 4,案卷台的大号筛选签也不是胶囊。
+    expect(StyleSheet.flatten(screen.getByTestId("desk-sources-city_god").props.style)).toMatchObject({ minHeight: 44, borderRadius: 4 });
   });
 
   it("another officer on the same phone starts at 全部", async () => {

@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.
   segmentTight: { fontSize: 14, lineHeight: 20, fontVariant: ["tabular-nums"] },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
-  chipLg: { minHeight: 44, borderRadius: 22, paddingHorizontal: space[4] },
+  chipLg: { minHeight: 44, borderRadius: radius.control, paddingHorizontal: space[4] }, // 第五十六批：能点的东西一律 4,大号筛选签不再是胶囊
   chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },
