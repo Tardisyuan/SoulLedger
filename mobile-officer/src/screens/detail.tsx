@@ -263,7 +263,7 @@ function SealedStrip({ civilization, court, at }: { civilization: string | null 
     <View testID="detail-sealed" style={{ flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: 10, backgroundColor: theme.s2 }}>
       <DossierSeal testID="detail-sealed-seal" civilization={civilization} court={court} size={44} stamp label={t("officer_app.seal.a11y")} />
       <View style={{ flex: 1, gap: 2 }}>
-        <Txt style={{ fontFamily: family.ui[600], fontSize: 15, lineHeight: 21 }}>{t("officer_app.detail.sealed")}</Txt>
+        <Txt style={{ fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 }}>{t("officer_app.detail.sealed")}</Txt>
         <Txt variant="caption" tone="muted">
           {t("officer_app.detail.sealed_meta", { time: formatWhen(at) })}
         </Txt>
@@ -545,7 +545,8 @@ function JudgmentDetail({
           {done ? <SealedStrip civilization={data.civilization} court={data.court} at={data.concluded_at} /> : null}
           <View testID={done ? "detail-dimmed" : undefined} style={{ gap: space[4], opacity: done ? DONE_OPACITY : 1 }}>
           <Txt variant="caption" tone="muted">{[courtLabel(t, data.court, locale), data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
-          {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
+          {/* Sealed but still in approval: `is_final` stays false until the chain ends, yet 「待宣判」 is over. */}
+          {!data.is_final && !data.concluded_at ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
           {/* 滞留(`stale_since`,定时任务盖章,不结案):与队列行同一句「◐ 滞留 · 30 天无进展」。 */}
           {data.stale_since ? <Txt variant="bodyLg" testID="judgment-stale">{`◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}`}</Txt> : null}
           {/* O-a:有人请求改派,能改派的人在页头下就看到请求与理由(主按钮随之是「改派给…」)。 */}

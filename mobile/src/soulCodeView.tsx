@@ -229,15 +229,15 @@ const styles = StyleSheet.create({
   box: { flexDirection: "row", alignItems: "center", height: 56, borderWidth: 1, paddingLeft: 16, paddingRight: 4 },
   entry: { flex: 1, height: 56, justifyContent: "center" },
   groupRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  digits: { fontFamily: family.mono[500], fontSize: 22, lineHeight: 30, letterSpacing: 1.8 },
+  digits: { fontFamily: family.mono[500], fontSize: 24, lineHeight: 32, letterSpacing: 1.8 },
   groups: { letterSpacing: 1 },
   caret: { width: 2, height: 26, marginLeft: -12 },
   // Transparent text, NOT opacity 0: iOS does not hit-test a view whose alpha is 0, so the box could not be
   // tapped into at all (iPhone 17 simulator, 2026-10-11; jest presses the node directly and cannot see it).
   // Android is the other way round: it does hit-test an alpha-0 view, and it drew the "transparent" text anyway,
   // on top of the groups (Medium_Phone emulator, 2026-10-11). So: transparent text on iOS, alpha 0 on Android.
-  hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, color: "transparent", fontSize: 22, opacity: Platform.OS === "android" ? 0 : 1 },
-  email: { flex: 1, height: 56, fontFamily: family.ui[500], fontSize: 17 },
+  hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, color: "transparent", fontSize: 24, opacity: Platform.OS === "android" ? 0 : 1 },
+  email: { flex: 1, height: 56, fontFamily: family.ui[500], fontSize: 20 },
   switch: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center" },
   switchText: { textDecorationLine: "underline" },
   scan: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderLeftWidth: 1 },

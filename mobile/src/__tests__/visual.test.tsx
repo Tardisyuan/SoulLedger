@@ -335,7 +335,7 @@ describe("v3 section labels (.product-label)", () => {
       </>
     );
     expect(flat(screen.getByText("Open source"))).toMatchObject(label);
-    expect(flat(screen.getByText("功过"))).toMatchObject({ fontSize: 15, fontFamily: "SoulLedgerSans_600", color: cn.ink });
+    expect(flat(screen.getByText("功过"))).toMatchObject({ fontSize: 16, fontFamily: "SoulLedgerSans_600", color: cn.ink });
   });
 });
 

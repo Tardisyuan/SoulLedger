@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   servedBar: { height: 6 },
   sectionBody: { gap: 12 },
   newTag: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
-  newTagText: { fontSize: 11, lineHeight: 14 },
+  newTagText: { fontSize: 12, lineHeight: 16 },
   axis: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
   axisStep: { flex: 1, flexDirection: "row", alignItems: "center" },
   linkH: { flex: 1, height: 2, marginHorizontal: 8 },

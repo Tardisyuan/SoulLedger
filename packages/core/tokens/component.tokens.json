@@ -204,7 +204,7 @@
             "unit": "px"
           },
           "lineHeight": {
-            "value": 14,
+            "value": 16,
             "unit": "px"
           }
         }
@@ -225,17 +225,18 @@
       }
     },
     "readback": {
+      "$description": "Seal read-back (the web layer of batch 46 and the officer app's sheet). Design batch 54 H3: on the 4px grid, name 20/28, case 16/24, verdict 24/32 -- the verdict stays the largest.",
       "name": {
         "$type": "typography",
         "$value": {
           "fontFamily": "var(--font-title)",
           "fontWeight": 600,
           "fontSize": {
-            "value": 18,
+            "value": 20,
             "unit": "px"
           },
           "lineHeight": {
-            "value": 26,
+            "value": 28,
             "unit": "px"
           }
         }
@@ -250,7 +251,7 @@
             "unit": "px"
           },
           "lineHeight": {
-            "value": 26,
+            "value": 24,
             "unit": "px"
           }
         }
@@ -261,11 +262,11 @@
           "fontFamily": "var(--font-title)",
           "fontWeight": 600,
           "fontSize": {
-            "value": 20,
+            "value": 24,
             "unit": "px"
           },
           "lineHeight": {
-            "value": 26,
+            "value": 32,
             "unit": "px"
           }
         }

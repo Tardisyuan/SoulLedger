@@ -411,8 +411,8 @@ const MARK_RIGHT = 16 + 44 + 16;
 /** The soul code's line (`codeText`) and what its copy target adds to reach 44: 28pt of padding. */
 const CODE_LINE = 16;
 const CODE_REACH = 44 - CODE_LINE;
-/** Compact, the room between the code's foot and the band's clipped edge: (48 − (18 + 4 + 16)) / 2. */
-const CODE_FOOT_SMALL = 5;
+/** Compact, the room between the code's foot and the band's clipped edge: (48 − (name 20 + 4 + 16)) / 2 (the name is 14/20 since batch 54 H3). */
+const CODE_FOOT_SMALL = 4;
 
 /**
  * v3's identity band, in place of the navigator's plaque on this tab: the civilization's
@@ -1303,9 +1303,9 @@ const styles = StyleSheet.create({
   recordHead: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   kind: { width: 20, height: 18, alignItems: "flex-start", justifyContent: "center" },
   milestone: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
-  milestoneText: { fontSize: 11, lineHeight: 14 },
+  milestoneText: { fontSize: 12, lineHeight: 16 },
   milestoneLine: { flexDirection: "row" },
-  recordDate: { fontSize: 11, opacity: 0.8 },
+  recordDate: { fontSize: 12, opacity: 0.8 },
   basisLine: { flexDirection: "row", flexWrap: "wrap", columnGap: 12 },
   apps: { gap: 12 },
   appCard: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
@@ -1313,7 +1313,7 @@ const styles = StyleSheet.create({
   /** v3 .life-identity: 116pt (meta line, seal row) → 48pt (one row) on scroll. */
   band: { overflow: "hidden", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 12 },
   bandSmall: { paddingVertical: 0, paddingLeft: 12, paddingRight: 4, justifyContent: "center" },
-  bandMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, letterSpacing: 0.6 },
+  bandMeta: { fontFamily: family.mono[400], fontSize: 12, lineHeight: 16, letterSpacing: 0.6 },
   bandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   bandText: { flex: 1, minWidth: 0, gap: 4 },
   // Sized to its words (not stretched), so its width is where the name ends: the head mark's clearance reads it.
@@ -1321,8 +1321,8 @@ const styles = StyleSheet.create({
   bandFrame: { overflow: "hidden" },
   // The soul's name: the title serif (Noto Serif SC 600) via `titleFamily(me.name)`, v4's big title 30/38
   // (the text column, 38 + 4 + the code's 16, still fits beside the 64pt seal).
-  name: { fontSize: 30, lineHeight: 38, flexShrink: 1 },
-  nameSmall: { fontSize: 13, lineHeight: 18, flexShrink: 1 },
+  name: { fontSize: 32, lineHeight: 40, flexShrink: 1 },
+  nameSmall: { fontSize: 14, lineHeight: 20, flexShrink: 1 },
   code: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
   /** 16 + 14 + 14 = 44. Full, the band has room below the row for the even split. */
   codeTarget: { paddingVertical: CODE_REACH / 2, marginVertical: -CODE_REACH / 2 },
@@ -1330,7 +1330,7 @@ const styles = StyleSheet.create({
   codeTargetSmall: { paddingTop: CODE_REACH - CODE_FOOT_SMALL, paddingBottom: CODE_FOOT_SMALL, marginTop: -(CODE_REACH - CODE_FOOT_SMALL), marginBottom: -CODE_FOOT_SMALL },
   /** Stacked the line is 16 × the text scale (≥ 27pt) and the band has no fixed height: no negative margins to push the box past the clipped edge, just a 44pt floor. */
   codeTargetStack: { minHeight: 44 },
-  codeText: { fontSize: 11, lineHeight: CODE_LINE, letterSpacing: 1.6, fontFamily: family.mono[500] },
+  codeText: { fontSize: 12, lineHeight: CODE_LINE, letterSpacing: 1.6, fontFamily: family.mono[500] },
   account: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   /** v3 .life-now. */
   now: { paddingTop: 24, paddingBottom: 24, alignItems: "center", gap: 8, borderBottomWidth: 1, overflow: "hidden" },
@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
   nowState: { alignSelf: "stretch", alignItems: "center", marginTop: 8 },
   nowGlyph: { fontSize: 56, lineHeight: 64 },
   nowWord: { fontFamily: family.title, fontSize: 56, lineHeight: 64, textAlign: "center" },
-  small: { fontSize: 11, lineHeight: 16 },
+  small: { fontSize: 12, lineHeight: 16 },
   /** v4 「你现在在哪」: 12 / 600 in ink (第四十九批 B3; the metal is the dot's alone), the place at 30/38, its sentence 15/24, then the road. */
   here: { paddingTop: 24, paddingBottom: 24, borderBottomWidth: 1 },
   hereEyebrow: { fontFamily: family.ui[600], letterSpacing: 0 },
@@ -1368,17 +1368,17 @@ const styles = StyleSheet.create({
   stageMark: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 14 },
   /** ✓ from the status-glyph face: the mono face (Plex then, Geist Mono now) has none, so the OS fell back to a √-like mark. */
   stageGlyph: { fontFamily: family.glyph },
-  stageWord: { fontSize: 11, lineHeight: 16, textAlign: "center" },
+  stageWord: { fontSize: 12, lineHeight: 16, textAlign: "center" },
   /** The balance panel (as applications' A11 panel): s1, a hairline, `radius.dialog`, 16 inside; the number title 28 / 36. */
   balanceWrap: { paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1 },
   balance: { flexDirection: "row", alignItems: "center", gap: 24, borderWidth: 1, borderRadius: radius.dialog, padding: 16 },
   side: { alignItems: "flex-start", gap: 4 },
-  balanceValue: { marginTop: 4, fontFamily: family.title, fontSize: 28, lineHeight: 36 },
+  balanceValue: { marginTop: 4, fontFamily: family.title, fontSize: 32, lineHeight: 40 },
   ledgerHead: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1 },
   ask: { position: "absolute", right: 16, bottom: 16, width: 48, height: 48, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   residenceWrap: { paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   residenceBox: { alignSelf: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 8, paddingVertical: 4 },
-  residence: { fontSize: 11, lineHeight: 15, letterSpacing: 0.4 },
+  residence: { fontSize: 12, lineHeight: 16, letterSpacing: 0.4 },
   residenceNote: { marginTop: 8 },
   homecomingWrap: { paddingTop: GUTTER, paddingBottom: GUTTER, borderBottomWidth: 1 },
   homecoming: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
@@ -1394,6 +1394,6 @@ const styles = StyleSheet.create({
   sealed: { marginHorizontal: 16, marginBottom: 16, borderWidth: 1 },
   stampRow: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 12, paddingHorizontal: 12 },
   stamp: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
-  stampText: { fontSize: 11, letterSpacing: 1.6 },
+  stampText: { fontSize: 12, letterSpacing: 1.6 },
   sealedFoot: { paddingHorizontal: GUTTER, paddingVertical: 12 },
 });

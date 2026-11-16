@@ -308,7 +308,7 @@ describe("full screen", () => {
     const counter = screen.getByTestId("chat-image-viewer-counter");
     expect(counter.props.children).toBe("2 / 2");
     const style = StyleSheet.flatten(counter.props.style);
-    expect([style.fontSize, style.color]).toEqual([13, "#FFFFFF"]);
+    expect([style.fontSize, style.color]).toEqual([14, "#FFFFFF"]);
     expect(counter.props.accessibilityLabel).toBe("图片 2 / 2");
     fireEvent(screen.getByTestId("chat-image-viewer-pages"), "momentumScrollEnd", { nativeEvent: { contentOffset: { x: 0, y: 0 } } });
     expect(screen.getByTestId("chat-image-viewer-counter").props.children).toBe("1 / 2");
