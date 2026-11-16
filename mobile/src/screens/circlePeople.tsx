@@ -735,13 +735,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 16 },
   head: { paddingTop: 24, paddingBottom: 16, gap: 16, borderBottomWidth: 1 },
   civ: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
-  civText: { fontSize: 11, lineHeight: 14, letterSpacing: 1.4 },
+  civText: { fontSize: 12, lineHeight: 16, letterSpacing: 1.4 },
   counts: { flexDirection: "row", gap: 24 },
   countBox: { flexDirection: "row", borderWidth: 1 },
   countCell: { flex: 1, minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingHorizontal: 16, borderLeftWidth: 0 },
-  countLabel: { fontSize: 12, lineHeight: 18 },
+  countLabel: { fontSize: 12, lineHeight: 16 },
   countValue: { flexDirection: "row", alignItems: "center", gap: 8 },
-  countN: { fontSize: 15, lineHeight: 20 },
+  countN: { fontSize: 16, lineHeight: 24 },
   reborn: { flexDirection: "row", gap: 12, alignItems: "flex-start", borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   smallFollow: { minHeight: 34, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   smallFollowText: { fontSize: 12, letterSpacing: 0.4 },
@@ -753,15 +753,15 @@ const styles = StyleSheet.create({
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   searchBar: { paddingVertical: 12, borderBottomWidth: 1 },
   searchBox: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
-  searchInput: { flex: 1, minHeight: 42, fontSize: 15 },
+  searchInput: { flex: 1, minHeight: 42, fontSize: 16 },
   resultsHead: { paddingTop: 12, paddingBottom: 8 },
   done: { flex: 1, alignItems: "center", gap: 12, paddingTop: 32 },
   form: { paddingVertical: 16 },
-  preview: { borderLeftWidth: 2, paddingLeft: 12, fontSize: 15, lineHeight: 24 },
+  preview: { borderLeftWidth: 2, paddingLeft: 12, fontSize: 16, lineHeight: 24 },
   formLabel: { marginTop: 20, marginBottom: 12 },
   radios: { gap: 2, borderWidth: 1 },
   radio: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderLeftWidth: 2 },
-  detail: { minHeight: 86, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 13, lineHeight: 24, textAlignVertical: "top" },
+  detail: { minHeight: 86, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 14, lineHeight: 28, textAlignVertical: "top" },
   submit: { marginTop: 16 },
   rename: { gap: 8 },
   /**
@@ -770,5 +770,5 @@ const styles = StyleSheet.create({
    * the bundled Noto Serif SC and keeps a Latin name in the interface face. Since v4 (2026-11-06) the
    * interface face carries Han itself (SoulLedger Sans), so the reason is gone; the choice is not yet revisited.
    */
-  nameInput: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, fontSize: 15 },
+  nameInput: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, fontSize: 16 },
 });

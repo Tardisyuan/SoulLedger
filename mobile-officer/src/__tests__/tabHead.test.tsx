@@ -33,7 +33,7 @@ describe("案卷台's head", () => {
   it("is the big-title head: 96 high, the title at 30, the texture behind it, the hall's name as its mark (hidden from screen readers)", async () => {
     renderOfficer(<TabHead tab="queue" onAsk={jest.fn()} onSearch={jest.fn()} />, { user: WITH_HALL });
     expect(StyleSheet.flatten(screen.getByTestId("tab-head").props.style)).toMatchObject({ minHeight: 96, alignItems: "flex-end" });
-    expect(StyleSheet.flatten(screen.getByText("案卷台").props.style).fontSize).toBe(30);
+    expect(StyleSheet.flatten(screen.getByText("案卷台").props.style).fontSize).toBe(32);
     await act(async () => layout("tab-head", 393, 96));
     expect(svgIds()).toContain("tab-head-texture");
     expect(screen.queryByTestId("head-mark-cn")).toBeNull();

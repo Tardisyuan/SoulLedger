@@ -207,9 +207,9 @@ describe("a tab's root (v4 big title, no band)", () => {
     expect(flat(screen.getByTestId("plaque-seal", H))).toMatchObject({ width: 38, height: 38 });
     expect(screen.getByTestId("plaque-seal-glyph", H).props.children).toBe("五");
     expect(screen.getByTestId("plaque-seal-outer", H).props.stroke.payload).toBe(argb(t.plaque));
-    expect(flat(screen.getByTestId("plaque-title"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 30, lineHeight: 38, color: t.ink });
+    expect(flat(screen.getByTestId("plaque-title"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 32, lineHeight: 40, color: t.ink });
     expect(screen.getByTestId("plaque-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
-    expect(flat(screen.getByTestId("plaque-meta"))).toMatchObject({ fontFamily: "SoulLedgerSans_400", fontSize: 13, color: t.inkMuted });
+    expect(flat(screen.getByTestId("plaque-meta"))).toMatchObject({ fontFamily: "SoulLedgerSans_400", fontSize: 14, color: t.inkMuted });
     expect(screen.getByTestId("header-account")).toBeTruthy();
     // v2's ornament band and texture are gone.
     expect(screen.queryAllByTestId(/^plaque-band-/, H)).toEqual([]);

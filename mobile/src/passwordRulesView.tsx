@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   common: { gap: 0, paddingBottom: 4 },
   mark: { width: 16, textAlign: "center", fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   markStrong: { fontFamily: family.ui[600] },
-  text: { flex: 1, fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
+  text: { flex: 1, fontSize: 14, lineHeight: 20, fontFamily: family.ui[400] },
   textOk: { fontFamily: family.ui[500] },
   textBad: { fontFamily: family.ui[600] },
 });

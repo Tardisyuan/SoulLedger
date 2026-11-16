@@ -306,7 +306,7 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     expect(panel.borderColor).toBe(t.hair);
     expect(panel.borderRadius).toBe(radius.dialog);
     expect(flat(value).color).toBe(v4[scheme].ink);
-    expect([flat(value).fontFamily, flat(value).fontSize]).toEqual([family.title, 28]);
+    expect([flat(value).fontFamily, flat(value).fontSize]).toEqual([family.title, 32]);
     expect([t.neg, t.pos, t.warn, t.plaque]).not.toContain(flat(value).color);
     expect(within(screen.getByTestId("score-merit")).getByText("3")).toBeTruthy();
     expect(within(screen.getByTestId("score-demerit")).getByText("15")).toBeTruthy();

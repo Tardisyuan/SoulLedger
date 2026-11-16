@@ -323,9 +323,10 @@ describe("落印前先确认(用户 2026-11-14,WCAG 2.2.1 的「可关」):通�
     await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
     await screen.findByTestId("swipe-readback-sheet");
     const flat = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style);
-    expect(flat("readback-name")).toMatchObject({ fontSize: 18 });
-    expect(flat("readback-case")).toMatchObject({ fontSize: 16 });
-    expect(flat("readback-verdict")).toMatchObject({ fontSize: 20 });
+    // 第五十四批 H3:三行落在 4px 格上,判决仍最大 —— 人名 20/28、案号 16/24、判决 24/32(网页 --readback-* 同值)。
+    expect(flat("readback-name")).toMatchObject({ fontSize: 20, lineHeight: 28 });
+    expect(flat("readback-case")).toMatchObject({ fontSize: 16, lineHeight: 24 });
+    expect(flat("readback-verdict")).toMatchObject({ fontSize: 24, lineHeight: 32 });
     expect(READBACK_SEAL_FLEX).toBe(1.4);
     expect(READBACK_BUTTON_H).toBe(52);
     expect(flat("readback-confirm")).toMatchObject({ flex: 1.4, minHeight: 52 });

@@ -272,7 +272,23 @@
       },
       "eg": {
         "seal": {
-          "$value": "{color.civ.eg.metal}"
+          "$description": "Batch 54 H4: the seal keeps the colour it had; only the metal moved.",
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [0.840099, 0.140332, 97.9493],
+            "hex": "#E3CB53"
+          },
+          "$extensions": {
+            "org.soulledger": {
+              "modes": {
+                ".light": {
+                  "colorSpace": "oklch",
+                  "components": [0.500161, 0.104135, 100.4376],
+                  "hex": "#716400"
+                }
+              }
+            }
+          }
         },
         "$root": {
           "$value": {
@@ -320,16 +336,16 @@
         "metal": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.840099, 0.140332, 97.9493],
-            "hex": "#E3CB53"
+            "components": [0.749838, 0.110285, 45.1701],
+            "hex": "#E89772"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.500161, 0.104135, 100.4376],
-                  "hex": "#716400"
+                  "components": [0.499651, 0.109736, 45.2643],
+                  "hex": "#954C28"
                 }
               }
             }
@@ -356,7 +372,23 @@
       },
       "gr": {
         "seal": {
-          "$value": "{color.civ.gr.metal}"
+          "$description": "Batch 54 H4: the seal keeps the colour it had; only the metal moved.",
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [0.659981, 0.110769, 41.5329],
+            "hex": "#CB7A5B"
+          },
+          "$extensions": {
+            "org.soulledger": {
+              "modes": {
+                ".light": {
+                  "colorSpace": "oklch",
+                  "components": [0.46051, 0.100199, 39.7875],
+                  "hex": "#86422A"
+                }
+              }
+            }
+          }
         },
         "$root": {
           "$value": {
@@ -404,16 +436,16 @@
         "metal": {
           "$value": {
             "colorSpace": "oklch",
-            "components": [0.659981, 0.110769, 41.5329],
-            "hex": "#CB7A5B"
+            "components": [0.750835, 0.09062, 108.3972],
+            "hex": "#B3B36E"
           },
           "$extensions": {
             "org.soulledger": {
               "modes": {
                 ".light": {
                   "colorSpace": "oklch",
-                  "components": [0.46051, 0.100199, 39.7875],
-                  "hex": "#86422A"
+                  "components": [0.50027, 0.089973, 108.4559],
+                  "hex": "#686722"
                 }
               }
             }

@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   /** Under the glyph column and its gap: 16 + 8. */
   noteLine: { marginLeft: 16 + space[2] },
-  date: { fontSize: 15, lineHeight: 24 },
+  date: { fontSize: 16, lineHeight: 24 },
   entry: { gap: space[2] },
   entryButton: { alignSelf: "flex-start" },
   form: { gap: space[3] },

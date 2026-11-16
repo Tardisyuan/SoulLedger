@@ -272,7 +272,7 @@
      `--text-*: initial` 清掉 Tailwind 的默认档,只剩这七个名字;字重只用 400 / 500 / 600。 */
   /* 2026-11-15(设计参照 §3,用户采纳):十档 11(只给大写小标签)/ 12 / 14 / 16 / 20 / 24 / 32 / 40 / 56 / 88,
      正文 13 → 14,行高落 4px 格;去掉 13、15、18、28。名字暂不动(约 2100 处调用点),只改值:
-     sm = 14/20 是正文;md = 16/24 是「卷」记录正文;xs = 12/16(第五十三批 G3 的表:行高全在 4px 格上,12 配 16、16 配 24);xl 与 dossier 同为 32/40。2xs 的 0.1em 字距从档上拿掉,
+     sm = 14/20 是正文(Design 令牌 `body`);md = 16/24 是「卷」记录正文(Design 令牌 `body-reading`,第五十四批 H3);xs = 12/16(第五十三批 G3 的表:行高全在 4px 格上,12 配 16、16 配 24);xl 与 dossier 同为 32/40。2xs 的 0.1em 字距从档上拿掉,
      只给大写标签(下面 base 层 `.text-2xs.uppercase`);两档展示字号用 clamp 在 360–1240 视口间连续变。 */
   --text-*: initial;
   --text-2xs: 11px;
@@ -298,8 +298,8 @@
   --text-dossier--line-height: 40px;
   --text-dossier--font-weight: 600;
   --text-display: 40px;
-  /* 54 = v3 身份带题字的 1.35。48(1.2)在 v3 第七轮实测墨迹越界 1px;题字带 overflow-hidden,
-     越界就是被裁。身份带定高,这一档加高不再推动它。字重 600:v3 的标题一律 600。 */
+  /* Design 令牌 `display` 40/52(第五十四批 H3 接受):52 在 4px 格上。48(1.2)在 v3 第七轮实测墨迹越界 1px;
+     题字带 overflow-hidden,越界就是被裁。身份带定高,这一档加高不再推动它。字重 600:v3 的标题一律 600。 */
   --text-display--line-height: 52px;
   --text-display--font-weight: 600;
   /* 规范 v3:展示字号,只给「当前这一判」与 App 本世余额两处。
@@ -615,13 +615,14 @@
     --color-civ-neutral-glow: 0.662027 0.014518 262.3609; /* #8E939C */
     --color-civ-neutral-metal: 0.782429 0.142657 75.8527; /* #ECAA3D */
     --color-civ-neutral-side: 0.168171 0.004477 264.4473; /* #0E0F11 */
-    /* 印(第三十批 `--seal`,第 3 步补全四家):地府朱色,欧洲 civT,埃及、希腊各自的 metal。var() 在 <html> 上求值,
-       所以浅色下 civT / metal 自动是浅色那一档。 */
+    /* 印(第三十批 `--seal`,第 3 步补全四家):地府朱色,欧洲 civT;埃及、希腊原是各自的 metal,第五十四批 H4 起
+       印不动、金属色改成铜 / 古铜(两者拉开色相),所以这两家的印写成自己的值(浅色档在 .light 里)。var() 在 <html> 上求值,
+       所以浅色下 civT 自动是浅色那一档。 */
     --color-civ-neutral-seal: var(--color-civ-neutral-ink);
     --color-civ-cn-seal: 0.645074 0.173464 34.1221; /* #E35D3F */
     --color-civ-eu-seal: var(--color-civ-eu-ink);
-    --color-civ-eg-seal: var(--color-civ-eg-metal);
-    --color-civ-gr-seal: var(--color-civ-gr-metal);
+    --color-civ-eg-seal: 0.840099 0.140332 97.9493; /* #E3CB53 */
+    --color-civ-gr-seal: 0.659981 0.110769 41.5329; /* #CB7A5B */
     --color-civ-cn: 0.428514 0.102617 30.6112; /* #7E362B */
     --color-civ-cn-ink: 0.780211 0.090787 36.1736; /* #EBA38F */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
@@ -635,12 +636,12 @@
     --color-civ-eg: 0.418933 0.082983 254.5438; /* #2B4E79 */
     --color-civ-eg-ink: 0.779300 0.093304 250.0374; /* #89BCF1 */
     --color-civ-eg-glow: 0.648635 0.097389 249.9778; /* #5F93C8 */
-    --color-civ-eg-metal: 0.840099 0.140332 97.9493; /* #E3CB53 */
+    --color-civ-eg-metal: 0.749838 0.110285 45.1701; /* #E89772 */
     --color-civ-eg-side: 0.213251 0.045308 250.4658; /* #071A2D */
     --color-civ-gr: 0.412855 0.049685 185.8153; /* #28544F */
     --color-civ-gr-ink: 0.779070 0.094463 171.8769; /* #73CBB0 */
     --color-civ-gr-glow: 0.648865 0.064720 185.1646; /* #5F9C94 */
-    --color-civ-gr-metal: 0.659981 0.110769 41.5329; /* #CB7A5B */
+    --color-civ-gr-metal: 0.750835 0.090620 108.3972; /* #B3B36E */
     --color-civ-gr-side: 0.214594 0.038473 177.1058; /* #011F19 */
     --color-main: var(--color-civ-neutral);
     --color-main-ink: var(--color-civ-neutral-ink);
@@ -716,13 +717,15 @@
     --color-scrim: 0.204832 0.006141 271.1072;
     --scrim-alpha: 0.42;
     --glow-alpha: 0.24;
-    /* 浅色不画线框:卡片、殿司卡、侧栏当前项只靠这两层很淡的阴影(v4 `.th-light --shadow`)。 */
-    --shadow-card: 0 1px 2px rgba(20, 20, 24, 0.05), 0 6px 20px -10px rgba(20, 20, 24, 0.16);
+    /* 浅色不画线框:卡片、殿司卡、侧栏当前项只靠这两层很淡的阴影(Design 第五十四批 H4 `shadow-card`)。 */
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04);
     --color-civ-neutral: 0.487734 0.019157 262.6797; /* #5A606B */
     --color-civ-neutral-ink: 0.455822 0.008971 260.7269; /* #54575C */
     --color-civ-neutral-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
     --color-civ-neutral-side: 0.957588 0.002656 106.4494; /* #F1F1EF */
     --color-civ-cn-seal: 0.520861 0.174215 31.9795; /* #B8321C */
+    --color-civ-eg-seal: 0.500161 0.104135 100.4376; /* #716400 */
+    --color-civ-gr-seal: 0.460510 0.100199 39.7875; /* #86422A */
     --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
     --color-civ-cn-ink: 0.458890 0.104876 35.6528; /* #883F2C */
     --color-civ-cn-metal: 0.520586 0.099805 78.4603; /* #886116 */
@@ -733,11 +736,11 @@
     --color-civ-eu-side: 0.939945 0.045645 319.2164; /* #F9E2FF */
     --color-civ-eg: 0.515592 0.103715 255.1595; /* #3C69A2 */
     --color-civ-eg-ink: 0.459325 0.117055 250.3637; /* #175A96 */
-    --color-civ-eg-metal: 0.500161 0.104135 100.4376; /* #716400 */
+    --color-civ-eg-metal: 0.499651 0.109736 45.2643; /* #954C28 */
     --color-civ-eg-side: 0.941063 0.028629 254.6783; /* #DFEDFF */
     --color-civ-gr: 0.507348 0.062072 185.1700; /* #37716A */
     --color-civ-gr-ink: 0.459924 0.084498 172.5200; /* #0E6753 */
-    --color-civ-gr-metal: 0.460510 0.100199 39.7875; /* #86422A */
+    --color-civ-gr-metal: 0.500270 0.089973 108.4559; /* #686722 */
     --color-civ-gr-side: 0.940078 0.050732 177.8776; /* #C8F7EB */
     /* 浅色从暗到亮。 */
     --color-chart-1: 0.259075 0.045425 251.0858;
@@ -869,25 +872,25 @@
     --door-glyph: 600 18px/24px var(--font-title);
     --door-glyph-size: 18px;
     --door-glyph-leading: 24px;
-    --door-label: 400 11px/14px var(--font-sans);
+    --door-label: 400 11px/16px var(--font-sans);
     --door-label-size: 11px;
-    --door-label-leading: 14px;
+    --door-label-leading: 16px;
     --mark-glyph: 600 11px/1 var(--font-title);
     --glowA: 0.3;
     --field: rgba(255, 255, 255, 0.05);
     --verdict-rail-w: 288px;
     --undo-radius: 8px;
     --readback-radius: 12px;
-    --readback-name: 600 18px/26px var(--font-title);
-    --readback-case: 400 16px/26px var(--font-mono);
-    --readback-verdict: 600 20px/26px var(--font-title);
-    --elevation-overlay: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 72px -12px rgba(0, 0, 0, 0.6);
+    --readback-name: 600 20px/28px var(--font-title);
+    --readback-case: 400 16px/24px var(--font-mono);
+    --readback-verdict: 600 24px/32px var(--font-title);
+    --elevation-overlay: 0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px rgb(0 0 0 / 0.55);
     --elevation-raised: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.5);
   }
   .light {
     --glowA: 0.22;
     --field: rgba(0, 0, 0, 0.035);
-    --elevation-overlay: 0 0 0 1px rgba(20, 22, 18, 0.06), 0 2px 6px rgba(10, 11, 9, 0.08), 0 24px 72px -12px rgba(10, 11, 9, 0.28);
+    --elevation-overlay: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 32px rgb(0 0 0 / 0.14);
     --elevation-raised: 0 1px 2px rgba(20, 22, 18, 0.06), 0 8px 24px -4px rgba(20, 22, 18, 0.12);
   }
   @media (hover: none), (pointer: coarse) {
@@ -1250,7 +1253,7 @@
   /* (v3 时身份带上的印随匾上的白字,`color: inherit`。v4 起印是默认的文明字色 civT;第三十批起页头不再放印。) */
 
   /* 卡片随主题(规范 v4 `.card`):深色用 1px 内描边(这里就是原来那条 line 框),浅色不画线框,
-     只靠两层很淡的阴影(1px 2px 5% + 6px 20px 16%)。值在 :root / .light 的 `--shadow-card`。
+     只靠两层很淡的阴影(第五十四批 H4:1px 2px 6% + 2px 8px 4%)。值在 :root / .light 的 `--shadow-card`。
      调用点:PageSection 与外壳里的殿司卡、侧栏当前项;业务页面里手写的面板随阶段 3 换过来。 */
   .light .v4-card {
     border-color: transparent;
