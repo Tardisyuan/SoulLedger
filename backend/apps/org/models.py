@@ -126,6 +126,11 @@ class Organization(AuditUserFields):
         leaves nothing claimed -- as before the registry."""
         from apps.tenants import global_codes
 
+        # 自动计算层级深度
+        if self.parent:
+            self.level = self.parent.level + 1
+        else:
+            self.level = 0
         update_fields = kwargs.get("update_fields")
         if update_fields is not None and "code" not in update_fields:
             return super().save(*args, **kwargs)
@@ -135,22 +140,6 @@ class Organization(AuditUserFields):
             super().save(*args, **kwargs)
             if old is not None:
                 global_codes.release(global_codes.ORG_CODE, old, using=alias)
-
-
-@receiver(post_delete, sender=Organization, dispatch_uid="org.release_code")
-def _release_code(sender, instance, using, **kwargs):
-    """A hard-deleted unit gives its code back (a soft delete keeps it, as the UNIQUE index did)."""
-    from apps.tenants import global_codes
-
-    global_codes.release(global_codes.ORG_CODE, instance.code, using=using)
-
-    def save(self, *args, **kwargs):
-        # 自动计算层级深度
-        if self.parent:
-            self.level = self.parent.level + 1
-        else:
-            self.level = 0
-        super().save(*args, **kwargs)
 
     def get_ancestors(self):
         """获取所有祖先组织"""
@@ -170,6 +159,14 @@ def _release_code(sender, instance, using, **kwargs):
             result.append(child)
             children.extend(list(child.children.all()))
         return result
+
+
+@receiver(post_delete, sender=Organization, dispatch_uid="org.release_code")
+def _release_code(sender, instance, using, **kwargs):
+    """A hard-deleted unit gives its code back (a soft delete keeps it, as the UNIQUE index did)."""
+    from apps.tenants import global_codes
+
+    global_codes.release(global_codes.ORG_CODE, instance.code, using=using)
 
 
 # 组织架构数据初始化已移至 management command:
