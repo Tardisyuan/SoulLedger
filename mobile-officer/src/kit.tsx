@@ -538,7 +538,7 @@ export const TAB_FONT_SCALE = 1.3;
  * At least 56 high plus the safe area, equal parts (each at least 64 wide), surface-1 with a 1px top line: one cell per door that
  * has a page this officer gets (第三十八批 四). In zh each cell is the door's glyph in the serif (18 / 22) over its name;
  * in en / egy it is the shared 24px line icon (`DOOR_ICON`, the web's set) over its name (`officer_app.doors.*.label`,
- * Geist 500 11 / 14) -- `.glyph` is drawn only in zh. The current door in ink (the icon's stroke 1.8), with a 14 x 2
+ * Geist 500 11 / 16, batch 54 H3) --`.glyph` is drawn only in zh. The current door in ink (the icon's stroke 1.8), with a 14 x 2
  * ink line 3 under the glyph box (第四十八批第三节 A1; it was the civilization's colour). The unread dot (8, `neg`, a 2px ring of the bar's ground) sits on
  * 我's glyph box, 4 past its right edge and 1 above its top (九.5).
  */
@@ -580,7 +580,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
               {selected ? <View testID={`door-${door}-current`} style={[styles.currentLine, { backgroundColor: t.ink }]} /> : null}
               {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.neg, borderColor: t.s1 }]} /> : null}
             </View>
-            <Txt variant="caption" numberOfLines={1} maxFontSizeMultiplier={TAB_FONT_SCALE} style={{ color: colour, fontSize: 11, lineHeight: 14, fontFamily: family.ui[zh ? 400 : 500] }}>
+            <Txt variant="caption" numberOfLines={1} maxFontSizeMultiplier={TAB_FONT_SCALE} style={{ color: colour, fontSize: 11, lineHeight: 16, fontFamily: family.ui[zh ? 400 : 500] }}>
               {tr(`officer_app.doors.${door}.label`)}
             </Txt>
           </Press>
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
   segmented: { flexDirection: "row", borderWidth: 1, borderRadius: radius.control, overflow: "hidden", marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
   // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.
-  segmentTight: { fontSize: 13, lineHeight: 18, fontVariant: ["tabular-nums"] },
+  segmentTight: { fontSize: 14, lineHeight: 20, fontVariant: ["tabular-nums"] },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
   chipLg: { minHeight: 44, borderRadius: 22, paddingHorizontal: space[4] },
   chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },

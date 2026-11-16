@@ -82,7 +82,7 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-ink-mid": { light: "#5e6166", dark: "#a1a4a8" },
   "--color-civ-cn": { light: "#a64a3b", dark: "#7e362b" },
   // civT / metal / side:设计参照 2026-11-15 §3.1(用户采纳「颜色按建议改」):civT 等明度(深 L .78 / 浅 L .46),
-  // 埃及与希腊的印(= metal)拉开。solid 与 glow 不动。门栏底(side)按第五十三批 G3,见下面「door-rail ground」。
+  // 埃及与希腊的印(当时 = metal)拉开。solid 与 glow 不动。门栏底(side)按第五十三批 G3,见下面「door-rail ground」。
   "--color-civ-cn-ink": { light: "#883f2c", dark: "#eba38f" },
   "--color-civ-cn-metal": { light: "#886116", dark: "#d7a85b" },
   "--color-civ-cn-side": { light: "#ffe4df", dark: "#2b110c" },
@@ -92,11 +92,15 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-civ-eu-side": { light: "#f9e2ff", dark: "#231226" },
   "--color-civ-eg": { light: "#3c69a2", dark: "#2b4e79" },
   "--color-civ-eg-ink": { light: "#175a96", dark: "#89bcf1" },
-  "--color-civ-eg-metal": { light: "#716400", dark: "#e3cb53" },
+  // 第五十四批 H4:印不动(还是 11-15 拉开后的那对),金属色改成铜。
+  "--color-civ-eg-metal": { light: "#954c28", dark: "#e89772" },
+  "--color-civ-eg-seal": { light: "#716400", dark: "#e3cb53" },
   "--color-civ-eg-side": { light: "#dfedff", dark: "#071a2d" },
   "--color-civ-gr": { light: "#37716a", dark: "#28544f" },
   "--color-civ-gr-ink": { light: "#0e6753", dark: "#73cbb0" },
-  "--color-civ-gr-metal": { light: "#86422a", dark: "#cb7a5b" },
+  // 第五十四批 H4:印不动,金属色改成古铜(橄榄)。
+  "--color-civ-gr-metal": { light: "#686722", dark: "#b3b36e" },
+  "--color-civ-gr-seal": { light: "#86422a", dark: "#cb7a5b" },
   "--color-civ-gr-side": { light: "#c8f7eb", dark: "#011f19" },
 };
 
@@ -112,7 +116,7 @@ describe("palette (规范 v4)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 48);
+    expect(rows).toHaveLength(2 * 50);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {
@@ -266,7 +270,7 @@ describe("the hairline is translucent ink (设计参照 2026-11-15 §5)", () => 
 });
 
 /* 文明色等明度、印分开(设计参照 2026-11-15 §3.1)。上面的 SPEC 钉 hex;这里钉 hex 背后的理由,改值时理由不能悄悄丢掉。
- * 变异:把深色 eu civT 改回 #A883AE(L .66)→ 等明度那条红;把浅色 gr metal 改回 #8F5B36 → 印分开那条红(ΔE 4.9)。 */
+ * 变异:把深色 eu civT 改回 #A883AE(L .66)→ 等明度那条红;把浅色 gr seal 改成 #8F5B36 → 印分开那条红(ΔE 4.9)。 */
 describe("civilization text colours share one lightness, and the Egyptian and Greek seals stay apart", () => {
   const CIV4 = ["cn", "eu", "eg", "gr"] as const;
   const L = (theme: ThemeName, name: string) => Number(resolveTriple(TOKENS_BY_THEME[theme], name).split(/\s+/)[0]);
@@ -283,6 +287,42 @@ describe("civilization text colours share one lightness, and the Egyptian and Gr
   it.each(THEMES)("%s eg seal and gr seal differ by ΔE(OKLab×100) ≥ 10", (theme) => {
     const [a, b] = [lab(theme, "--color-civ-eg-seal"), lab(theme, "--color-civ-gr-seal")];
     expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) * 100).toBeGreaterThanOrEqual(10);
+  });
+});
+
+/* 第五十四批 H4:埃及、希腊的印不动,金属色(行程脊的当前点、角饰)改成铜 / 古铜,和印一眼分得开。
+ * 理由是两条:色相差(Design 量的是约 41° / 54°,对着它的印值;这里对着代码里的印量,不低于 30°),对 canvas 的对比
+ * 不低于 Design 报的数(埃及 8.17 / 5.91,希腊 8.61 / 5.56,深 / 浅)。
+ * 变异:把深色 eg metal 改回 #E3CB53(= 印)→ 色相那条红。 */
+describe("the Egyptian and Greek metals stand apart from their seals (batch 54 H4)", () => {
+  const hue = (theme: ThemeName, name: string) => Number(resolveTriple(TOKENS_BY_THEME[theme], name).split(/\s+/)[2]);
+  const QUOTED = { eg: { dark: 8.17, light: 5.91 }, gr: { dark: 8.61, light: 5.56 } } as const;
+  it.each(THEMES.flatMap((theme) => (["eg", "gr"] as const).map((civ) => [theme, civ] as const)))("%s %s: metal and seal differ in hue by ≥ 30°", (theme, civ) => {
+    const d = Math.abs(hue(theme, `--color-civ-${civ}-metal`) - hue(theme, `--color-civ-${civ}-seal`)) % 360;
+    expect(Math.min(d, 360 - d)).toBeGreaterThanOrEqual(30);
+  });
+  it.each(THEMES.flatMap((theme) => (["eg", "gr"] as const).map((civ) => [theme, civ] as const)))("%s %s: metal on canvas ≥ the contrast Design quoted", (theme, civ) => {
+    expect(contrastRatio(rgbOf(theme, `--color-civ-${civ}-metal`), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(QUOTED[civ][theme] - 0.005);
+  });
+});
+
+/* 第五十四批 H3 / H4 的两处数值:回读层三行落在 4px 格上(判决仍最大),阴影是 Design 的 `shadow-card` / `shadow-overlay`。
+ * 变异:把 component.tokens.json 的回读判决改回 20/26(并重新生成)→ 第一条红。 */
+describe("read-back type and the two shadows (batch 54)", () => {
+  it("read-back: name 20/28, case 16/24, verdict 24/32", () => {
+    expect([ROOT_TOKENS["--readback-name"], ROOT_TOKENS["--readback-case"], ROOT_TOKENS["--readback-verdict"]]).toEqual([
+      "600 20px/28px var(--font-title)",
+      "400 16px/24px var(--font-mono)",
+      "600 24px/32px var(--font-title)",
+    ]);
+  });
+  it.each([
+    ["dark", "--shadow-card", "none"],
+    ["light", "--shadow-card", "0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04)"],
+    ["dark", "--elevation-overlay", "0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px rgb(0 0 0 / 0.55)"],
+    ["light", "--elevation-overlay", "0 1px 2px rgb(0 0 0 / 0.06), 0 12px 32px rgb(0 0 0 / 0.14)"],
+  ] as const)("%s %s is Design's", (theme, name, want) => {
+    expect(TOKENS_BY_THEME[theme][name]).toBe(want);
   });
 });
 

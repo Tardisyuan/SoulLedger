@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   textAction: { width: undefined, minWidth: 44, paddingHorizontal: 8 },
   actionBadge: { position: "absolute", top: 4, right: 0, minWidth: 16, height: 16, paddingHorizontal: 4, alignItems: "center", justifyContent: "center" },
-  actionBadgeText: { fontSize: 10, lineHeight: 14, letterSpacing: 0 },
+  actionBadgeText: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   title: { flex: 1, paddingHorizontal: 4 },
   /** 补足 A3: 20 / 28 — the simplified plaque's title. */
   barTitle: { fontSize: 20, lineHeight: 28, letterSpacing: 0 },
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   tabCurrent: { position: "absolute", bottom: -3, width: 14, height: 2, borderRadius: 1 },
   tabBadge: { position: "absolute", top: -2, right: -8, width: 8, height: 8, borderRadius: radius.pill },
   /** v4: 11 / 14 under a 22 icon. */
-  tabLabel: { fontSize: 11, lineHeight: 14, letterSpacing: 0, textAlign: "center" },
+  tabLabel: { fontSize: 11, lineHeight: 16, letterSpacing: 0, textAlign: "center" },
   /** v4 page header: the seal, then the big title over its sub line. */
   plaque: { paddingTop: 12, paddingBottom: 16, paddingLeft: 16, paddingRight: 4 },
   plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12 },

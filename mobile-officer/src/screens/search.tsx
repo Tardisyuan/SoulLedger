@@ -243,7 +243,7 @@ function SoulLookup({
         ) : null}
         {nothing ? (
           <View testID="search-no-results" style={{ alignItems: "center", gap: space[2], paddingHorizontal: space[5], paddingVertical: space[6] }}>
-            <Txt accessibilityRole="header" style={{ fontFamily: family.title, fontSize: 17, lineHeight: 24, textAlign: "center" }}>
+            <Txt accessibilityRole="header" style={{ fontFamily: family.title, fontSize: 20, lineHeight: 28, textAlign: "center" }}>
               {t("search.no_results_title", { q: query })}
             </Txt>
             <Txt variant="body" tone="muted" style={{ textAlign: "center" }}>
@@ -324,7 +324,7 @@ function HitRow({ testID, name, q, line, mono, right, onPress }: { testID: strin
       })}
     >
       <View style={{ flex: 1, gap: 2 }}>
-        <Txt numberOfLines={1} style={{ fontFamily: family.serifHan, fontSize: 17, lineHeight: 24 }}>
+        <Txt numberOfLines={1} style={{ fontFamily: family.serifHan, fontSize: 20, lineHeight: 28 }}>
           {marked(name, q).map((p, i) => hit(p, i, family.title))}
         </Txt>
         <Txt numberOfLines={1} variant="caption" tone="muted" style={mono ? { fontFamily: family.mono[400] } : undefined}>

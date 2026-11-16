@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   card: { paddingTop: 16, paddingBottom: 16, gap: 12, borderBottomWidth: 1 },
   head: { flexDirection: "row", alignItems: "center", gap: 12 },
-  small: { fontSize: 11, lineHeight: 16 },
+  small: { fontSize: 12, lineHeight: 16 },
   steps: { flexDirection: "row", flexWrap: "nowrap", gap: 4 },
   delivered: { paddingTop: 12, paddingBottom: 12, gap: 4 },
   track: { height: 2, overflow: "hidden" },

@@ -369,9 +369,9 @@ export function SealReadbackSheet({
       <View testID="swipe-readback-sheet" style={{ padding: space[5], gap: space[3] }}>
         <Txt variant="title">{t("judgment.seal_readback.title")}</Txt>
         <View>
-          {line(t("judgment.seal_readback.soul"), name, "readback-name", { fontFamily: titleFamily(name), fontSize: 18, lineHeight: 26 })}
-          {line(t("judgment.seal_readback.case"), judgment.case_number ?? "", "readback-case", { fontFamily: family.mono[400], fontSize: 16, lineHeight: 26 })}
-          {line(t("judgment.seal_readback.verdict"), verdictLabel, "readback-verdict", { fontFamily: titleFamily(verdictLabel), fontSize: 20, lineHeight: 28 })}
+          {line(t("judgment.seal_readback.soul"), name, "readback-name", { fontFamily: titleFamily(name), fontSize: 20, lineHeight: 28 })}
+          {line(t("judgment.seal_readback.case"), judgment.case_number ?? "", "readback-case", { fontFamily: family.mono[400], fontSize: 16, lineHeight: 24 })}
+          {line(t("judgment.seal_readback.verdict"), verdictLabel, "readback-verdict", { fontFamily: titleFamily(verdictLabel), fontSize: 24, lineHeight: 32 })}
         </View>
         <Txt variant="caption" tone="muted">
           {t("judgment.seal_readback.note")}

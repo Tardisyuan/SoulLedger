@@ -20,6 +20,8 @@ it("a multiline field's line height is at least 1.8 x its size", () => {
   expect(typeof fontSize).toBe("number");
   expect(typeof lineHeight).toBe("number");
   expect((lineHeight as number) / (fontSize as number)).toBeGreaterThanOrEqual(1.8);
+  // Design batch 54 H3: exactly 2 x the size in the input component (16/32), off the ten type steps on purpose.
+  expect([fontSize, lineHeight]).toEqual([16, 32]);
   expect(style("m").fontFamily).toBe(family.serifHan);
 });
 
