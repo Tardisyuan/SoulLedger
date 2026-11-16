@@ -4,6 +4,7 @@
 # Usage:
 #   ./scripts/backup-db.sh                    # Backup to ./backups/
 #   ./scripts/backup-db.sh /path/to/backups   # Backup to specified directory
+#   BACKUP_DRY_RUN=1 ./scripts/backup-db.sh   # List the databases (control + every shard) and files, dump nothing
 #
 # Connection: the standard libpq variables (PGHOST, PGPORT, PGDATABASE,
 # PGUSER, PGPASSWORD) — what the production compose `backup` service passes.
@@ -99,6 +100,25 @@ fi
 
 BACKUP_FILE="${BACKUP_DIR}/soulledger_${TIMESTAMP}.sql.gz"
 PARTIAL="${BACKUP_FILE}.partial"
+MANIFEST="${BACKUP_DIR}/soulledger_manifest_${TIMESTAMP}.txt"
+
+# Civilization shards (sharding stage 2+): every SHARD_DATABASE_URL_<CIV> the backend reads is dumped too, as
+# soulledger_civ_<civ>_<timestamp>.sql.gz with the control dump's timestamp, and soulledger_manifest_<timestamp>.txt
+# lists what one run wrote (alias + file; never the URL, it carries the password). These are pg_dumps taken one
+# after another, NOT one snapshot across databases: for a point-in-time-consistent set while all of them live on one
+# server, take a physical backup of the instance (pg_basebackup / a volume snapshot) -- docs/DEPLOY.md「备份」.
+SHARDS=$(env | sed -n 's/^SHARD_DATABASE_URL_\([A-Z][A-Z_]*\)=..*$/\1/p' | sort)
+
+if [ "${BACKUP_DRY_RUN:-}" = 1 ]; then
+    echo "Dry run: would back up"
+    echo "  control  ${PGDATABASE} -> ${BACKUP_FILE}"
+    for civ in $SHARDS; do
+        alias="civ_$(printf '%s' "$civ" | tr 'A-Z' 'a-z')"
+        echo "  ${alias}  -> ${BACKUP_DIR}/soulledger_${alias}_${TIMESTAMP}.sql.gz"
+    done
+    echo "  manifest -> ${MANIFEST}"
+    exit 0
+fi
 
 mkdir -p "$BACKUP_DIR"
 rm -f "$BACKUP_DIR/.backup-ok"
@@ -124,6 +144,26 @@ fi
 mv "$PARTIAL" "$BACKUP_FILE"
 encrypt "$BACKUP_FILE"
 echo "Backup complete: ${BACKUP_FILE} ($(du -h "$BACKUP_FILE" | cut -f1))"
+printf 'control %s\n' "$(basename "$BACKUP_FILE")" > "${MANIFEST}.partial"
+
+for civ in $SHARDS; do
+    alias="civ_$(printf '%s' "$civ" | tr 'A-Z' 'a-z')"
+    SHARD_FILE="${BACKUP_DIR}/soulledger_${alias}_${TIMESTAMP}.sql.gz"
+    eval "SHARD_URL=\${SHARD_DATABASE_URL_${civ}}"
+    echo "Backing up shard ${alias}..."
+    if ! pg_dump --no-owner --no-privileges -Z 6 -d "$SHARD_URL" -f "${SHARD_FILE}.partial" \
+        || ! gzip -t "${SHARD_FILE}.partial" || [ ! -s "${SHARD_FILE}.partial" ]; then
+        rm -f "${SHARD_FILE}.partial" "${MANIFEST}.partial"
+        echo "ERROR: pg_dump of shard ${alias} failed; no backup of it written" >&2
+        exit 1
+    fi
+    mv "${SHARD_FILE}.partial" "$SHARD_FILE"
+    encrypt "$SHARD_FILE"
+    printf '%s %s\n' "$alias" "$(basename "$SHARD_FILE")" >> "${MANIFEST}.partial"
+    echo "Shard backup complete: ${SHARD_FILE} ($(du -h "$SHARD_FILE" | cut -f1))"
+done
+mv "${MANIFEST}.partial" "$MANIFEST"
+encrypt "$MANIFEST"
 
 if [ -n "${MEDIA_DIR:-}" ]; then
     MEDIA_FILE="${BACKUP_DIR}/soulledger_media_${TIMESTAMP}.tar.gz"
@@ -222,6 +262,7 @@ find "$BACKUP_DIR" -name "soulledger_media_*.tar.gz" -mtime +"$RETENTION_DAYS" -
 find "$BACKUP_DIR" -name "soulledger_synapse_*.dump" -mtime +"$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "soulledger_synapse_data_*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "soulledger_*.age" -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "soulledger_manifest_*.txt" -mtime +"$RETENTION_DAYS" -delete
 
 if [ -z "${OPS_ALERT_WEBHOOK_URL:-}" ] && [ "${BACKUP_STRICT:-}" = 1 ] && [ "${ALLOW_NO_ALERTS:-}" != 1 ]; then
     problem "OPS_ALERT_WEBHOOK_URL is not set: a failed backup notifies nobody (set it, or ALLOW_NO_ALERTS=1)"

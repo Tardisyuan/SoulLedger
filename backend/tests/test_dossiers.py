@@ -133,12 +133,13 @@ class TestDossier:
         d = client.get(f"{BASE}{case.pk}/").json()
         assert [r["event_date"]["year"] for r in d["soul"]["records"]] == [1905, 1904, 1903]
         # 码名查询(perm_permission / perm_rolepermission)不算:命中与否取决于权限缓存(Redis)此刻热不热,
-        # 同一份代码实测 13 与 21 都出现过。剩下的是卷宗自己的:用户、数据范围、案子、引用、灵魂、记录、转世、联审、
-        # 所在站,加四次字段规则(案子、灵魂、记录权重各一,与条数无关)。
+        # 同一份代码实测 13 与 21 都出现过。剩下的是卷宗自己的:用户、案子、引用、灵魂、记录、转世、联审、
+        # 所在站,加四次字段规则(案子、灵魂、记录权重各一,与条数无关)。数据范围的配置行 2026-11-16 起按版本在进程里
+        # 留一份(apps/perm/data_scope.py::_shared),暖请求不再查它:13 → 12。
         with CaptureQueriesContext(connection) as ctx:
             assert client.get(f"{BASE}{case.pk}/").status_code == 200
         own = [q["sql"] for q in ctx.captured_queries if '"perm_permission"' not in q["sql"]]
-        assert len(own) == 13, "\n".join(own)
+        assert len(own) == 12, "\n".join(own)
 
     def test_the_desk_row_is_slim(self, world):
         case = _case(world.cn)

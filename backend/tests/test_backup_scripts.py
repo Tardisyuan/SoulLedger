@@ -110,6 +110,48 @@ def test_a_failed_dump_with_no_webhook_says_nobody_was_notified(tmp_path):
     assert _log(bin_dir, "curl") == ""
 
 
+SHARD_ENV = {"SHARD_DATABASE_URL_CHINESE": "postgres://u:secret-cn@db:5432/sl_cn",
+             "SHARD_DATABASE_URL_GREEK": "postgres://u:secret-gr@db:5432/sl_gr"}
+
+
+def test_a_dry_run_lists_the_control_database_and_every_shard_and_dumps_nothing(tmp_path):
+    code, out, bin_dir, out_dir = _backup(tmp_path, BACKUP_DRY_RUN="1", PGDATABASE="soulledger", **SHARD_ENV)
+    assert code == 0, out
+    assert "control  soulledger" in out and "civ_chinese" in out and "civ_greek" in out and "manifest" in out
+    assert _log(bin_dir, "pg_dump") == "" and not out_dir.exists()
+    assert "secret" not in out
+
+
+def test_every_shard_is_dumped_with_the_control_timestamp_and_listed_in_a_manifest(tmp_path):
+    code, out, bin_dir, out_dir = _backup(tmp_path, **SHARD_ENV)
+    assert code == 0, out
+    [control] = out_dir.glob("soulledger_2*.sql.gz")
+    stamp = control.name[len("soulledger_"):-len(".sql.gz")]
+    assert (out_dir / f"soulledger_civ_chinese_{stamp}.sql.gz").exists()
+    assert (out_dir / f"soulledger_civ_greek_{stamp}.sql.gz").exists()
+    manifest = (out_dir / f"soulledger_manifest_{stamp}.txt").read_text().split("\n")
+    assert manifest == [f"control {control.name}", f"civ_chinese soulledger_civ_chinese_{stamp}.sql.gz",
+                        f"civ_greek soulledger_civ_greek_{stamp}.sql.gz", ""]
+    calls = _log(bin_dir, "pg_dump")
+    assert "-d postgres://u:secret-cn@db:5432/sl_cn" in calls and "-d postgres://u:secret-gr@db:5432/sl_gr" in calls
+    assert "secret" not in out, "a shard URL (with its password) reached the log"
+
+
+def test_a_failed_shard_dump_fails_the_run_and_writes_no_manifest(tmp_path):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    # pg_dump fails only for the Greek shard
+    _fake(bin_dir, "pg_dump", '''case "$*" in *sl_gr*) exit 2;; esac
+while [ $# -gt 0 ]; do [ "$1" = -f ] && { echo dump | gzip > "$2"; }; shift; done''')
+    _fake(bin_dir, "curl", "cat >/dev/null; exit 0")
+    out_dir = tmp_path / "backups"
+    p = subprocess.run(["sh", str(BACKUP), str(out_dir)], cwd=tmp_path, env=_env(bin_dir, **SHARD_ENV),
+                       capture_output=True, text=True)
+    assert p.returncode == 1, p.stdout + p.stderr
+    assert "shard civ_greek failed" in p.stderr
+    assert not list(out_dir.glob("soulledger_manifest_*")) and not (out_dir / ".backup-ok").exists()
+
+
 # -- restore-drill.sh -------------------------------------------------------
 
 def _tar(path, files):
@@ -281,7 +323,7 @@ def test_with_a_recipient_every_file_gets_an_age_twin_and_only_those_go_offsite(
     assert code == 0, out
     plain = sorted(f.name for f in out_dir.glob("soulledger_*") if not f.name.endswith(".age"))
     enc = sorted(f.name[:-4] for f in out_dir.glob("soulledger_*.age"))
-    assert len(plain) == 2 and plain == enc
+    assert len(plain) == 3 and plain == enc  # db, media, and the run's manifest
     assert all(f.read_bytes().startswith(b"AGEFAKE:") for f in out_dir.glob("*.age"))
     assert not list(out_dir.glob("*.partial"))
     assert _log(bin_dir, "rclone").splitlines() == [f"copy --include soulledger_*.age {out_dir} box:sl"]

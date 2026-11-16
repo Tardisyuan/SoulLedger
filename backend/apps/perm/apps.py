@@ -20,3 +20,7 @@ class PermConfig(AppConfig):
         from .matrix import template_restore_refusal
 
         register_restore_check(template_restore_refusal)
+
+        from .data_scope import connect_invalidation
+
+        connect_invalidation()

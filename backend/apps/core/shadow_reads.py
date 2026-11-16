@@ -11,6 +11,7 @@ case marks its own (`_from_testcase`): `shard_reads.reads_control` takes only th
 """
 import json
 import re
+import time
 from contextlib import ExitStack, contextmanager
 from unittest import mock
 from urllib.parse import urlsplit
@@ -181,6 +182,26 @@ def rolled_back():
         for alias, a in reversed(atomics):
             transaction.set_rollback(True, using=alias)
             a.__exit__(None, None, None)
+
+
+@contextmanager
+def measured():
+    """{"queries": n, "ms": t} of the block: statements on every database, and wall time. The cost columns of
+    `shadow_read_diff` (review 2026-11-16 2.0); not part of any answer that is compared."""
+    out = {"queries": 0, "ms": 0.0}
+
+    def count(execute, sql, params, many, context):
+        out["queries"] += 1
+        return execute(sql, params, many, context)
+
+    started = time.perf_counter()
+    try:
+        with ExitStack() as stack:
+            for alias in connections:
+                stack.enter_context(connections[alias].execute_wrapper(count))
+            yield out
+    finally:
+        out["ms"] = (time.perf_counter() - started) * 1000
 
 
 def fetch(client, url, max_pages=None, trace=False, **extra):

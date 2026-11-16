@@ -2127,8 +2127,10 @@ class TestRemoteTimeLimits:
         # The fake ssh records "$*": its options and host come first. The lock is tried first without waiting
         # (so a wait can be announced), then waited for; either way nothing runs without it.
         # (The gates' run also prunes unused trees between taking the lock and starting: TestUnusedRemoteTreesAreDeleted.)
-        assert re.search(rf" fake-host \( flock -n {first_fd} \|\| \{{ echo .*; flock 9; \}} \|\| exit 1; "
-                         r"(remote_prune \(\).*\n\}; remote_prune \S+ \S+ \d+ [01]; )?docker run", remote, re.S), remote
+        # The gates have two slots (fd 9 run.lock, fd 8 run.2.lock; TestTwoGateSlots): either free one, or a wait for either.
+        assert re.search(rf" fake-host \( flock -n {first_fd} (\|\| flock -n 8 )?\|\| \{{ echo .*; "
+                         r"(flock 9|until flock -n 9 \|\| flock -n 8; do sleep 10; done); \} \|\| exit 1; "
+                         r"(remote_prune \(\).*\n\}; \( flock 7; remote_prune \S+ \S+ \d+ [01] \) 7>\S+/prune\.lock; )?docker run", remote, re.S), remote
         assert remote.rstrip().endswith(f" 9>/srv/appdata/sl-gates/{lock}"), remote
         # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
         tail = remote.split(inner_end, 1)[1]
@@ -2280,6 +2282,72 @@ class TestRemoteLocksSayWhenTheyWait:
         assert proc.returncode == 1 and "RAN" not in proc.stdout, proc.stdout
 
 
+class TestTwoGateSlots:
+    """2026-11-16 (user decision): four agents' gates queued behind one run.lock for an hour on a 20-core box. Two
+    runs now go at once: slot 1 is fd 9 on run.lock, slot 2 fd 8 on run.2.lock. A free slot is taken without a word;
+    both taken, the run names the holders and tries both every 10 s. GATES_REMOTE_SLOTS=1 is the old single lock."""
+
+    @staticmethod
+    def _definition(name: str) -> str:
+        m = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", RUNNER.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, f"no {name} in run-gates.sh"
+        return m.group(0)
+
+    def _take(self, tmp_path, free: set[str], frees_later: str = "", slots: str = "2"):
+        """`free`: the fds whose `flock -n` succeeds; `frees_later`: an fd that succeeds from its second try on."""
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "flock").write_text(
+            "#!/bin/bash\n"
+            f'echo "flock $*" >> "{tmp_path}/flock.log"\n'
+            f'case " {" ".join(sorted(free))} " in *" $2 "*) exit 0 ;; esac\n'
+            f'if [ "$2" = "{frees_later}" ]; then [ -e "{tmp_path}/tried" ] && exit 0; touch "{tmp_path}/tried"; fi\n'
+            '[ "$1" = -n ] && exit 1\nexit 0\n')
+        (b / "sleep").write_text(f'#!/bin/bash\necho "sleep $*" >> "{tmp_path}/flock.log"\n')
+        (b / "docker").write_text('#!/bin/bash\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
+        for f in b.iterdir():
+            f.chmod(0o755)
+        script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition('run-gates.sh')}"
+                  f"{self._definition('remote_slots')}"
+                  f'eval "( $(remote_slots sl-gates-); echo RAN ) 8>{tmp_path}/lock2 9>{tmp_path}/lock"\n')
+        env = _clean_env()
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60)
+        return proc, (tmp_path / "flock.log").read_text()
+
+    def test_slot_one_free_is_taken_without_a_word(self, tmp_path):
+        proc, log = self._take(tmp_path, {"9"})
+        assert proc.stdout == "RAN\n" and log == "flock -n 9\n", proc.stdout + log
+
+    def test_slot_one_taken_slot_two_free_runs_at_once(self, tmp_path):
+        proc, log = self._take(tmp_path, {"8"})
+        assert proc.stdout == "RAN\n" and log == "flock -n 9\nflock -n 8\n", proc.stdout + log
+
+    def test_both_taken_names_the_holders_then_takes_whichever_frees(self, tmp_path):
+        proc, log = self._take(tmp_path, set(), frees_later="8")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert proc.stdout == ("gates: both gate slots are taken on that machine, held by: "
+                               "sl-gates-A-1 (Up 3 hours),sl-gates-B-2 (Up 1 minute)\nRAN\n"), proc.stdout
+        # Never a blocking `flock 9`: that would sit behind slot 1 while slot 2 frees.
+        assert log == "flock -n 9\nflock -n 8\nflock -n 9\nflock -n 8\n", log
+
+    def test_one_slot_is_the_single_lock_as_it_was(self, tmp_path):
+        proc, log = self._take(tmp_path, set(), slots="1")
+        assert "waiting for run.lock" in proc.stdout and log == "flock -n 9\nflock 9\n", proc.stdout + log
+
+    def test_a_gate_run_opens_both_slots_and_a_bad_count_is_refused(self, tmp_path):
+        text = RUNNER.read_text(encoding="utf-8")
+        assert '"( $(remote_slots sl-gates-);' in text and ") 8>$RDIR/run.2.lock 9>$RDIR/run.lock\"" in text
+        sizing = re.search(r'^case "\$\{GATES_REMOTE_SLOTS:-2\}" in .*?esac$', text, re.M | re.S)
+        assert sizing, "no slot sizing in run-gates.sh"
+        for slots, rc in (("3", 2), ("1", 0), ("2", 0)):
+            proc = subprocess.run(["bash", "-c", f"GATES_REMOTE_SLOTS={slots}\n{sizing.group(0)}\necho $SLOT_CPUS"],
+                                  env=_clean_env(), capture_output=True, text=True, timeout=60)
+            assert proc.returncode == rc, (slots, proc.stdout)
+        assert "GATES_REMOTE_SLOTS=3" in subprocess.run(["bash", "-c", f"GATES_REMOTE_SLOTS=3\n{sizing.group(0)}"],
+                                                        env=_clean_env(), capture_output=True, text=True).stdout
+
+
 class TestUnusedRemoteTreesAreDeleted:
     """2026-11-13 (test review 3.5): every checkout left up to four synced trees on the remote machine, each
     with its own node_modules, and nothing removed them. A delegated gate run deletes those no run has used
@@ -2413,8 +2481,8 @@ class TestUnusedRemoteTreesAreDeleted:
         assert f"mkdir -p {tree} && touch {tree}/.sl-last-use" in calls[0], calls[0]
         run = calls[-1]
         assert self._function().split("{", 1)[0].strip() == "remote_prune()" and "remote_prune () " in run, run
-        call = f"; remote_prune /srv/appdata/sl-gates {tree} 14 0; docker run"
-        assert call in run and run.index("flock 9; } || exit 1;") < run.index(call) < run.index(") 9>/srv/appdata/sl-gates/run.lock"), run
+        call = f"; ( flock 7; remote_prune /srv/appdata/sl-gates {tree} 14 0 ) 7>/srv/appdata/sl-gates/prune.lock; docker run"
+        assert call in run and run.index("done; } || exit 1;") < run.index(call) < run.index(") 8>/srv/appdata/sl-gates/run.2.lock 9>/srv/appdata/sl-gates/run.lock"), run
         # What reached the remote shell is the function this file tests, and it parses.
         sent = run[run.index("remote_prune () "):run.index(call)]
         assert "docker ps -aq" in sent and ".sl-last-use" in sent and "rm -rf -- " in sent, sent
@@ -2423,7 +2491,7 @@ class TestUnusedRemoteTreesAreDeleted:
     def test_the_period_and_the_dry_run_are_handed_over_and_a_bad_period_is_refused(self, checkouts, tmp_path):
         main, _ = checkouts
         _, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="0", GATES_REMOTE_PRUNE_DRY="1")
-        assert re.search(r"; remote_prune \S+ \S+ 0 1; docker run", calls[-1]), calls[-1]
+        assert re.search(r"; remote_prune \S+ \S+ 0 1 \) 7>\S+/prune\.lock; docker run", calls[-1]), calls[-1]
         proc, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="1; rm -rf /")
         assert proc.returncode == 2 and "is not a number of days" in proc.stdout and not calls, proc.stdout
 
@@ -2744,9 +2812,11 @@ class TestTwoSidesAtOnce:
 
     def test_the_container_splits_its_cpus_between_the_sides(self):
         text = RUNNER.read_text(encoding="utf-8")
-        assert "-e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6}" in text
-        assert "-e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6}" in text
-        assert "--cpus ${GATES_REMOTE_CPUS:-12}" in text
+        assert "-e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS}" in text
+        assert "-e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS}" in text
+        assert "--cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM}" in text
+        # Two slots share the box: each half-ish, workers = CPUs split between the two sides (TestTwoGateSlots).
+        assert "1) SLOT_CPUS=12 SLOT_MEM=24g SLOT_WORKERS=6 ;; 2) SLOT_CPUS=10 SLOT_MEM=20g SLOT_WORKERS=5 ;;" in text
 
 
 class TestTheE2eReport:

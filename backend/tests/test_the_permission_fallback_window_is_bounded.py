@@ -182,7 +182,7 @@ def test_invalidate_all_clears_its_own_prefix_and_only_its_own(local_redis):
     role = f"JUDGE-{token}"
     foreign = f"perm:another-process-{token}:soul.read"
 
-    with override_settings(REDIS_URL=url):
+    with override_settings(CACHE_PERMISSION_REDIS_URL=url):
         cache = PermissionCache()
     assert cache._redis_client is not None, "没连上 Redis —— 下面断的会是兜底字典,不是 Redis"
 

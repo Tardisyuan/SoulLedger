@@ -91,6 +91,30 @@ def test_the_command_does_not_ask_synapse(settings, a_greek_soul):
     assert made.call_count == 0, f"shadow_read_diff built the real Matrix client {made.call_count} times\n{out}"
 
 
+@pytest.mark.django_db
+def test_measured_counts_the_statements_and_the_time_of_its_block():
+    from apps.core import shadow_reads as shadow
+    from apps.tenants.models import Tenant
+
+    with shadow.measured() as cost:
+        list(Tenant.objects.all())
+        list(Tenant.objects.all())
+    assert cost["queries"] == 2 and cost["ms"] > 0
+    with shadow.measured() as idle:
+        pass
+    assert idle["queries"] == 0
+
+
+@sharded
+def test_the_command_prints_each_endpoints_cost_and_the_slowest(a_greek_soul):
+    out = _diff("--slowest", "1")
+    assert "q.before" in out and "slowest 1 cut over:" in out, out
+    rows = [ln.split() for ln in out.splitlines() if ln.startswith("  ") and "chat-session" in ln]
+    assert len(rows) == 2, out  # once in the table, once as the slowest
+    _, pairs, q_before, q_cut, ms_before, ms_cut = rows[0]
+    assert int(pairs) == 2 and int(q_before) > 0 and int(q_cut) > 0 and float(ms_cut) > 0, rows[0]
+
+
 @sharded
 def test_the_differential_tests_fetch_leaves_the_cache_alone(redis_cache, a_greek_soul):
     from apps.core import shadow_reads as shadow

@@ -21,11 +21,15 @@ written beside it. DRF's version also does not validate the address it picks,
 which is how an unparseable value once reached a database column
 (see `apps/core/client_ip.py`). One source, one answer.
 """
+import logging
 import re
+import time
 
 from rest_framework import throttling
 
 from apps.core.client_ip import get_client_ip
+
+logger = logging.getLogger(__name__)
 
 #: What to key on when no usable address can be determined (a request with no
 #: valid `REMOTE_ADDR`). These share one bucket rather than being exempted:
@@ -62,11 +66,37 @@ class ClientIPIdentMixin:
         return int(num), multiplier * _PERIOD_SECONDS[match.group(2).lower()]
 
 
-class AnonRateThrottle(ClientIPIdentMixin, throttling.AnonRateThrottle):
+class FailOpenMixin:
+    """The two default throttles let the request through when Redis is unreachable (review 2026-11-16 4.4).
+
+    They are a protection on every request, not an authorization: before, a dead Redis made every API request 500
+    here, although the business data is all in PostgreSQL. Logged, then not retried for FAIL_OPEN_COOLDOWN seconds
+    (each try costs up to `REDIS_SOCKET_TIMEOUT`). The security counters (login lockout, reset codes, the
+    password-reset throttles below) do NOT fail open: they answer 503 (`apps.core.problems.exception_handler`).
+    """
+
+    def allow_request(self, request, view):
+        from redis.exceptions import RedisError
+
+        if time.monotonic() < _fail_open_until[0]:
+            return True
+        try:
+            return super().allow_request(request, view)
+        except RedisError as e:
+            _fail_open_until[0] = time.monotonic() + FAIL_OPEN_COOLDOWN
+            logger.warning("throttle %s not applied: cache unavailable (%s)", type(self).__name__, e)
+            return True
+
+
+FAIL_OPEN_COOLDOWN = 5.0
+_fail_open_until = [0.0]
+
+
+class AnonRateThrottle(FailOpenMixin, ClientIPIdentMixin, throttling.AnonRateThrottle):
     """Drop-in for `DEFAULT_THROTTLE_CLASSES`; anonymous requests only."""
 
 
-class UserRateThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):
+class UserRateThrottle(FailOpenMixin, ClientIPIdentMixin, throttling.UserRateThrottle):
     """Default per-user limit for logged-in callers (scope `user`).
 
     DRF's version keys *anonymous* requests by IP as well; here that would
