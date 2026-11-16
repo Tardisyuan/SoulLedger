@@ -47,8 +47,8 @@ describe("v3 general motion rows", () => {
 
   it("the three off-table durations and the reduced fade are named tokens with v3's numbers", () => {
     expect(themeValue("--transition-duration-close")).toBe("160ms");
-    expect(themeValue("--transition-duration-dismiss")).toBe("140ms");
-    expect(themeValue("--transition-duration-reveal")).toBe("200ms");
+    expect(themeValue("--transition-duration-dismiss")).toBe("160ms"); // 第五十八批:140 → 160
+    expect(themeValue("--transition-duration-reveal")).toBe("160ms"); // 第五十八批:200 → 160
     expect(themeValue("--transition-duration-reduced")).toBe("80ms");
   });
 
