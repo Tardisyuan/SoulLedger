@@ -595,8 +595,14 @@ def pytest_collection_modifyitems(config, items):
     whole suite passed in that order (5699 passed). The guard stays for tests
     written since: stop the run at collection instead, naming the first test
     out of place. ``trylast`` so
-    this sees the final order; under xdist every worker collects the same list
-    and receives items in increasing index order, so the check holds there too.
+    this sees the final order.
+
+    UNDER ``--dist worksteal`` IT DOES NOT HOLD PER WORKER, and this check cannot see that: a worker whose own
+    chunk ended with the transactional tail steals plain tests from a busier worker and runs them after the
+    flush. 2026-11-16: gw4 ran ``test_ws_*`` / ``test_workflow_number`` (transactional), then stole
+    ``test_judgment_request_reassign`` and failed on a missing seeded SYSTEM_ADMIN; on real PostgreSQL the same
+    steal failed eight perm / scheduler tests. Every one passed alone. ``_reseed_after_a_flush`` below is what
+    makes the order not matter on a worker; this check still keeps the collected order honest.
     """
     _skip_sharded_without_shards(items)
     seen_tx = None
@@ -610,6 +616,55 @@ def pytest_collection_modifyitems(config, items):
                 "A transactional test truncates the rows data migrations seed, so later plain tests "
                 "lose them. Something reordered tests after pytest-django; see conftest.py."
             )
+
+
+#: This worker's databases as the data migrations left them ({alias: serialized rows}), taken once before its first
+#: transactional test; `_FLUSHED` is set once a transactional test has run (its teardown truncates every table).
+_SEEDED_ROWS: dict = {}
+_FLUSHED = []
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _seeded_rows_snapshot(request):
+    """Snapshot the seeded rows at session start, on a worker that has any transactional test to run (0.1 s and
+    ~200 KB on SQLite, measured 2026-11-16). Session scope, so before any test of this worker wrote a row."""
+    if not any(_db_kind(item) == "tx" for item in request.session.items):
+        return
+    request.getfixturevalue("django_db_setup")
+    from django.db import connections
+    from pytest_django.fixtures import _get_databases_for_setup
+
+    aliases, _ = _get_databases_for_setup(request.session.items)  # the test databases, never a real one
+    with request.getfixturevalue("django_db_blocker").unblock():
+        for alias in sorted(aliases):
+            _SEEDED_ROWS[alias] = connections[alias].creation.serialize_db_to_string()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """`_reseed_after_a_flush`: before a plain database test that runs after a transactional one on this worker (a
+    worksteal hand-off, see `pytest_collection_modifyitems`), put back the rows the data migrations seed. Done here,
+    before pytest-django opens the test's transaction, so it is not rolled back with the test."""
+    kind = _db_kind(item)
+    if kind == "tx":
+        _FLUSHED[:] = [item.nodeid]
+    elif kind == "db" and _FLUSHED and _SEEDED_ROWS:
+        _reseed_after_a_flush(item.config)
+
+
+def _reseed_after_a_flush(config):
+    from django.core.management import call_command
+    from django.db import connections
+    from pytest_django.plugin import blocking_manager_key
+
+    with config.stash[blocking_manager_key].unblock():
+        for alias, rows in _SEEDED_ROWS.items():
+            # Empty it again (the flush's post_migrate may have re-created some rows), keep the sequences past the
+            # restored pks, then load the seed back.
+            call_command("flush", database=alias, interactive=False, inhibit_post_migrate=True,
+                         reset_sequences=False, verbosity=0)
+            connections[alias].creation.deserialize_db_from_string(rows)
+    _FLUSHED.clear()
 
 
 
