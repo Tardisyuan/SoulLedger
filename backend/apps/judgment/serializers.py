@@ -652,7 +652,14 @@ class JudgmentDetailSerializer(JudgmentSerializer):
         if at is None:
             decided = [n for n in steps if n.decided_at is not None]
             at = max(decided, key=lambda n: n.decided_at).pk if decided else None
-        disposition = getattr(obj, "disposition", None)
+        from apps.core.shard_reads import with_fanout
+        from apps.disposition.models import Disposition
+
+        # Not `obj.disposition`: the accessor reads the database the judgment came from, and a disposition with no
+        # hall (written before `DispositionViewSet.create_tenant` filled one in) lives in control only (D2), so a
+        # judgment read from its hall's shard found none and read the flow as holding nothing (shadow_read_diff
+        # --all, 2026-11-16). Every database is asked; one query while nothing is cut over, as before.
+        disposition = with_fanout(Disposition._base_manager.filter(judgment_id=obj.pk)).first()
         waiting = None
         if disposition is not None and not disposition.is_executed and not getattr(disposition, "is_deleted", False):
             waiting = unfinished_flow(disposition, flow_status=wf.status)

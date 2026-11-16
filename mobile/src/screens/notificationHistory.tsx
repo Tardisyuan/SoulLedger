@@ -142,9 +142,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   last: { borderBottomWidth: 0 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  stamp: { fontSize: 11, letterSpacing: 0.6 },
+  stamp: { fontSize: 12, letterSpacing: 0.6 },
   flag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  flagText: { fontSize: 10, letterSpacing: 0.4 },
+  flagText: { fontSize: 12, letterSpacing: 0.4 },
   more: { paddingVertical: 16 },
   reason: { marginTop: 8 },
 });

@@ -64,6 +64,18 @@ def test_one_url_adds_that_civilizations_alias_on_the_shard_engine():
     assert greek["HOST"] == "db.example"
 
 
+@pytest.mark.parametrize("value, want", [(None, 600), ("0", 0)])
+def test_db_conn_max_age_reaches_default_and_every_shard(value, want):
+    """2026-11-16: a runserver test backend kept a connection per thread per alias for 600 s and filled the test
+    server's 100 with the four shard aliases. DB_CONN_MAX_AGE=0 closes them at the end of each request."""
+    env = {f"{ENV_PREFIX}GREEK": PG.format("greek")}
+    if value is not None:
+        env["DB_CONN_MAX_AGE"] = value
+    proc, out = _settings_in_a_fresh_process(**env)
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    assert {a: d["CONN_MAX_AGE"] for a, d in out["databases"].items()} == {"default": want, "civ_greek": want}
+
+
 def test_a_url_that_names_no_civilization_refuses_to_start():
     proc, _ = _settings_in_a_fresh_process(**{f"{ENV_PREFIX}CHINA": PG.format("china")})
     assert proc.returncode != 0 and "civ_china" in proc.stderr and "name no civilization" in proc.stderr, proc.stderr[-2000:]

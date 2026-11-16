@@ -206,7 +206,7 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
             {figures.map(([label, n], i) => (
               <View key={label} style={{ flex: 1, paddingVertical: space[2], paddingHorizontal: space[3], borderLeftWidth: i ? 1 : 0, borderLeftColor: theme.hair }}>
                 <Txt variant="caption" tone="muted">{label}</Txt>
-                <Txt variant="value" style={{ fontSize: 17, lineHeight: 24 }}>{n == null ? "—" : signed(n)}</Txt>
+                <Txt variant="value" style={{ fontSize: 20, lineHeight: 28 }}>{n == null ? "—" : signed(n)}</Txt>
               </View>
             ))}
           </View>
@@ -441,7 +441,7 @@ function KarmaTab({ soul }: { soul: Soul }) {
                     {[when, source ? t("officer_app.soul.source", { source: source.state === "known" ? source.label : r.evidence_source! }) : null].filter(Boolean).join(" · ")}
                   </OneLine>
                 </View>
-                <OneLine variant="value" tone={r.record_type === "DEMERIT" ? "neg" : "pos"} style={{ fontSize: 15 }}>{deedScore(r)}</OneLine>
+                <OneLine variant="value" tone={r.record_type === "DEMERIT" ? "neg" : "pos"} style={{ fontSize: 16 }}>{deedScore(r)}</OneLine>
               </View>
             );
           })}

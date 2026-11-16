@@ -16,7 +16,7 @@ from django.db import router
 ENV_PREFIX = "SHARD_DATABASE_URL_"
 
 
-def databases_from_env(env, *, disable_server_side_cursors=False):
+def databases_from_env(env, *, disable_server_side_cursors=False, conn_max_age=600):
     """{alias: DATABASES entry} for every `SHARD_DATABASE_URL_<CIV>` set in `env`; {} when none is, which
     leaves production with `default` alone. PostgreSQL only. A name that is no civilization
     (SHARD_DATABASE_URL_CHINA) is refused at startup by `apps.core.sharding.check_cut_over_settings`."""
@@ -26,7 +26,7 @@ def databases_from_env(env, *, disable_server_side_cursors=False):
     for key, url in env.items():
         if not key.startswith(ENV_PREFIX) or not url.strip():
             continue
-        db = dj_database_url.parse(url.strip(), conn_max_age=600, conn_health_checks=True)
+        db = dj_database_url.parse(url.strip(), conn_max_age=conn_max_age, conn_health_checks=True)
         if "postgresql" not in db["ENGINE"]:
             raise ValueError(f"{key} must be a PostgreSQL URL (a civilization shard is PostgreSQL), got {db['ENGINE']}")
         db["ENGINE"] = "config.shard_db.postgresql"

@@ -1,17 +1,18 @@
 /**
- * 「记住的账号」, one card for both apps (Design 第五十批 C3): card ground, 1px line, radius 12; a 44 round avatar on
+ * 「记住的账号」, one card for both apps (Design 第五十批 C3): card ground, 1px line, radius.sheet 12 (第五十五批); a 44 round avatar on
  * card2 with the name's first character in the serif, the name 16 / 500, the masked account in mono 13 / sub, and the
  * text link 「换一个账号」 at the right (sub, underlined in line2). The apps differ only in how the account is masked
  * (officer `zh***g`, soul `QU3-•••-W5F`) and in the link's words.
  *
  * Also the row of C4's list (`trailing` in place of the link: the soul app's 「⋯」, 40 avatar, 15 / 500 name).
  * `afterCode` sits right after the masked account (第五十二批 C4: the fingerprint on the row that owns the credential).
- * A leaf: ui / fonts only, so the officer app can import it (mobile-officer/src/shared.ts, sharedClosure.test.ts).
+ * A leaf: ui / fonts / theme only, so the officer app can import it (mobile-officer/src/shared.ts, sharedClosure.test.ts).
  */
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { family } from "./fonts";
+import { radius } from "./theme";
 import { Txt, useTheme, Press } from "./ui";
 
 export function RememberedCard({
@@ -72,7 +73,7 @@ export function RememberedCard({
       {trailing}
     </>
   );
-  const frame = [styles.card, compact ? null : { borderWidth: 1, borderRadius: 12, borderColor: t.hair, backgroundColor: t.s1 }];
+  const frame = [styles.card, compact ? null : { borderWidth: 1, borderRadius: radius.sheet, borderColor: t.hair, backgroundColor: t.s1 }];
   return onPress ? (
     <Pressable testID={testID} accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [frame, pressed && { backgroundColor: t.hair }]}>
       {body}
@@ -89,9 +90,9 @@ const styles = StyleSheet.create({
   avatar: { alignItems: "center", justifyContent: "center" },
   initial: { fontFamily: family.serifHan, fontSize: 18, lineHeight: 24 },
   fill: { flex: 1, gap: 2 },
-  name: { fontFamily: family.ui[500], fontSize: 16, lineHeight: 22 },
-  nameCompact: { fontSize: 15, lineHeight: 21 },
-  masked: { fontFamily: family.mono[400], fontSize: 13, lineHeight: 18 },
+  name: { fontFamily: family.ui[500], fontSize: 16, lineHeight: 24 },
+  nameCompact: { fontSize: 16, lineHeight: 24 },
+  masked: { fontFamily: family.mono[400], fontSize: 14, lineHeight: 20 },
   codeLine: { flexDirection: "row", alignItems: "center", gap: 8 },
   link: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 12 },
   linkText: { textDecorationLine: "underline", fontSize: 14, lineHeight: 20 },

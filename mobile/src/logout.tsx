@@ -74,6 +74,6 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
   sheetButtons: { marginTop: 12, gap: 12 },
 });

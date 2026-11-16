@@ -220,13 +220,16 @@ remote_flock() {
 # both). Free slot first, without waiting; both taken: say who holds them, then try both every 10 s. A copy of
 # this script from before the second slot takes run.lock only, so old and new share the machine correctly.
 # GATES_REMOTE_SLOTS=1 is the single lock as it was (remote_flock 9 run.lock).
+# A waiter whose ssh is gone gives up: ssh without a tty sends no SIGHUP, so on 2026-11-16 three runs whose agents
+# had stopped them still sat in `flock 9` on that machine (parent: init) and would have started the moment the
+# lock freed — one on the same tree as its agent's new run. Each retry checks the remote shell is not orphaned.
 # Why two: four agents' gates queued behind one lock for an hour (2026-11-16) while the box had 20 cores. Each
 # slot's container is capped lower (10 CPUs / 20 GB, 5 + 5 workers) so two fit beside Metro and the test PG.
 remote_slots() {
     if [ "${GATES_REMOTE_SLOTS:-2}" = 1 ]; then remote_flock 9 run.lock "$@"; return; fi
     local filters="" n
     for n in "$@"; do filters="$filters --filter name=$n"; done
-    printf '%s' "flock -n 9 || flock -n 8 || { echo \"$P: both gate slots are taken on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; until flock -n 9 || flock -n 8; do sleep 10; done; } || exit 1"
+    printf '%s' "flock -n 9 || flock -n 8 || { echo \"$P: both gate slots are taken on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; while :; do [ \"\$(ps -o ppid= -p \$\$ | tr -d ' ')\" != 1 ] || exit 1; sleep 10; flock -n 9 || flock -n 8 && break; done; } || exit 1"
 }
 case "${GATES_REMOTE_SLOTS:-2}" in 1) SLOT_CPUS=12 SLOT_MEM=24g SLOT_WORKERS=6 ;; 2) SLOT_CPUS=10 SLOT_MEM=20g SLOT_WORKERS=5 ;;
     *) echo "gates: GATES_REMOTE_SLOTS=${GATES_REMOTE_SLOTS} — 1 or 2"; exit 2 ;; esac

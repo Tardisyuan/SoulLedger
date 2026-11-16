@@ -778,8 +778,8 @@ function Confirm({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   sheet: { flex: 1, borderTopWidth: 1 },
-  /** The drawer's top corners (v3 第一批: sheets 8); square once it fills the screen. */
-  sheetRound: { borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
+  /** The drawer's top corners (第五十五批: radius.sheet 12); square once it fills the screen. */
+  sheetRound: { borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   /** The pull zone around the 36 × 4 handle (a drag, not a tap target: closing has its button). */
   handleZone: { height: 24, alignItems: "center", justifyContent: "center" },
   handle: { width: 36, height: 4, borderRadius: 999 },
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
   suggestion: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   question: { alignSelf: "flex-end", maxWidth: "85%", borderRightWidth: 2, paddingRight: 12, gap: 2 },
-  meta: { fontSize: 11, textAlign: "right" },
+  meta: { fontSize: 12, textAlign: "right" },
   answer: { gap: 8 },
   answerHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   answerText: { flexShrink: 1 },
@@ -807,11 +807,11 @@ const styles = StyleSheet.create({
   stop: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   jump: { position: "absolute", right: 12, bottom: 72, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
   en: { borderWidth: 1, borderStyle: "dotted", paddingHorizontal: 4 },
-  enText: { fontSize: 10, lineHeight: 14, letterSpacing: 0.6 },
+  enText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.6 },
   card: { borderWidth: 1, padding: 16, gap: 12 },
   introItem: { flexDirection: "row", gap: 12, borderTopWidth: 1, paddingTop: 12 },
   composer: { borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
-  input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15 },
+  input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16 },
   send: { width: 44, height: 44, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   historyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
   screenTag: { borderLeftWidth: 2, paddingLeft: 8 },

@@ -79,7 +79,7 @@ describe(".module.css files read the tokens", () => {
  * 打印样式按纸面排(pt / mm),字号不在屏幕的档上,不数 type。 */
 const APP_BASELINE: Record<string, { type: number; radius: number; easing: number }> = {
   // 2026-11-15 实数。type 里有 4 处是触屏输入框的 16 / 24(那两条规则是有意的字面值)。
-  "app/globals.css": { type: 21, radius: 23, easing: 8 },
+  "app/globals.css": { type: 21, radius: 17, easing: 8 },
 };
 
 const APP_DETECTORS = {

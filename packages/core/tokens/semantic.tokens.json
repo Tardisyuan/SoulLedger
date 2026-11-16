@@ -741,7 +741,7 @@
     "$extensions": {
       "org.soulledger": {
         "modes": {
-          ".light": "0 1px 2px rgba(20, 20, 24, 0.05), 0 6px 20px -10px rgba(20, 20, 24, 0.16)"
+          ".light": "0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04)"
         }
       }
     }
@@ -760,11 +760,12 @@
       }
     },
     "overlay": {
-      "$value": "0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 72px -12px rgba(0, 0, 0, 0.6)",
+      "$description": "Design batch 54 H4 `shadow-overlay`: dialogs, sheets, menus. Dark: the first layer is the translucent edge, drawn as a shadow so the box keeps its size.",
+      "$value": "0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px rgb(0 0 0 / 0.55)",
       "$extensions": {
         "org.soulledger": {
           "modes": {
-            ".light": "0 0 0 1px rgba(20, 22, 18, 0.06), 0 2px 6px rgba(10, 11, 9, 0.08), 0 24px 72px -12px rgba(10, 11, 9, 0.28)"
+            ".light": "0 1px 2px rgb(0 0 0 / 0.06), 0 12px 32px rgb(0 0 0 / 0.14)"
           }
         }
       }
@@ -988,7 +989,7 @@
       "$value": {
         "colorSpace": "srgb",
         "components": [1, 1, 1],
-        "alpha": 0.08,
+        "alpha": 0.12,
         "hex": "#FFFFFF"
       },
       "$extensions": {
@@ -997,7 +998,7 @@
             ".light": {
               "colorSpace": "srgb",
               "components": [0, 0, 0],
-              "alpha": 0.08,
+              "alpha": 0.12,
               "hex": "#000000"
             }
           }
@@ -1036,9 +1037,9 @@
           "modes": {
             ".light": {
               "colorSpace": "srgb",
-              "components": [0.082353, 0.07451, 0.070588],
+              "components": [0.086275, 0.090196, 0.101961],
               "alpha": 0.42,
-              "hex": "#151312"
+              "hex": "#16171A"
             }
           }
         }

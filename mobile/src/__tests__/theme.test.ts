@@ -16,6 +16,7 @@ import {
   brand,
   oklchToHex,
   preLoginTheme,
+  radius,
   sealedTheme,
   semantic,
   themeFor,
@@ -24,6 +25,7 @@ import {
   type ColorScheme,
   type Theme,
 } from "../theme";
+import { seal } from "../theme.generated";
 
 /** [dark OKLCH, light OKLCH], exactly as the 灵魂簿 App handoff's table prints them. */
 const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string] }[] = [
@@ -90,17 +92,20 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
   const pairs = (line: string) => line.split(" · ").map((p) => p.split(" "));
 
   it("is the draft's .th-dark / .th-light and [data-civ] blocks, verbatim", () => {
-    expect(v4.dark).toEqual({ main: "#111113", card: "#1A1B1E", card2: "#222327", ink: "#F3F3F1", sub: "#B4B6BA", faint: "#7C7F85", line: "rgba(255,255,255,0.08)", line2: "rgba(255,255,255,0.16)", field: "rgba(255,255,255,0.05)", onSolid: "#FFFFFF", pos: "#8AD3A1", neg: "#F2849B", onNeg: "#16171A" });
-    expect(v4.light).toEqual({ main: "#F8F8F6", card: "#FFFFFF", card2: "#F1F1EE", ink: "#16171A", sub: "#54575C", faint: "#8A8D92", line: "rgba(0,0,0,0.08)", line2: "rgba(0,0,0,0.16)", field: "rgba(0,0,0,0.035)", onSolid: "#FFFFFF", pos: "#1F6B3F", neg: "#A81E3C", onNeg: "#FFFFFF" });
+    expect(v4.dark).toEqual({ main: "#111113", card: "#1A1B1E", card2: "#222327", ink: "#F3F3F1", sub: "#B4B6BA", faint: "#7C7F85", line: "rgba(255,255,255,0.12)", line2: "rgba(255,255,255,0.16)", field: "rgba(255,255,255,0.05)", onSolid: "#FFFFFF", pos: "#8AD3A1", neg: "#F2849B", onNeg: "#16171A" });
+    expect(v4.light).toEqual({ main: "#F8F8F6", card: "#FFFFFF", card2: "#F1F1EE", ink: "#16171A", sub: "#54575C", faint: "#8A8D92", line: "rgba(0,0,0,0.12)", line2: "rgba(0,0,0,0.16)", field: "rgba(0,0,0,0.035)", onSolid: "#FFFFFF", pos: "#1F6B3F", neg: "#A81E3C", onNeg: "#FFFFFF" });
     const nine = (c: (typeof CIVS)[number]) => [v4.civ[c].glow, v4.civ[c].tD, v4.civ[c].tL, v4.civ[c].sL, v4.civ[c].sD, v4.civ[c].mD, v4.civ[c].mL, v4.civ[c].sideD, v4.civ[c].sideL].join(" ");
     expect(CIVS.map((c) => [c, nine(c)])).toEqual([
       ["cn", "#C8604F #EBA38F #883F2C #A64A3B #7E362B #D7A85B #886116 #2B110C #FFE4DF"],
       ["eu", "#A0709F #CCA6E4 #6D4286 #7A4F85 #5A3A63 #B9C2CF #5C6878 #231226 #F9E2FF"],
-      ["eg", "#5F93C8 #89BCF1 #175A96 #3C69A2 #2B4E79 #E3CB53 #716400 #071A2D #DFEDFF"],
-      ["gr", "#5F9C94 #73CBB0 #0E6753 #37716A #28544F #CB7A5B #86422A #011F19 #C8F7EB"],
+      ["eg", "#5F93C8 #89BCF1 #175A96 #3C69A2 #2B4E79 #E89772 #954C28 #071A2D #DFEDFF"],
+      ["gr", "#5F9C94 #73CBB0 #0E6753 #37716A #28544F #B3B36E #686722 #011F19 #C8F7EB"],
     ]);
     expect(ON_PLAQUE).toBe(v4.dark.onSolid);
     expect(ON_PLAQUE).toBe(v4.light.onSolid);
+    // Batch 54 H4: Egypt's and Greece's seals stay; their metals moved to copper / old bronze, so neither is its seal any more.
+    expect([seal.eg.dark, seal.eg.light, seal.gr.dark, seal.gr.light]).toEqual(["#E3CB53", "#716400", "#CB7A5B", "#86422A"]);
+    for (const c of ["eg", "gr"] as const) expect([v4.civ[c].mD, v4.civ[c].mL]).not.toContain(seal[c].dark);
   });
 
   it("the neutral plaque is the web's neutral text colour --color-civ-neutral-ink, read from globals.css (dark :root, light .light)", () => {
@@ -125,6 +130,25 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     expect(notifications[1].color.toLowerCase()).toBe(NEUTRAL_PLAQUE.light.toLowerCase());
     // v3's neutral (#262925 / #656962) and v2's warm black / warm grey are gone.
     expect(Object.values(NEUTRAL_PLAQUE)).not.toEqual(expect.arrayContaining(["#262925", "#656962", "#2B2724", "#6E665E"]));
+  });
+
+  it("the scrim is the web's on every surface (Design batch 55): black .62 dark, ink #16171A .42 light, read from globals.css", () => {
+    const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
+    const web = (selector: string) => {
+      const b = css.split(`${selector} {`).slice(1).map((x) => x.split(/\n {2}\}/)[0]).find((x) => x.includes("--color-scrim:")) ?? "";
+      const [r, g, bl] = rgb(oklchToHex(b.match(/--color-scrim:\s*([^;]+);/)?.[1].trim() ?? ""));
+      return `rgba(${r},${g},${bl},${b.match(/--scrim-alpha:\s*([^;]+);/)?.[1].trim()})`;
+    };
+    expect({ dark: semantic.dark.scrim, light: semantic.light.scrim }).toEqual({ dark: "rgba(0,0,0,0.62)", light: "rgba(22,23,26,0.42)" });
+    expect({ dark: web(":root"), light: web(".light") }).toEqual({ dark: semantic.dark.scrim, light: semantic.light.scrim });
+    // Absence: v3's warm ink scrim is gone.
+    expect(Object.values(semantic).map((s) => s.scrim)).not.toContain("rgba(21,19,18,0.42)");
+  });
+
+  it("radius.sheet is the web's --radius-sheet, 12 (Design batch 55)", () => {
+    const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
+    expect(radius.sheet).toBe(12);
+    expect(css.match(/--radius-sheet:\s*([^;]+);/)?.[1]).toBe(`${radius.sheet}px`);
   });
 
   it.each(SCHEMES)("%s: the status colours — v4's pos / neg / onNeg, the rest as 规范 v2 §二 printed them", (scheme) => {

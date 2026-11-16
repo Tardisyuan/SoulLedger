@@ -148,14 +148,14 @@ export function FadeIn({
  */
 export const TYPE = {
   /** Titles and display text in Noto Serif SC 600 (`family.title`); body and controls stay `ui`. */
-  display: { fontSize: 30, lineHeight: 38, fontFamily: family.title },
+  display: { fontSize: 32, lineHeight: 40, fontFamily: family.title },
   title: { fontSize: 20, lineHeight: 28, fontFamily: family.title },
-  nav: { fontSize: 15, lineHeight: 22, fontFamily: family.ui[600] },
-  body: { fontSize: 14, lineHeight: 22, fontFamily: family.ui[400] },
-  bodyLg: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[500] },
+  nav: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[600] },
+  body: { fontSize: 14, lineHeight: 20, fontFamily: family.ui[400] },
+  bodyLg: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[500] },
   label: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.4 },
   /** A ledger row's title (v3 `.life-records article b`), 15 / 600 on its row. */
-  section: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[600] },
+  section: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[600] },
   /**
    * What a block of the page is — 11, upper case, always in `muted` (`SectionLabel`). Every
    * section header and form-group label outside the ledger rows. The interface face, not mono:
@@ -163,15 +163,15 @@ export const TYPE = {
    * mono `.product-label`; the 0.08em tracking is the prototype's.
    */
   eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.88, textTransform: "uppercase" },
-  caption: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
-  value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
-  valueLg: { fontSize: 30, lineHeight: 38, fontFamily: family.mono[500] },
+  caption: { fontSize: 14, lineHeight: 20, fontFamily: family.ui[400] },
+  value: { fontSize: 14, lineHeight: 20, fontFamily: family.mono[400] },
+  valueLg: { fontSize: 32, lineHeight: 40, fontFamily: family.mono[500] },
   /**
    * 第三十批 `--juan`: the 「卷」 register — a record's own words, the serif 16/28. Design draws 400; the app
    * bundles Noto Serif SC at 500 / 600 only, so it is 500 (a value with no Han takes EB Garamond, `quoteFamily`,
    * as quoted words do). `--juan-strong` (600) waits for the screen that draws it.
    */
-  juan: { fontSize: 16, lineHeight: 28, fontFamily: family.serifHan },
+  juan: { fontSize: 16, lineHeight: 24, fontFamily: family.serifHan },
 } satisfies Record<string, TextStyle>;
 
 export type Tone = "ink" | "muted" | "subtle" | "neg" | "negInk" | "pos" | "warn";
@@ -1680,15 +1680,15 @@ export const styles = StyleSheet.create({
   pullIndicator: { position: "absolute", top: 0, left: 0, right: 0, height: PULL_REFRESH_PT, alignItems: "center", justifyContent: "center" },
   pullGlyph: { fontFamily: family.glyph, fontSize: 20, lineHeight: 24 },
   block: { paddingHorizontal: GUTTER, paddingVertical: GUTTER },
-  count: { marginLeft: space[3], fontSize: 11, lineHeight: 16 },
+  count: { marginLeft: space[3], fontSize: 12, lineHeight: 16 },
   sectionRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   // B11: a section's title row is 48 high.
   sectionHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", paddingHorizontal: GUTTER, paddingVertical: space[3] },
   sectionBody: { paddingHorizontal: GUTTER, paddingBottom: space[4] },
   /** v3 .life-records: a 60pt row — number, title, count, ＋. */
   ledgerHeader: { minHeight: 60 },
-  ledgerIndex: { width: 30, fontSize: 11, lineHeight: 16 },
-  ledgerPlus: { width: 24, textAlign: "right", fontSize: 15, lineHeight: 20 },
+  ledgerIndex: { width: 30, fontSize: 12, lineHeight: 16 },
+  ledgerPlus: { width: 24, textAlign: "right", fontSize: 16, lineHeight: 24 },
   ledgerPlusOpen: { transform: [{ rotate: "45deg" }] },
   ledgerBody: { marginHorizontal: space[3], marginBottom: space[3], paddingHorizontal: space[4], paddingVertical: space[3], borderLeftWidth: 3 },
   empty: { alignItems: "center", gap: space[2], paddingVertical: space[4] },
@@ -1704,11 +1704,12 @@ export const styles = StyleSheet.create({
   // The ring sits 4pt outside the field, so its corner is the field's plus 4.
   ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.control + 4 },
   inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48, borderRadius: radius.control, overflow: "hidden" },
-  input: { flex: 1, minHeight: 46, paddingHorizontal: space[3], fontSize: 15 },
-  monoInput: { fontSize: 15, letterSpacing: 2.2 },
+  input: { flex: 1, minHeight: 46, paddingHorizontal: space[3], fontSize: 16 },
+  monoInput: { fontSize: 16, letterSpacing: 2.2 },
   // Android clips the first line's top of a Noto Serif SC multiline field under about 1.8 x the size
-  // (Huawei 10-31: 15/24 and 15/26 clip, 15/27 whole); `inputFace.test.tsx` holds the ratio.
-  multiline: { minHeight: 128, paddingVertical: space[3], fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
+  // (Huawei 10-31: 15/24 and 15/26 clip, 15/27 whole). Design batch 54 H3: 2 x the size (16/32, 14/28), off the
+  // ten type steps on purpose, in multiline fields only; `inputFace.test.tsx` holds the ratio.
+  multiline: { minHeight: 128, paddingVertical: space[3], fontSize: 16, lineHeight: 32, textAlignVertical: "top" },
   reveal: { width: 52, alignItems: "center", justifyContent: "center", borderLeftWidth: 1 },
   revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: radius.control },
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },
@@ -1726,22 +1727,22 @@ export const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingVertical: space[2],
   },
-  buttonText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 22, textAlign: "center" },
+  buttonText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, textAlign: "center" },
   notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
   failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
-  failedText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20 },
+  failedText: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
   small: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: space[3], paddingVertical: space[2] },
   screenError: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6], paddingVertical: space[7] },
   retry: { alignSelf: "stretch", marginTop: space[1] },
   home: { alignSelf: "stretch" },
-  errorCode: { fontSize: 11, opacity: 0.8 },
+  errorCode: { fontSize: 12, opacity: 0.8 },
   rows: { gap: space[2] },
   juan: { borderTopWidth: 1 },
   juanRow: { paddingVertical: space[3], borderBottomWidth: 1 },
   // 第三十批 卷: the field names one column, 72 wide (two to four Han characters), on the value's 28 line.
   juanLabel: { width: 72 },
-  juanLabelLine: { lineHeight: 28 },
-  juanMono: { fontSize: 14, lineHeight: 28 },
+  juanLabelLine: { lineHeight: 24 },
+  juanMono: { fontSize: 14, lineHeight: 20 },
   row: { flexDirection: "row", gap: space[4], alignItems: "flex-start" },
   rowStacked: { flexDirection: "column", gap: space[1] },
   rowLabel: { minWidth: 56, maxWidth: "45%" },
@@ -1760,16 +1761,16 @@ export const styles = StyleSheet.create({
     paddingVertical: space[1],
   },
   badgeWraps: { flexWrap: "wrap" },
-  badgeText: { fontFamily: family.ui[500], fontSize: 13, lineHeight: 18, letterSpacing: 0 },
+  badgeText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, letterSpacing: 0 },
   // Design E 组: every status glyph from the one bundled font, never a per-glyph OS fallback.
   badgeGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
-  badgeRaw: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, opacity: 0.85 },
+  badgeRaw: { fontFamily: family.mono[400], fontSize: 12, lineHeight: 16, opacity: 0.85 },
   quote: { borderLeftWidth: 2, paddingLeft: space[4], paddingVertical: 2 },
-  quoteText: { fontSize: 15, lineHeight: 28 },
+  quoteText: { fontSize: 16, lineHeight: 24 },
   quoteCompact: { paddingLeft: space[3] },
   original: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2], marginTop: space[2] },
   originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[1], paddingVertical: 2 },
-  originalText: { fontSize: 11, lineHeight: 16, letterSpacing: 0.4 },
+  originalText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.4 },
   skeleton: { paddingVertical: space[2] },
   skeletonRow: { paddingVertical: space[3], borderBottomWidth: 1 },
   progressTrack: { height: touch.topline, overflow: "hidden" },

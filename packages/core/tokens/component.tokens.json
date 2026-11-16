@@ -158,14 +158,8 @@
       }
     }
   },
-  "undo-radius": {
-    "$type": "dimension",
-    "$value": {
-      "value": 8,
-      "unit": "px"
-    }
-  },
-  "readback-radius": {
+  "radius-sheet": {
+    "$description": "Design batch 55: the large mobile surfaces (bottom sheets, the read-back sheet, the remembered-account card, the account list, the scan notice). Dialogs, popovers and panels stay --radius-panel 6; the web's undo strip is --radius-panel too.",
     "$type": "dimension",
     "$value": {
       "value": 12,
@@ -204,7 +198,7 @@
             "unit": "px"
           },
           "lineHeight": {
-            "value": 14,
+            "value": 16,
             "unit": "px"
           }
         }
@@ -225,17 +219,18 @@
       }
     },
     "readback": {
+      "$description": "Seal read-back (the web layer of batch 46 and the officer app's sheet). Design batch 54 H3: on the 4px grid, name 20/28, case 16/24, verdict 24/32 -- the verdict stays the largest.",
       "name": {
         "$type": "typography",
         "$value": {
           "fontFamily": "var(--font-title)",
           "fontWeight": 600,
           "fontSize": {
-            "value": 18,
+            "value": 20,
             "unit": "px"
           },
           "lineHeight": {
-            "value": 26,
+            "value": 28,
             "unit": "px"
           }
         }
@@ -250,7 +245,7 @@
             "unit": "px"
           },
           "lineHeight": {
-            "value": 26,
+            "value": 24,
             "unit": "px"
           }
         }
@@ -261,11 +256,11 @@
           "fontFamily": "var(--font-title)",
           "fontWeight": 600,
           "fontSize": {
-            "value": 20,
+            "value": 24,
             "unit": "px"
           },
           "lineHeight": {
-            "value": 26,
+            "value": 32,
             "unit": "px"
           }
         }

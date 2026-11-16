@@ -17,6 +17,7 @@ import { LAPSE_KEYS, canSubmitLogin, isFinalLapse, lapseOfReason, shouldAutoProm
 import { forgetDevice } from "../mfa";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
 import { RememberedCard } from "../rememberedCard";
+import { radius } from "../theme";
 import { SoulCodeField } from "../soulCodeView";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme, Press } from "../ui";
 import { useBiometry } from "../useBiometry";
@@ -738,7 +739,7 @@ const styles = StyleSheet.create({
   forgot: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "flex-end" },
   underline: { textDecorationLine: "underline" },
   resetNotice: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
-  resetTitle: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 20 },
+  resetTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   footer: { borderTopWidth: 1, marginHorizontal: 24, marginTop: 24, paddingTop: 24, paddingBottom: 32 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
@@ -746,13 +747,13 @@ const styles = StyleSheet.create({
   languageText: { fontSize: 12, letterSpacing: 0 },
   stack: { gap: 16, paddingHorizontal: GUTTER + 8 },
   expiry: { borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
-  expiryValue: { fontSize: 15, lineHeight: 22, fontFamily: family.mono[500] },
-  inlineMono: { fontSize: 11 },
+  expiryValue: { fontSize: 16, lineHeight: 24, fontFamily: family.mono[500] },
+  inlineMono: { fontSize: 12 },
   noSpacing: { letterSpacing: 0 },
-  noticeTitle: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 22 },
+  noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   network: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   lapsed: { flexDirection: "row", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
-  list: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
+  list: { borderWidth: 1, borderRadius: radius.sheet, overflow: "hidden" },
   listRow: { borderBottomWidth: 1 },
   more: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
   other: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingHorizontal: 16 },

@@ -104,6 +104,8 @@ describe("D8a: 案卷台's source chip is kept", () => {
     expect(mockList).toHaveBeenCalledWith({ group: "mine", source: "city_god" });
     expect(mockList).not.toHaveBeenCalledWith({ group: "mine" });
     await waitFor(() => expect(screen.getByTestId("desk-sources-city_god").props.accessibilityState).toMatchObject({ selected: true }));
+    // 第五十六批：能点的东西一律 4,案卷台的大号筛选签也不是胶囊。
+    expect(StyleSheet.flatten(screen.getByTestId("desk-sources-city_god").props.style)).toMatchObject({ minHeight: 44, borderRadius: 4 });
   });
 
   it("another officer on the same phone starts at 全部", async () => {
@@ -167,7 +169,7 @@ describe("D8b: the last three reject reasons", () => {
     // 第五十二批 F1: an outlined full-width row, 40 high, ↺ in --faint, one line; read as 「填入：…」.
     const row = screen.getByTestId("decision-recent-1");
     expect(row.props.accessibilityLabel).toBe("填入：先退回");
-    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ minHeight: 44, borderWidth: 1, borderRadius: 8 });
+    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ minHeight: 44, borderWidth: 1, borderRadius: 4 }); // 第五十六批：是按钮，控件圆角 4
     expect(screen.getByTestId("decision-recent-1-icon", { includeHiddenElements: true })).toHaveTextContent("↺");
     fireEvent.press(screen.getByTestId("decision-recent-1"));
     expect(screen.getByTestId("decision-reason").props.value).toBe("先退回");

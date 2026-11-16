@@ -260,10 +260,10 @@ function SealedStrip({ civilization, court, at }: { civilization: string | null 
   const { t } = useI18n();
   const theme = useTheme();
   return (
-    <View testID="detail-sealed" style={{ flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: 10, backgroundColor: theme.s2 }}>
+    <View testID="detail-sealed" style={{ flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.dialog, backgroundColor: theme.s2 }}>
       <DossierSeal testID="detail-sealed-seal" civilization={civilization} court={court} size={44} stamp label={t("officer_app.seal.a11y")} />
       <View style={{ flex: 1, gap: 2 }}>
-        <Txt style={{ fontFamily: family.ui[600], fontSize: 15, lineHeight: 21 }}>{t("officer_app.detail.sealed")}</Txt>
+        <Txt style={{ fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 }}>{t("officer_app.detail.sealed")}</Txt>
         <Txt variant="caption" tone="muted">
           {t("officer_app.detail.sealed_meta", { time: formatWhen(at) })}
         </Txt>
