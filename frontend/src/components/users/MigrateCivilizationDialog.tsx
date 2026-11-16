@@ -153,7 +153,7 @@ export function MigrateCivilizationDialog({ user, onClose, onDone }: {
         {blocked.length > 0 ? (
           <section aria-labelledby="migrate-civ-blocked" className="flex flex-col gap-2">
             <div>
-              <h3 id="migrate-civ-blocked" className="m-0 text-md font-semibold">{t("users.migrate_civ.blocked_title")}</h3>
+              <h3 id="migrate-civ-blocked" className="m-0 text-sm font-medium">{t("users.migrate_civ.blocked_title")}</h3>
               <p className="m-0 text-[oklch(var(--color-ink-muted))]">{t("users.migrate_civ.blocked_body")}</p>
             </div>
             <ul className="m-0 list-none divide-y divide-[oklch(var(--color-line))] rounded-control border border-[oklch(var(--color-line))] p-0">
