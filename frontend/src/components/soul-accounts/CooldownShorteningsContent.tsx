@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { PAGE_SIZE, type OfficerCooldownShortening } from "@soulledger/core/api";
+import { PAGE_SIZE, soulAccountsApi, type OfficerCooldownShortening } from "@soulledger/core/api";
 import { soulAccountKeys } from "@soulledger/core/query_keys";
 import { useCooldownShortenings, useCooldownShorteningCounts } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -203,7 +203,18 @@ export function CooldownShorteningsContent({ tabs }: { tabs: ReactNode }) {
         </ul>
       </div>
 
-      {selected && <CooldownShorteningDetail key={selected.id} row={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <CooldownShorteningDetail
+          key={selected.id}
+          row={selected}
+          onClose={() => setSelected(null)}
+          onOpenNext={(id) =>
+            void queryClient
+              .fetchQuery({ queryKey: soulAccountKeys.cooldownShortening(id), queryFn: async () => (await soulAccountsApi.cooldownShortening(id)).data })
+              .then(setSelected, () => setSelected(null))
+          }
+        />
+      )}
     </PageShell>
   );
 }
