@@ -79,9 +79,11 @@ class ShardRouter:
             return None
         from django.conf import settings
 
-        if settings.SHARD_READ_CIVS and not settings.SHARD_WRITE_CIVS:
+        if settings.SHARD_READ_CIVS:
             # Stage 3: rows read from two shards meet in memory along a crossing key (a judgment and the soul
-            # it names); every write still goes to control (`apps.core.shard_reads.write_route`).
+            # it names); every write still goes to control (`apps.core.shard_reads.write_route`). Stage 4 the
+            # same, and a write still goes where its own row's hall says (`write_alias_of`), not to the database
+            # the related row came from -- so the in-memory pair decides nothing about where anything is written.
             return True
         return not (placement(obj1) == SHARD and placement(obj2) == SHARD)
 

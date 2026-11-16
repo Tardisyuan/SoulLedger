@@ -96,7 +96,7 @@ def _chat_on(settings):
 # ---- the same randomness on both sides ----------------------------------------------------------------------
 
 class _Seeded:
-    """uuid4 (the function and every field default that is it) and `random` from one seed."""
+    """uuid4 (the function and every field default that is it), `random` and `secrets` from one seed."""
 
     def __init__(self, monkeypatch, seed):
         self.mp, self.seed = monkeypatch, seed
@@ -111,7 +111,13 @@ class _Seeded:
         self.mp.setattr(uuid, "uuid4", uuid4)
         for f in self.fields:
             self.mp.setattr(f, "default", uuid4)
+            self.mp.setitem(f.__dict__, "_get_default", uuid4)  # Field._get_default is cached on first use
         random.seed(self.seed)
+        import secrets  # token_hex / token_urlsafe draw from token_bytes (an API key's prefix, a soul code)
+
+        self.mp.setattr(secrets, "token_bytes", lambda n=32: rng.randbytes(n))
+        self.mp.setattr(secrets, "choice", rng.choice)
+        self.mp.setattr(secrets, "randbelow", rng.randrange)
 
     def __exit__(self, *exc):
         self.mp.undo()

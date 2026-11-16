@@ -49,9 +49,11 @@ control before (`master_alias`); control stays a full mirror (shard-to-control s
               (`acting_alias`). No single one (MASTER, no context): NoShardContext, except that a queryset
               update / delete is split per master (`_split`), a create / get_or_create / bulk_create asks its row
               first, and a read for a write (select_for_update) runs on the one master holding its rows (`_locate`).
-  acting      the reads `reads_control` names (in a transaction, a write request, Celery, a command) read the
-  reads       master they write -- the row's own master database, else the context's, else every master (MASTER:
-              the merge above over the write-cut civilizations) -- so a write request reads its own writes.
+  acting      the reads `reads_control` names (in a transaction, a write request, Celery, a command) read where
+  reads       stage 3's control answered from, the masters: every master (MASTER: the merge above over the
+              write-cut civilizations), or -- asked about the rows of one row (a related manager, which Django
+              routes itself and which cannot merge) -- that row's hall's master. So a write request reads its own
+              writes and still finds another civilization's row its payload names, as the single database does.
   atomic      `transaction.atomic()` with no `using` also opens on the context's master shard (every write-cut
               shard where it has none), so a business transaction holds where its rows are (`_install_atomic`).
 """
@@ -277,22 +279,54 @@ def acting_alias():
     return CONTROL_ALIAS
 
 
-def _on_a_master(instance):
-    """A SHARD row read from the shard of a civilization whose writes are cut over: that shard is its master."""
-    return (instance is not None and placement(type(instance)) == SHARD
-            and _civ_of_alias(instance._state.db or "") in settings.SHARD_WRITE_CIVS)
-
-
 def _acting_read(hints):
-    """A read that may act on what was just written (`reads_control`). Stage 3: control. Stage 4: the master --
-    the row's own database when it came from one, else the context's master, else MASTER (every master)."""
+    """A read that may act on what was just written (`reads_control`). Stage 3: control, which holds every row.
+    Stage 4: the row's own database when it came from a master, else every master (MASTER) -- the stage-3 answer
+    with each write-cut civilization's rows read where they are written. Not only the context's master: a write
+    request of a Greek hall still reads the row of another civilization its payload names, to refuse it the way the
+    single database does ("no such soul in this tenant", not "object does not exist";
+    tests/test_sharded_writes_equal_single_db.py)."""
     if not settings.SHARD_WRITE_CIVS:
         return CONTROL_ALIAS
-    if _on_a_master(hints.get("instance")):
-        return None
     if hints.get(FANOUT_HINT):
-        return MASTER
-    return acting_alias() or MASTER
+        return MASTER  # a crossing key: the row it names may be in any master
+    instance = hints.get("instance")
+    kind = placement(type(instance)) if instance is not None else None
+    if kind in (SHARD, REFERENCE):
+        # The rows hanging off a row (job.runs, soul.records) are its hall's: that hall's master. One database --
+        # Django asks the router itself for a related manager (`_apply_rel_filters`), which cannot merge.
+        civ = instance.civilization if kind == REFERENCE else _loaded_civilization(instance)
+        if civ is not None:
+            return master_alias(civ) if civ else CONTROL_ALIAS
+        db = instance._state.db  # a hop of its path not loaded (reading it here would ask this again): its database
+        return db if db and (db == CONTROL_ALIAS or _civ_of_alias(db) in settings.SHARD_WRITE_CIVS) else (
+            acting_alias() if acting_alias() not in (None, MASTER) else CONTROL_ALIAS)
+    return MASTER
+
+
+def _loaded_civilization(instance):
+    """The civilization of `instance`'s hall from what is in memory (its loaded path, the hall id read from control):
+    "" for a row with no hall, None when a hop is not loaded."""
+    from django.apps import apps as django_apps
+
+    obj = instance
+    *hops, last = tenant_path(type(instance)).split("__")
+    for hop in hops:
+        f = obj._meta.get_field(hop)
+        if getattr(obj, f.attname) is None:
+            return ""
+        obj = f.get_cached_value(obj, None)
+        if obj is None:
+            return None
+    f = obj._meta.get_field(last)
+    cached = f.get_cached_value(obj, None)
+    if cached is not None:
+        return cached.civilization
+    hall_id = getattr(obj, f.attname)
+    if hall_id is None:
+        return ""
+    hall = django_apps.get_model("tenants", "Tenant")._base_manager.using(CONTROL_ALIAS).filter(pk=hall_id).first()
+    return hall.civilization if hall is not None else ""
 
 
 def route(model, hints):
@@ -1192,25 +1226,32 @@ def _locate(qs):
     qs._db = _checked(homes[0]) if homes else CONTROL_ALIAS
 
 
-def _probe(model, values):
-    """An unsaved row built from the plain field values of a get_or_create, to ask where it goes."""
-    names = {f.name for f in model._meta.concrete_fields} | {f.attname for f in model._meta.concrete_fields}
-    try:
-        return model(**{k: v for k, v in values.items() if k in names and not callable(v)})
-    except Exception:  # noqa: BLE001 -- a value the constructor refuses: the real call will say why
+def _hall_from_values(model, values):
+    """The hall a get_or_create's values name through `model`'s tenant path, or None. Read from the values (the
+    first hop as a row or an id), never by building the row: that would draw its defaults (a uuid4) once more."""
+    from django.apps import apps as django_apps
+
+    first, *rest = tenant_path(model).split("__")
+    f = model._meta.get_field(first)
+    value = values.get(first, values.get(f.attname))
+    if value is None or callable(value):
         return None
+    if isinstance(value, models.Model):  # the hall itself, or the row the path goes through (its hall is the same)
+        return value if not rest else _hall_of(value)
+    hall_id = value if not rest else (f.related_model._base_manager.filter(pk=value)
+                                      .values_list("__".join(rest), flat=True).first())
+    tenant = django_apps.get_model("tenants", "Tenant")
+    return tenant._base_manager.using(CONTROL_ALIAS).filter(pk=hall_id).first() if hall_id is not None else None
 
 
 def _probe_alias(qs, values):
-    """Where a get_or_create on `qs` goes when its row names a hall; None: ask the router."""
+    """Where a get_or_create on `qs` goes when its values name a hall; None: ask the router."""
     if not settings.SHARD_WRITE_CIVS or qs._db is not None or placement(qs.model) != SHARD:
         return None
     if qs._hints.get("instance") is not None or control_mastered(qs.model):
         return None
-    probe = _probe(qs.model, values)
-    if probe is None or _hall_of(probe) is None:
-        return None
-    return _checked(write_alias_of(probe))
+    hall = _hall_from_values(qs.model, values)
+    return _checked(master_alias(hall.civilization)) if hall is not None else None
 
 
 def _install_writes():
@@ -1269,6 +1310,18 @@ def _install_writes():
             return objs
         return bulk_create
 
+    def getting(original):
+        def get(self, *args, **kwargs):
+            # Django's get() asks `connections[clone.db]` before it evaluates a select_for_update: locate first.
+            if self._for_write and settings.SHARD_WRITE_CIVS and self._db is None:
+                probe = self.filter(*args, **kwargs) if args or kwargs else self._chain()
+                _locate(probe)
+                if probe._db is not None:
+                    return original(self.using(probe._db), *args, **kwargs)
+            return original(self, *args, **kwargs)
+        return get
+
+    _hook("get", getting)
     _hook("update", updating)
     _hook("delete", deleting)
     _hook("create", creating)

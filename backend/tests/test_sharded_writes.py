@@ -93,6 +93,7 @@ def test_saving_and_deleting_a_row_go_to_its_master_whatever_the_context():
     """The row says where it goes: a Greek soul saved from a SYSTEM_ADMIN-like context (no hall) or from an
     Egyptian hall's context still lands on civ_greek, and its delete happens there."""
     from apps.core.shard_reads import read_context
+    from apps.events.models import SoulEvent
     from apps.souls.models import Soul
 
     halls = _halls()
@@ -107,7 +108,8 @@ def test_saving_and_deleting_a_row_go_to_its_master_whatever_the_context():
             assert Soul._base_manager.using(GREEK).get(pk=soul.pk).name == "renamed from Egypt"
             assert not Soul._base_manager.using("default").filter(pk=soul.pk).exists()
             assert not Soul._base_manager.using(EGYPT).filter(pk=soul.pk).exists()
-            Soul.all_objects.filter(pk=soul.pk).delete()  # MASTER: split per master
+            SoulEvent.all_objects.filter(soul_id=soul.pk).delete()  # MASTER: split per master (PROTECT on the soul)
+            Soul.all_objects.filter(pk=soul.pk).delete()
     assert _where(Soul, soul.pk) == []
 
 
@@ -130,7 +132,7 @@ def test_a_write_naming_no_row_and_no_civilization_is_refused(label):
         with pytest.raises(NoShardContext):
             model._base_manager.filter(pk__in=[]).delete()
         with pytest.raises(NoShardContext):
-            model._base_manager.filter(pk__in=[]).update(pk=None)
+            model._base_manager.filter(pk__in=[]).update()
     with override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=[]):
         model._base_manager.filter(pk__in=[]).delete()
 
@@ -304,7 +306,8 @@ def test_with_no_write_cut_every_write_routes_as_in_stage_3():
         with override_settings(SHARD_READ_CIVS=reads, SHARD_WRITE_CIVS=[]):
             for model in apps.get_models(include_auto_created=True):
                 assert router.db_for_write(model) == "default", model._meta.label
-            assert router.db_for_write(Soul, instance=on_shard) == "default"
+            # reads not cut: Django's own answer (the row's database); reads cut: control (stage 3 write_route)
+            assert router.db_for_write(Soul, instance=on_shard) == ("default" if reads else GREEK)
             with transaction.atomic():
                 assert _atomic_extra.get() and not any(_atomic_extra.get())
                 assert [a for a in connections if a != "default" and connections[a].in_atomic_block
@@ -365,7 +368,7 @@ def test_assigning_ranges_is_idempotent_and_refuses_a_foreign_id():
                                                               resource="soul", resource_id="foreign")])
     with pytest.raises(CommandError, match="another civilization"):
         call_command("assign_shard_id_ranges", "--civ", "EGYPTIAN", verbosity=0)
-    with pytest.raises(CommandError, match="another civilization"):
+    with pytest.raises(CommandError, match="id range problem"):
         call_command("assign_shard_id_ranges", "--all", "--check", verbosity=0)
 
 
