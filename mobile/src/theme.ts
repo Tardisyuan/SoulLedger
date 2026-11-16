@@ -105,12 +105,14 @@ export const GUTTER_PT = 20;
  */
 export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, tag: 28, topline: 2, toastBar: 3 } as const;
 /**
- * v4 (user decision 2026-11-06): controls 4 — inputs, buttons, tags / badges; panels, dialogs and
- * sheets 6 (a sheet rounds its top corners only; v3's 8 became 6). The pill (the lamp, a drawer
- * handle) and the circle (a radio, an avatar) are `pill`. `none` is left for what is still square
- * (a rule, a table cell). The focus ring follows its element's shape.
+ * v4 (user decision 2026-11-06): controls 4 — inputs, buttons, tags / badges; panels and dialogs 6.
+ * Design batch 55: the large mobile surfaces — bottom sheets (top corners only), the remembered-account
+ * card, the account list, the scan notice — are `sheet` 12, the web's --radius-sheet (generated from
+ * packages/core/tokens). The pill (the lamp, a drawer handle) and the circle (a radio, an avatar) are
+ * `pill`. `none` is left for what is still square (a rule, a table cell). The focus ring follows its
+ * element's shape.
  */
-export const radius = { none: 0, control: 4, dialog: 6, pill: 999 } as const;
+export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.sheet, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds excepted, `useReducedMotionDurations`).
  * Opacity and translate only — the one scale is the cold start's mark receding (0.96),

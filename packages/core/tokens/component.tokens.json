@@ -158,14 +158,8 @@
       }
     }
   },
-  "undo-radius": {
-    "$type": "dimension",
-    "$value": {
-      "value": 8,
-      "unit": "px"
-    }
-  },
-  "readback-radius": {
+  "radius-sheet": {
+    "$description": "Design batch 55: the large mobile surfaces (bottom sheets, the read-back sheet, the remembered-account card, the account list, the scan notice). Dialogs, popovers and panels stay --radius-panel 6; the web's undo strip is --radius-panel too.",
     "$type": "dimension",
     "$value": {
       "value": 12,

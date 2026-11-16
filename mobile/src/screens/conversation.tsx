@@ -1029,7 +1029,7 @@ const styles = StyleSheet.create({
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
   subtitle: { fontSize: 12, lineHeight: 16 },
   rightSlot: { flexDirection: "row", alignItems: "center" },
-  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   hallHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 16 },

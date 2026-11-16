@@ -1126,7 +1126,7 @@ const styles = StyleSheet.create({
   reaction: { minWidth: 44, minHeight: 44, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
   lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
   /** In a `Sheet`: the edge and the ground are the sheet's; its drag handle sits above. */
   sheetBody: { paddingTop: 8, paddingHorizontal: 20, gap: 12 },
   sheetTitle: { flexShrink: 1 },
@@ -1141,7 +1141,7 @@ const styles = StyleSheet.create({
   /** 18pt of words, 44 to the finger: the padding grows, the negative margins keep it where it was. */
   replyButton: { marginTop: -4, marginBottom: -12, alignSelf: "flex-start", paddingVertical: 16, paddingRight: 12 },
   replying: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 2, paddingBottom: 8 },
-  menu: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
+  menu: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   dock: { borderTopWidth: 1, paddingTop: 12 },

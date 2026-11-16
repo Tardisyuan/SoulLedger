@@ -17,6 +17,7 @@ import { LAPSE_KEYS, canSubmitLogin, isFinalLapse, lapseOfReason, shouldAutoProm
 import { forgetDevice } from "../mfa";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
 import { RememberedCard } from "../rememberedCard";
+import { radius } from "../theme";
 import { SoulCodeField } from "../soulCodeView";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme, Press } from "../ui";
 import { useBiometry } from "../useBiometry";
@@ -752,7 +753,7 @@ const styles = StyleSheet.create({
   noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   network: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   lapsed: { flexDirection: "row", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
-  list: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
+  list: { borderWidth: 1, borderRadius: radius.sheet, overflow: "hidden" },
   listRow: { borderBottomWidth: 1 },
   more: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
   other: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingHorizontal: 16 },

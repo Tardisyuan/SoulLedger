@@ -120,7 +120,7 @@ export const semantic = {
     "warnBg": "#FFF1E2",
     "lamp": "#6A3E00",
     "lampBg": "#FBF1DC",
-    "scrim": "rgba(21,19,18,0.42)"
+    "scrim": "rgba(22,23,26,0.42)"
   }
 } as const;
 export const seal = {
@@ -140,4 +140,7 @@ export const seal = {
     "dark": "#CB7A5B",
     "light": "#86422A"
   }
+} as const;
+export const radius = {
+  "sheet": 12
 } as const;

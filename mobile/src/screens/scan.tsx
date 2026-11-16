@@ -24,6 +24,7 @@ import Svg, { Path } from "react-native-svg";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { INVALID_BANNER_MS } from "../loginRules";
+import { radius } from "../theme";
 import { Button, Screen, Txt, useTheme, Press } from "../ui";
 
 /** What the sign-in page receives: a fresh `at` per scan, so the same code twice still lands. */
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
   manual: { minHeight: 44, justifyContent: "center" },
   manualText: { color: WHITE, textDecorationLine: "underline" },
   privacy: { color: "#D8D8D2", textAlign: "center" },
-  notice: { alignSelf: "stretch", backgroundColor: NOTICE.ground, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
+  notice: { alignSelf: "stretch", backgroundColor: NOTICE.ground, borderRadius: radius.sheet, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
   noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   denied: { padding: 24, gap: 16 },
   deniedTitle: { fontFamily: family.ui[600], fontSize: 24, lineHeight: 32 },

@@ -458,7 +458,7 @@
   line-height: var(--tai-label-leading);
   color: oklch(var(--color-ink-muted));
 }
-/* 撤回条(第 4 条):判栏底部,盖住落印区。底 surface-2,墨 16% 的描边,圆角 8;两行字 + 描边的「撤回 ⌘Z」;
+/* 撤回条(第 4 条):判栏底部,盖住落印区。底 surface-2,墨 16% 的描边,圆角 --radius-panel 6(第五十五批,此前 8);两行字 + 描边的「撤回 ⌘Z」;
    底边一条 2px、墨 60% 的线在 UNDO_MS 内线性缩到 0 —— 不用文明色也不用警示色,这不是警告。悬停不暂停。 */
 .undo {
   position: absolute;
@@ -471,7 +471,7 @@
   align-items: center;
   padding: 10px 12px 12px;
   overflow: hidden;
-  border-radius: var(--undo-radius);
+  border-radius: var(--radius-panel);
   border: 1px solid color-mix(in oklch, oklch(var(--color-ink)) 16%, transparent);
   background: oklch(var(--color-surface-2));
 }

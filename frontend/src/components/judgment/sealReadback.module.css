@@ -1,5 +1,5 @@
 /*
- * 回读层(第四十六批第一节第 8 条,稿 `v4-batch46-desk.html` 第 4 节 `.rb`):居中 440 宽、圆角 12、衬线标题;
+ * 回读层(第四十六批第一节第 8 条,稿 `v4-batch46-desk.html` 第 4 节 `.rb`):居中 440 宽、圆角 --radius-sheet 12(第五十五批)、衬线标题;
  * 灵魂 / 案号 / 判决三行用卷宗字号(人名 18 衬线、案号 16 等宽、判决 20 衬线,最大)。值全读令牌
  * (`--readback-*`,源头 packages/core/tokens/component.tokens.json)。
  */
@@ -10,7 +10,7 @@
   display: grid;
   gap: 12px;
   padding: 20px 22px 18px;
-  border-radius: var(--readback-radius);
+  border-radius: var(--radius-sheet);
   background: oklch(var(--color-surface-1));
   /* 稿子的 --line2:墨 16%。 */
   border: 1px solid color-mix(in oklch, oklch(var(--color-ink)) 16%, transparent);

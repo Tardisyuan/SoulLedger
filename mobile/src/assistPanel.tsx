@@ -778,8 +778,8 @@ function Confirm({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   sheet: { flex: 1, borderTopWidth: 1 },
-  /** The drawer's top corners (v3 第一批: sheets 8); square once it fills the screen. */
-  sheetRound: { borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
+  /** The drawer's top corners (第五十五批: radius.sheet 12); square once it fills the screen. */
+  sheetRound: { borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   /** The pull zone around the 36 × 4 handle (a drag, not a tap target: closing has its button). */
   handleZone: { height: 24, alignItems: "center", justifyContent: "center" },
   handle: { width: 36, height: 4, borderRadius: 999 },

@@ -279,7 +279,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       animationConfigs={timing}
       gestureEventsHandlersHook={useSheetGestures}
       backdropComponent={backdrop}
-      backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, borderTopWidth: 1, borderTopColor: edge }}
+      backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, borderTopWidth: 1, borderTopColor: edge }}
       handleIndicatorStyle={{ backgroundColor: t.hair2 }}
       // The keyboard lifts the sheet with the focused field (its Inputs are BottomSheetTextInput, see
       // InSheetContext); a drag on the sheet puts the keyboard away, and closing it puts the sheet back.

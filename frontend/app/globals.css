@@ -879,8 +879,7 @@
     --glowA: 0.3;
     --field: rgba(255, 255, 255, 0.05);
     --verdict-rail-w: 288px;
-    --undo-radius: 8px;
-    --readback-radius: 12px;
+    --radius-sheet: 12px;
     --readback-name: 600 20px/28px var(--font-title);
     --readback-case: 400 16px/24px var(--font-mono);
     --readback-verdict: 600 24px/32px var(--font-title);
@@ -3290,7 +3289,7 @@ li:last-child > .route-row {
 /* 预览卡:1px 线 + 一层柔影;换文明时淡入 400 ms。 */
 .demo-preview-card {
   border: 1px solid oklch(var(--color-line));
-  border-radius: 14px;
+  border-radius: var(--radius-sheet);
   background: oklch(var(--color-surface-1));
   box-shadow: var(--shadow-card);
 }
