@@ -581,11 +581,16 @@ def test_a_random_update_on_control_is_reported_exactly_and_fixed(world):
         new = world.value(field)
         picked = [pk for pk in rng.sample(held, rng.randint(1, min(3, len(held))))
                   if model._base_manager.filter(pk=pk).values_list(field.attname, flat=True).get() != new]
-        if picked:
+        if not picked:
+            continue
+        try:  # a value a constraint refuses (a second default city god of a hall: seed 418987) is drawn again too
+            with transaction.atomic(using="default"):
+                model._base_manager.filter(pk__in=picked).update(**{field.attname: new})
             break
-    assert picked, "fifty draws and every one equal to the rows' values"
+        except IntegrityError:
+            picked = []
+    assert picked, f"fifty draws and every one equal to the rows' values or refused; SHARD_SYNC_SEED={world.seed}"
     print(f"update {model._meta.label}.{field.name} on {picked}")
-    model._base_manager.filter(pk__in=picked).update(**{field.attname: new})
     others = [a for a in ["default", *shard_aliases()] if a != alias]
     before = _snapshot(others)
 
@@ -599,6 +604,18 @@ def test_a_random_update_on_control_is_reported_exactly_and_fixed(world):
     assert _snapshot(others) == before, "a fix on one shard changed another database"
 
 
+def _held_by_its_hall(soul):
+    """Whether a row owned by the soul's hall (not by the soul) names it through a constrained key (a capture warrant,
+    `CaptureWarrant.soul`). Moving such a soul's home -- which the product never does: a dispatch leaves a copy at
+    home (D6) -- strands that row in the old shard with a key to a soul it no longer holds ("not copied", seed
+    418987, 2026-11-16 gate). The test below moves the home, so it takes a soul nothing of its hall holds that way."""
+    from apps.core.sharding import same_civilization_keys
+
+    Soul = apps.get_model("souls", "Soul")
+    return any(f.model._base_manager.filter(**{f.attname: soul.pk}).exists()
+               for m in apps.get_models() for f in same_civilization_keys(m) if f.related_model is Soul)
+
+
 @sharded
 def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
     """The fix deletes on the shard without the bare-id delete rules (apps/core/bare_ids.py), which would
@@ -607,7 +624,8 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
 
     Soul = apps.get_model("souls", "Soul")
     account = next(a for a in SoulAccount._base_manager.filter(soul__tenant__isnull=False).select_related("soul__tenant")
-                   if a.soul.tenant.civilization in CIVS and a.soul.tenant_id == a.soul.home_tenant_id)
+                   if a.soul.tenant.civilization in CIVS and a.soul.tenant_id == a.soul.home_tenant_id
+                   and not _held_by_its_hall(a.soul))
     soul, here = account.soul, alias_for_civilization(account.soul.tenant.civilization)
     elsewhere = next(h for h in world.halls if h.declared_civilization and h.civilization != soul.tenant.civilization)
     from apps.org.models import Organization

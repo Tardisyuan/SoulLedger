@@ -473,7 +473,11 @@ def test_the_first_write_to_a_shard_without_its_range_is_refused():
 
     halls = _halls()
     from apps.audit.models import AuditAction, AuditLog
+    from apps.core.shard_ids import _set_next
 
+    # A PostgreSQL sequence is not rolled back with the test: an earlier test on this database may have moved it
+    # into the range already (gate 2026-11-16). Put it back below the range, as a shard that never had it assigned.
+    _set_next(GREEK, AuditLog, 1)
     with cut("GREEK"), _in_hall(halls["GREEK"]):
         Soul.objects.create(name="a uuid pk needs no range", tenant=halls["GREEK"])
         with pytest.raises(ImproperlyConfigured, match="assign_shard_id_ranges"):
