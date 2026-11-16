@@ -268,6 +268,8 @@ export interface ApprovalNode {
   waiting_on_cosigner?: { id: number; name: string } | null;
   timeout_hours?: number | null;
   timeout_action?: WorkflowTimeoutAction | "";
+  /** When the node became the current stop; its deadline is this plus `timeout_hours`. Null before it is reached. */
+  activated_at?: string | null;
   /** 第四十三批: the realm's segment (its order) and this station's number inside it; null before segments. */
   segment_order?: number | null;
   order_in_segment?: number | null;

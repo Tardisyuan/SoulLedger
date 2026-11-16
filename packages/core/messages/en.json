@@ -1721,7 +1721,8 @@
       "terminate_confirm_title": "End this workflow?",
       "terminate_confirm_message": "It cannot be advanced or decided afterwards. The reason goes into the audit log.",
       "terminate_success": "Workflow ended",
-      "terminate_error": "Failed to end the workflow"
+      "terminate_error": "Failed to end the workflow",
+      "deadline": "Due {{time}}"
     },
     "verdicts": {
       "passed": "Passed",

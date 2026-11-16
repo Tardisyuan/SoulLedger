@@ -25,5 +25,6 @@
   "soul_app.login.reset_filled",
   "soul_app.login.use_code",
   "soul_app.login.use_email",
-  "users.roles.SYSTEM_ADMIN"
+  "users.roles.SYSTEM_ADMIN",
+  "workflow.detail.deadline"
 ]
