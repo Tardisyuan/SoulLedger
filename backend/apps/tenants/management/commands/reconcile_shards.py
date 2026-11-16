@@ -6,7 +6,9 @@ docs/audit/2026-11-15-sharding/PLAN.md). Sync is this command with --fix.
 
 Which rows a shard holds and how they are compared: apps/core/shard_sync.py. Prints one line per row that
 differs (model, pk, which side lacks or disagrees), exits 1 when any is left -- with --fix, rows
-still differing when it re-checks after the fix. No shard alias configured: says so and exits 0.
+still differing when it re-checks after the fix -- and on an integer-id range problem (apps/core/shard_ids.py: an
+id of another civilization's range on a shard, a write-cut shard's sequence outside its range, control's
+PostgreSQL sequences at or above 1e15). No shard alias configured: says so and exits 0.
 `--direction shard-to-control --fix` is refused for a civilization not in SHARD_WRITE_CIVS.
 """
 from django.core.management.base import BaseCommand, CommandError
@@ -53,7 +55,7 @@ class Command(BaseCommand):
             if early:
                 raise CommandError(f"--direction {SHARD_TO_CONTROL} --fix refused for {early}: not in SHARD_WRITE_CIVS "
                                    f"{list(settings.SHARD_WRITE_CIVS)}, so control is still the master of their rows")
-        report =reconcile(shards, fix=fix, direction=direction, retry_window=retry_window)
+        report = reconcile(shards, fix=fix, direction=direction, retry_window=retry_window)
         for alias, diffs in report.items():
             src, dst = ("control", alias) if direction == CONTROL_TO_SHARD else (alias, "default")
             for d in diffs:
@@ -65,5 +67,13 @@ class Command(BaseCommand):
                 self.stdout.write("still " + d.line(*(("control", d.alias) if direction == CONTROL_TO_SHARD
                                                       else (d.alias, "default"))).strip())
         left = sum(map(len, report.values()))
+        # Stage 4 (gap 4a): integer ids of the compared shards in their civilization's range, control's below it.
+        from apps.core.shard_ids import problems
+
+        ranges = [p for alias in ["default", *shards] for p in problems(alias)]
+        for p in ranges:
+            self.stdout.write(f"  id range: {p}")
         if left:
             raise CommandError(f"{left} row(s) differ" + (" after the fix" if fix else ""))
+        if ranges:
+            raise CommandError(f"{len(ranges)} id range problem(s)")

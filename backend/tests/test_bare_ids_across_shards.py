@@ -3,10 +3,10 @@ on real civilization shards (stage-1B re-review, items G and H; runs in the `sha
 
 G  a PROTECT source that exists only on a shard (RebirthApplication.account) blocks deleting the control
    SoulAccount it names. Mutation: the PROTECT probe looks only at the first alias -> red.
-H  the auto-created M2M through rows (CityGod_officers, TudiGod_officers on a shard) are cleared when the
-   control user they name is deleted -- by the delete, not by calling clear_bare_ids. Mutation: bare_ids_to()
-   leaves out auto-created through tables -> red. The RoleDataScope_orgs direction (org deleted on its shard,
-   through rows on control) is a strict xfail: it found a stage-4 defect, see its reason.
+H  the M2M through rows (CityGodOfficer, TudiGodOfficer on a shard) are cleared when the control user they
+   name is deleted -- by the delete, not by calling clear_bare_ids. Mutation: bare_ids_to() leaves out the
+   through tables -> red. The RoleDataScopeOrg direction (org deleted on its shard, through rows on control)
+   was a strict xfail until stage 4 made the three through tables explicit (gap 4c).
 Writing these found a stage-2 defect, fixed in apps/core/bare_ids.py: clear_bare_ids and orphans asked every
 alias for every bare id, so once fanout() named a shard, every hard delete of a user died on a CONTROL source
 table (User.create_user ...) that a shard does not have.
@@ -100,15 +100,11 @@ def test_deleting_a_control_user_clears_its_through_rows_on_the_shard(greek, mod
     assert left == {kept.pk}, left  # its own row went, the other officer's stayed
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "stage-4 defect, found here: deleting an Organization on its shard runs Django's collector there, which "
-    "cascades into RoleDataScope.orgs' auto-created through table -- a CONTROL table absent on the shard "
-    "(no such table: perm_role_data_scope_orgs). Unreachable before SHARD_WRITE_CIVS; needs an explicit "
-    "through model with DO_NOTHING (cleared by bare_ids) before Greek writes are cut over. strict: goes red "
-    "when fixed, so the xfail comes off."))
 def test_deleting_an_organization_on_its_shard_clears_the_control_scope_rows(greek, settings):
     """The other direction: Greek writes cut over, so the shard's Organization is the primary; deleting it
-    there clears RoleDataScope_orgs rows on control."""
+    there clears RoleDataScopeOrg rows on control. Until gap 4c this was a strict xfail: Django's collector on
+    the shard cascaded into RoleDataScope.orgs' auto-created through table, a CONTROL table absent there (no such
+    table: perm_role_data_scope_orgs). Mutation: the through key back to CASCADE -> red."""
     from apps.org.models import Organization
     from apps.perm.models import Role, RoleDataScope
 
@@ -144,4 +140,4 @@ def test_orphans_reads_each_bare_id_where_its_table_is(greek):
     through._base_manager.using(SHARD).bulk_create([through(citygod_id=god.pk, user_id=live.pk)])
     assert orphans(["default", SHARD]) == []
     through._base_manager.using(SHARD).bulk_create([through(citygod_id=god.pk, user_id=live.pk + 10_000)])
-    assert orphans(["default", SHARD]) == [("judgment.CityGod_officers.user", SHARD, 1)]
+    assert orphans(["default", SHARD]) == [("judgment.CityGodOfficer.user", SHARD, 1)]

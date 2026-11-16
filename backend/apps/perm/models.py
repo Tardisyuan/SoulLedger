@@ -553,7 +553,8 @@ class RoleDataScope(AuditUserFields):
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='data_scopes')
     resource = models.CharField(max_length=40, blank=True, default='', help_text="空 = 角色默认")
     scope = models.CharField(max_length=10, choices=SCOPE_CHOICES)
-    orgs = models.ManyToManyField('org.Organization', blank=True, related_name='+', help_text="DEFINE 的机构", db_constraint=False)
+    orgs = models.ManyToManyField('org.Organization', blank=True, related_name='+', help_text="DEFINE 的机构",
+                                  through='RoleDataScopeOrg')
 
     class Meta:
         db_table = 'perm_role_data_scope'
@@ -566,3 +567,18 @@ class RoleDataScope(AuditUserFields):
 
     def __str__(self):
         return f"{self.role_id}:{self.resource or '*'} → {self.scope}"
+
+
+class RoleDataScopeOrg(models.Model):
+    """`RoleDataScope.orgs`' through row (stage 4 gap 4c): the table Django created for the M2M, made explicit so
+    neither end is Django's to delete. Its organization lives in a shard once that hall's writes are cut over, and
+    Django's collector clears an auto-created through table on the database the deleted row is in -- a shard, where
+    this CONTROL table is not (no such table). Both keys are bare ids (DO_NOTHING, no constraint); apps.core.bare_ids
+    clears them on every database (CASCADE, `ON_DELETE`)."""
+    roledatascope = models.ForeignKey(RoleDataScope, on_delete=models.DO_NOTHING, db_constraint=False, related_name='+')
+    organization = models.ForeignKey('org.Organization', on_delete=models.DO_NOTHING, db_constraint=False,
+                                     related_name='+')
+
+    class Meta:
+        db_table = 'perm_role_data_scope_orgs'
+        unique_together = [('roledatascope', 'organization')]

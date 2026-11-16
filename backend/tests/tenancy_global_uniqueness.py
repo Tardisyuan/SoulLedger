@@ -145,8 +145,31 @@ UNIQUE_KEYS = {
     'chat.Conversation:chat_one_open_inbox_per_soul_and_hall': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
     'judgment.CityGod:unique_city_god_name_per_hall': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
     'judgment.CityGod:one_default_city_god_per_hall': ('PER_TENANT', 'one default city god per hall (tenant is the key); NOT global'),
+    'judgment.CityGodOfficer:unique_together(citygod,user)': ('PER_PARENT', "one row per (city god, officer): CityGod.officers' through table (gap 4c), the rows live with their city god"),
+    'death_sync.TudiGodOfficer:unique_together(tudigod,user)': ('PER_PARENT', "one row per (tudi god, officer): TudiGod.officers' through table (gap 4c), the rows live with their tudi god"),
+    'perm.RoleDataScopeOrg:unique_together(roledatascope,organization)': ('PER_PARENT', "one row per (scope, unit): RoleDataScope.orgs' through table (gap 4c), the rows live with their global scope row"),
     'judgment.Statute:unique_statute_tenant_code': ('PER_TENANT', 'statute code is unique PER TENANT only, yet some code lookups ignore the tenant (see tenancy_unscoped_sites CODE rows)'),
     'ledger.BalanceSnapshot:uniq_balance_snapshot_tenant_month': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
     'ledger.SoulCensusSnapshot:uniq_census_snapshot_tenant_day': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
     'social.SensitiveWord:social_sensitive_word_unique_per_tenant': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
+}
+
+#: Stage 4 (writes split): the unique keys of a SHARD model whose columns include a key that may cross
+#: civilizations (`apps.core.shard_reads.crossing_keys`) and not the hall. Each shard's UNIQUE index covers only
+#: its own rows, and the rows that share such a key can be in two shards -- a soul's residence rows in the hall it
+#: resides in, its home rows at home. Held by D6 (one writable copy of a soul; its rows written by the hall that
+#: holds the soul) and, across civilizations, by the stage-4 saga (outbox / inbox, part C), not by an index.
+#: Derived and pinned by `test_global_uniqueness_inventory.py::test_the_keys_a_write_split_can_span_are_pinned`.
+SPANNING = {
+    'chat.Conversation:chat_one_open_direct_room_per_pair': "one open room per soul pair; the two souls may live in two civilizations (private chat across halls): the room is opened by the initiator's hall only",
+    'dispatch.CrossTenantJudgmentParticipant:unique_cross_judgment_node_order': 'one seat per bench order; seats live with their halls, the bench with the initiating hall (joint judgment, part C)',
+    'dispatch.DispatchRecord:unique_active_dispatch': 'one live dispatch per soul across source and target halls (dispatch state machine, part C)',
+    'judgment.EvidenceAdmission:unique_admission_judgment_record': 'one ruling per (case, record): a residence court rules on records the home hall wrote; the admission lives with the case',
+    'realms.SoulPathEntry:soulpath_one_open_entry_per_soul': 'one open station per soul, whichever hall holds it: only the hall holding the soul writes one (D6)',
+    'realms.SoulPathEntry:soulpath_unique_sequence': 'per-soul path sequence across the halls it passed through: written by the hall holding the soul (D6)',
+    'reincarnation.Reincarnation:reincarnation_one_per_soul_cycle': 'one rebirth per soul and life: written by the hall holding the soul (D6)',
+    'sentence_plan.SentencePlan:unique_in_progress_sentence_plan': 'one plan in progress per soul; the plan belongs to the home hall, the soul may reside elsewhere (part C)',
+    'soul_accounts.RebirthApplication:appeal_workflow': 'one application per appeal workflow; the application follows its soul, the workflow stays in the hall that opened it',
+    'soul_accounts.RebirthApplication:workflow': 'one application per rebirth workflow; as appeal_workflow',
+    'workflow.WorkflowSegment:uniq_wf_segment_order': "one segment per (workflow, order); a segment run by another civilization's realm lives in that shard (part C)",
 }

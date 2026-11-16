@@ -81,6 +81,14 @@ ON_DELETE = {
     "workflow.WorkflowSegment.workflow": models.CASCADE,
     # Stage 2 review: a residence court rules on records the home hall wrote (`*_bare_ids_stage2_review`).
     "judgment.EvidenceAdmission.record": models.RESTRICT,
+    # Stage 4 gap 4c: the three M2M through tables made explicit (`*_explicit_through_bare_ids`); a through row
+    # goes with either end, as Django's auto-created one did.
+    "death_sync.TudiGodOfficer.tudigod": models.CASCADE,
+    "death_sync.TudiGodOfficer.user": models.CASCADE,
+    "judgment.CityGodOfficer.citygod": models.CASCADE,
+    "judgment.CityGodOfficer.user": models.CASCADE,
+    "perm.RoleDataScopeOrg.organization": models.CASCADE,
+    "perm.RoleDataScopeOrg.roledatascope": models.CASCADE,
 }
 
 
@@ -90,10 +98,10 @@ def label(field) -> str:
 
 def is_bare(field) -> bool:
     """A forward FK with no database constraint: the ones we cut (on_delete=DO_NOTHING), and both FKs of
-    an auto-created M2M through table whose M2M field has `db_constraint=False` (RoleDataScope_orgs,
-    CityGod_officers, TudiGod_officers). Those keep Django's CASCADE, but Django clears them only on the
-    database the deleted row is in, and reversing 1B puts their constraints back -- so they are checked
-    for orphans and cleared across databases like the others."""
+    an auto-created M2M through table whose M2M field has `db_constraint=False` (none since stage 4 gap 4c
+    made RoleDataScope.orgs, CityGod.officers and TudiGod.officers explicit through models with DO_NOTHING
+    keys: Django cleared an auto-created one only on the database the deleted row is in, where the table
+    may not be). Checked for orphans and cleared across databases like the others."""
     if not isinstance(field, models.ForeignKey) or field.db_constraint:
         return False
     return field.model._meta.auto_created or field.remote_field.on_delete is models.DO_NOTHING
@@ -209,18 +217,15 @@ def counting_cascades():
 def primary_alias(instance):
     """The alias holding the authoritative row of `instance`: its civilization's shard once that
     civilization's writes are cut over (settings.SHARD_WRITE_CIVS, stage 4), else the control database.
-    CONTROL / REFERENCE rows, and SHARD rows with no hall (D2), are always on "default"."""
-    from apps.core.sharding import SHARD, alias_for_civilization, placement, tenant_path
+    CONTROL / REFERENCE rows, and SHARD rows with no hall (D2), are always on "default". The same answer as
+    the write router's (`apps.core.shard_reads.write_alias_of`)."""
+    from apps.core.sharding import SHARD, placement
 
     if not settings.SHARD_WRITE_CIVS or placement(type(instance)) != SHARD:
         return "default"
-    hall = instance
-    for step in tenant_path(type(instance)).split("__"):
-        hall = getattr(hall, step, None)
-        if hall is None:
-            return "default"
-    civ = hall.civilization
-    return alias_for_civilization(civ) if civ in settings.SHARD_WRITE_CIVS else "default"
+    from apps.core.shard_reads import write_alias_of
+
+    return write_alias_of(instance)
 
 
 def _on_pre_delete(sender, instance, using, **kwargs):

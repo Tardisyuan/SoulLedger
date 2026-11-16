@@ -31,7 +31,10 @@ What later stages change:
       `apps.core.shard_reads.route` -- the instance hint, else the read context of the request / task; no
       context raises `NoShardContext`, never a silent fall back to default. FANOUT reads are merged by the
       QuerySet hooks in that module, not here.
-  4   db_for_write: the same for settings.SHARD_WRITE_CIVS.
+  4   db_for_write (done): a SHARD row of a civilization in settings.SHARD_WRITE_CIVS is written on its shard, any
+      other on control, by `apps.core.shard_reads.write_route` -- the row's hall, else the context's master; no
+      single answer raises NoShardContext. Reads that may act on a write (in a transaction, a write request,
+      Celery, a command) read the master too (reads your writes); `transaction.atomic()` opens on the shard as well.
 
 Rollback at any stage before 4: delete the DATABASE_ROUTERS line in settings.
 """
@@ -59,10 +62,10 @@ class ShardRouter:
         # Stage 3 (apps/core/shard_reads.py): a SHARD model of a civilization in SHARD_READ_CIVS. None while
         # nothing is cut over. A FANOUT read reaching the router is one the QuerySet hooks did not merge
         # (raw SQL, explain, a combined queryset): refused rather than read from one database.
-        from apps.core.shard_reads import FANOUT, route
+        from apps.core.shard_reads import FANOUT, MASTER, route
 
         alias = route(model, hints)
-        if alias == FANOUT:
+        if alias in (FANOUT, MASTER):
             raise NoShardContext(f"{model._meta.label}: a read across every shard through a path that cannot merge")
         return alias
 

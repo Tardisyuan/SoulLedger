@@ -46,11 +46,16 @@ def test_discovery_sees_exactly_the_bare_foreign_keys():
                 for f in m._meta.concrete_fields
                 if isinstance(f, models.ForeignKey) and is_bare(f) and f.model is m}
     assert seen == declared and "realms.Realm.create_user" in seen and "realms.Realm.parent_realm" not in seen
-    # The M2M through tables whose M2M field is db_constraint=False: both their keys, CASCADE.
-    through = {"perm.RoleDataScope_orgs.organization", "perm.RoleDataScope_orgs.roledatascope",
-               "judgment.CityGod_officers.user", "judgment.CityGod_officers.citygod",
-               "death_sync.TudiGod_officers.user", "death_sync.TudiGod_officers.tudigod"}
-    assert {label(f) for f in _all_bare() if f.model._meta.auto_created} == through
+    # The M2M through tables (explicit since stage 4 gap 4c, DO_NOTHING both ends): both their keys, CASCADE.
+    through = {"perm.RoleDataScopeOrg.organization", "perm.RoleDataScopeOrg.roledatascope",
+               "judgment.CityGodOfficer.user", "judgment.CityGodOfficer.citygod",
+               "death_sync.TudiGodOfficer.user", "death_sync.TudiGodOfficer.tudigod"}
+    throughs = {f.remote_field.through for m in apps.get_models() for f in m._meta.local_many_to_many}
+    by_label = {label(f): f for f in _all_bare()}
+    assert {k for k, f in by_label.items() if f.model in throughs} == through
+    assert all(rule(by_label[k]) is models.CASCADE for k in through)
+    # Gap 4c: no auto-created through table is left whose keys Django's collector would clear on one database.
+    assert not [k for k, f in by_label.items() if f.model._meta.auto_created], "an M2M lost its explicit through"
 
 
 @pytest.fixture
@@ -338,7 +343,7 @@ def _orphan_source(edge, hall):
         pt = PeriodicTask.objects.create(name="orph", task="orph", crontab=cron)
         job = ScheduledJob.objects.create(periodic_task=pt, job_key="tests.orph")
         return ScheduledJob.objects.filter(pk=job.pk), "periodic_task_id", pt.pk + GONE
-    if edge.startswith("perm.RoleDataScope_orgs."):
+    if edge.startswith("perm.RoleDataScopeOrg."):
         scope = RoleDataScope.objects.create(role=Role.objects.get_or_create(name="orph")[0], scope="DEFINE")
         scope.orgs.add(org)
         rows = RoleDataScope.orgs.through.objects.filter(roledatascope=scope)
@@ -408,12 +413,12 @@ ORPHAN_EDGES = [
     "authentication.User.organization",      # -> Organization
     "authentication.User.actor",             # -> Actor
     "scheduler.ScheduledJob.periodic_task",  # -> PeriodicTask
-    "perm.RoleDataScope_orgs.organization",
-    "perm.RoleDataScope_orgs.roledatascope",
-    "judgment.CityGod_officers.user",
-    "judgment.CityGod_officers.citygod",
-    "death_sync.TudiGod_officers.user",
-    "death_sync.TudiGod_officers.tudigod",
+    "perm.RoleDataScopeOrg.organization",
+    "perm.RoleDataScopeOrg.roledatascope",
+    "judgment.CityGodOfficer.user",
+    "judgment.CityGodOfficer.citygod",
+    "death_sync.TudiGodOfficer.user",
+    "death_sync.TudiGodOfficer.tudigod",
 ]
 
 
@@ -445,7 +450,7 @@ def test_clearing_a_deleted_organization_removes_its_through_table_rows(hall):
     from apps.core.bare_ids import clear_bare_ids
     from apps.org.models import Organization
 
-    rows, _, _ = _orphan_source("perm.RoleDataScope_orgs.organization", hall)
+    rows, _, _ = _orphan_source("perm.RoleDataScopeOrg.organization", hall)
     row = rows.get()
     gone, scope = row.organization, row.roledatascope
     kept = Organization.objects.create(name="kept", code="ORPH_KEPT", category="", tenant=hall, parent=gone.parent)
@@ -486,12 +491,21 @@ def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hal
 
     greek, chinese = Soul.objects.create(name="g", tenant=greek_hall), Soul.objects.create(name="c", tenant=hall)
     kept, gone = account_of(greek, "bare-copy-g"), account_of(chinese, "bare-copy-c")
+    from apps.events.models import SoulEvent
+
     settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
-    # fanout() would name civ_greek, which this settings file has no database for; the rows are here.
+    # fanout() would name civ_greek, which this settings file has no database for; the rows are here. So is
+    # every write: stage 4 routes a Greek soul's writes to civ_greek, so the deletes name control themselves
+    # (`Soul.purge` there would, which is what test_shard_aliases.py does on a real shard).
     monkeypatch.setattr("apps.core.sharding.fanout", lambda: ["default"])
-    greek.purge()
+
+    def delete_on_control(soul):
+        SoulEvent.all_objects.using("default").filter(soul=soul).delete()
+        Soul.all_objects.using("default").filter(pk=soul.pk).delete()
+
+    delete_on_control(greek)
     assert SoulAccount.objects.filter(pk=kept.pk).exists()
-    chinese.purge()  # Chinese writes are not cut over: default is its primary, the rule applies
+    delete_on_control(chinese)  # Chinese writes are not cut over: default is its primary, the rule applies
     assert not SoulAccount.objects.filter(pk=gone.pk).exists()
 
 

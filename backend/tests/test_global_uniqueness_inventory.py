@@ -220,3 +220,32 @@ def test_soul_code_generator_retries_on_collision_and_never_overwrites():
     )
     assert "IntegrityError" in caught and guarded
     assert _field("souls.Soul", "soul_code").null, "soul_code must stay nullable until provisioned (unique ignores NULL)"
+
+
+def test_the_keys_a_write_split_can_span_are_pinned():
+    """Stage 4: once a civilization's writes go to its shard, a UNIQUE index of a SHARD table holds per shard. A key
+    with the hall in it stays in one shard; a key through a crossing key (a soul, a workflow, a judgment that may be
+    in another civilization's shard) can have its rows in two -- each pinned in SPANNING with what holds it instead.
+    Derived from the constraints and `crossing_keys()`."""
+    from apps.core.shard_reads import crossing_keys
+    from apps.core.sharding import SHARD, placement
+    from tests.tenancy_global_uniqueness import SPANNING
+
+    crossing = {(f.model, f.name) for f in crossing_keys()}
+
+    def columns(m, key):
+        if key.startswith("unique_together("):
+            return key[len("unique_together("):-1].split(",")
+        c = next((c for c in m._meta.constraints if getattr(c, "name", None) == key), None)
+        return list(c.fields) if c is not None else [key]
+
+    derived = set()
+    for key in derive():
+        label, name = key.split(":", 1)
+        m = apps.get_model(label)
+        cols = columns(m, name)
+        if placement(m) == SHARD and "tenant" not in cols and any((m, c) in crossing for c in cols):
+            derived.add(key)
+    assert derived == set(SPANNING), (f"not pinned: {sorted(derived - set(SPANNING))}; "
+                                      f"pinned, gone: {sorted(set(SPANNING) - derived)}")
+    assert all(len(why) > 20 for why in SPANNING.values())

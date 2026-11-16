@@ -636,6 +636,7 @@ def test_shard_to_control_brings_a_shard_write_back(world):
     code, out = _reconcile("--civ", civ, "--direction", "shard-to-control")
     assert code == 1 and _reported(out) == {(Soul._meta.label, str(soul.pk))}, out
     with override_settings(SHARD_READ_CIVS=[civ], SHARD_WRITE_CIVS=[civ]):  # stage 4: the shard is the master
+        call_command("assign_shard_id_ranges", "--civ", civ, stdout=io.StringIO())  # gap 4a: before writes cut over
         assert _reconcile("--civ", civ, "--direction", "shard-to-control", "--fix")[0] == 0
     assert Soul._base_manager.get(pk=soul.pk).name == "written-on-the-shard"
     assert _reconcile("--all")[0] == 0
