@@ -14,11 +14,12 @@ class MenusConfig(AppConfig):
         from apps.core.recycle_bin import register_bin_type
 
         from .models import Menu, MenuButton
-        from .views import bump_menus
+        from .views import bump_menus, menu_rows
 
         for model in (Menu, MenuButton):  # the sidebar's per-process copy (apps/menus/views.py::menu_rows)
             post_save.connect(bump_menus, sender=model, dispatch_uid=f"menus-save-{model.__name__}")
             post_delete.connect(bump_menus, sender=model, dispatch_uid=f"menus-delete-{model.__name__}")
+            menu_rows.watch(model._meta.label)
         register_bin_type(
             "menu", Menu, "reference", lambda menu: menu.name,
             location=lambda menu: {"kind": "parent", "value": menu.parent.name} if menu.parent_id else None,

@@ -22,7 +22,23 @@ from django.db import transaction
 logger = logging.getLogger(__name__)
 
 
+#: model label -> the memos built from its rows (`VersionedMemo.watch`). A writer no signal reaches -- the shard sync's
+#: raw inserts and deletes (apps/core/shard_sync.py `apply_fix`) -- bumps them with `bump_for(model)`.
+WATCHED: dict = {}
+
+
+def bump_for(model, using=None):
+    """Bump every memo built from `model`'s rows (a write that sent no signal)."""
+    for memo in WATCHED.get(model._meta.label, ()):
+        memo.bump(using=using)
+
+
 class VersionedMemo:
+    def watch(self, *labels):
+        """Record that this memo is built from these models' rows ("app.Model"): `bump_for` reaches it."""
+        for label in labels:
+            WATCHED.setdefault(label, []).append(self)
+
     def __init__(self, namespace: str, ttl: float = 60.0):
         self.key = f"v:{namespace}"
         self.ttl = ttl

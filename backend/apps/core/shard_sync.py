@@ -276,6 +276,12 @@ def apply_fix(found, direction):
                 for i in range(0, len(rows), step):
                     # raw: the values as read, no pre_save -- bulk_create would stamp auto_now columns anew.
                     model._base_manager.using(target)._insert(rows[i:i + step], fields=fields, raw=True, using=target)
+    # Raw inserts and deletes send no signal: the per-process caches built from these rows (apps/core/versioned.py,
+    # e.g. the data scope's org tree from Organization) are told here, now and at the target's commit.
+    from apps.core.versioned import bump_for
+
+    for model in found:
+        bump_for(model, using=target)
 
 
 def sync_direction(shard):

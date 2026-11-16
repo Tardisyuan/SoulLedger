@@ -368,6 +368,36 @@ def _reconcile_s2c(civ):
 
 
 @sharded
+@pytest.mark.parametrize("writes", [[], ["CHINESE"]], ids=["control-to-shard", "shard-to-control"])
+def test_a_sync_fix_tells_the_caches_built_from_the_rows_it_wrote(writes):
+    """The sync writes raw (no signal), so a per-process copy built from those rows (apps/core/versioned.py: the data
+    scope's org tree) would keep answering the old rows until its ttl. `apply_fix` bumps every memo watching a model it
+    fixed: the next read sees the new unit, in either direction. Mutation: no bump -> the stale tree is served."""
+    from apps.core.shard_reads import control_mirror_writes, read_context
+    from apps.core.shard_sync import SHARD_TO_CONTROL, reconcile
+    from apps.org.models import Organization
+    from apps.org.ownership import tenant_root
+    from apps.perm.data_scope import _shared, _tree
+
+    halls = _halls()
+    hall = halls["CHINESE"]
+    root = tenant_root(hall)
+    _assign("CHINESE")
+    source, target = ("civ_chinese", "default") if writes else ("default", "civ_chinese")
+    with override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=writes), read_context(target):
+        def tree():
+            return _shared.get(("tree", hall.pk), lambda: _tree(hall.pk))
+        before = tree()
+        with control_mirror_writes():  # the unit as the master has it; no signal, no bump
+            Organization._base_manager.using(source).bulk_create(
+                [Organization(tenant=hall, name="new unit", code="W4_CACHE", parent=root)])
+        assert tree() == before  # nothing told the copy yet: the stale answer the sync must end
+        reconcile(["civ_chinese"], fix=True, direction=SHARD_TO_CONTROL if writes else "control-to-shard")
+        new = Organization._base_manager.using(target).get(code="W4_CACHE").pk
+        assert new in tree().get(root.pk, []), "a sync fix left the cached org tree stale"
+
+
+@sharded
 def test_a_write_on_a_write_cut_shard_queues_the_sync(monkeypatch, django_capture_on_commit_callbacks):
     from django.core.cache import cache
 

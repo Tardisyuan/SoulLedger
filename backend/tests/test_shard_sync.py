@@ -617,9 +617,10 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
     control_before = _snapshot(["default"])
 
     code, out = _reconcile("--all", "--fix")
+    seed = f"SHARD_SYNC_SEED={world.seed}"  # in the failure itself, not only in a report section (2026-11-16)
     # Rows that followed the soul and still point into its old hall are bare ids: nothing is left.
-    assert code == 0 and "still" not in out, out
-    assert (Soul._meta.label, str(soul.pk)) in _reported(out)
+    assert code == 0 and "still" not in out, f"{seed}\n{out}"
+    assert (Soul._meta.label, str(soul.pk)) in _reported(out), seed
     assert not Soul._base_manager.using(here).filter(pk=soul.pk).exists()
     assert _snapshot(["default"]) == control_before
     assert SoulAccount._base_manager.filter(pk=account.pk, soul_id=soul.pk).exists()
