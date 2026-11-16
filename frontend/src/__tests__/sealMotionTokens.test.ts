@@ -103,3 +103,25 @@ describe("呼吸 (G2): the spine's current point breathes three times, then stop
     expect(CSS).not.toMatch(/empty-breathe/);
   });
 });
+
+describe("「你在这里」(batch 58 M5): the route and journey markers breathe like the spine, three times, then stop", () => {
+  it.each([".route-now::after", ".journey-pulse"])("%s plays now-breath --now-breath-count times, never infinite", (sel) => {
+    const rule = block(CSS, sel);
+    expect(rule).toMatch(/animation: now-breath var\(--now-breath\) ease-in-out var\(--now-breath-count\)/);
+    expect(rule).not.toMatch(/infinite/);
+  });
+
+  it("now-breath is BREATHE_MOTION (the spine's spine-now values), ending at rest", () => {
+    const frames = block(CSS, "@keyframes now-breath");
+    expect(frames).toMatch(new RegExp(`transform: scale\\(${BREATHE_MOTION.scale[1]}\\)`));
+    expect(frames).toMatch(new RegExp(`opacity: ${BREATHE_MOTION.opacity[1]}`));
+    expect(frames).toMatch(/0%,\s*100% \{\s*transform: scale\(1\);\s*opacity: 1;/);
+    // Absence: the old endless rings are gone.
+    expect(CSS).not.toMatch(/route-pulse|journey-breathe/);
+  });
+
+  it("reduce motion: neither breathes", () => {
+    expect(CSS).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.route-row \.route-walked,\s*\.route-now::after \{\s*animation: none;/);
+    expect(CSS).toMatch(/\.journey-pulse \{\s*animation: none;\s*\}/);
+  });
+});

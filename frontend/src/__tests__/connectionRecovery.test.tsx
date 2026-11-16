@@ -163,19 +163,63 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
     expect(pill.className).not.toMatch(/text-\[oklch\(var\(--color-(warn|warning)\)\)\]/);
   });
 
-  it("fades out over 300ms once connected, and does not say 「已连接」", () => {
+  it("fades in over 160 and fades out over 160 (batch 58 M13)", () => {
+    mockStatus = "failed";
+    render(<ConnectionBanner />);
+    for (const el of [screen.getByTestId("connection-banner"), screen.getByTestId("connection-rule")]) {
+      expect(classes(el)).toEqual(expect.arrayContaining(["animate-content-in", "transition-opacity", "duration-fast", "ease-exit"]));
+      expect(classes(el)).not.toContain("duration-base");
+    }
+  });
+
+  it("once connected: says 「已连接」 for 3 s, then fades out over 160 (batch 58 M13)", () => {
     jest.useFakeTimers();
     mockStatus = "failed";
     const { rerender } = render(<ConnectionBanner />);
     mockStatus = "connected";
     rerender(<ConnectionBanner />);
     const pill = screen.getByTestId("connection-banner");
-    expect(classes(pill)).toContain("opacity-0");
-    expect(pill).not.toHaveTextContent("connection.connected");
+    expect(pill).toHaveAttribute("data-tone", "ok");
+    expect(pill).toHaveTextContent("connection.connected");
+    expect(pill).not.toHaveTextContent("connection.failed");
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(classes(screen.getByTestId("connection-rule"))).toContain("bg-[oklch(var(--color-status-success))]");
     act(() => {
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(2999);
+    });
+    expect(classes(screen.getByTestId("connection-banner"))).toContain("opacity-100");
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(classes(screen.getByTestId("connection-banner"))).toContain("opacity-0");
+    act(() => {
+      jest.advanceTimersByTime(159);
+    });
+    expect(screen.getByTestId("connection-banner")).toBeInTheDocument();
+    act(() => {
+      jest.advanceTimersByTime(1);
     });
     expect(screen.queryByTestId("connection-banner")).toBeNull();
+  });
+
+  it("drops again during the hold: back to the reason at once, not faded", () => {
+    jest.useFakeTimers();
+    mockStatus = "failed";
+    const { rerender } = render(<ConnectionBanner />);
+    mockStatus = "connected";
+    rerender(<ConnectionBanner />);
+    act(() => {
+      jest.advanceTimersByTime(3050);
+    });
+    mockStatus = "failed";
+    rerender(<ConnectionBanner />);
+    const pill = screen.getByTestId("connection-banner");
+    expect(pill).toHaveAttribute("data-tone", "neg");
+    expect(classes(pill)).toContain("opacity-100");
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(screen.getByTestId("connection-banner")).toHaveAttribute("data-tone", "neg");
   });
 
   describe("离线(v3:navigator.onLine === false,随 offline / online 事件)", () => {
@@ -205,7 +249,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
 
       setOnline(true);
       act(() => {
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(3000 + 160);
       });
       expect(screen.queryByTestId("connection-banner")).toBeNull();
     });

@@ -3,7 +3,6 @@
 import { forwardRef } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { Spinner } from "./Spinner";
 
 /**
  * The one button — 规范 v2「朱印」补足 A1 的按钮行,尺寸见下面 size 那段(触屏 44 / 48 / 56,精确指针 v4 的 32 / 36 / 40),
@@ -19,8 +18,9 @@ import { Spinner } from "./Spinner";
  *   只出现在「输入名称以确认」的对话框里 —— 放在哪是调用点的事,这里只管长相。
  * - **警示**:次按钮的形状换成警示色(A1 没画这一档,保留 v1 的做法)。
  *
- * 禁用:底 s2、字 ink3、边框透明,不透明度不变(对比豁免,但仍可辨认)。加载:aria-busy、
- * 不可再按、前面加转圈,宽度不变。焦点环交给全局 `:focus-visible`(2px ink 外扩 2)。
+ * 禁用:底 s2、字 ink3、边框透明,不透明度不变(对比豁免,但仍可辨认)。忙碌(第五十八批 M10):aria-busy、
+ * 立即不可再按,但样子不变 —— 不置灰(禁用的那组类带 `not-aria-busy:`),文字、宽度都不动;超过 160ms 底边走一条线
+ * (globals.css `.button-busy`)。不放转圈。焦点环交给全局 `:focus-visible`(2px ink 外扩 2)。
  *
  * 叠黑的类名必须整串写出来:Tailwind 扫源码里的完整类名,拼出来的它看不见。
  *
@@ -33,7 +33,8 @@ const button = cva(
     "font-semibold whitespace-nowrap select-none border",
     "transition-[color,background-color,border-color] duration-fast ease-standard",
     // Disabled (A1): s2 fill, ink3 text, no border, same opacity; hover and press are dead.
-    "disabled:pointer-events-none disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-transparent",
+    // Busy is disabled too (no second press) but keeps its look (M10), hence `not-aria-busy:`.
+    "disabled:pointer-events-none disabled:not-aria-busy:bg-[oklch(var(--color-disabled-surface))] disabled:not-aria-busy:text-[oklch(var(--color-disabled-ink))] disabled:not-aria-busy:border-transparent",
   ],
   {
     variants: {
@@ -111,13 +112,9 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof button> {
   /**
-   * Busy. Disables the control and lays a `<Spinner size="sm">` over the
-   * label (v3:加载时保留原宽度). The label stays in the layout and in the
-   * accessibility tree — only its opacity drops to 0 — so the button keeps its
-   * width and its accessible name. (This comment used to say the spinner was
-   * placed ahead of the label "so the button does not resize"; inserted in the
-   * flow, it widened the button by the spinner plus a gap.) The spinner is
-   * unlabelled on purpose: the button's text is the name, `aria-busy` the state.
+   * Busy (Design v4 batch 58 M10). Disabled at once so it cannot be pressed again, but drawn as before: same
+   * label, same width, same colours. After 160ms a 2px line runs along the bottom edge (`.button-busy`), in the
+   * button's own text colour at 60%. The label is the accessible name, `aria-busy` the state — nothing else is read.
    */
   loading?: boolean;
 }
@@ -138,22 +135,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(button({ variant, size }), loading && "relative", className)}
+      className={cn(button({ variant, size }), loading && "relative overflow-hidden", className)}
       {...rest}
     >
-      {loading ? (
-        <>
-          {/* Same `gap-2` as the button, so the hidden label measures exactly what it did. */}
-          <span data-button-label="" className="inline-flex items-center gap-2 opacity-0">
-            {children}
-          </span>
-          <span className="absolute inset-0 grid place-items-center">
-            <Spinner size="sm" />
-          </span>
-        </>
-      ) : (
-        children
-      )}
+      {children}
+      {loading ? <span aria-hidden="true" data-button-busy="" className="button-busy" /> : null}
     </button>
   );
 });
