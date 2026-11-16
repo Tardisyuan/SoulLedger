@@ -246,6 +246,95 @@ remote_verdict() {
     esac
 }
 
+# ── THE WINDOWS PC: A THIRD HOST WHEN UNRAID IS FULL AND THE PC IS IDLE (2026-11-17, user decision) ──
+# GATES_REMOTE_WIN (.prepush.env) names an ssh host: sshd inside WSL on the PC, with docker, the same images and
+# its own sl-pg-test. A gate run goes there only when every unRAID gate slot is held right now (--e2e: when
+# unRAID's e2e.lock is held), the PC answers, has the image, runs no other job of ours, no game from
+# GATES_REMOTE_WIN_GAMES is running and Windows' CPU is under GATES_REMOTE_WIN_MAX_CPU %. Otherwise nothing
+# changes: the run goes to GATES_REMOTE exactly as before and waits there. The PC takes one job at a time,
+# gate or E2E: both take its run.lock.
+# The user's two conditions: (1) a game that starts during a run drops the run to nice 19 and
+# GATES_REMOTE_WIN_GAME_CPUS CPUs — never stops it — and restores it when the game exits (win_watch, beside
+# the container); a file `game-running` in GATES_REMOTE_WIN_DIR counts as a game, to prove that path.
+# (2) the SSD: GATES_REMOTE_WIN_DIR is a tmpfs there (trees, node_modules, venv, logs), sl-pg-test keeps its
+# data on tmpfs, and the container's /root and /tmp are tmpfs too (npm / pip caches, Chromium's profile).
+WIN_DIR="${GATES_REMOTE_WIN_DIR:-/srv/sl-gates}"
+WIN_GAMES="${GATES_REMOTE_WIN_GAMES:-YuanShen.exe GenshinImpact.exe}"
+ELOCK=e2e.lock RUN_EXTRA="" WIN_WATCH=0
+# win_exe <program> <args…> — a Windows program from a shell sshd started, which has no WSL_INTEROP.
+win_exe() {
+    local s; for s in ${WSL_INTEROP:-} /run/WSL/*_interop; do
+        [ -S "$s" ] && WSL_INTEROP="$s" timeout 20 "$@" 2>/dev/null && return 0
+    done; return 1
+}
+# win_game <dir> <game.exe>… — prints the first listed game running on Windows (or the flag file); nothing if none.
+win_game() {
+    local d="$1" g tl; shift
+    [ -e "$d/game-running" ] && { echo "game-running flag"; return 0; }
+    tl=$(win_exe /mnt/c/Windows/System32/tasklist.exe /FO CSV /NH) || { echo "cannot ask Windows"; return 0; }
+    for g in "$@"; do grep -qi "^\"$g\"" <<<"$tl" && { echo "$g"; return 0; }; done; return 0
+}
+# win_probe <dir> <image> <max cpu %> <game.exe>… — on the PC: "idle", or why not.
+win_probe() {
+    local d="$1" img="$2" max="$3" g cpu; shift 3
+    docker image inspect "$img" >/dev/null 2>&1 || { echo "no $img image"; return; }
+    mkdir -p "$d" && ( flock -n 9 ) 9>"$d/run.lock" || { echo "already running a job of ours"; return; }
+    g=$(win_game "$d" "$@"); [ -z "$g" ] || { echo "game: $g"; return; }
+    cpu=$(win_exe /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -c \
+        "(Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average" | tr -dc 0-9)
+    [ -n "$cpu" ] && [ "$cpu" -lt "$max" ] || { echo "Windows CPU at ${cpu:-?}% (limit $max%)"; return; }
+    echo idle
+}
+# win_watch <container> <dir> <cpus> <cpus while a game runs> <game.exe>… — on the PC, beside the run, until the
+# container is gone. Processes forked later inherit nice 19 from their parents; each pass renices again anyway.
+win_watch() {
+    local c="$1" d="$2" hi="$3" lo="$4" low=0 seen=0 g; shift 4
+    while :; do
+        if docker inspect "$c" >/dev/null 2>&1; then seen=1; elif [ $seen = 1 ]; then return; fi
+        g=$(win_game "$d" "$@")
+        if [ -n "$g" ] && [ $seen = 1 ]; then
+            docker top "$c" -eo pid | tail -n +2 | xargs -r renice -n 19 -p >/dev/null 2>&1
+            [ $low = 1 ] || { docker update --cpus "$lo" "$c" >/dev/null && low=1 \
+                && echo "gates: $g on the PC — the run there drops to nice 19 and $lo CPUs until it exits"; }
+        elif [ $low = 1 ] && [ $seen = 1 ]; then
+            docker top "$c" -eo pid | tail -n +2 | xargs -r renice -n 0 -p >/dev/null 2>&1
+            docker update --cpus "$hi" "$c" >/dev/null && low=0 && echo "gates: no game on the PC — the run there is back to $hi CPUs"
+        fi
+        sleep "${WIN_WATCH_EVERY:-15}"
+    done
+}
+# win_bg <container> <cpus> — the remote shell's words that start win_watch beside the run (empty off the PC).
+win_bg() {
+    [ "$WIN_WATCH" = 1 ] || return 0
+    printf '%s\n( win_watch %s %s %s %s %s ) & W=$!; ' "$(declare -f win_exe win_game win_watch)" \
+        "$1" "$WIN_DIR" "$2" "${GATES_REMOTE_WIN_GAME_CPUS:-4}" "$WIN_GAMES"
+}
+win_bg_end() { [ "$WIN_WATCH" = 1 ] && printf '%s' 'kill $W 2>/dev/null; '; return 0; }
+# win_route <gate|e2e> <image> — point GATES_REMOTE (and its dir, database, sizes) at the PC when the rule holds.
+win_route() {
+    [ -n "${GATES_REMOTE_WIN:-}" ] && [ -n "${GATES_REMOTE:-}" ] || return 1
+    local locks=e2e.lock state why url
+    [ "$1" = gate ] && { locks=run.lock; [ "${GATES_REMOTE_SLOTS:-2}" = 1 ] || locks="run.lock run.2.lock"; }
+    state=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" \
+        "for l in $locks; do flock -n $RDIR/\$l true && { echo free; exit; }; done; echo full" 2>/dev/null)
+    [ "$state" = full ] || [ "${GATES_REMOTE_WIN_FORCE:-}" = 1 ] || return 1  # FORCE: try the PC whatever unRAID has free
+    why=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE_WIN" \
+        "$(declare -f win_exe win_game win_probe); win_probe $WIN_DIR $2 ${GATES_REMOTE_WIN_MAX_CPU:-40} $WIN_GAMES" 2>/dev/null)
+    [ "$why" = idle ] || { echo "$P: $GATES_REMOTE is full ($locks held); not using $GATES_REMOTE_WIN: ${why:-unreachable}"; return 1; }
+    if [ "$1" = gate ]; then
+        url="${GATES_REMOTE_WIN_DB_URL:-$(ssh -o BatchMode=yes "$GATES_REMOTE_WIN" cat /etc/sl-gates/pg.url 2>/dev/null)}"
+        [ -n "$url" ] || { echo "$P: not using $GATES_REMOTE_WIN: no GATES_REMOTE_WIN_DB_URL and no /etc/sl-gates/pg.url there"; return 1; }
+        GATES_REMOTE_DB_URL="$url"
+    fi
+    [ "$state" = full ] && why="is full ($locks held)" || why="is not full, but GATES_REMOTE_WIN_FORCE=1"
+    echo "$P: $GATES_REMOTE $why and $GATES_REMOTE_WIN is idle — this run goes there"
+    GATES_REMOTE="$GATES_REMOTE_WIN" RDIR="$WIN_DIR" RWORK="$WIN_DIR/work/$RID" GATES_REMOTE_SLOTS=1 ELOCK=run.lock WIN_WATCH=1
+    SLOT_CPUS="${GATES_REMOTE_WIN_CPUS:-16}" SLOT_MEM="${GATES_REMOTE_WIN_MEMORY:-32g}" SLOT_WORKERS="${GATES_REMOTE_WIN_WORKERS:-6}"
+    GATES_REMOTE_CPUS="$SLOT_CPUS" GATES_REMOTE_MEMORY="$SLOT_MEM" GATES_REMOTE_E2E_CPUS="$SLOT_CPUS" GATES_REMOTE_E2E_MEMORY="$SLOT_MEM"
+    GATES_REMOTE_PYTEST_WORKERS="$SLOT_WORKERS" GATES_REMOTE_JS_WORKERS="$SLOT_WORKERS"
+    RUN_EXTRA=" --tmpfs /root:rw,exec,size=4g --tmpfs /tmp:rw,exec,size=4g"
+}
+
 # ── SYNCED TREES NOBODY USES ARE DELETED THERE (2026-11-13, test review 3.5) ─────────────────────
 # Each checkout leaves up to four trees on the remote machine — work/<id> (the gates), work/<id>-e2e,
 # work/demo-<hash> and android/work/<id> — each with its own node_modules (and venv), and nothing ever
@@ -531,6 +620,7 @@ if [ -n "$E2E" ]; then
         fi
     fi
     EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
+    win_route e2e "$EIMG" || :  # THE WINDOWS PC, near the top
     # Its own synced tree and its own lock (2026-10-29): E2E builds .next and runs browsers in a tree of its
     # own, so it no longer waits for — or rsyncs under — a gate run on the same box. 8 CPUs here + 12 for a
     # gate run = the box's 20; the two used to queue on run.lock one after the other.
@@ -548,7 +638,7 @@ if [ -n "$E2E" ]; then
     # /tmp in memory, as in scripts/demo-remote.sh: Chromium's profile and cache on the shared btrfs image stalled
     # frames for 5–19 s under load (2026-11-08 trace evidence there).
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, above.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 e2e.lock sl-e2e- sl-demo-); docker run --rm --init --name $ENAME \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 $ELOCK sl-e2e- sl-demo-); $(win_bg $ENAME ${GATES_REMOTE_E2E_CPUS:-8})docker run --rm --init --name $ENAME$RUN_EXTRA \
         --tmpfs /tmp:rw,exec,size=8g --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
         -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
         -e PROJECTS='$E2E' $EIMG timeout -k 60 $ELIMIT bash -c '$REMOTE_DEPS
@@ -560,7 +650,7 @@ if [ -n "$E2E" ]; then
           echo \"  → \$PROJECTS in one run (\$(( \$(date +%s) - T ))s)\"
           python3 /app/scripts/e2e-report.py /sl-tmp/e2e.json \$(echo \$PROJECTS | tr , \" \") \
             || { tail -30 /sl-tmp/e2e.log; [ \$rc -eq 0 ] && rc=1; }
-          exit \$rc'; rc=\$?; docker rm -f $ENAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/e2e.lock"
+          exit \$rc'; rc=\$?; $(win_bg_end)docker rm -f $ENAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/$ELOCK"
     ERC=$?
     trap - EXIT
     remote_verdict "$ERC" "$ELIMIT" GATES_REMOTE_E2E_TIMEOUT
@@ -1128,6 +1218,7 @@ static_fail() {
 # comment GATES_REMOTE out of .prepush.env; `SKIP_PREPUSH=1 git push` skips the hook.
 if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the gates on this machine."
+    win_route gate "$RIMG" || :  # THE WINDOWS PC, near the top
     # ... and mark the tree as in use before anything is synced into it (SYNCED TREES NOBODY USES, above).
     ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1 && { mkdir -p $RWORK && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
         || fail "$GATES_REMOTE is unreachable, or has no $RIMG image. Not running the gates on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
@@ -1173,7 +1264,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # Workers: 5 for pytest + 5 for the JS runners = the slot's 10 CPUs (6 + 6 = 12 with one slot), because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY ) 7>$RDIR/prune.lock; docker run --rm --init --name $RNAME \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY ) 7>$RDIR/prune.lock; $(win_bg $RNAME ${GATES_REMOTE_CPUS:-$SLOT_CPUS})docker run --rm --init --name $RNAME$RUN_EXTRA \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS} \
@@ -1182,7 +1273,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
           find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
           $REMOTE_DEPS
           export PREPUSH_CHANGED=\"\$(cat .sl-changed)\" PREPUSH_CHANGED_BACKEND=\"\$(cat .sl-changed-backend)\" PREPUSH_CHANGED_JS=\"\$(cat .sl-changed-js)\"
-          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/run.lock" | tee "$RLOG"
+          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; $(win_bg_end)docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/run.lock" | tee "$RLOG"
     RSTATUS=${PIPESTATUS[0]}
     trap - EXIT
     remote_verdict "$RSTATUS" "$RLIMIT" "$RLIMIT_VAR"
