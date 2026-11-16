@@ -359,6 +359,7 @@ def _kept_or_fresh_templates(config, fresh):
     from config.testdb import (
         database_digests,
         database_exists,
+        gate_slot,
         kept_template_names,
         objects_that_differ,
         prune_templates,
@@ -378,7 +379,7 @@ def _kept_or_fresh_templates(config, fresh):
         )
         for alias in fresh
     }
-    kept = kept_template_names(settings.DATABASES, hashes)
+    kept = kept_template_names(settings.DATABASES, hashes, gate_slot(os.environ))
     verify = sqlite_template.mode(os.environ, reuse_db=False, nomigrations=False, has_migration_tests=False) == "verify"
     existing = set()
     for alias, name in kept.items():
