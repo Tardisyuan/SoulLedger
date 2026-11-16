@@ -11,6 +11,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 
 /** The to-do item a workflow is decided as: a plain approval by the workflow's id, a rebirth by its application's. */
 export type ApprovalRef = { kind: "approval" | "rebirth"; id: string };
@@ -36,7 +37,12 @@ export function AddCosignerDialog({ target, onClose, onAdded }: { target: Approv
     queryFn: async () => (await officerAppApi.signerCandidates(q.trim() || undefined)).data,
     placeholderData: (previous) => previous,
   });
-  const options = (candidates.data ?? []).map((p) => ({ value: String(p.id), label: p.name && p.name !== p.username ? `${p.name} · ${p.username}` : p.username }));
+  // 第五十九批 N10: the name on top, 「用户名 · 角色」 underneath -- the officer App's sheet has the same two lines.
+  const options = (candidates.data ?? []).map((p) => ({
+    value: String(p.id),
+    label: p.name || p.username,
+    detail: [p.username, resolveEnumDisplay(t, "users.roles", p.role).label ?? p.role].filter(Boolean).join(" · "),
+  }));
 
   const add = useMutation({
     mutationFn: (userId: number) => officerAppApi.addCosigner(target.kind, target.id, userId),

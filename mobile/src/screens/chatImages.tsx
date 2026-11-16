@@ -17,7 +17,7 @@ import type { ChatImageRef } from "@soulledger/core/api/matrix";
 import { mediaUrl } from "@soulledger/core/api/soul-social";
 import { Image, type ImageSource } from "expo-image";
 import { useCallback, useEffect, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Outgoing } from "../chat";
@@ -25,7 +25,7 @@ import { bubbleStamp } from "../chatRules";
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { ON_PLAQUE } from "../theme";
-import { AlertTxt, Loader, OneLine, Txt, useTheme, Press } from "../ui";
+import { AlertTxt, FadeModal, Loader, OneLine, Txt, useTheme, Press } from "../ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
 export const CHAT_IMAGE_MAX = 4;
@@ -226,10 +226,10 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
  */
 export function ChatImageViewer({ images, index, onClose }: { images: ChatImageRef[]; index: number | null; onClose: () => void }) {
   return (
-    <Modal visible={index !== null} animationType="fade" onRequestClose={onClose} transparent={false} statusBarTranslucent>
+    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始。 */}
       {index !== null ? <ViewerPages key={index} images={images} start={index} onClose={onClose} /> : null}
-    </Modal>
+    </FadeModal>
   );
 }
 

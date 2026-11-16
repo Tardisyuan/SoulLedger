@@ -3,12 +3,13 @@ import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate, pad2 } from "@soulledger/core/domain/dates";
 import { verdictNamespace } from "@soulledger/core/domain/verdictNames";
+import { BREATHE_MOTION } from "@soulledger/core/config/motion";
 import { civKey, realmPlace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useReducer, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist } from "../assist";
@@ -608,7 +609,9 @@ const ROUTE_AHEAD = 3;
  * 30/38, v4's sentence for it, then the road drawn top to bottom — walked in a solid line in the civilization's
  * colour, "here" a ring in the metal (the spine's one metal mark) under 「你现在在这里」 in bold ink (Design 第四十九批 B3,
  * as the web route's current station), ahead dashed in --sub. Only the trunk (「支线不画」). A road
- * that ends (湮灭, 永罚) ends in `neg`. Nothing moves; there is nothing to still under reduce motion.
+ * that ends (湮灭, 永罚) ends in `neg`. The "here" ring breathes three times and stops, as the dossier spine's current
+ * point (第五十八批 M5, `BREATHE_MOTION`: 2.4s × 3, scale 1 → 1.06, opacity 1 → .7), again when the stop changes or the
+ * page is entered; under reduce motion it does not move.
  */
 function HereRoute({ route }: { route: SoulRoute }) {
   const t = useTheme();
@@ -645,6 +648,28 @@ function HereRoute({ route }: { route: SoulRoute }) {
   );
 }
 
+/** The road's "here" ring: three breaths on mount (a new stop is a new row, so a new mount), then still (M5). */
+export function HereRing({ testID, style }: { testID: string; style: StyleProp<ViewStyle> }) {
+  const reduced = useReducedMotion();
+  const [b] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (reduced) return;
+    const half = { duration: BREATHE_MOTION.periodMs / 2, easing: Easing.inOut(Easing.ease), useNativeDriver: true };
+    const run = Animated.loop(Animated.sequence([Animated.timing(b, { toValue: 1, ...half }), Animated.timing(b, { toValue: 0, ...half })]), {
+      iterations: BREATHE_MOTION.iterations,
+    });
+    run.start();
+    return () => run.stop();
+  }, [b, reduced]);
+  const breath = reduced
+    ? null
+    : {
+        opacity: b.interpolate({ inputRange: [0, 1], outputRange: [...BREATHE_MOTION.opacity] }),
+        transform: [{ scale: b.interpolate({ inputRange: [0, 1], outputRange: [...BREATHE_MOTION.scale] }) }],
+      };
+  return <Animated.View testID={testID} style={[style, breath]} />;
+}
+
 function RouteRow({
   kind,
   step,
@@ -669,13 +694,11 @@ function RouteRow({
       <View style={styles.routeRail}>
         {/* v4 dashes the road ahead; RN draws a dashed border only when all four sides are, so it is the hairline here. */}
         {last ? null : <View style={[styles.routeLine, { backgroundColor: kind === "walked" ? t.plaque : t.hair2 }]} />}
-        <View
-          testID={`${testID}-mark`}
-          style={[
-            styles.routeDot,
-            kind === "here" ? [styles.routeDotHere, { borderColor: mark, backgroundColor: t.s0 }] : { borderColor: mark, backgroundColor: kind === "walked" ? mark : t.s0 },
-          ]}
-        />
+        {kind === "here" ? (
+          <HereRing testID={`${testID}-mark`} style={[styles.routeDot, styles.routeDotHere, { borderColor: mark, backgroundColor: t.s0 }]} />
+        ) : (
+          <View testID={`${testID}-mark`} style={[styles.routeDot, { borderColor: mark, backgroundColor: kind === "walked" ? mark : t.s0 }]} />
+        )}
       </View>
       <View style={styles.routeText}>
         {kind === "here" ? (

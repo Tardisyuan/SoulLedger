@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { QueryClientContext } from "@tanstack/react-query";
+import { useSkeletonHold } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -377,6 +379,19 @@ export interface PageHeadProps {
 }
 
 /**
+ * Some query that already has data on screen is fetching again — a refetch, a reconnect's or a version bump's
+ * invalidation, a timed poll (M8). Loading more of an infinite list is not a refresh (M9 draws its own rows), and a first
+ * load has no data yet (the skeleton says that). No QueryClient (a bare test render): never.
+ */
+function useRefreshingShownData(): boolean {
+  const client = React.useContext(QueryClientContext);
+  const subscribe = React.useCallback((cb: () => void) => (client ? client.getQueryCache().subscribe(cb) : () => {}), [client]);
+  const read = () =>
+    !!client && client.isFetching({ predicate: (q) => q.state.data !== undefined && !q.state.fetchMeta?.fetchMore }) > 0;
+  return React.useSyncExternalStore(subscribe, read, () => false);
+}
+
+/**
  * 「顶线 + 卷宗头」(第三十批「卷宗」第 1 步)。PageShell 用它画页头;案卷台右侧摊开的那一份(第 2 步)直接用它。
  * 文明由 <html data-civ> 选(顶线 civT、光晕 glow × `--glowA`、纸纹、水印都随文明换);水印的中心物与记号读此刻所在的殿。
  * 不吸顶:卷宗的封面不跟着滚,滚动时还需要的只有筛选栏。
@@ -397,6 +412,15 @@ export function PageHead({
   const civ = (useHallCivilization() ?? null) as SealCiv | null;
   const headRef = React.useRef<HTMLElement>(null);
   useHeadMarkAvoidance(headRef);
+  // 第五十八批 M8:已有内容时的刷新(重取、重连、版本更新、定时)让顶线走一趟。开始时起一趟,播完(animationend)收。
+  const refreshing = useRefreshingShownData();
+  const [refreshPass, setRefreshPass] = React.useState(false);
+  const [wasRefreshing, setWasRefreshing] = React.useState(refreshing);
+  if (refreshing !== wasRefreshing) {
+    setWasRefreshing(refreshing);
+    if (refreshing) setRefreshPass(true);
+  }
+  const endRefreshPass = React.useCallback(() => setRefreshPass(false), []);
   const body = (
     <>
       {/* 返回链接与等宽小字共用标题上方那一行,但它们不是一回事:小字说**这一页是什么**(案号、殿、日期),
@@ -470,7 +494,13 @@ export function PageHead({
           body
         )}
       </div>
-      <div aria-hidden="true" data-loading={loading ? "" : undefined} className="page-head-topline" />
+      <div
+        aria-hidden="true"
+        data-loading={loading ? "" : undefined}
+        data-refresh={!loading && refreshPass ? "" : undefined}
+        onAnimationEnd={endRefreshPass}
+        className="page-head-topline"
+      />
       <div aria-hidden="true" className="page-head-glow" />
       <div aria-hidden="true" className="page-head-pat" />
       <CivMark civ={civ} size={180} className="page-head-wm" />
@@ -508,7 +538,8 @@ export function PageShell({
   useReportHeading(typeof title === "string" ? title : null);
 
   // 三选一，顺序是有意的：还在加载时不该先闪一下空态。
-  const showingSkeleton = Boolean(isLoading && skeleton);
+  // 第五十八批 M6:骨架一旦出现至少停 300 ms(`useSkeletonHold`)。
+  const showingSkeleton = useSkeletonHold(Boolean(isLoading && skeleton));
   const body = showingSkeleton ? skeleton : isEmpty && empty ? empty : children;
 
   // 等宽小字一行:页面报的殿名、案号在前,页面自己的 eyebrow 在后。标题下面一行:副标题,再接页面报的概览。
@@ -593,7 +624,7 @@ export function PageShell({
       ) : null}
 
       {/* 规范 v3「骨架 → 内容」:骨架在时没有动画类,内容一到就挂上 `animate-content-in`
-          (200ms 淡入)—— 类名从无到有就是动画开始,不用 key、不重挂载。骨架是静态的、
+          (160 淡入,第五十八批 M7)—— 类名从无到有就是动画开始,不用 key、不重挂载。骨架是静态的、
           瞬时离场,所以这是「内容淡入」而不是两层叠着的交叉淡化;只对给了 `skeleton`
           的页面生效。减少动态效果下是 80ms(`data-motion`)。 */}
       <div

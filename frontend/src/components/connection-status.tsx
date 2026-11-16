@@ -98,17 +98,19 @@ export function useConnectionBannerShown(): boolean {
   return offline || (!!user && status !== "connected" && status !== "connecting");
 }
 
-/** v4 第八批:连上之后胶囊淡出的时长。 */
-/** = `--transition-duration-base`(`duration-base`,240ms)—— 淡出完再清空内容。 */
-const FADE_MS = 240;
+/** 第五十八批 M13:进出都是 160 = `--transition-duration-fast`(`duration-fast`)—— 淡出完再清空内容。 */
+const FADE_MS = 160;
+/** 第五十八批 M13:连上以后先停 3 秒(说「已连接」),再收起。 */
+export const CONNECTED_HOLD_MS = 3000;
 
-type Tone = "warn" | "neg" | "offline";
+type Tone = "warn" | "neg" | "offline" | "ok";
 /** The dot and the 2px rule: amber while it retries, red when it gave up, grey offline. `--color-amber` is
  *  for marks only, never text — the pill's words are ink. */
 const TONE_COLOUR: Record<Tone, string> = {
   warn: "bg-[oklch(var(--color-amber))]",
   neg: "bg-[oklch(var(--color-danger))]",
   offline: "bg-[oklch(var(--color-faint-text))]",
+  ok: "bg-[oklch(var(--color-status-success))]",
 };
 
 /**
@@ -127,7 +129,8 @@ const TONE_COLOUR: Record<Tone, string> = {
  *
  * Reconnecting: amber dot, pulsing. Failed (or disconnected — terminal too): red dot and 重连. Offline:
  * grey dot, no button — queries refetch on `online` by themselves, and if the socket gave up meanwhile
- * the pill turns red and offers 重连 then. On reconnect the pill fades out over 240ms (`duration-base`), no 「已连接」.
+ * the pill turns red and offers 重连 then. On reconnect (batch 58 M13) it says 「已连接」 with a green dot for 3 s, then
+ * fades out over 160ms (`duration-fast`); it fades in over the same 160.
  */
 export function ConnectionBanner() {
   const { status, reconnect } = useWebSocket();
@@ -139,18 +142,24 @@ export function ConnectionBanner() {
   const tone: Tone | null = !shown ? null : offline ? "offline" : status === "reconnecting" ? "warn" : "neg";
   const reason = !tone ? null : offline ? t("connection.offline") : t(`connection.${status}`);
 
-  // The last state shown, kept for the fade after the link comes back (derived state, set during render).
+  // The last state shown, kept for the hold and the fade after the link comes back (derived state, set during render).
   const [last, setLast] = useState<{ tone: Tone; reason: string } | null>(null);
+  const [leaving, setLeaving] = useState(false);
   if (tone && reason && (last?.tone !== tone || last?.reason !== reason)) setLast({ tone, reason });
+  if (tone && leaving) setLeaving(false);
+  const back = !tone && !!last;
   useEffect(() => {
-    if (tone) return;
-    const id = window.setTimeout(() => setLast(null), FADE_MS);
-    return () => window.clearTimeout(id);
-  }, [tone]);
+    if (!back) return;
+    const hold = window.setTimeout(() => setLeaving(true), CONNECTED_HOLD_MS);
+    const gone = window.setTimeout(() => setLast(null), CONNECTED_HOLD_MS + FADE_MS);
+    return () => {
+      window.clearTimeout(hold);
+      window.clearTimeout(gone);
+    };
+  }, [back]);
 
-  const view = tone && reason ? { tone, reason } : last;
+  const view = tone && reason ? { tone, reason } : last ? { tone: "ok" as const, reason: t("connection.connected") } : null;
   if (!view) return null;
-  const leaving = !tone;
   const canRetry = view.tone === "neg";
 
   return (
@@ -162,7 +171,7 @@ export function ConnectionBanner() {
         data-testid="connection-banner"
         data-tone={view.tone}
         data-offline={view.tone === "offline" ? "true" : undefined}
-        className={`inline-flex h-7.5 min-w-0 shrink items-center gap-2 whitespace-nowrap rounded-[9999px] border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] pl-2 text-xs text-[oklch(var(--color-ink))] transition-opacity duration-base motion-reduce:transition-none max-[768px]:fixed max-[768px]:left-1/2 max-[768px]:top-[calc(var(--spacing)*15+var(--imp-h))] max-[768px]:z-masthead max-[768px]:max-w-[calc(100vw-32px)] max-[768px]:-translate-x-1/2 ${
+        className={`inline-flex h-7.5 min-w-0 shrink items-center gap-2 whitespace-nowrap rounded-[9999px] border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] pl-2 text-xs text-[oklch(var(--color-ink))] animate-content-in transition-opacity duration-fast ease-exit motion-reduce:transition-none max-[768px]:fixed max-[768px]:left-1/2 max-[768px]:top-[calc(var(--spacing)*15+var(--imp-h))] max-[768px]:z-masthead max-[768px]:max-w-[calc(100vw-32px)] max-[768px]:-translate-x-1/2 ${
           canRetry ? "pr-1" : "pr-3"
         } ${leaving ? "opacity-0" : "opacity-100"}`}
       >
@@ -188,7 +197,7 @@ export function ConnectionBanner() {
       <span
         aria-hidden="true"
         data-testid="connection-rule"
-        className={`pointer-events-none absolute inset-x-0 -bottom-px h-0.5 transition-opacity duration-base motion-reduce:transition-none max-[768px]:hidden ${TONE_COLOUR[view.tone]} ${
+        className={`pointer-events-none absolute inset-x-0 -bottom-px h-0.5 animate-content-in transition-opacity duration-fast ease-exit motion-reduce:transition-none max-[768px]:hidden ${TONE_COLOUR[view.tone]} ${
           leaving ? "opacity-0" : "opacity-80"
         }`}
       />

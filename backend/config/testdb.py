@@ -240,20 +240,28 @@ def terminate_other_sessions(cursor, name: str) -> None:
 
 KEEP_TEMPLATES = 3
 _HASH_LEN = 20
-_KEPT_SUFFIX = re.compile(rf"_tpl_h[0-9a-f]{{{_HASH_LEN}}}$")
+# SL_GATE_SLOT (run-gates.sh: 1 / 2 = the gate slot holding the lock) puts the slot in the name,
+# `_tpl_s<slot>_h<hash>`, and a slot prunes only its own: two slots on one server used to drop each other's
+# templates under a running clone (exit 3 at setup, 2026-11-17). Unset = the unslotted name, as before.
+_KEPT_SUFFIX = re.compile(rf"_tpl_(s[a-z0-9]{{1,8}}_)?h[0-9a-f]{{{_HASH_LEN}}}$")
+
+
+def gate_slot(env) -> str:
+    slot = env.get("SL_GATE_SLOT", "")
+    return f"s{slot}_" if re.fullmatch(r"[a-z0-9]{1,8}", slot) else ""
 
 
 def keeps_templates(env) -> bool:
     return env.get("GATES_IN_REMOTE") == "1"
 
 
-def kept_template_names(databases: dict, hashes: dict) -> dict:
-    """{alias: `<test name>_tpl_h<hash>`} for the aliases in `hashes`."""
+def kept_template_names(databases: dict, hashes: dict, slot: str = "") -> dict:
+    """{alias: `<test name>_tpl_[s<slot>_]h<hash>`} for the aliases in `hashes`; `slot` is gate_slot(env)."""
     out = {}
     for alias, digest in hashes.items():
         db = databases[alias]
         base = db.get("TEST", {}).get("NAME") or f"test_{db['NAME']}"
-        out[alias] = f"{base}_tpl_h{digest[:_HASH_LEN]}"
+        out[alias] = f"{base}_tpl_{slot}h{digest[:_HASH_LEN]}"
     return out
 
 
@@ -273,10 +281,27 @@ def touch_template(cursor, name: str, now: float) -> None:
     cursor.execute(f"COMMENT ON DATABASE {_quoted(name)} IS %s", [str(int(now))])
 
 
+def _slot_of(name: str) -> str:
+    return (_KEPT_SUFFIX.search(name).group(1)) or ""
+
+
+def in_use(cursor, name: str) -> bool:
+    """A session connected to `name`, or a CREATE DATABASE ... TEMPLATE naming it in flight. Any doubt = in use."""
+    try:
+        cursor.execute(
+            "SELECT 1 FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND (datname = %s OR"
+            " (state = 'active' AND query ILIKE %s AND query LIKE %s)) LIMIT 1",
+            [name, "%create database%template%", f"%{name}%"],
+        )
+        return cursor.fetchone() is not None
+    except Exception:  # noqa: BLE001
+        return True
+
+
 def stale_templates(rows, kept: str, keep: int = KEEP_TEMPLATES) -> list:
     """Of `rows` = [(name, comment)], the kept templates of `kept`'s base beyond the newest `keep` by last
     use. Never `kept` itself (this run's), never a name of any other shape (a per-run `_tpl_<suffix>`)."""
-    shape = re.compile(re.escape(_KEPT_SUFFIX.sub("", kept)) + _KEPT_SUFFIX.pattern)
+    shape = re.compile(re.escape(_KEPT_SUFFIX.sub("", kept) + "_tpl_" + _slot_of(kept)) + rf"h[0-9a-f]{{{_HASH_LEN}}}$")
 
     def last_use(comment):
         return int(comment) if (comment or "").isdigit() else 0
@@ -290,10 +315,12 @@ def prune_templates(cursor, kept: str, keep: int = KEEP_TEMPLATES) -> list:
     base = _KEPT_SUFFIX.sub("", kept)
     cursor.execute(
         "SELECT datname, shobj_description(oid, 'pg_database') FROM pg_database WHERE datname LIKE %s",
-        [base.replace("_", "\\_") + "\\_tpl\\_h%"],
+        [(base + "_tpl_" + _slot_of(kept) + "h").replace("_", "\\_") + "%"],
     )
     dropped = []
     for name in stale_templates(cursor.fetchall(), kept, keep):
+        if in_use(cursor, name):
+            continue
         try:
             cursor.execute(f"DROP DATABASE IF EXISTS {_quoted(name)}")
             dropped.append(name)

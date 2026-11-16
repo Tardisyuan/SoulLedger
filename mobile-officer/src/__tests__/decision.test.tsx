@@ -2,7 +2,7 @@
  * The decision flow (spec §四, §五): the action bar, the two sheets, the reason that is flagged
  * only on confirm, a failure that keeps what was typed, and the "already handled" landing.
  */
-import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 
 import { Detail } from "../screens/detail";
 import { ToastProvider } from "../shared";
@@ -149,6 +149,8 @@ describe("add signer", () => {
     // The candidate row reads the role through the bundles (seen as raw "JUDGE" on the emulator).
     expect(await screen.findByText("mengpo · 判官")).toBeTruthy();
     expect(screen.queryByText(/JUDGE/)).toBeNull();
+    // 第五十九批 N10: the name on top of 「用户名 · 角色」, as the web picker now reads.
+    expect(within(screen.getByTestId("cosign-2")).getByText("孟婆")).toBeTruthy();
     fireEvent.press(await screen.findByTestId("cosign-2"));
     fireEvent.press(screen.getByTestId("cosign-confirm"));
     await waitFor(() => expect(mockAddCosigner).toHaveBeenCalledWith("approval", "wf-1", 2));

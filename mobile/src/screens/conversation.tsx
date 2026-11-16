@@ -28,7 +28,6 @@ import {
   Animated,
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -49,7 +48,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
-import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press } from "../ui";
+import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
@@ -565,7 +564,7 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
         <Icon name="more" size={18} color={t.inkMuted} />
       </Press>
       <ThemeContext.Provider value={page}>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <FadeModal visible={open} onRequestClose={() => setOpen(false)}>
         <View style={[styles.fill, { backgroundColor: page.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setOpen(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
           <View testID="chat-menu-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: page.s1, borderTopColor: page.hair2, paddingBottom: 20 + insets.bottom }]}>
@@ -596,7 +595,7 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
             </Press>
           </View>
         </View>
-      </Modal>
+      </FadeModal>
       </ThemeContext.Provider>
     </>
   );
@@ -608,7 +607,7 @@ function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; op
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+    <FadeModal visible={open} onRequestClose={onClose}>
       <View style={[styles.fill, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} accessibilityRole="button" onPress={onClose} accessibilityLabel={tr("soul_app.common.cancel")} />
         <View testID="block-sheet" accessibilityViewIsModal style={[styles.sheet, styles.confirmSheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
@@ -620,7 +619,7 @@ function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; op
           <Button testID="block-confirm" title={tr("soul_app.chat.block.confirm")} busy={busy} onPress={onConfirm} />
         </View>
       </View>
-    </Modal>
+    </FadeModal>
   );
 }
 

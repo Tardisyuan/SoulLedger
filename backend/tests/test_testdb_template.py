@@ -1,12 +1,17 @@
 """Template-cloned worker databases (config/testdb.py, wired in the root conftest.py).
 No DB server needed; the real-PostgreSQL run is what proves the clone works."""
+import re
+
 import pytest
 
 from config.testdb import (
     database_digests,
+    gate_slot,
+    in_use,
     keeps_templates,
     kept_template_names,
     objects_that_differ,
+    prune_templates,
     stale_templates,
     template_names,
     touch_template,
@@ -153,3 +158,66 @@ def test_touch_refuses_anything_but_a_test_database():
     assert cursor.executed[-1] == (f'COMMENT ON DATABASE "test_soulledger_tpl_h{H}" IS %s', ["1700000000"])
     with pytest.raises(ValueError):
         touch_template(cursor, "soulledger", 1)
+
+
+# --- Gate slots sharing one PG server (2026-11-17) ----------------------------
+
+
+def test_no_slot_keeps_the_unslotted_name_and_a_slot_is_in_the_name():
+    assert gate_slot({}) == "" and gate_slot({"SL_GATE_SLOT": "x y"}) == ""
+    assert gate_slot({"SL_GATE_SLOT": "2"}) == "s2_"
+    assert kept_template_names(dbs(), {"default": H}, gate_slot({"SL_GATE_SLOT": "2"})) == {
+        "default": f"test_soulledger_tpl_s2_h{H}"}
+
+
+class _PgCursor:
+    """pg_database rows for the LIKE the prune issues (applied here), a busy set for the in-use query."""
+
+    def __init__(self, rows, busy=()):
+        self.rows, self.busy, self.dropped, self.result = rows, set(busy), [], []
+
+    def execute(self, sql, params=None):
+        if sql.startswith("SELECT datname"):
+            pat = params[0].replace("\\_", "\0").replace("%", ".*").replace("\0", "_")
+            self.result = [r for r in self.rows if re.fullmatch(pat, r[0])]
+        elif "pg_stat_activity" in sql:
+            self.result = [(1,)] if params[0] in self.busy else []
+        elif sql.startswith("DROP DATABASE"):
+            self.dropped.append(sql.split('"')[1])
+
+    def fetchall(self):
+        return self.result
+
+    def fetchone(self):
+        return self.result[0] if self.result else None
+
+
+def _slot_rows():
+    return [(f"test_soulledger_tpl_{slot}h{str(i) * 20}", str(1000 + i)) for slot in ("", "s1_", "s2_") for i in range(1, 6)]
+
+
+def test_two_slots_never_prune_each_others_templates():
+    rows = _slot_rows()
+    for slot in ("s1_", "s2_", ""):
+        mine = f"test_soulledger_tpl_{slot}h{'5' * 20}"
+        cur = _PgCursor(rows)
+        dropped = prune_templates(cur, mine)
+        assert dropped and all(n.startswith(f"test_soulledger_tpl_{slot}h") for n in dropped), (slot, dropped)
+        assert mine not in dropped
+
+
+def test_a_template_in_use_is_not_dropped_and_a_failed_check_counts_as_in_use():
+    rows = _slot_rows()
+    mine = f"test_soulledger_tpl_s1_h{'5' * 20}"
+    busy = f"test_soulledger_tpl_s1_h{'2' * 20}"
+    cur = _PgCursor(rows, busy={busy})
+    dropped = prune_templates(cur, mine)
+    assert busy not in dropped and busy not in cur.dropped and dropped  # the others still go
+
+    class Broken(_PgCursor):
+        def execute(self, sql, params=None):
+            if "pg_stat_activity" in sql:
+                raise RuntimeError("no")
+            super().execute(sql, params)
+
+    assert in_use(Broken([]), busy) is True

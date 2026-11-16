@@ -47,8 +47,8 @@ describe("v3 general motion rows", () => {
 
   it("the three off-table durations and the reduced fade are named tokens with v3's numbers", () => {
     expect(themeValue("--transition-duration-close")).toBe("160ms");
-    expect(themeValue("--transition-duration-dismiss")).toBe("140ms");
-    expect(themeValue("--transition-duration-reveal")).toBe("200ms");
+    expect(themeValue("--transition-duration-dismiss")).toBe("160ms"); // 第五十八批:140 → 160
+    expect(themeValue("--transition-duration-reveal")).toBe("160ms"); // 第五十八批:200 → 160
     expect(themeValue("--transition-duration-reduced")).toBe("80ms");
   });
 
@@ -143,9 +143,9 @@ describe("v3 general motion rows", () => {
     expect(css).toMatch(/\.toast-leaving\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(8px\);/);
   });
 
-  it("skeleton → content: PageShell fades the body in over `reveal` once the skeleton goes", () => {
+  it("skeleton → content: PageShell fades the body in over 160 (`fast`, batch 58 M7) once the skeleton goes", () => {
     expect(themeValue("--animate-content-in")).toBe(
-      "content-in var(--transition-duration-reveal) var(--ease-enter) backwards"
+      "content-in var(--transition-duration-fast) var(--ease-enter) backwards"
     );
     expect(src("src/components/ui/PageShell.tsx")).toMatch(/skeleton && !showingSkeleton && "animate-content-in"/);
   });

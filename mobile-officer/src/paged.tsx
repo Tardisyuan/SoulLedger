@@ -1,13 +1,14 @@
 /**
  * 「加载更多」 under a list the server pages (20 a page). `first` is page 1 as `useRemote` holds it;
  * the pages fetched here sit on top of it. A reload that replaces `first` fetches them again (below); another
- * tab or group (`first` goes null first) drops them, and a page that arrives after that is dropped too. While a page is on its way the button is busy;
+ * tab or group (`first` goes null first) drops them, and a page that arrives after that is dropped too. While a page is on its way two
+ * skeleton rows stand at the list's foot, as in the soul app and on the web (第五十八批 M9; after the same 400 wait);
  * a page that fails leaves the rows where they were and says so under them, with 重试.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 
-import { Loader, Notice, SmallButton, space, useI18n } from "./shared";
+import { Notice, Skeleton, SmallButton, space, useI18n } from "./shared";
 
 export interface Page<T> {
   results: T[];
@@ -95,9 +96,16 @@ export function MoreRow({ more, state = null }: { more: (() => void) | null; sta
       </View>
     );
   }
+  if (state === "busy") {
+    return (
+      <View style={{ padding: space[5] }}>
+        <Skeleton lines={2} testID="list-more-busy" />
+      </View>
+    );
+  }
   return (
     <View style={{ padding: space[5], alignItems: "center" }}>
-      {state === "busy" ? <Loader size={20} testID="list-more-busy" /> : <SmallButton testID="list-more" title={t("officer_app.list.more")} onPress={more} />}
+      <SmallButton testID="list-more" title={t("officer_app.list.more")} onPress={more} />
     </View>
   );
 }

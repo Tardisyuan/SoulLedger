@@ -185,7 +185,12 @@ describe("加签", () => {
     expect(within(dialog).getByTestId("cosign-rules")).toHaveTextContent(tZh("officer_app.cosign.rules"));
     fireEvent.change(within(dialog).getByLabelText(tZh("officer_app.cosign.search")), { target: { value: "孟" } });
     await waitFor(() => expect(officerAppApi.signerCandidates).toHaveBeenLastCalledWith("孟"));
-    fireEvent.click(await screen.findByRole("option", { name: "孟判官 · meng" }));
+    const option = await screen.findByRole("option", { name: /孟判官/ });
+    // 第五十九批 N10: the name on top, 「用户名 · 角色」 underneath -- the officer App's two lines.
+    expect(option.querySelector("[data-option-detail]")?.previousElementSibling).toHaveTextContent(/^孟判官$/);
+    expect(option.querySelector("[data-option-detail]")).toHaveTextContent(new RegExp(`^meng · ${tZh("users.roles.JUDGE")}$`));
+    expect(option).not.toHaveTextContent("孟判官 · meng");
+    fireEvent.click(option);
     fireEvent.click(within(dialog).getByTestId("cosign-confirm"));
     return dialog;
   }

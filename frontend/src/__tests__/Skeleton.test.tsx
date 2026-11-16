@@ -1,8 +1,8 @@
 /**
  * Tests for Skeleton components
  */
-import { act, render } from "@testing-library/react";
-import { Skeleton, TableSkeleton, CardSkeleton, ListSkeleton, SKELETON_DELAY_MS } from "@/components/ui/skeleton";
+import { act, render, renderHook } from "@testing-library/react";
+import { Skeleton, TableSkeleton, CardSkeleton, ListSkeleton, LoadMoreSkeleton, SKELETON_DELAY_MS, SKELETON_MIN_SHOWN_MS, useSkeletonHold } from "@/components/ui/skeleton";
 
 describe("Skeleton 400 ms delay (规范 v1 §1.7:骨架屏不闪烁)", () => {
   beforeEach(() => jest.useFakeTimers());
@@ -106,5 +106,59 @@ describe("Skeleton components", () => {
   it("renders ListSkeleton with a custom count, not the default", () => {
     const { container } = render(<ListSkeleton count={5} />);
     expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(5 * 3);
+  });
+
+  it("LoadMoreSkeleton (batch 58 M9): two rows, decorative, each block on the 400 ms delay", () => {
+    jest.useFakeTimers();
+    const { container } = render(<LoadMoreSkeleton />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveAttribute("aria-hidden", "true");
+    expect(root.children).toHaveLength(2);
+    const blocks = container.querySelectorAll("[data-slot=skeleton]");
+    expect(blocks).toHaveLength(4);
+    blocks.forEach((b) => expect(b.className).toContain("invisible"));
+    jest.useRealTimers();
+  });
+});
+
+describe("useSkeletonHold (batch 58 M6): once shown, a skeleton stays at least 300 ms", () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+  const at = (ms: number) => act(() => { jest.advanceTimersByTime(ms); });
+
+  it("a load done before 400 ms never holds", () => {
+    const { result, rerender } = renderHook(({ l }) => useSkeletonHold(l), { initialProps: { l: true } });
+    at(399);
+    rerender({ l: false });
+    expect(result.current).toBe(false);
+  });
+
+  it("data at 500 ms: the skeleton (shown at 400) stays until 700, then goes", () => {
+    expect(SKELETON_MIN_SHOWN_MS).toBe(300);
+    const { result, rerender } = renderHook(({ l }) => useSkeletonHold(l), { initialProps: { l: true } });
+    at(500);
+    rerender({ l: false });
+    expect(result.current).toBe(true);
+    at(199);
+    expect(result.current).toBe(true);
+    at(1);
+    expect(result.current).toBe(false);
+  });
+
+  it("data after 700 ms: no extra hold", () => {
+    const { result, rerender } = renderHook(({ l }) => useSkeletonHold(l), { initialProps: { l: true } });
+    at(900);
+    rerender({ l: false });
+    expect(result.current).toBe(false);
+  });
+
+  it("a new load restarts the clock", () => {
+    const { result, rerender } = renderHook(({ l }) => useSkeletonHold(l), { initialProps: { l: true } });
+    at(450);
+    rerender({ l: false });
+    rerender({ l: true });
+    at(100);
+    rerender({ l: false });
+    expect(result.current).toBe(false);
   });
 });

@@ -39,12 +39,13 @@ const LIVE_CARD: Record<"light" | "dark", Record<string, string>> = require("../
 const REPO = path.join(__dirname, "..", "..", "..");
 const DIRS = [path.join("mobile", "src"), path.join("mobile-officer", "src")];
 
-type Kind = "TOPLINE" | "SEAL" | "SPINE" | "SPINE_HERE" | "FOCUS" | "GLOW_TOP_HEAD" | "TOPLINE_LOADER";
+type Kind = "TOPLINE" | "TOPLINE_RUN" | "SEAL" | "SPINE" | "SPINE_HERE" | "FOCUS" | "GLOW_TOP_HEAD" | "TOPLINE_LOADER";
 
 /** 「文件 :: 槽」→ 每一处的类(数组长度 = 次数)。 */
 const ALLOWED: Record<string, Kind[]> = {
   // 顶线四形(两个 App 页头都用它)。
-  "mobile/src/civHead.tsx :: plaque": ["TOPLINE"],
+  // …and its one run on a refresh of what is on screen (第五十八批 M8): it takes the top line, so it keeps the colour (A9).
+  "mobile/src/civHead.tsx :: plaque": ["TOPLINE", "TOPLINE_RUN"],
   // 灵魂端页头:晕光 + 殿印(38)。
   "mobile/src/chrome.tsx :: glow": ["GLOW_TOP_HEAD"],
   "mobile/src/chrome.tsx :: plaque": ["SEAL"],

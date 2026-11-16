@@ -10,6 +10,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
+import { HandledBy } from "@/src/components/ui/HandledBy";
 import { failureKey, lifeNumber, rebirthBadgeClass } from "./soulAccountsView";
 import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 import { tenantLabel } from "@/src/lib/domainNames";
@@ -86,7 +87,14 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
           {row(t("soul_accounts.fields.soul_code"), <SoulCode code={a.soul_code} />)}
           {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(a.cycle) }))}
-          {row(t("soul_accounts.fields.status"), <DomainEnum namespace="soul_accounts.rebirth_status" value={a.status} className={rebirthBadgeClass(a.status)} />)}
+          {row(
+            t("soul_accounts.fields.status"),
+            // 第五十九批 N14: who acted last, beside the tag, from the officer App's item detail (`handled_by` / `handled_at`).
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <DomainEnum namespace="soul_accounts.rebirth_status" value={a.status} className={rebirthBadgeClass(a.status)} />
+              <HandledBy name={item.data?.handled_by?.name} at={item.data?.handled_at} />
+            </span>
+          )}
           {row(t("soul_accounts.rebirth.fields.desired_form"), <DomainEnum namespace="reincarnation.forms" value={a.desired_form} />)}
           {merit != null && row(t("ledger.journal.col_balance"), <span data-testid="rebirth-merit" className="font-mono">{String(merit)}</span>)}
           {row(t("soul_accounts.rebirth.fields.current_step"), currentStep)}

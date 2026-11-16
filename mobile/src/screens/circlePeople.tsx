@@ -19,7 +19,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useContext, useRef, useState } from "react";
-import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useChat } from "../chat";
@@ -31,7 +31,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import { radius } from "../theme";
-import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
+import { Button, Empty, FadeModal, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
 import { fetchSocialStatus, invalidateSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PostList } from "./circle";
@@ -225,7 +225,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
           />
         )}
       </Screen>
-      <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
+      <FadeModal visible={menu} onRequestClose={() => setMenu(false)}>
         <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setMenu(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
           <View testID="profile-menu" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
@@ -266,7 +266,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
             </Press>
           </View>
         </View>
-      </Modal>
+      </FadeModal>
     </View>
   );
 }

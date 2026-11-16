@@ -1,10 +1,53 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 /** 规范 v1 §1.7:骨架屏不闪烁,400 ms 后才出现。快于这个的加载,用户什么都不该看见。 */
 export const SKELETON_DELAY_MS = 400
+/** 第五十八批 M6:骨架一旦出现,至少停 300 ms,免得闪一下就没了。TODO(batch59 token): motion.skeleton 生成变量后改读它。 */
+export const SKELETON_MIN_SHOWN_MS = 300
+
+/**
+ * Whether to keep showing a skeleton (M6). True while `loading`; and if the skeleton became visible (400 ms in), true
+ * until it has been visible for 300 ms, even if the data arrived sooner. A load done before 400 ms never shows one.
+ */
+export function useSkeletonHold(loading: boolean): boolean {
+  const [held, setHeld] = useState(false)
+  const [prev, setPrev] = useState(loading)
+  if (loading !== prev) {
+    setPrev(loading)
+    if (loading) setHeld(false)
+  }
+  // The 300 ms runs from the moment the skeleton appeared, so it is started by that timer, not by a later effect —
+  // and it is not cleared when the load ends (that is the point); only unmount clears it.
+  const release = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => {
+    if (!loading) return
+    const id = setTimeout(() => {
+      setHeld(true)
+      clearTimeout(release.current)
+      release.current = setTimeout(() => setHeld(false), SKELETON_MIN_SHOWN_MS)
+    }, SKELETON_DELAY_MS)
+    return () => clearTimeout(id)
+  }, [loading])
+  useEffect(() => () => clearTimeout(release.current), [])
+  return loading || held
+}
+
+/** 第五十八批 M9:「加载更多」进行中,列表底部两行骨架(同样等 400 ms 才出现)。 */
+export function LoadMoreSkeleton() {
+  return (
+    <div aria-hidden="true" data-load-more-skeleton="" className="grid gap-2 py-2">
+      {[0, 1].map((i) => (
+        <div key={i} className="grid gap-2 border-b border-[oklch(var(--color-line))] pb-3">
+          <Skeleton className="h-4 w-48 max-w-full" />
+          <Skeleton className="h-3 w-80 max-w-full" />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 interface SkeletonProps {
   className?: string

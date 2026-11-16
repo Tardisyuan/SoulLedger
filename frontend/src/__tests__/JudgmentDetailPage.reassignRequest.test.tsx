@@ -127,8 +127,17 @@ describe("a pending reassign request on the judgment page", () => {
     expect(line).not.toHaveTextContent("officer_app.dispatch_status.reason");
   });
 
+  // 第五十九批 N5: the request is read by everyone on the case; only who can reassign gets 改派给….
+  it("shows an officer without judgment.assign the request line, with no 改派给…", async () => {
+    asUser(1, JUDGE);
+    mockGet.mockResolvedValue({ data: judgment(ASKED) });
+    renderPage();
+    const line = await screen.findByTestId("desk-reassign-request", {}, TIMEOUT);
+    expect(line).toHaveTextContent("officer_app.case.reassign_request(崔判官,2026-11-15T09:00:00Z)");
+    expect(screen.queryByTestId("desk-reassign-to")).toBeNull();
+  });
+
   it.each([
-    ["an officer without judgment.assign", 1, JUDGE, ASKED],
     ["the officer who asked", 2, LEAD, ASKED],
     ["a concluded case", 1, LEAD, { ...ASKED, is_final: true, verdict: "PASSED", concluded_at: "2026-11-16T00:00:00Z" }],
     ["no request", 1, LEAD, { claimed_by: 2, claimed_by_name: "崔判官", reassign_requested_at: null }],

@@ -5,13 +5,13 @@
  * top edge are plain hairlines (`hair`), no longer the civilization's colour.
  */
 import { type ReactNode } from "react";
-import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { KeyboardAvoidingView, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { clockOf, digitsOf, type StepState } from "../mfa";
-import { Interp, Input, Txt, useReducedMotion, useTheme, Press } from "../ui";
+import { FadeModal, Interp, Input, Txt, useTheme, Press } from "../ui";
 
 /** A plain hairline at the top of every screen in this flow (第四十八批 A10; it was 3px in the civilization's colour). */
 export function CoverRule() {
@@ -202,9 +202,8 @@ export function MfaSheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
   return (
-    <Modal visible={open} transparent animationType={reduced ? "none" : "fade"} onRequestClose={onClose}>
+    <FadeModal visible={open} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
         <View style={[styles.fill, { backgroundColor: t.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={onClose} accessibilityLabel={closeLabel} />
@@ -217,7 +216,7 @@ export function MfaSheet({
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </FadeModal>
   );
 }
 

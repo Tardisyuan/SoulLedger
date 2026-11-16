@@ -156,7 +156,7 @@ function SchedulerPageContent() {
         onClick={() => void queryClient.invalidateQueries({ queryKey: schedulerKeys.all })}
         aria-busy={jobs.isFetching}
       >
-        <RefreshCw aria-hidden="true" className={`w-4 h-4 mr-1 inline ${jobs.isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} />
+        <RefreshCw aria-hidden="true" className="w-4 h-4 mr-1 inline" />
         {t("scheduler.refresh")}
       </Button>
       {isSystemAdmin && canManage && (
