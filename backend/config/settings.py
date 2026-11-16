@@ -226,6 +226,26 @@ from config.shard_db import databases_from_env  # noqa: E402
 
 DATABASES.update(databases_from_env(
     os.environ, disable_server_side_cursors=DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"]))
+
+
+def _apply_statement_timeout(databases: dict, ms: int) -> None:
+    """`-c statement_timeout=<ms>` in the libpq `options` of every PostgreSQL alias, in place; 0 = none.
+
+    Without it a slow leg of a fan-out read holds the request, and a stuck statement in a cross-database transaction
+    holds the locks of the other databases with it (sharding review 2026-11-16, 2.7). PgBouncer does not pass
+    `options` on (it refuses the connection), so the production compose, which connects through it, sets
+    DB_STATEMENT_TIMEOUT_MS=0 and puts the limit on the role instead (docs/DEPLOY.md「数据库超时」)."""
+    if not ms:
+        return
+    for db in databases.values():
+        if "postgresql" in db["ENGINE"]:
+            options = db.setdefault("OPTIONS", {})
+            options["options"] = f"{options.get('options', '')} -c statement_timeout={ms}".strip()
+
+
+#: Milliseconds; applies to the control database and every shard alias alike.
+DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "60000") or 0)
+_apply_statement_timeout(DATABASES, DB_STATEMENT_TIMEOUT_MS)
 # Civilizations (apps.souls.models.Civilization values, comma list) whose reads / writes are cut over
 # to their own alias. Empty = none; tests use override_settings (plan D8).
 SHARD_READ_CIVS = [c.strip() for c in os.getenv("SHARD_READ_CIVS", "").split(",") if c.strip()]

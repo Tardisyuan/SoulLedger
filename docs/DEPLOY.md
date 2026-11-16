@@ -36,6 +36,10 @@
 | `DB_PASSWORD` | 必 | compose 的 `:?` 校验,缺了不启动 | `docker-compose.yml:13`;`production.yml:28,45,151` |
 | `REDIS_URL` / `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` | 必 | 生产叠加文件由 `REDIS_PASSWORD` 拼出(`production.yml:49-51`);不用手写。缺 Redis:权限缓存退回进程内存(默认 TTL 0,每次查库;同一请求内的重复检查只问一次,2026-10-30)、WebSocket 与 Celery 全部不可用 | `settings.py:135,388-389` |
 | `REDIS_PASSWORD` | 必 | `production.yml:16` 的 `:?` 校验 | |
+| `REDIS_CACHE_URL` / `CHANNEL_LAYER_REDIS_URL` / `CACHE_PERMISSION_REDIS_URL` | — | 2026-11-16 起 Redis 按用途分库:`REDIS_URL` 的 db 0 = **状态**缓存 `default`(登录锁定、验证码、一次性标记、幂等键、锁、版本号;不清、不淘汰,Redis 挂了答 503 `unavailable`);db 1 / 2 = Celery;**db 3 = 纯缓存 `data`**(功过摘要、价格表、Matrix 令牌)与权限缓存;**db 4 = WebSocket channel layer**。不设时按 `REDIS_URL` 的主机换 db 号推出来(带密码的 URL 一并带过去),不用手写。纯缓存挂了照常服务(查库) | `settings.py` Redis 一节;`apps/core/cache.py` |
+| `CACHE_KEY_PREFIX` | — | 默认库名。两个缓存别名的键都带它,两个部署共用一台 Redis 时互不读写 | `settings.py` CACHES |
+| `REDIS_SOCKET_TIMEOUT` | — | 默认 0.5 秒(连接与读);此前没设,redis-py 默认 5 秒 —— Redis 黑洞时每个请求先等 5 秒。channel layer 仍是 15 秒(必须长于它的阻塞读) | `settings.py` |
+| `DB_STATEMENT_TIMEOUT_MS` | — | 默认 60000:每个 PostgreSQL 别名(控制库与各分库)连接时带 `-c statement_timeout=…`;0 = 不设。**经 PgBouncer 连时必须设 0**(PgBouncer 不转发 `options`,会拒绝连接),生产叠加文件已设 0,见 §4「数据库超时与连接数」 | `settings.py::_apply_statement_timeout` |
 | `TRUSTED_PROXY_COUNT` | — | 生产叠加文件写死 `"1"`(nginx 一跳)。别改成 0:审计日志/登录限速/API key IP 白名单都会取到 nginx 的地址 | `production.yml:53`;`settings.py:49` |
 | `CORS_ALLOWED_ORIGINS` | 推 | 默认只有 localhost。**走同一个 nginx 域名(Web 与 API 同源)时不需要设。** Web 与 API 分在不同源时必须列**完整源**(`https://desk.example.com`),不能是 `*`:`CORS_ALLOW_CREDENTIALS=True` 是为 2FA「30 天不再询问」设备 cookie 开的(`mfa.py:325-331`:httpOnly、`SameSite=Lax`、`secure=not DEBUG`、path `/api/v1/auth/`)。Lax cookie 只在**同站**(同一可注册主域,如 `desk.example.com` 与 `api.example.com`)的 XHR 里随请求发送;跨站域名这个 cookie 永远发不出去,2FA 每次都要验 | `settings.py:236-239` |
 | `CSRF_TRUSTED_ORIGINS` | — | 全仓库没有这个设置(`grep CSRF_TRUSTED` 无结果)。API 走 JWT bearer,DRF 不校验 CSRF;只有 Django admin(`/admin/`)的表单登录受影响:若 admin 从 nginx 的 https 域名访问,Django 看到的是 `X-Forwarded-Proto: https` 与 `Host`,同源,通常不需要。**admin 登录实测:未核实** | |
@@ -116,6 +120,23 @@
 3. `$DC up -d`。Compose 会按依赖顺序:db/redis → pgbouncer → backend(迁移)→ celery、celery-beat。
 4. 迁移是否破坏性:发布前读目标版本里新增的 `backend/apps/*/migrations/`;含 `RemoveField`/`DeleteModel`/`RunPython` 的,回滚前提是已备份。CLAUDE.md 记过 `apps/perm/migrations/0017` 在真 PostgreSQL 上因 `except: pass` 触发事务中止——**每次发布前用真 PG 跑一遍 `makemigrations --check` 与迁移**(CI/pre-push 默认只在 SQLite 上跑,见 `CLAUDE.md`「SQLITE HIDES A WHOLE CLASS OF DEFECT」)。
 5. 部署后:`$DC exec backend python manage.py sync_permissions`(先 `--dry-run`)——启动命令**不**自动跑它。
+6. **2026-11-16 那一版(Redis 分库 + 键前缀)上线时一次性丢掉 Redis 里的旧键**:旧键在 db 0 没有前缀,新代码读不到 ——
+   登录锁定与递增延迟清零、进行中的找回密码验证码 / 联系邮箱验证码作废(用户重发即可)、幂等键与书信 txn_id 失效
+   (那一刻正在重试的请求可能重做一次)、beat 锁丢一个周期、权限缓存与功过摘要冷启动。旧键靠各自 TTL 消失(最长 7 天的
+   txn_id);不想等就在维护窗口里对 db 0 删掉不带前缀的键。channel layer 换到 db 4:已连着的 WebSocket 会重连一次。
+
+### 数据库超时与连接数(5 个别名)
+
+- **`statement_timeout`**:直连 PostgreSQL 时由 `DB_STATEMENT_TIMEOUT_MS`(默认 60 秒)给每个别名带上。经 PgBouncer(生产叠加文件)
+  不能用连接参数,设在角色上:`ALTER ROLE soulledger SET statement_timeout = '60s';`(各分库若用不同角色,每个角色一条),
+  分库上再加 `ALTER ROLE … SET idle_in_transaction_session_timeout = '60s'`。迁移里有超过 60 秒的单条语句(大表建索引)时,
+  迁移前临时 `SET statement_timeout = 0` 或在那一条迁移里 `RunSQL("SET LOCAL statement_timeout = 0")`。
+- **连接预算**:每个线程 / worker 对每个摸到的别名各持一条长连接(`conn_max_age=600`)。分库切读之后灵魂端与全局任务会摸到
+  全部 5 个别名,所以按 **5 × 并发线程数** 算:daphne 线程池 + celery `--concurrency=2` + beat。生产叠加文件的 PgBouncer
+  只配了一个库(`DATABASE_URL`)、`MAX_CLIENT_CONN 200`、`DEFAULT_POOL_SIZE 20`:加分库时 (a) 给 PgBouncer 配上 4 个分库的条目
+  (edoburu 镜像用 `DATABASES_*` 或挂一份 `pgbouncer.ini`),`SHARD_DATABASE_URL_<CIV>` 指向 PgBouncer 而不是直连;(b) `MAX_CLIENT_CONN`
+  至少乘 5;(c) 5 个库在同一台 PostgreSQL 上时 `max_connections` 是共用的:`DEFAULT_POOL_SIZE × 5` 加上直连的迁移 / 备份要小于它。
+  本仓库没有改生产的 PgBouncer 配置 —— 上分库那天按这三条改。
 
 ## 5. `manage.py check --deploy` 结果(2026-10-09 实跑)
 
@@ -172,6 +193,10 @@
 ## 8. 备份
 
 - `backup` 服务(`docker-compose.production.yml`,镜像 `postgres:16-alpine`;2026-10-30 前用 pgvector 镜像时没有 `crond`,每日 cron 从没起来):启动先备份一次(失败容器退出),之后容器内 cron **每天 02:00**(容器时区,镜像默认 UTC)跑 `scripts/backup-db.sh`,文件在主机 `./backups/`:`soulledger_*.sql.gz`(库)、`soulledger_media_*.tar.gz`(头像媒体)、聊天初始化后再加 `soulledger_synapse_*.dump` 与 `soulledger_synapse_data_*.tar.gz`(签名密钥,丢了等于换了一台 homeserver)。
+- **分库(2026-11-16 起)**:设了 `SHARD_DATABASE_URL_<CIV>` 时,每个分库另出一份 `soulledger_civ_<civ>_<时间戳>.sql.gz`(与控制库同一个时间戳),
+  `soulledger_manifest_<时间戳>.txt` 列出这一轮写了哪些(别名 + 文件名,不含 URL)。backup 服务要拿到这几个变量(compose 里给它加上)。
+  `BACKUP_DRY_RUN=1` 只列出要备份的库。**这些是先后跑的 pg_dump,不是跨库一致的快照**:要一个时间点上一致的整套,5 个库在同一台
+  PostgreSQL 上时用整实例物理备份(`pg_basebackup` / 卷快照)。恢复演练(`restore-drill.sh`)目前只验控制库。
 - healthcheck:任一应有的最新备份超过 26 小时 → unhealthy。备份失败会 POST `OPS_ALERT_WEBHOOK_URL`;**unhealthy 本身仍没有人被通知**(§3)。
 - **异地副本**:设 `BACKUP_OFFSITE_REMOTE` 后每次备份 `rclone copy` 到那里(`DEPLOYMENT.md`「备份异地副本与告警」)。**目标还没定**(用户 2026-10-30),不设时备份只在本机 `./backups/`,机器坏了一起坏。
 - **2026-10-31 起不设就不算部署好**:`check-deploy-env.sh` 在 `OPS_ALERT_WEBHOOK_URL` 或 `BACKUP_OFFSITE_REMOTE` 为空时 FAIL,除非明写 `ALLOW_NO_ALERTS=1` / `ALLOW_NO_OFFSITE=1`(变成 WARN)。`backup` 服务带 `BACKUP_STRICT=1`:缺这两样(且没明写放弃)时备份照写,但脚本退出 3、打印醒目的告警块、healthcheck 转 unhealthy(`.backup-ok` 只在退出 0 时才有),每晚的日志里都会再出现一次。告警发不出去时 `ops-alert.sh` 也打印一整块 `ALERT NOT DELIVERED` 并返回非 0。

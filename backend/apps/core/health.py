@@ -1,7 +1,8 @@
+import logging
 import time
 
 from django.conf import settings
-from django.db import connection
+from django.db import connections
 from django.http import JsonResponse
 from django.views import View
 from rest_framework.authentication import SessionAuthentication
@@ -11,13 +12,21 @@ from rest_framework.views import APIView
 from apps.core.permissions import IsAdminPermission
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 
+logger = logging.getLogger(__name__)
+
 
 def database_ok() -> bool:
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-    except Exception:
-        return False
+    """Every configured database answers: the control database and each civilization shard (`civ_*`).
+
+    Was `default` alone, so with a shard down the readiness probe stayed green while every request of that
+    civilization failed (sharding review 2026-11-16, 3.6)."""
+    for alias in connections:
+        try:
+            with connections[alias].cursor() as cursor:
+                cursor.execute("SELECT 1")
+        except Exception:
+            logger.warning("readiness: database %r unreachable", alias)
+            return False
     return True
 
 
