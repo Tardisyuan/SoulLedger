@@ -26,3 +26,17 @@ export function nodeDeadline(node: Pick<ApprovalNode, "activated_at" | "timeout_
   const start = new Date(node.activated_at).getTime();
   return Number.isNaN(start) ? null : new Date(start + node.timeout_hours * 3_600_000).toISOString();
 }
+
+const HOUR = 3_600_000;
+
+/**
+ * 「还有 {left}」 / 「已过截止 {late}」 (第五十九批 N11): how far `deadline` is from `now`, in the largest unit that
+ * still reads as a whole number -- minutes under an hour, hours under two days, else days -- rounded down
+ * (「还有 23 小时」 at 23 h 40 min, never a promise of 24). `Intl` gives the unit words in the page's own locale.
+ */
+export function deadlineDistance(deadline: string, now: number, intlLocale: string): { overdue: boolean; text: string } {
+  const ms = new Date(deadline).getTime() - now;
+  const abs = Math.abs(ms);
+  const [n, unit] = abs < HOUR ? [Math.max(1, Math.floor(abs / 60_000)), "minute"] : abs < 48 * HOUR ? [Math.floor(abs / HOUR), "hour"] : [Math.floor(abs / (24 * HOUR)), "day"];
+  return { overdue: ms < 0, text: new Intl.NumberFormat(intlLocale, { style: "unit", unit, unitDisplay: "long" }).format(n) };
+}
