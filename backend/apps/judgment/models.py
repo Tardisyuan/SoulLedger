@@ -622,9 +622,20 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         if refresh_claimable_since(self) and kwargs.get("update_fields") is not None:
             kwargs["update_fields"] = [*kwargs["update_fields"], "claimable_since"]
         if self._state.adding and not self.case_number:
-            # 发号与写入在同一个事务里:写入失败,号跟着回滚,不留空号。
-            with transaction.atomic():
+            from apps.tenants.global_codes import row_alias
+
+            alias = row_alias(self, kwargs.get("using"))
+            if alias == "default":
+                # 发号与写入在同一个事务里:写入失败,号跟着回滚,不留空号。
+                with transaction.atomic(using="default"):
+                    self.case_number = JudgmentCaseCounter.next_number(self.tenant)
+                    super().save(*args, **kwargs)
+                return
+            # 分库阶段 4:案子写在分库,计数行在控制库(CONTROL)。号在控制库自己的事务里先提交、不握锁跨库;
+            # 分库写失败留下空号,永不复用 —— 与 WF 号同一条(缺口 4b,global_codes.next_workflow_number)。
+            with transaction.atomic(using="default"):
                 self.case_number = JudgmentCaseCounter.next_number(self.tenant)
+            with transaction.atomic(using=alias):
                 super().save(*args, **kwargs)
             return
         super().save(*args, **kwargs)

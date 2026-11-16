@@ -109,6 +109,9 @@ def test_deleting_an_organization_on_its_shard_clears_the_control_scope_rows(gre
     from apps.perm.models import Role, RoleDataScope
 
     settings.SHARD_WRITE_CIVS = ["GREEK"]
+    from django.core.management import call_command
+
+    call_command("assign_shard_id_ranges", "--civ", "GREEK", verbosity=0)  # gap 4a: before the first shard write
     root = Organization(tenant_id=greek.pk, name="ROOT", code="GRX_ROOT")  # one live root per hall
     Organization._base_manager.using(SHARD).bulk_create([root])
     root = Organization._base_manager.using(SHARD).get(code="GRX_ROOT")  # its id, on any engine

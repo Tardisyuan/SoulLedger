@@ -336,6 +336,29 @@ def _on_write(sender, using="default", **kwargs):
     transaction.on_commit(_enqueue, using=using)
 
 
+def _copy_hall(sender, instance, using="default", raw=False, **kwargs):
+    """Stage 4: a hall saved on control is copied into every shard at once (REFERENCE, D4), in that shard's open
+    transaction when there is one. A new hall of a write-cut civilization is seeded on its shard in the same request
+    (`tenants.views.TenantViewSet.create`), whose foreign keys to the hall must hold at the shard's commit -- the
+    next sync is too late. Only while some civilization's writes are cut over; before that the sync copies it."""
+    if not settings.SHARD_WRITE_CIVS or using != "default" or raw:
+        return
+    fields = [f for f in sender._meta.concrete_fields if not f.primary_key]
+    for alias in shard_aliases():
+        rows = sender._base_manager.using(alias).filter(pk=instance.pk)
+        if rows.exists():
+            rows.update(**{f.attname: getattr(instance, f.attname) for f in fields})
+        else:
+            sender._base_manager.using(alias)._insert([instance], fields=sender._meta.concrete_fields, raw=True,
+                                                      using=alias)
+
+
+def connect_hall_copies():
+    from django.db.models.signals import post_save
+
+    post_save.connect(_copy_hall, sender=apps.get_model("tenants", "Tenant"), dispatch_uid="shard_sync_copy_hall")
+
+
 def connect():
     for model in compared_models():
         uid = f"shard_sync:{model._meta.label}"

@@ -60,3 +60,6 @@ class SoulsConfig(AppConfig):
         from apps.core import shard_ids
 
         shard_ids.connect()
+        # ... and nothing writes control's mirror of those rows, or a third database inside a transaction.
+        shard_reads.connect_write_guards()
+        shard_sync.connect_hall_copies()

@@ -127,7 +127,15 @@ def bare_ids_to():
 
 def clear_bare_ids(target, pks, aliases):
     """Apply each bare id's own rule to the rows pointing at `pks` of `target`, on every alias:
-    PROTECT refuses before anything changes, then CASCADE deletes and SET_NULL nulls."""
+    PROTECT refuses before anything changes, then CASCADE deletes and SET_NULL nulls. On control this also
+    removes the mirror of a write-cut civilization's rows (stage 4): the sync would remove them anyway."""
+    from apps.core.shard_reads import control_mirror_writes
+
+    with control_mirror_writes():
+        _clear_bare_ids(target, pks, aliases)
+
+
+def _clear_bare_ids(target, pks, aliases):
     fields = bare_ids_to().get(target._meta.concrete_model, [])
     # Only where the pointing table exists: a CONTROL source (User.create_user...) is not on a shard, and
     # asking a shard for it failed every hard delete of a user once fanout() named one (stage 2).

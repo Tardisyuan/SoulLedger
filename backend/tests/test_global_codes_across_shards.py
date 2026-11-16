@@ -237,12 +237,14 @@ def test_two_civilizations_creating_workflows_at_once_get_distinct_numbers(monke
 # ---- soul ownership (D6) ---------------------------------------------------------------------------------
 
 def _soul_rows(tenant, home, *aliases):
+    from apps.core.shard_reads import control_mirror_writes
     from apps.souls.models import Soul
 
     soul = Soul(name="归属", tenant=tenant, home_tenant=home)
-    for alias in aliases:
-        Soul._base_manager.using(alias).bulk_create([Soul(pk=soul.pk, name=soul.name, tenant_id=tenant.pk,
-                                                          home_tenant_id=home.pk)])
+    with control_mirror_writes():  # control's mirror of a write-cut soul, built on purpose (stage 4 refuses it otherwise)
+        for alias in aliases:
+            Soul._base_manager.using(alias).bulk_create([Soul(pk=soul.pk, name=soul.name, tenant_id=tenant.pk,
+                                                              home_tenant_id=home.pk)])
     return soul
 
 

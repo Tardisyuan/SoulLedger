@@ -21,21 +21,24 @@ from django.core.management import call_command
 from django.db import connections, router, transaction
 from django.test import RequestFactory, override_settings
 
-from apps.core.sharding import SHARD, NoShardContext, alias_for_civilization, placement
+from apps.core.sharding import SHARD, NoShardContext, placement
 from tests.test_shard_sync import CIVS, sharded
 
 GREEK, EGYPT = "civ_greek", "civ_egyptian"
 
 
 def _halls():
-    """One hall per civilization in control, copied to every shard (Tenant is REFERENCE, D4)."""
+    """One hall per civilization in control, synced to the shards (the hall, D4, and what control made for it:
+    its root unit) -- stage 3's state, before any write is cut over."""
+    from apps.org.ownership import tenant_root
     from apps.tenants.models import Tenant
+    from tests.test_shard_sync import _sync
 
     halls = {civ: Tenant.objects.create(code=f"W4_{civ[:2]}", display_name=civ, declared_civilization=civ)
              for civ in CIVS}
-    for alias in (alias_for_civilization(c) for c in CIVS):
-        Tenant._base_manager.using(alias).bulk_create(
-            [Tenant(**{f.attname: getattr(h, f.attname) for f in Tenant._meta.concrete_fields}) for h in halls.values()])
+    for hall in halls.values():
+        tenant_root(hall)
+    _sync()
     return halls
 
 
@@ -218,19 +221,107 @@ def test_a_per_hall_task_reads_and_writes_its_shard_and_a_global_one_every_maste
 
 
 @sharded
-def test_a_failure_in_a_transaction_rolls_the_shard_back_with_control():
+def test_a_halls_transaction_is_its_shards_and_a_control_write_inside_it_commits_first():
+    """One civilization: `atomic()` is the shard's transaction (a failure rolls the shard row back), and a control
+    write inside it -- a hall-less row here, a code claim or a case number in the product -- is control's own
+    autocommit, committed before the shard row (part B: a gap, never a reuse). No single civilization (MASTER):
+    control's transaction plus the shards', all rolled back together. Mutation: atomic() opens nothing on the
+    shard -> the shard row survives the rollback."""
     from apps.audit.models import AuditAction, AuditLog
     from apps.souls.models import Soul
 
     halls = _halls()
     _assign("GREEK")
-    with cut("GREEK"), _in_hall(halls["GREEK"]):
-        with pytest.raises(RuntimeError), transaction.atomic():
-            Soul.objects.create(name="rolled back", tenant=halls["GREEK"])
-            AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="x")
+    with cut("GREEK"):
+        with _in_hall(halls["GREEK"]):
+            with pytest.raises(RuntimeError), transaction.atomic():
+                assert transaction.get_connection().alias == GREEK
+                assert not [b for b in connections["default"].atomic_blocks if not b._from_testcase]
+                Soul.objects.create(name="rolled back", tenant=halls["GREEK"])
+                AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="x")
+                raise RuntimeError
+            assert not Soul._base_manager.using(GREEK).filter(name="rolled back").exists()
+            assert AuditLog._base_manager.using("default").filter(resource_id="x").exists()
+        with pytest.raises(RuntimeError), transaction.atomic():  # no context: MASTER
+            Soul.objects.create(name="rolled back too", tenant=halls["GREEK"])
+            AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="y")
             raise RuntimeError
-        assert not Soul._base_manager.using(GREEK).filter(name="rolled back").exists()
-        assert not AuditLog._base_manager.using("default").filter(resource_id="x").exists()
+        assert not Soul._base_manager.using(GREEK).filter(name="rolled back too").exists()
+        assert not AuditLog._base_manager.using("default").filter(resource_id="y").exists()
+
+
+@sharded
+def test_a_write_to_a_third_database_inside_a_transaction_is_refused():
+    """A Greek hall's transaction is open on civ_greek only; a row routed to civ_egyptian inside it would autocommit
+    there and survive the rollback. Refused (WriteOutsideTransaction); outside a transaction it is an ordinary write.
+    Mutation: no check -> the Egyptian row is written and kept."""
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.core.shard_reads import WriteOutsideTransaction
+
+    halls = _halls()
+    _assign("GREEK", "EGYPTIAN")
+
+    def log(name):
+        return AuditLog.objects.create(tenant=halls["EGYPTIAN"], action=AuditAction.READ, resource="soul",
+                                       resource_id=name)
+    with cut("GREEK", "EGYPTIAN"), _in_hall(halls["GREEK"]):
+        with pytest.raises(WriteOutsideTransaction), transaction.atomic():
+            log("egyptian inside a greek transaction")
+        assert not AuditLog._base_manager.using(EGYPT).filter(resource_id="egyptian inside a greek transaction").exists()
+        made = log("egyptian, no transaction")
+    assert _where(AuditLog, made.pk) == [EGYPT]
+
+
+@sharded
+def test_a_hall_may_write_again_the_code_its_rolled_back_shard_write_claimed():
+    """Part B's claim commits on control before the shard row; a hall's transaction that then rolls back leaves the
+    claim. The same hall writing that code again is allowed (its database's UNIQUE index decides there); another
+    hall's is still refused. Without this a hall's root unit, whose code is fixed (ROOT_<hall>), could never be made
+    after one failed request. Mutation: no own-claim branch in claim_org_code -> the retry is refused."""
+    from django.db import IntegrityError
+
+    from apps.org.models import Organization
+    from apps.org.ownership import tenant_root
+
+    halls = _halls()
+    _assign("GREEK", "EGYPTIAN")
+    with cut("GREEK", "EGYPTIAN"):
+        with _in_hall(halls["GREEK"]):
+            root = tenant_root(halls["GREEK"])
+            with pytest.raises(RuntimeError), transaction.atomic():
+                Organization.objects.create(tenant=halls["GREEK"], name="u", code="W4_RETRY", parent=root)
+                raise RuntimeError
+            assert not Organization._base_manager.using(GREEK).filter(code="W4_RETRY").exists()
+            Organization.objects.create(tenant=halls["GREEK"], name="u", code="W4_RETRY", parent=root)
+        with _in_hall(halls["EGYPTIAN"]), pytest.raises(IntegrityError, match="already taken"):
+            Organization.objects.create(tenant=halls["EGYPTIAN"], name="u", code="W4_RETRY",
+                                        parent=tenant_root(halls["EGYPTIAN"]))
+
+
+@sharded
+def test_a_direct_write_on_control_of_a_write_cut_row_is_refused():
+    """Control only mirrors a write-cut civilization's rows; a write there (`.using("default")`, loaddata) would be
+    undone by the next shard-to-control sync. Refused for save, delete, queryset update / delete and bulk_create;
+    a row of a civilization not cut over is written as before; `control_mirror_writes()` lets bare-id deletes (and
+    a test) through. Mutation: the guard off -> the write lands and the sync silently reverts it."""
+    from apps.core.shard_reads import ControlMirrorWrite, control_mirror_writes
+    from apps.souls.models import Soul
+
+    halls = _halls()
+    greek = Soul._base_manager.using("default").create(name="greek mirror", tenant=halls["GREEK"])
+    chinese = Soul._base_manager.using("default").create(name="chinese master", tenant=halls["CHINESE"])
+    _assign("GREEK")
+    with cut("GREEK"):
+        mirror = Soul._base_manager.using("default")
+        for write in (lambda: mirror.filter(pk=greek.pk).update(name="x"),
+                      lambda: mirror.filter(pk=greek.pk).delete(),
+                      lambda: greek.save(using="default"),
+                      lambda: mirror.bulk_create([Soul(name="new mirror", tenant=halls["GREEK"])])):
+            with pytest.raises(ControlMirrorWrite):
+                write()
+        assert mirror.filter(pk=chinese.pk).update(name="still control's") == 1
+        with control_mirror_writes():
+            assert mirror.filter(pk=greek.pk).update(name="allowed") == 1
 
 
 # ---- sync direction ------------------------------------------------------------------------------------------
@@ -250,7 +341,10 @@ def test_a_write_cut_civilization_syncs_shard_to_control_and_the_others_control_
         with _in_hall(halls["CHINESE"]):
             chinese = Soul.objects.create(name="control-born", tenant=halls["CHINESE"])
         stale = Soul(name="written to control by mistake", tenant=halls["GREEK"])
-        Soul._base_manager.using("default").bulk_create([stale])
+        from apps.core.shard_reads import control_mirror_writes
+
+        with control_mirror_writes():  # what a write to control by mistake leaves (the guard refuses it otherwise)
+            Soul._base_manager.using("default").bulk_create([stale])
         sync_shards()
         assert Soul._base_manager.using("default").filter(pk=new.pk).exists()
         assert not Soul._base_manager.using("default").filter(pk=stale.pk).exists()  # the shard is the master
@@ -260,12 +354,16 @@ def test_a_write_cut_civilization_syncs_shard_to_control_and_the_others_control_
 
 
 def _reconcile_s2c(civ):
+    import io
+
     from django.core.management.base import CommandError
 
+    out = io.StringIO()
     try:
-        call_command("reconcile_shards", "--civ", civ, "--direction", "shard-to-control", verbosity=0)
+        call_command("reconcile_shards", "--civ", civ, "--direction", "shard-to-control", stdout=out)
         return 0
     except CommandError:
+        print(out.getvalue())
         return 1
 
 
@@ -309,7 +407,7 @@ def test_with_no_write_cut_every_write_routes_as_in_stage_3():
             # reads not cut: Django's own answer (the row's database); reads cut: control (stage 3 write_route)
             assert router.db_for_write(Soul, instance=on_shard) == ("default" if reads else GREEK)
             with transaction.atomic():
-                assert _atomic_extra.get() and not any(_atomic_extra.get())
+                assert _atomic_extra.get() and all(not held for _, held in _atomic_extra.get())
                 assert [a for a in connections if a != "default" and connections[a].in_atomic_block
                         and any(not b._from_testcase for b in connections[a].atomic_blocks)] == []
 
@@ -322,16 +420,17 @@ def test_two_civilizations_create_organizations_with_disjoint_ids_in_their_range
     without that check both shards issue the same small ids."""
     from apps.core.shard_ids import id_range
     from apps.org.models import Organization
+    from apps.org.ownership import tenant_root
 
-    halls = _halls()
+    halls = _halls()  # each hall's root unit exists (stage 3's state); the new units hang under it
     _assign("GREEK", "EGYPTIAN")
     made = {}
     with cut("GREEK", "EGYPTIAN"):
         for civ in ("GREEK", "EGYPTIAN"):
             with _in_hall(halls[civ]):
-                root = Organization.objects.create(tenant=halls[civ], name="root", code=f"W4R_{civ}")
-                made[civ] = [root.pk, *(Organization.objects.create(
-                    tenant=halls[civ], name=f"u{i}", code=f"W4U_{civ}{i}", parent=root).pk for i in range(2))]
+                root = tenant_root(halls[civ])
+                made[civ] = [Organization.objects.create(tenant=halls[civ], name=f"u{i}", code=f"W4U_{civ}{i}",
+                                                         parent=root).pk for i in range(3)]
     for civ, pks in made.items():
         low, high = id_range(civ)
         assert all(low <= pk < high for pk in pks), (civ, pks)
@@ -346,8 +445,9 @@ def test_the_first_write_to_a_shard_without_its_range_is_refused():
     from apps.audit.models import AuditAction, AuditLog
 
     with cut("GREEK"), _in_hall(halls["GREEK"]):
+        Soul.objects.create(name="a uuid pk needs no range", tenant=halls["GREEK"])
         with pytest.raises(ImproperlyConfigured, match="assign_shard_id_ranges"):
-            Soul.objects.create(name="too early", tenant=halls["GREEK"])
+            AuditLog.objects.create(tenant=halls["GREEK"], action=AuditAction.READ, resource="soul", resource_id="no")
         _assign("GREEK")
         AuditLog.objects.create(tenant=halls["GREEK"], action=AuditAction.READ, resource="soul", resource_id="ok")
 
@@ -404,3 +504,81 @@ def test_the_rehearsal_writes_through_the_services_and_reconciles_clean_both_way
     on_control = set(Soul._base_manager.using("default").filter(name__startswith="rehearsal-4-").values_list("pk", flat=True))
     on_shard = set(Soul._base_manager.using(GREEK).filter(name__startswith="rehearsal-4-").values_list("pk", flat=True))
     assert on_control and on_control == on_shard  # written on the shard, brought back by the reverse sync
+
+
+# ---- found by the 2026-11-16 review (ADVICE-sharding-fable.md 1.1) and part B's caveats -------------------------
+
+@sharded
+def test_a_hall_created_after_its_civilizations_write_cut_over_is_seeded_on_its_shard():
+    """POST /tenants/ for a Greek hall with Greek writes cut over: the hall row is control's, its seed (realms,
+    statutes, templates) goes to civ_greek, whose foreign keys to the hall must hold at that shard's commit -- so the
+    hall is copied into every shard in the same request (`shard_sync._copy_hall`). 201, the seed on the shard and
+    nowhere else, reconcile clean. Mutation: no copy -> the shard's commit fails (no hall there)."""
+    from apps.authentication.models import User, UserRole
+    from apps.judgment.models import Statute
+    from apps.realms.models import Realm
+    from apps.tenants.models import Tenant
+    from tests.soul_account_support import officer_client
+
+    _halls()
+    _assign("GREEK")
+    admin = User.objects.create_user(username="w4-hall", password="x", role=UserRole.SYSTEM_ADMIN)  # only it builds halls
+    with cut("GREEK"):
+        res = officer_client(admin).post("/api/v1/tenants/", {"code": "GR_W4NEW", "display_name": "new",
+                                                              "civilization": "GREEK"}, format="json")
+        assert res.status_code == 201, res.data
+        hall = Tenant._base_manager.using("default").get(code="GR_W4NEW")
+        for alias in (a for a in connections if a.startswith("civ_")):
+            assert Tenant._base_manager.using(alias).filter(pk=hall.pk).exists(), alias
+        for model in (Realm, Statute):
+            assert model._base_manager.using(GREEK).filter(tenant=hall).exists(), model
+            assert not model._base_manager.using("default").filter(tenant=hall).exists(), model
+        from apps.tenants.tasks import sync_shards
+
+        sync_shards()  # what beat / the debounce runs: shard-to-control for GREEK, control-to-shard for the rest
+        assert _reconcile_s2c("GREEK") == 0
+
+
+@sharded
+def test_a_case_number_is_spent_on_control_before_the_shard_row_and_never_reused():
+    """JudgmentCaseCounter is CONTROL; a Greek case is written on civ_greek. The number is drawn in control's own
+    transaction first (no lock held across the shard's commit): a shard insert that fails leaves a gap, and the next
+    case takes the next number -- never the spent one."""
+    from unittest import mock
+
+    from apps.judgment.models import Judgment, JudgmentCaseCounter, format_case_number
+    from apps.souls.models import Soul
+
+    halls = _halls()
+    _assign("GREEK")
+    with cut("GREEK"), _in_hall(halls["GREEK"]):
+        soul = Soul.objects.create(name="numbered", tenant=halls["GREEK"])
+        counters = JudgmentCaseCounter.objects.using("default")
+        with mock.patch.object(Judgment, "save_base", side_effect=RuntimeError("shard insert failed")), \
+                pytest.raises(RuntimeError):
+            Judgment(soul=soul, tenant=halls["GREEK"], civilization="GREEK").save()
+        spent = {c.key: c.last for c in counters.all()}
+        assert spent and not Judgment._base_manager.using(GREEK).filter(soul_id=soul.pk).exists()
+        case = Judgment(soul=soul, tenant=halls["GREEK"], civilization="GREEK")
+        case.save()
+        key = next(k for k in spent if k != "WF")  # the case counter (<prefix>-<year>), not the WF row
+        assert counters.get(key=key).last == spent[key] + 1
+        prefix, year = key.rsplit("-", 1)
+        assert case.case_number == format_case_number(prefix, int(year), spent[key] + 1)
+        assert _where(Judgment, case.pk) == [GREEK]
+
+
+@sharded
+def test_reconcile_fix_control_to_shard_never_overwrites_a_write_cut_shard():
+    """`reconcile_shards --civ GREEK --fix` in its default direction (control-to-shard) while Greek writes are cut
+    over: the shard is the master of its SHARD rows, so a row only the shard has stays (only REFERENCE and the
+    control-mastered models are copied that way). Mutation: `_sides` compares them anyway -> the row is deleted."""
+    from apps.souls.models import Soul
+
+    halls = _halls()
+    _assign("GREEK")
+    with cut("GREEK"):
+        with _in_hall(halls["GREEK"]):
+            soul = Soul.objects.create(name="shard only", tenant=halls["GREEK"])
+        call_command("reconcile_shards", "--civ", "GREEK", "--fix", verbosity=0)
+        assert Soul._base_manager.using(GREEK).filter(pk=soul.pk).exists()

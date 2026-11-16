@@ -499,9 +499,12 @@ def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hal
     # (`Soul.purge` there would, which is what test_shard_aliases.py does on a real shard).
     monkeypatch.setattr("apps.core.sharding.fanout", lambda: ["default"])
 
+    from apps.core.shard_reads import control_mirror_writes
+
     def delete_on_control(soul):
-        SoulEvent.all_objects.using("default").filter(soul=soul).delete()
-        Soul.all_objects.using("default").filter(pk=soul.pk).delete()
+        with control_mirror_writes():  # stage 4 refuses a direct write of a write-cut row on control otherwise
+            SoulEvent.all_objects.using("default").filter(soul=soul).delete()
+            Soul.all_objects.using("default").filter(pk=soul.pk).delete()
 
     delete_on_control(greek)
     assert SoulAccount.objects.filter(pk=kept.pk).exists()
