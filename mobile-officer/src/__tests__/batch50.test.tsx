@@ -78,6 +78,19 @@ describe("C1 · after sealing, the detail stays and says so", () => {
     fireEvent.press(screen.getByTestId("detail-next"));
     expect(onNext).toHaveBeenCalled();
   });
+
+  it.each([
+    // Sealed, approval still running: the server keeps is_final false until the chain ends; 「待宣判」 is over all the same.
+    [{ is_final: false, concluded_at: "2026-11-16T10:23:00Z" }, false],
+    [{ is_final: false, concluded_at: null }, true],
+  ])("「◇ 待宣判」 only while the case is unsealed (%o)", async (over, shown) => {
+    mockGet.mockResolvedValue({
+      data: { id: "j-2", case_number: "CN-2026-0022", soul: "s-2", soul_name: "钱", civilization: "CHINESE", court: "第一殿", claimed_by: 7, claimed_by_name: "阎罗", ...over },
+    });
+    renderOfficer(<Detail target={{ type: "judgment", id: "j-2" }} from="审判" onBack={() => {}} onSettled={() => {}} />);
+    await screen.findByTestId("judgment-detail");
+    expect(screen.queryByText(/^◇ 待宣判/) !== null).toBe(shown);
+  });
 });
 
 describe("C2 · 查询", () => {

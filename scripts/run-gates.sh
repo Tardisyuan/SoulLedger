@@ -215,6 +215,21 @@ remote_flock() {
     for n in "$@"; do filters="$filters --filter name=$n"; done
     printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
 }
+# remote_slots <container name prefix> — the gates' lock, with GATES_REMOTE_SLOTS (default 2, 2026-11-16 user
+# decision) runs at once on that machine: slot 1 is fd 9 on run.lock, slot 2 fd 8 on run.2.lock (the caller opens
+# both). Free slot first, without waiting; both taken: say who holds them, then try both every 10 s. A copy of
+# this script from before the second slot takes run.lock only, so old and new share the machine correctly.
+# GATES_REMOTE_SLOTS=1 is the single lock as it was (remote_flock 9 run.lock).
+# Why two: four agents' gates queued behind one lock for an hour (2026-11-16) while the box had 20 cores. Each
+# slot's container is capped lower (10 CPUs / 20 GB, 5 + 5 workers) so two fit beside Metro and the test PG.
+remote_slots() {
+    if [ "${GATES_REMOTE_SLOTS:-2}" = 1 ]; then remote_flock 9 run.lock "$@"; return; fi
+    local filters="" n
+    for n in "$@"; do filters="$filters --filter name=$n"; done
+    printf '%s' "flock -n 9 || flock -n 8 || { echo \"$P: both gate slots are taken on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; until flock -n 9 || flock -n 8; do sleep 10; done; } || exit 1"
+}
+case "${GATES_REMOTE_SLOTS:-2}" in 1) SLOT_CPUS=12 SLOT_MEM=24g SLOT_WORKERS=6 ;; 2) SLOT_CPUS=10 SLOT_MEM=20g SLOT_WORKERS=5 ;;
+    *) echo "gates: GATES_REMOTE_SLOTS=${GATES_REMOTE_SLOTS} — 1 or 2"; exit 2 ;; esac
 remote_limit() {  # <value> <variable name>: refuse anything `timeout` would not read as a duration
     [[ "$1" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: $2=$1 is not a time limit (e.g. 30m, 1800)"; exit 2; }
 }
@@ -240,8 +255,8 @@ remote_verdict() {
 #     deleted, so it goes after the full period.
 #   - Never this run's own tree, and never a tree some container mounts, running or stopped (a Metro left up
 #     for weeks takes no lock and syncs nothing). If docker cannot be asked, nothing is deleted.
-#   - It runs on that machine inside the subshell that holds run.lock, before the container starts, so only
-#     one prune runs at a time. It cannot fail the run.
+#   - It runs on that machine inside the subshell that holds a gate slot, before the container starts, under its
+#     own prune.lock, so only one prune runs at a time even with two slots. It cannot fail the run.
 # remote_prune's text is sent as it stands (declare -f): it runs in the REMOTE host's shell, so it uses only
 # its arguments. ponytail: between reading a mark and `rm -rf`, another checkout's first run in two weeks
 # could touch that mark and start syncing — a window of milliseconds once per idle tree; that run would go
@@ -1147,23 +1162,24 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # TMPDIR is OUTSIDE the tree (/sl-tmp): under /app, test_testdb_name's child pytest found the tree's
     # root conftest above its tmp_path and applied it twice (test_soulledger_wired_wired), every delegated run.
     ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RDIR/tmp/$RID" || fail "could not create $RDIR/tmp/$RID on $GATES_REMOTE"
-    # flock: one delegated run at a time on that machine, from any checkout or session. It is the only
+    # flock: GATES_REMOTE_SLOTS delegated runs at a time on that machine (remote_slots), from any checkout or
+    # session. It is the only
     # lock there: GATE_LOCK=0 turns off gate-lock.sh inside the container, whose pid check cannot work
     # across containers — each numbers its processes from 1, so a lock an interrupted run left behind
     # named pid 7, the next container had a live pid 7, and that push waited 30 minutes (2026-10-28).
-    # Workers: 6 for pytest + 6 for the JS runners = the container's 12 CPUs, because the two sides now
+    # Workers: 5 for pytest + 5 for the JS runners = the slot's 10 CPUs (6 + 6 = 12 with one slot), because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 run.lock sl-gates-); $(declare -f remote_prune); remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY; docker run --rm --init --name $RNAME \
-        --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY ) 7>$RDIR/prune.lock; docker run --rm --init --name $RNAME \
+        --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
-        -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6} \
+        -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS} \
         -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
         -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $RLIMIT bash -c '
           find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
           $REMOTE_DEPS
           export PREPUSH_CHANGED=\"\$(cat .sl-changed)\" PREPUSH_CHANGED_BACKEND=\"\$(cat .sl-changed-backend)\" PREPUSH_CHANGED_JS=\"\$(cat .sl-changed-js)\"
-          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/run.lock" | tee "$RLOG"
+          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/run.lock" | tee "$RLOG"
     RSTATUS=${PIPESTATUS[0]}
     trap - EXIT
     remote_verdict "$RSTATUS" "$RLIMIT" "$RLIMIT_VAR"
