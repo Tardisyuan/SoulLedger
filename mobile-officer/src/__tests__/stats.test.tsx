@@ -1,5 +1,5 @@
 /** 我的数: five numbers in two groups; all zero is one sentence; a failure leaves no old numbers; only 认领未结 opens anything. */
-import { fireEvent, screen } from "@testing-library/react-native";
+import { fireEvent, screen, within } from "@testing-library/react-native";
 
 import { StatsScreen, allZero, monthSince } from "../screens/stats";
 import { renderOfficer } from "./harness";
@@ -71,6 +71,9 @@ it("shows the hall's numbers from hall-stats, and nothing of them when it fails"
   renderOfficer(<StatsScreen onBack={() => {}} onOpenQueue={() => {}} />);
   expect(await screen.findByTestId("stats-hall")).toBeTruthy();
   expect(screen.getByText("本月已结 56%")).toBeTruthy();
+  // 全殿那一格是「本殿本月结案」,不借「我的数」的「本月结案」。
+  expect(within(screen.getByTestId("hall-month")).getByText("本殿本月结案")).toBeTruthy();
+  expect(within(screen.getByTestId("hall-month")).queryByText("本月结案")).toBeNull();
   expect(screen.getByText("3.5 日")).toBeTruthy();
   expect(screen.getByTestId("hall-overdue")).toBeTruthy();
 });

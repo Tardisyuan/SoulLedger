@@ -76,7 +76,8 @@ function HallStats({ s }: { s: JudgmentHallStats }) {
       <Stat testID="hall-overdue" label={t("queue.tab.overdue")} n={s.overdue} />
       <Stat
         testID="hall-month"
-        label={t("officer_app.stats.concluded_this_month")}
+        // 全殿的数,不是「我的」:与网页本殿概览同一个键(本殿本月结案)。
+        label={t("overview.stat.concluded")}
         n={s.concluded_this_month}
         note={s.month_done_pct != null ? t("overview.month_done_pct", { pct: String(s.month_done_pct) }) : undefined}
       />
