@@ -6,8 +6,9 @@ looking at a context -- so production with no shard env, and a sharded run with 
 exactly as before (tests/test_sharded_reads_equal_single_db.py holds both).
 
 Where a read of a SHARD model goes (`route`), first answer wins:
-  1. inside the code's own transaction, or -> control. The writes are there and nowhere else yet; a
-     anywhere in a write request              check-then-act must not read a lagging shard (`reads_control`).
+  1. inside the code's own transaction,    -> control. The writes are there and nowhere else yet; a
+     anywhere in a write request, or in        check-then-act must not read a lagging shard (`reads_control`).
+     Celery (below)
      a model in CONTROL_READS                 its queries join a control table; listed with the reason.
   2. the queryset says FANOUT_HINT          -> fan out (crossing keys, residence reads).
   3. an instance hint of a SHARD row        -> that row's database (Django's own rule).
@@ -15,20 +16,29 @@ Where a read of a SHARD model goes (`route`), first answer wins:
   4. the read context                       -> one alias, or FANOUT.
   5. none of these                          -> `NoShardContext`. Never a silent fall back to control.
 
-The read context (`current_context`): an explicit `read_context(...)` (a management command runs in FANOUT),
+The read context (`current_context`): an explicit `read_context(...)` (a management command reads control, below),
 else the request's hall (or the tenant contextvar a per-hall Celery task sets); else the user -- a
 civilization ADMIN reads its civilization, SYSTEM_ADMIN, a soul account and an anonymous caller (sign-in by
 soul code) read everywhere (FANOUT), a caller that reaches no hall reads control (scope_to_tenant answers it
 nothing anyway). A hall of UNKNOWN civilization, and a civilization not cut over, read control: that is where
-their rows live (D2). Outside a request: the hall a task set, else FANOUT inside a Celery task (a global sweep,
-a task handed a soul id), else none -- NoShardContext.
+their rows live (D2). Outside a request, inside Celery -- a task's body, or a Celery signal's receivers
+(worker_ready, task_postrun, beat's before_task_publish) -- reads go where the task's writes go: control
+(`reads_control`), the hall's shard only once the hall's civilization writes there (stage 4, SHARD_WRITE_CIVS).
+Not FANOUT and not the hall's shard: stage 3 writes reach a shard only at the next sync, so a task handed the id
+of a row its request just committed must read control to find it (a FANOUT read excludes the cut-over halls
+from the control leg), and a sweep that reads, writes and reads again must read what it wrote (a per-hall
+purge that re-read its lagging shard got the deleted ids back and looped). Control holds every row in stage 3.
+A task that wants another answer says so: `read_context(FANOUT)` / `@fanout_reads` / `read_context(hall)`.
+A management command reads control for the same reason (`read_context("default")` around it: an operator's
+sweep reads, then writes to control); `shadow_read_diff` sets each request's context itself. Outside a request,
+Celery and a command: an explicit context or the tenant contextvar, else NoShardContext.
 
 FANOUT is not a database. A queryset evaluated under it visits every leg -- control with the cut-over
 civilizations' halls excluded, then each cut-over shard (a shard's soul copies of another civilization
 excluded, D6) -- and merges: each leg fetches its first offset+limit rows in the queryset's own order, the
 rows are merged in that order and the slice is taken from the merge. `count` / `exists` / `aggregate`
-combine per leg. `install()` hooks those QuerySet methods; a path it does not cover (raw SQL, explain, a
-combined queryset) asks the router, which raises NoShardContext.
+combine per leg; `in_bulk` reads the merge. `install()` hooks those QuerySet methods; a path it does not
+cover (raw SQL, explain, a combined queryset) asks the router, which raises NoShardContext.
 """
 import decimal
 import functools
@@ -62,9 +72,11 @@ _context = ContextVar("shard_read_context", default=None)
 #: queries filter through a control table (User, SoulAccount, celery-beat's PeriodicTask), which no shard has;
 #: they move when that filter is rewritten (a denormalized column, or ids read from control first).
 #: tests/test_sharded_reads_equal_single_db.py prints this list; it is the stage-3 debt, not a convenience.
+#: Each reason names the lookups that make it one (tests/test_fanout_merge_edge_cases.py: each lookup reaches a
+#: CONTROL table and the app's code still says it); the set itself is pinned there.
 CONTROL_READS = {
     "social.Post": "visibility filters on author__role / author__soul_account__soul__tenant (User, SoulAccount)",
-    "social.Comment": "the same author filters as Post, and joins its post's author",
+    "social.Comment": "the same author filters as Post (author__role / author__soul_account__soul__tenant)",
     "social.Reaction": "lists through post__author (User)",
     "social.PostMedia": "media checks post__author__role (User)",
     "social.SocialMute": "moderation lists filter user__soul_account / user__display_name (User, SoulAccount)",
@@ -136,7 +148,7 @@ def current_context():
     if hall is not None:
         return alias_for_reads(hall.civilization)
     if request is None:
-        return FANOUT if _in_celery_task() else None
+        return CONTROL_ALIAS if in_celery() else None
     return context_for_user(getattr(request, "user", None))
 
 
@@ -149,11 +161,8 @@ def context_for_user(user):
 
     if is_tenant_exempt(user) or getattr(user, "role", None) == SOUL_ROLE:
         return FANOUT
-    hall_view = getattr(user, "hall_view", None)
-    if hall_view is not None:
-        from apps.tenants.models import Tenant
-
-        return alias_for_reads(Tenant._base_manager.get(pk=hall_view).civilization)
+    # An ADMIN viewing one hall (`hall_view`) never gets here: impersonation sets it only on a request whose token
+    # names that hall, so `request.tenant` answered first (current_context).
     if is_civilization_admin(user):
         return alias_for_reads(getattr(user, "civilization", None))
     if getattr(user, "tenant_id", None) is not None:  # force_authenticate: request_tenant's fallback
@@ -168,13 +177,22 @@ def in_write_transaction():
 
 def reads_control():
     """Stage 3 writes go to control, so a read that may act on what was just written reads control too: inside
-    the code's own transaction, and anywhere in a write request (any method but GET / HEAD / OPTIONS)."""
-    if in_write_transaction() or _context.get() == CONTROL_ALIAS:  # or the code said so: read_context("default")
+    the code's own transaction, anywhere in a write request (any method but GET / HEAD / OPTIONS), and in
+    Celery with no context of its own unless its hall writes to its shard (module header)."""
+    explicit = _context.get()
+    if in_write_transaction() or explicit == CONTROL_ALIAS:  # or the code said so: read_context("default")
         return True
     from apps.core.request_local import get_current_request
 
     request = get_current_request()
-    return request is not None and getattr(request, "method", "GET") not in ("GET", "HEAD", "OPTIONS")
+    if request is not None:
+        return getattr(request, "method", "GET") not in ("GET", "HEAD", "OPTIONS")
+    if explicit is None and in_celery():
+        from apps.tenants.managers import get_current_tenant
+
+        hall = get_current_tenant()
+        return hall is None or hall.civilization not in settings.SHARD_WRITE_CIVS
+    return False
 
 
 def route(model, hints):
@@ -464,6 +482,8 @@ def _ordering(qs):
             out.append((item.name, False, None))
         else:  # an expression (Case(...), Lower(...)): annotated per leg as it is
             out.append((item, False, None))
+    if not q.standard_ordering:  # reverse(), and so last() / latest(): the compiler flips every key, nulls too
+        out = [(name, not desc, None if nulls is None else not nulls) for name, desc, nulls in out]
     return out
 
 
@@ -734,14 +754,32 @@ def _combine_groups(qs, rows):
 def count(qs):
     q = qs.query
     if q.distinct or isinstance(q.group_by, tuple) or q.combinator:
-        return len(merged(qs))
+        # The database counts these without their ORDER BY unless sliced (Query.get_aggregation), so an order
+        # key -- Meta.ordering's too -- never joins what DISTINCT / GROUP BY is taken over.
+        return len(merged(qs if q.is_sliced else qs.order_by()))
     total = sum(_leg(qs, alias, narrow, None, on).count() for alias, narrow, on in legs(qs.model))
     total = max(0, total - q.low_mark)
     return min(total, q.high_mark - q.low_mark) if q.high_mark is not None else total
 
 
 def exists(qs):
+    if qs.query.low_mark:  # qs[n:].exists(): whether a row is left after the first n of the merge
+        return count(qs) > 0
     return any(_leg(qs, alias, narrow, qs.query.high_mark, on).exists() for alias, narrow, on in legs(qs.model))
+
+
+def in_bulk(qs, id_list=None, *, field_name="pk"):
+    """Django's in_bulk over the merge (Django's own reads `connections[qs.db]`, which FANOUT is not)."""
+    if qs.query.is_sliced:
+        raise TypeError("Cannot use 'limit' or 'offset' with in_bulk().")
+    if field_name != "pk" and not qs.model._meta.get_field(field_name).unique:
+        raise ValueError(f"in_bulk()'s field_name must be a unique field but {field_name!r} isn't.")
+    if id_list is not None:
+        id_list = tuple(id_list)
+        if not id_list:
+            return {}
+        qs = qs.filter(**{f"{field_name}__in": id_list})
+    return {getattr(obj, field_name): obj for obj in qs}
 
 
 def _part(expr, name):
@@ -804,13 +842,36 @@ def aggregate(qs, args, kwargs):
 
 # ---- hooks -------------------------------------------------------------------------------------------------
 
-def _in_celery_task():
-    """Inside a Celery task's body (a worker, or an eager call). A task's hall comes from the tenant contextvar
-    it sets itself (the per-hall jobs); one that sets none -- a global sweep, a task handed a soul id -- reads
-    every leg rather than no context."""
+_celery_signal = ContextVar("shard_read_celery_signal", default=False)
+
+
+def in_celery():
+    """Inside a Celery task's body (a worker, or an eager call), or a Celery signal's receivers (module header:
+    with no hall of its own, it reads control)."""
     from celery import current_task
 
+    if _celery_signal.get():
+        return True
     return bool(current_task) and getattr(current_task.request, "id", None) is not None
+
+
+def _install_celery_signals():
+    """Mark the receivers of every Celery signal as "inside Celery" (worker_ready has no task and no request)."""
+    from celery.utils.dispatch import Signal
+
+    original = Signal.send
+    if getattr(original, "_shard_reads", False):
+        return
+
+    def send(self, *args, **kwargs):
+        token = _celery_signal.set(True)
+        try:
+            return original(self, *args, **kwargs)
+        finally:
+            _celery_signal.reset(token)
+    send._shard_reads = True
+    functools.update_wrapper(send, original)
+    Signal.send = send
 
 
 def _hook(name, make):
@@ -867,7 +928,7 @@ def install():
             return original(self, *args, **kwargs)
         return _aggregate
 
-    counting, existing = evaluating(count), evaluating(exists)
+    counting, existing, bulk = evaluating(count), evaluating(exists), evaluating(in_bulk)
 
     from django.core.management.base import BaseCommand
 
@@ -876,7 +937,7 @@ def install():
         def execute(self, *args, **options):
             if _context.get() is not None:
                 return original_execute(self, *args, **options)
-            with read_context(FANOUT):  # an operator command has no request and no hall
+            with read_context(CONTROL_ALIAS):  # an operator command writes to control: it reads there (header)
                 return original_execute(self, *args, **options)
         execute._shard_reads = True
         functools.update_wrapper(execute, original_execute)
@@ -887,7 +948,9 @@ def install():
     _hook("count", counting)
     _hook("exists", existing)
     _hook("aggregate", aggregating)
+    _hook("in_bulk", bulk)
     _install_crossing_accessors()
+    _install_celery_signals()
 
 
 def crossing_keys():

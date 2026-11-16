@@ -15,9 +15,9 @@ Entry: (file under backend/, expression, count, tag, route, reason) -- one row p
                 CONTROL  the model is not SHARD (CONTROL, or REFERENCE: Tenant); cut-over changes nothing
                 WRITE    a lock (select_for_update), or a read inside the code's own transaction: control,
                          where stage 3 still writes
-                CONTEXT  the request's / task's read context: its hall's civilization; FANOUT for SYSTEM_ADMIN,
-                         a soul account, an anonymous caller, a Celery task with no hall, a management command;
-                         NoShardContext with none
+                CONTEXT  the request's read context: its hall's civilization; FANOUT for SYSTEM_ADMIN, a soul
+                         account, an anonymous caller; control in a write request, a Celery task or signal and a
+                         management command (stage 3 writes there); NoShardContext with none
                 FANOUT   every leg, spelled at the site: `with_fanout(...)`, inside `with read_context(FANOUT)`, or
                          in a function decorated `@fanout_reads`
                 USING    names its database itself with `.using(alias)`
@@ -109,7 +109,6 @@ SITES = [
     ('apps/core/sharding.py', 'target._base_manager', 1, 'PK', 'USING', "cross_civilization_keys: the hall of the one row a key being saved names, by that key's value -- whatever its hall, since a row of another civilization is what it looks for"),
     ('apps/core/sharding.py', '_tenant_model()._base_manager', 1, 'PK', 'USING', "cross_civilization_keys: the two halls (Tenant rows) of a row being saved and of the row its key names, by pk, to compare their civilizations"),
     ('apps/core/bare_ids.py', 'target._base_manager', 2, 'CLI', 'USING', "orphans: every pk of a bare id's target on each of its homes (control, plus the shards for a SHARD target), for check_bare_ids (run before reversing stage 1B); a subquery when the one home is the alias being checked, a list otherwise"),
-    ('apps/core/shard_reads.py', 'Tenant._base_manager', 1, 'FANOUT', 'CONTROL', "current_context: the one hall an ADMIN is viewing (User.hall_view), by its pk, to read its civilization"),
     ('apps/core/shard_sync.py', 'Tenant._base_manager', 1, 'FANOUT', 'USING',"halls_of: the Tenant table itself, the halls of one civilization (soft-deleted halls included: their rows are still that civilization's), for reconcile_shards / sync_shards"),
     ('apps/core/shard_sync.py', 'model._base_manager', 2, 'CLI', 'USING', "owned: one shard model's rows that belong to one civilization's shard -- on control filtered by its tenant path to that civilization's halls, on the shard every row there -- soft-deleted included, for reconcile_shards / sync_shards ‖ apply_fix: bulk_create on the target alias of rows owned() read"),
     ('apps/core/shard_sync.py', 'dst.model._base_manager', 1, 'CLI', 'USING', "apply_fix: raw delete, on the target alias only, of the pks compare() found extra or changed there"),

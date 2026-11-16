@@ -501,11 +501,11 @@ def test_a_read_with_no_context_is_refused_once_a_civilization_is_cut_over(world
     NoShardContext once any civilization is cut over -- never a quiet answer from control -- and reads as
     before while none is."""
     from apps.core.request_local import get_current_request
-    from apps.core.shard_reads import _context, _in_celery_task, current_context
+    from apps.core.shard_reads import _context, current_context, in_celery
     from apps.tenants.managers import get_current_tenant
 
     assert get_current_request() is None and get_current_tenant() is None
-    assert current_context() is None, (_context.get(), _in_celery_task())
+    assert current_context() is None, (_context.get(), in_celery())
     from apps.core.shard_reads import CONTROL_READS
 
     shard_models = [m for m in apps.get_models() if placement(m) == SHARD and m._meta.label not in CONTROL_READS]
