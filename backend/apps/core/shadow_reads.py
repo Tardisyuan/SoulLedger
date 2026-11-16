@@ -11,11 +11,14 @@ case marks its own (`_from_testcase`): `shard_reads.reads_control` takes only th
 """
 import json
 import re
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+from unittest import mock
 from urllib.parse import urlsplit
 
+from django.conf import settings
 from django.core.cache import caches
 from django.db import connections, transaction
+from django.test import override_settings
 from django.urls import get_resolver, reverse
 
 #: Response keys whose value is the moment of the request, not data: the clock, and a problem response's
@@ -86,6 +89,81 @@ def urls_for(found, case, list_answer, rng, n=4):
     return [reverse(name, kwargs={lookup: i}) for i in rng.sample(ids, min(n, len(ids)))]
 
 
+# ---- nothing leaves the process -----------------------------------------------------------------------------
+
+class UnreachableMatrix:
+    """The Matrix client of a shadow run: Synapse unreachable, on both sides alike (a real client would make
+    users and rooms there, which no rollback undoes)."""
+
+    def __getattr__(self, name):
+        from apps.chat.matrix import MatrixError
+
+        def unreachable(*args, **kwargs):
+            raise MatrixError("shadow_read_diff: Synapse is not asked")
+        return unreachable
+
+
+_running = []  # the dispatch record of the `isolated()` this process is inside, if any
+
+
+def _real_matrix():
+    from django.utils.module_loading import import_string
+
+    from apps.chat.matrix import SynapseClient
+
+    try:
+        return issubclass(import_string(settings.MATRIX_CLIENT), SynapseClient)
+    except ImportError:
+        return False
+
+
+@contextmanager
+def isolated():
+    """Run the block with no effect outside this process (module header). Yields the list of Celery dispatches
+    it held back, as (task name, args, kwargs). Re-entrant: inside another `isolated()` it is that one."""
+    if _running:
+        yield _running[-1]
+        return
+    from celery import Celery
+    from celery.app.task import Task
+    from celery.result import AsyncResult
+
+    from apps.perm import cache as perm_cache
+
+    sent = []
+
+    def task_apply_async(task, args=None, kwargs=None, *rest, **options):
+        sent.append((task.name, tuple(args or ()), dict(kwargs or {})))
+        return AsyncResult(options.get("task_id") or f"shadow-{len(sent)}")
+
+    def app_send_task(app, name, args=None, kwargs=None, *rest, **options):
+        sent.append((name, tuple(args or ()), dict(kwargs or {})))
+        return AsyncResult(options.get("task_id") or f"shadow-{len(sent)}")
+
+    memory_perms = perm_cache.PermissionCache.__new__(perm_cache.PermissionCache)
+    memory_perms._redis_client, memory_perms._fallback_cache = None, {}
+    memory_perms._retry_cooldown = float("inf")  # never (re)connects
+    memory_perms._last_connect_failure = 0.0
+    overrides = {
+        "CACHES": {alias: {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": f"shadow-{alias}"}
+                   for alias in settings.CACHES},
+        "EMAIL_BACKEND": "django.core.mail.backends.locmem.EmailBackend",
+        "CHANNEL_LAYERS": {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}},
+    }
+    if _real_matrix():
+        overrides["MATRIX_CLIENT"] = f"{__name__}.UnreachableMatrix"
+    with ExitStack() as stack:
+        stack.enter_context(override_settings(**overrides))
+        stack.enter_context(mock.patch.object(Task, "apply_async", task_apply_async))
+        stack.enter_context(mock.patch.object(Celery, "send_task", app_send_task))
+        stack.enter_context(mock.patch.object(perm_cache, "_permission_cache", memory_perms))
+        _running.append(sent)
+        try:
+            yield sent
+        finally:
+            _running.pop()
+
+
 # ---- asking -----------------------------------------------------------------------------------------------
 
 @contextmanager
@@ -107,13 +185,13 @@ def rolled_back():
 
 def fetch(client, url, max_pages=None, trace=False, **extra):
     """(status, body) -- every page of a paginated list joined (at most `max_pages`); an exception is an answer
-    too. Rolled back on every database."""
-    with rolled_back():
+    too. Rolled back on every database; nothing leaves the process (`isolated`)."""
+    with isolated(), rolled_back():
         return _fetch_pages(client, url, max_pages, trace, extra)
 
 
 def _fetch_pages(client, url, max_pages, trace, extra):
-    for c in caches.all():
+    for c in caches.all():  # this run's LocMem (`isolated`): each request starts from an empty cache
         c.clear()
     rows, body, status, pages = [], None, None, 0
     while url:

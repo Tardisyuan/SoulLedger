@@ -12,7 +12,9 @@ printed and the command exits non-zero.
 
 Read-only: tokens are minted and every request runs inside a transaction on every database that is rolled
 back (tests/test_sharded_reads_equal_single_db.py holds that the row counts of every alias are unchanged).
-A task a GET hands to Celery directly (not on commit) still reaches the broker; none is known to do so.
+Nothing leaves the process (`shadow_reads.isolated`): the caches are this run's own (not the backend's Redis),
+a task a GET hands to Celery is recorded and listed here instead of sent (`GET /me/chat/session/` does), the
+Matrix client finds Synapse unreachable on both sides (tests/test_shadow_read_diff_leaves_no_trace.py).
 """
 import random
 
@@ -38,7 +40,16 @@ class Command(BaseCommand):
         parser.add_argument("--ids", type=int, default=2, help="ids per detail route (default 2)")
         parser.add_argument("--seed", type=int, default=0)
 
-    def handle(self, *args, civ=None, every=False, endpoint="", max_pages=5, ids=2, seed=0, **options):
+    def handle(self, *args, **options):
+        with shadow.isolated() as held_back:
+            try:
+                self._compare(**options)
+            finally:
+                if held_back:
+                    self.stdout.write(f"held back {len(held_back)} Celery dispatch(es), not sent: "
+                                      f"{sorted({name for name, _, _ in held_back})}")
+
+    def _compare(self, civ=None, every=False, endpoint="", max_pages=5, ids=2, seed=0, **options):
         from apps.souls.models import Civilization
 
         civs = [c for c in Civilization.values if alias_for_civilization(c) in shard_aliases()] if every else [civ]
