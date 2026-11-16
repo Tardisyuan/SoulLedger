@@ -317,6 +317,8 @@ describe("A · the scanner", () => {
     expect(screen.getByText("没有相机权限")).toBeTruthy();
     expect(screen.getByText("相机和相册都只读码，不拍照、不上传。")).toBeTruthy();
     expect(screen.queryByTestId("scan-camera")).toBeNull();
+    // Design batch 57: an ordinary page, so 「从相册选」 here is the control radius 4 (on the camera it stays a pill).
+    expect(StyleSheet.flatten(screen.getByTestId("scan-album").props.style)).toMatchObject({ height: 44, borderRadius: 4 });
     fireEvent.press(screen.getByTestId("scan-open-settings"));
     expect(open).toHaveBeenCalledTimes(1);
     fireEvent.press(screen.getByTestId("scan-manual"));
