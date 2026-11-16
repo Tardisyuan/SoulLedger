@@ -4,7 +4,7 @@
  *   「下一件」 after a decision (detail.tsx NextBar): the next row of the to-do's own group, 「{name} · 还剩 n 件」.
  *   「最近用过」 above a refusal's notes (memory.ts): remembered only when the server took the refusal.
  */
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import WorkflowDetailPage from "@/app/workflow/[id]/page";
 import { readReasons, rememberReason } from "@/src/lib/recentRejectReasons";
 import { tZh } from "./support/zhBundle";
@@ -91,6 +91,9 @@ describe("下一件 after a decision", () => {
     const before = officerAppApi.todo.mock.calls.length;
     await client.refetchQueries();
     expect(officerAppApi.todo.mock.calls.length).toBeGreaterThan(before);
+    // The refetched to-do no longer has w1; the answer read while it was there stays.
+    await waitFor(() => expect(client.getQueryData<{ approvals: { count: number } }>(["dashboard", "todo", "officer"])?.approvals.count).toBe(2));
+    await act(async () => {});
     expect(screen.getByTestId("next-bar-next")).toHaveAttribute("href", "/workflow/w2");
   });
 
