@@ -34,6 +34,8 @@ describe("M1: a tab fades in; a screen over the tabs slides in from the right", 
         <Text>page</Text>
       </PageEnter>
     );
+    // At its first frame a tab's page is clear (it fades in); a slid-in screen is opaque (it moves in).
+    expect(flat(screen.getByTestId(id)).opacity).toBe(slide ? 1 : 0);
     await act(async () => {});
     const style = flat(screen.getByTestId(id));
     expect(timing.mock.calls.at(-1)![1]).toMatchObject({ toValue: 1, duration: 240, easing: EASE.enter });
