@@ -236,6 +236,13 @@ class TenantCreateSerializer(serializers.ModelSerializer):
         fixed = TENANT_CIVILIZATION.get(attrs["code"])
         if fixed is not None and fixed != attrs["declared_civilization"]:
             raise serializers.ValidationError({"civilization": f"{attrs['code']} is a {fixed} hall."})
+        from apps.tenants.global_codes import case_prefix_clash
+
+        clash = case_prefix_clash(attrs["code"], attrs["declared_civilization"])
+        if clash:
+            raise serializers.ValidationError({"code": serializers.ErrorDetail(
+                f"The case-number prefix of {attrs['code']} is already used by {', '.join(clash)} of another "
+                "civilization; choose a code whose first segment differs.", code="case_prefix_shared")})
         return attrs
 
 

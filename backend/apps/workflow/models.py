@@ -362,12 +362,14 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         without this a caller holding no transaction would keep the edit when the sync raised."""
         from django.db import transaction
 
-        from apps.judgment.models import JudgmentCaseCounter
+        from apps.tenants import global_codes
 
-        with transaction.atomic():
+        alias = global_codes.row_alias(self, kwargs.get("using"))
+        with transaction.atomic(using=alias):
             if self._state.adding and not self.number:
-                # 发号与写入同一个事务:写入失败,号跟着回滚,不留空号。
-                self.number = format_workflow_number(JudgmentCaseCounter.bump(WORKFLOW_NUMBER_KEY))
+                # 号由控制库的 `WF` 计数行发(分库阶段 4 缺口 4b,REGISTRY):行在控制库时发号与写入同一个事务,
+                # 写入失败号跟着回滚、不留空号;行在分库时号在控制库先提交,分库写失败留下空号,永不复用。
+                self.number = format_workflow_number(global_codes.next_workflow_number(using=alias))
             super().save(*args, **kwargs)
 
     @property

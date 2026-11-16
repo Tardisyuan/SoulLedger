@@ -36,6 +36,7 @@ PLACEMENT = {
     'souls.Soul': ('SHARD', 'tenant', 'own tenant column = current hall (D6); home_tenant children and residence are stage 4'),
     'souls.SoulRecord': ('SHARD', 'tenant', 'own tenant column'),
     'judgment.JudgmentCaseCounter': ('CONTROL', None, 'no tenant column and no foreign-key chain to a hall: global'),
+    'tenants.GlobalCode': ('CONTROL', None, 'stage-4 registry of global codes; tenant_id is a bare record of the claimer, not a path'),
     'judgment.Judgment': ('SHARD', 'tenant', 'own tenant column'),
     'judgment.Statute': ('SHARD', 'tenant', 'own tenant column'),
     'judgment.JudgmentCitation': ('SHARD', 'tenant', 'own tenant column'),
