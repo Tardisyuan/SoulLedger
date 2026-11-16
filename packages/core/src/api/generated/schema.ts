@@ -29647,6 +29647,7 @@ export interface operations {
                 overdue?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                reassign_requested?: boolean;
                 returned?: boolean;
                 /** @description A search term. */
                 search?: string;
@@ -30013,6 +30014,7 @@ export interface operations {
                 overdue?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                reassign_requested?: boolean;
                 returned?: boolean;
                 /** @description A search term. */
                 search?: string;
@@ -30342,6 +30344,7 @@ export interface operations {
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 overdue?: boolean;
+                reassign_requested?: boolean;
                 returned?: boolean;
                 /** @description A search term. */
                 search?: string;
@@ -30494,6 +30497,7 @@ export interface operations {
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 overdue?: boolean;
+                reassign_requested?: boolean;
                 returned?: boolean;
                 /** @description A search term. */
                 search?: string;
