@@ -10,9 +10,10 @@ from rest_framework.response import Response
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt
+from apps.core.versioned import VersionedMemo
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
-from .access import menu_is_visible_to, visible_menus
+from .access import is_menu_admin, menu_is_visible_to, visible_menus
 from .button_access import visible_buttons
 from .models import Menu, MenuButton
 from .serializers import (
@@ -41,6 +42,20 @@ _MENU_PREFETCH = (
     "children__children",
     "children__children__buttons",
 )
+
+#: The unfiltered menu rows `GET /menus/` serves, one copy per process while `v:menus` is unchanged
+#: (apps/core/versioned.py; review 2026-11-16 #7). The role / codename filter still runs per caller on the copy,
+#: so nothing role-dependent is cached. Any Menu / MenuButton save or delete bumps it (apps/menus/apps.py).
+menu_rows = VersionedMemo("menus")
+
+
+def bump_menus(sender=None, using=None, **_kwargs):
+    menu_rows.bump(using=using)
+
+
+def _menu_rows(every):
+    base = Menu.objects.all() if every else Menu.objects.filter(is_active=True)
+    return list(base.prefetch_related(*_MENU_PREFETCH))
 
 
 class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
@@ -100,6 +115,24 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             Menu.objects.filter(is_active=True).prefetch_related(*_MENU_PREFETCH),
             user,
         )
+
+    def list(self, request, *args, **kwargs):
+        # The sidebar's call (no query parameters but the page) is served from `menu_rows`: the same rows
+        # `get_queryset` returns, narrowed by the same `menu_is_visible_to`. Anything else takes the queryset path.
+        # (A comment, not a docstring: drf-spectacular would publish a docstring as the operation's description.)
+        user = request.user
+        if set(request.query_params) - {"page", "page_size"} or not user.is_authenticated:
+            return super().list(request, *args, **kwargs)
+        every = is_menu_admin(user)
+        # ponytail: the rows are shared by every request of this process, read-only (deepcopy drops their prefetch
+        # caches: QuerySet.__deepcopy__ does not copy results). Copy them if a serializer ever writes to a row.
+        rows = menu_rows.get(every, lambda: _menu_rows(every))
+        if not every:
+            rows = [m for m in rows if menu_is_visible_to(m, user)]
+        page = self.paginate_queryset(rows)
+        if page is None:
+            return Response(self.get_serializer(rows, many=True).data)
+        return self.get_paginated_response(self.get_serializer(page, many=True).data)
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete, recording who and why. The default ModelViewSet

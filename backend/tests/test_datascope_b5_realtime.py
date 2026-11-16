@@ -114,18 +114,27 @@ async def _server_refresh(comm, user):
     assert (await comm.receive_json_from(timeout=5))["type"] == "permission.refreshed"
 
 
+def _set_judge_scope(value):
+    """Through `save()`, as the data-scope API writes (`data_scope_api.replace_role_config`): the per-process copy of
+    the rules is invalidated by the model signals, which `QuerySet.update()` skips (`apps/perm/data_scope.py::_shared`;
+    tests/test_data_scope_and_menus_are_cached_per_version.py guards that no product code writes it that way)."""
+    for row in RoleDataScope.objects.filter(role__name="JUDGE"):
+        row.scope = value
+        row.save()
+
+
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_a_scope_change_takes_effect_on_refresh(cn_tenant):
     judge, _units, souls = await _world(cn_tenant)
     comm = await _connect(judge)
     try:
-        await database_sync_to_async(lambda: RoleDataScope.objects.filter(role__name="JUDGE").update(scope="ALL"))()
+        await database_sync_to_async(_set_judge_scope)("ALL")
         await _server_refresh(comm, judge)
         await _publish(souls["theirs"])
         assert (await _next_probe(comm))["probe"] == "他司魂", "改成「全部」并刷新后仍按旧范围丢弃"
 
-        await database_sync_to_async(lambda: RoleDataScope.objects.filter(role__name="JUDGE").update(scope="ORG"))()
+        await database_sync_to_async(_set_judge_scope)("ORG")
         await comm.send_json_to({"type": "permission.refresh"})  # 客户端发的刷新同样重算
         assert (await comm.receive_json_from(timeout=5))["type"] == "permission.refreshed"
         await _publish(souls["theirs"])

@@ -3,6 +3,10 @@
     manage.py shadow_read_diff --civ GREEK          # before adding GREEK to SHARD_READ_CIVS
     manage.py shadow_read_diff --all                # every civilization with a shard, at once
     manage.py shadow_read_diff --civ GREEK --endpoint soul --max-pages 2
+    manage.py shadow_read_diff --all --slowest 20   # + the 20 endpoints slowest once cut over
+
+Every run also prints, per endpoint, the SQL statements (on every database) and wall ms of its requests before and
+cut over -- what a cut-over costs, not only whether it changes an answer (review 2026-11-16, 2.0).
 
 Every GET endpoint of the URLconf (apps/core/shadow_reads.py) is asked by existing users -- for each hall in
 scope one active user per hall role, the civilization's ADMIN, a SYSTEM_ADMIN and a soul account of the
@@ -39,6 +43,8 @@ class Command(BaseCommand):
         parser.add_argument("--max-pages", type=int, default=5, help="pages of a list to compare (default 5)")
         parser.add_argument("--ids", type=int, default=2, help="ids per detail route (default 2)")
         parser.add_argument("--seed", type=int, default=0)
+        parser.add_argument("--slowest", type=int, default=10,
+                            help="list the N endpoints slowest once cut over (default 10; 0 = none)")
 
     def handle(self, *args, **options):
         with shadow.isolated() as held_back:
@@ -49,7 +55,22 @@ class Command(BaseCommand):
                     self.stdout.write(f"held back {len(held_back)} Celery dispatch(es), not sent: "
                                       f"{sorted({name for name, _, _ in held_back})}")
 
-    def _compare(self, civ=None, every=False, endpoint="", max_pages=5, ids=2, seed=0, **options):
+    def _costs(self, costs, slowest):
+        """Per endpoint, summed over its (caller, URL) pairs: SQL statements (every database) and wall ms, before and
+        cut over. Then the `slowest` endpoints by cut-over ms -- the list to work down first."""
+        def line(case, n, qb, qc, mb, mc):
+            return f"  {case:<48} {n:>5} {qb:>8} {qc:>8} {mb:>10.1f} {mc:>10.1f}"
+
+        header = f"  {'endpoint':<48} {'pairs':>5} {'q.before':>8} {'q.cut':>8} {'ms.before':>10} {'ms.cut':>10}"
+        self.stdout.write("cost per endpoint (statements on every database; wall ms):\n" + header)
+        for case, row in sorted(costs.items()):
+            self.stdout.write(line(case, *row))
+        if slowest:
+            self.stdout.write(f"slowest {slowest} cut over:\n" + header)
+            for case, row in sorted(costs.items(), key=lambda kv: -kv[1][4])[:slowest]:
+                self.stdout.write(line(case, *row))
+
+    def _compare(self, civ=None, every=False, endpoint="", max_pages=5, ids=2, seed=0, slowest=10, **options):
         from apps.souls.models import Civilization
 
         civs = [c for c in Civilization.values if alias_for_civilization(c) in shard_aliases()] if every else [civ]
@@ -69,6 +90,7 @@ class Command(BaseCommand):
         rng = random.Random(seed)
         pairs = with_data = 0
         differences = []
+        costs = {}  # endpoint -> [pairs, queries before, queries cut over, ms before, ms cut over]
         # Each request's own context: the management command's FANOUT default must not stand in for it.
         with read_context(None):
             for case in cases:
@@ -79,16 +101,23 @@ class Command(BaseCommand):
                         with override_settings(SHARD_READ_CIVS=before):
                             answer = shadow.fetch(client, _rev(lst), max_pages, **extra)
                     for url in shadow.urls_for(found, case, answer, rng, ids):
-                        with override_settings(SHARD_READ_CIVS=before):
+                        with override_settings(SHARD_READ_CIVS=before), shadow.measured() as cost_b:
                             base = shadow.drop(shadow.fetch(client, url, max_pages, **extra), shadow.WRITES_ON_READ.get(case, ()))
-                        with override_settings(SHARD_READ_CIVS=after):
+                        with override_settings(SHARD_READ_CIVS=after), shadow.measured() as cost_c:
                             cut = shadow.drop(shadow.fetch(client, url, max_pages, **extra), shadow.WRITES_ON_READ.get(case, ()))
+                        row = costs.setdefault(case, [0, 0, 0, 0.0, 0.0])
+                        row[0] += 1
+                        row[1] += cost_b["queries"]
+                        row[2] += cost_c["queries"]
+                        row[3] += cost_b["ms"]
+                        row[4] += cost_c["ms"]
                         pairs += 1
                         if base != cut:
                             differences.append(f"{who} GET {url}: {shadow.diff(base, cut)}")
                             self.stdout.write(f"DIFFERS {differences[-1]}")
                         elif shadow.has_data(base):
                             with_data += 1
+        self._costs(costs, slowest)
         self.stdout.write(f"compared {pairs} (caller, URL) pairs over {len(cases)} endpoints; {with_data} with data; "
                           f"{len(differences)} differ")
         if differences:
