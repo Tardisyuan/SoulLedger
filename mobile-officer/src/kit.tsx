@@ -14,8 +14,8 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
-import { HIGHLIGHT_ALPHA, isDenied } from "./rules";
-import { Button, EASE, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
+import { isDenied } from "./rules";
+import { BusyLine, Button, EASE, Emblem, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -94,6 +94,8 @@ export function LoadingRows({ inContent = false }: { inContent?: boolean } = {})
   const t = useTheme();
   const { t: tr } = useI18n();
   const reduced = useReducedMotion();
+  // 第五十八批 M6: nothing for the first 400, as the soul app's `Skeleton`; `useRemote` / `useCached` keep a shown one 300.
+  const shown = useAfter(motion.skeletonDelay);
   const [x] = useState(() => new Animated.Value(0));
   const [width, setWidth] = useState(0);
   // The 30% run travels left to right and starts again, as the soul app's `Skeleton` line and the web's page-head
@@ -104,6 +106,7 @@ export function LoadingRows({ inContent = false }: { inContent?: boolean } = {})
     run.start();
     return () => run.stop();
   }, [x, reduced, width]);
+  if (!shown) return null;
   return (
     <View testID="state-loading" accessible accessibilityLabel={tr("soul_app.common.loading")} accessibilityState={{ busy: true }}>
       {/* 第三十批 一.5: a 2px line at the top, never a spinner. Where it takes the head's top line it counts as the top line
@@ -295,7 +298,7 @@ export function Row({
 }
 
 /**
- * The pushed row's wash: ink at .07 (spec §五), on the one landing recipe both apps and the web share (`useLandingFade`:
+ * The pushed row's wash: ink at `HIGHLIGHT_ALPHA` (10%, 第五十九批: one strength on all three surfaces), on the one landing recipe both apps and the web share (`useLandingFade`:
  * held 1600, faded over 400, 2s in all; 第四十批 S-e). Nothing is drawn under reduce-motion (spec §五).
  */
 export function Highlight() {
@@ -313,6 +316,8 @@ export function Highlight() {
  * 44 high, square. `outline`: the secondary (ink3 border); `ink-outline`: ink border (驳回);
  * `ink`: ink-solid (the reject confirmation); `primary` (批准): ink-solid too since 第三十批 五.1 -- the
  * civilization colour stays out of buttons. The two kinds are kept apart for their callers' meaning.
+ * `busy` (第五十八批 M10): it stops taking presses and keeps its look, words and width; past 160 a line runs along its
+ * foot in its own text colour at 60% (`BusyLine`, shared with the soul app).
  */
 export function ActionButton({
   title,
@@ -350,11 +355,12 @@ export function ActionButton({
       accessibilityState={{ busy: !!busy, disabled: !!inert }}
       disabled={inert}
       onPress={onPress}
-      style={({ pressed }) => [styles.action, { backgroundColor: look.bg, borderColor: look.border, opacity: pressed || busy ? 0.7 : 1 }, style]}
+      style={({ pressed }) => [styles.action, { backgroundColor: look.bg, borderColor: look.border, opacity: pressed ? 0.7 : 1 }, style]}
     >
       <Txt variant="nav" style={[styles.actionText, { color: look.ink }]}>
         {title}
       </Txt>
+      {busy && !disabled ? <BusyLine color={look.ink} testID={testID ? `${testID}-busy` : "action-busy"} /> : null}
     </Pressable>
   );
 }
@@ -621,8 +627,9 @@ export const EDGE_BACK_PT = 20;
  * iOS's back swipe for a screen drawn over the tabs (App 手感, 2026-11-15): this app has no navigator (`b3aeab110` took
  * `react-native-screens` out on purpose), so the system gesture is not there, and the 「‹ 返回」 row sits in the corner a
  * thumb reaches last. A pan that starts within `EDGE_BACK_PT` of the left edge carries the page with the finger; let go
- * past a third of the width (or flung faster than 800 pt/s) it calls `onBack`, short of that it slides back. Under reduce
- * motion the page does not follow -- past the line it just closes. Android has its own back gesture (and `BackHandler`),
+ * past a third of the width (or flung faster than 800 pt/s) the page carries on off the right edge over 160 on the exit
+ * curve and then calls `onBack`; short of that it slides back over 160 on the exit curve, no bounce (第五十八批 M1 / M12).
+ * Under reduce motion the page does not follow -- past the line it just closes. Android has its own back gesture (and `BackHandler`),
  * so there this is only its children. No `onBack` (a screen that must not be left yet): no gesture.
  */
 export function EdgeBack({ onBack, children }: { onBack?: () => void; children: ReactNode }) {
@@ -643,14 +650,46 @@ export function EdgeBack({ onBack, children }: { onBack?: () => void; children: 
     })
     .onEnd((e, ok) => {
       if (ok && (e.translationX > width / 3 || e.velocityX > 800)) {
-        x.setValue(0);
-        onBack?.();
-      } else Animated.timing(x, { toValue: 0, duration: durations.sheetOut, easing: EASE.enter, useNativeDriver: false }).start();
+        if (reduced) {
+          onBack?.();
+          return;
+        }
+        Animated.timing(x, { toValue: width, duration: motion.sheetOut, easing: EASE.exit, useNativeDriver: false }).start(() => {
+          onBack?.();
+          x.setValue(0); // a detail that only popped an inner layer stays: back in place
+        });
+      } else Animated.timing(x, { toValue: 0, duration: durations.sheetOut, easing: EASE.exit, useNativeDriver: false }).start();
     });
   return (
     <GestureDetector gesture={pan}>
       <Animated.View style={{ flex: 1, transform: [{ translateX: x }] }}>{children}</Animated.View>
     </GestureDetector>
+  );
+}
+
+/**
+ * 第五十八批 M1, the soul app's pattern without a navigator: a tab's page cross-fades in over `tabFade` (240, enter curve);
+ * a screen drawn over the tabs (a detail, 我的's sub-screens, 滑卡) slides in from the right over the same 240. Under
+ * reduce motion both are an 80 fade, nothing moves (M3). The shell keys it by what is shown, so each change plays once.
+ */
+export function PageEnter({ slide, children }: { slide: boolean; children: ReactNode }) {
+  const { width } = useWindowDimensions();
+  const reduced = useReducedMotion();
+  const { tabFade } = useReducedMotionDurations();
+  const [p] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    const run = Animated.timing(p, { toValue: 1, duration: tabFade, easing: EASE.enter, useNativeDriver: true });
+    run.start();
+    return () => run.stop();
+  }, [p, tabFade]);
+  const moves = slide && !reduced;
+  return (
+    <Animated.View
+      testID={slide ? "page-slide" : "page-fade"}
+      style={{ flex: 1, opacity: moves ? 1 : p, transform: moves ? [{ translateX: p.interpolate({ inputRange: [0, 1], outputRange: [width, 0] }) }] : [] }}
+    >
+      {children}
+    </Animated.View>
   );
 }
 

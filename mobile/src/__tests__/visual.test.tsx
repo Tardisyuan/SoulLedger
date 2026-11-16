@@ -431,13 +431,18 @@ describe("useReducedMotionDurations", () => {
     expect(read()).toEqual(motion);
   });
 
-  it("under reduce motion: every transition 0; the holds (waits, not movement) unchanged", async () => {
+  it("under reduce motion: every movement 0; the 80 fades kept (第五十八批 M3 / M4); the holds and waits unchanged", async () => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
     wrap(<Probe />);
     await act(async () => {});
     const d = read();
-    expect(Object.entries(d).filter(([k, v]) => !k.endsWith("Hold") && v !== 0)).toEqual([]);
-    expect([d.toastHold, d.welcomeHold]).toEqual([motion.toastHold, motion.welcomeHold]);
+    const fades = ["fade", "toastIn", "toastOut", "tabFade", "dialogIn", "dialogOut", "reduced"];
+    const waits = ["skeletonDelay", "skeletonHold", "busyDelay"];
+    expect(Object.entries(d).filter(([k, v]) => !k.endsWith("Hold") && !fades.includes(k) && !waits.includes(k) && v !== 0)).toEqual([]);
+    expect(fades.map((k) => d[k])).toEqual(fades.map(() => 80));
+    expect([d.toastHold, d.welcomeHold, d.skeletonDelay, d.skeletonHold, d.busyDelay]).toEqual([motion.toastHold, motion.welcomeHold, 400, 300, 160]);
+    // A sheet and a section move: they stay 0, not 80.
+    expect([d.sheetIn, d.sheetOut, d.sectionIn, d.offlineBar]).toEqual([0, 0, 0, 0]);
   });
 });
 
@@ -569,14 +574,14 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; th
     expect(opacity()).toBe(1);
   });
 
-  it("released at 55: no reload, and back to 0 over 200ms on the entry curve", async () => {
+  it("released at 55: no reload, and back to 0 over 160 (第五十九批, was 200) on the entry curve", async () => {
     const onRefresh = jest.fn();
     await mount(onRefresh);
     const timing = jest.spyOn(Animated, "timing");
     pull(PULL_REFRESH_PT - 1);
     expect(onRefresh).not.toHaveBeenCalled();
     const config = timing.mock.calls.at(-1)![1] as { toValue: number; duration: number; easing: (x: number) => number };
-    expect(config).toMatchObject({ toValue: 0, duration: 200 });
+    expect(config).toMatchObject({ toValue: 0, duration: 160 });
     expect(config.easing(0.3)).toBeCloseTo(Easing.bezier(0.2, 0.8, 0.2, 1)(0.3));
     expect(config.easing(0.3)).not.toBeCloseTo(0.3);
     settle();

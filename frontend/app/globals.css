@@ -164,13 +164,13 @@
   /* 规范 v3「B2 · 通用」那张表用到了 B1 四档之外的三个时长(2026-10-01)。它们各只属于一件
    * 事,所以按那件事起名,不并进最近的档 —— 并进去就是把 v3 写的数改成了别的数:
    *   close    160ms  弹窗 / 抽屉关闭(开是 240 = base;Design 第四批 2026-10-03 由 180 改 160)
-   *   dismiss  140ms  Toast 出场(进场 160 = fast)
-   *   reveal   200ms  骨架 → 内容的交叉淡化(表格展开 2026-10-03 起改为 240 = base)
+   *   dismiss  160ms  Toast 出场(进场 160 = fast;第五十八 / 五十九批由 140 并到 160)
+   *   reveal   160ms  骨架 → 内容的淡入(第五十八 / 五十九批由 200 并到 160;表格展开 2026-10-03 起改为 240 = base)
    *   reduced   80ms  减少动态效果下保留的那一下淡入(B3「整页、弹窗、Toast、异步内容」),
    *                   不带位移。只在下面第二个 prefers-reduced-motion 块里用。 */
   --transition-duration-close: 160ms; /* @kind other */
-  --transition-duration-dismiss: 140ms; /* @kind other */
-  --transition-duration-reveal: 200ms; /* @kind other */
+  --transition-duration-dismiss: 160ms; /* @kind other */
+  --transition-duration-reveal: 160ms; /* @kind other */
   --transition-duration-reduced: 80ms; /* @kind other */
   /* v4 概览进页(第七批 `.roll` / `.ring`):数字滚动与进度环,900ms。只属于这一件事,所以按它起名(同上面三个)。 */
   --transition-duration-count: 900ms; /* @kind other */
@@ -614,6 +614,8 @@
     --scrim-alpha: 0.62;
     /* 光晕透明度(v4 `--glowA`):深 .30、浅 .24。 */
     --glow-alpha: 0.3;
+    /* 改动行 / 推送落点的底色强度(第五十九批):三端统一墨 10%,`row-changed` 与两个 App 的落点底色都读它。 */
+    --highlight-alpha: 0.1;
     /* 卡片阴影(v4 `--shadow`):深色没有阴影,卡片靠 1px 内描边(`.v4-card` 保留原来的 line 框)。 */
     --shadow-card: none;
     /* 文明 · 深色档(v4 `[data-civ]` 的 D 值)。光晕两主题同值,只在这里声明。 */

@@ -16,13 +16,14 @@
  * each app hands `HeadMark` its own hall names.
  */
 import type { Locale } from "@soulledger/core/config/locale";
-import { Text, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
+import { useEffect, useState } from "react";
+import { Animated, Text, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Stop, Text as SvgText } from "react-native-svg";
 
 import { family, titleFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import type { CivKey } from "./theme";
-import { useTheme } from "./ui";
+import { motion, type CivKey } from "./theme";
+import { EASE, useReducedMotion, useToplineRuns, useTheme } from "./ui";
 
 // ── the top line ───────────────────────────────────────────────────────
 
@@ -62,16 +63,54 @@ export function toplineBars(civ: CivKey, width: number): Bar[] {
 export function Topline() {
   const t = useTheme();
   const { width: screen } = useWindowDimensions();
-  const bars = toplineBars(t.civ, Math.max(0, screen - 2 * TOPLINE_INSET));
+  const line = Math.max(0, screen - 2 * TOPLINE_INSET);
+  const bars = toplineBars(t.civ, line);
   const height = Math.max(...bars.map((b) => b.y + b.h));
+  // 第五十八批 M8: a refresh of what is on screen (`runTopline`, ui.tsx) runs the line once — the shape dims and a
+  // 34% run in the civilization's colour crosses it over `loadingLine` (1.2s). Reduce motion: the run stands still in
+  // the middle for that long. No spinner anywhere.
+  const runs = useToplineRuns();
+  const reduced = useReducedMotion();
+  const [ran, setRan] = useState(0);
+  const running = runs > ran;
+  const [x] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!runs) return;
+    x.setValue(0);
+    const pass = reduced
+      ? Animated.delay(motion.loadingLine)
+      : Animated.timing(x, { toValue: 1, duration: motion.loadingLine, easing: EASE.standard, useNativeDriver: true });
+    pass.start(({ finished }) => finished && setRan(runs));
+    return () => pass.stop();
+  }, [runs, reduced, x]);
+  const run = TOPLINE_RUN * line;
   return (
-    <View testID="topline" pointerEvents="none" style={{ position: "absolute", top: 0, left: TOPLINE_INSET, right: TOPLINE_INSET, height }}>
+    <View testID="topline" pointerEvents="none" style={{ position: "absolute", top: 0, left: TOPLINE_INSET, right: TOPLINE_INSET, height, overflow: "hidden" }}>
       {bars.map((b, i) => (
-        <View key={i} testID="topline-bar" style={{ position: "absolute", left: b.x, top: b.y, width: b.w, height: b.h, backgroundColor: t.plaque }} />
+        <View
+          key={i}
+          testID="topline-bar"
+          style={{ position: "absolute", left: b.x, top: b.y, width: b.w, height: b.h, backgroundColor: t.plaque, opacity: running ? 0.3 : 1 }}
+        />
       ))}
+      {running ? (
+        <Animated.View
+          testID="topline-run"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: run,
+            height,
+            backgroundColor: t.plaque,
+            transform: [{ translateX: reduced ? (line - run) / 2 : x.interpolate({ inputRange: [0, 1], outputRange: [-run, line] }) }],
+          }}
+        />
+      ) : null}
     </View>
   );
 }
+const TOPLINE_RUN = 0.34;
 
 // ── the paper texture ──────────────────────────────────────────────────
 

@@ -5,11 +5,11 @@ import { Animated, StyleSheet, View } from "react-native";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { daysLeft, formatStamp } from "../rules";
-import { radius, space } from "../theme";
+import { HIGHLIGHT_ALPHA, radius, space } from "../theme";
 import { Button, Input, Interp, Notice, Txt, useLandingFade, useReducedMotion, useTheme } from "../ui";
 
-/** 6% ink over the page, as an 8-digit hex (the theme's ink is `#RRGGBB`): 0.06 × 255 ≈ 0x0F. */
-const WASH = "0F";
+/** Ink at `HIGHLIGHT_ALPHA` (10%, 第五十九批) over the page, as the alpha of an 8-digit hex (the theme's ink is `#RRGGBB`). */
+const WASH = Math.round(HIGHLIGHT_ALPHA * 255).toString(16).padStart(2, "0").toUpperCase();
 
 /**
  * A11: a glyph column (16) and the sentence, 8 apart. The spec has 10; the spacing scale
@@ -27,7 +27,7 @@ function StatusLine({ glyph, children }: { glyph: string; children: ReactNode })
 }
 
 /**
- * The light wash behind the block when the page was opened from a tapped push: ink at 6%,
+ * The light wash behind the block when the page was opened from a tapped push: ink at 10% (`HIGHLIGHT_ALPHA`),
  * 8pt beyond the block on every side (A11 「从推送进入时的高亮」), on the shared landing recipe (`useLandingFade`: held
  * 1600, faded over 400, 2s in all; 第四十批 S-e). Not scrolled to, not moved. Under reduce-motion there is no fade —
  * the wash is simply not drawn.

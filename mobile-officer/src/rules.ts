@@ -495,9 +495,6 @@ export function isDenied(error: unknown): boolean {
   return (error as { response?: { status?: number } })?.response?.status === 403;
 }
 
-/** The pushed row's highlight peak: `ink / .07` (spec §五). Its timing is the shared landing recipe (`motion.highlight`). */
-export const HIGHLIGHT_ALPHA = 0.07;
-
 /**
  * The hall's name for the identity band and Me: the civilization's underworld name
  * (`plaque.realm.<civ>`, e.g. 酆都), as the web console does (`useRealm`). The tenant's

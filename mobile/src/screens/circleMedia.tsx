@@ -21,13 +21,13 @@ import { Image, type ImageSource } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Modal, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { fileField } from "../platform";
-import { AlertTxt, Txt, useLayout, useReducedMotion, useTheme, Press } from "../ui";
+import { AlertTxt, FadeModal, Txt, useLayout, useReducedMotion, useTheme, Press } from "../ui";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
@@ -102,10 +102,10 @@ export function MediaGrid({ media, onOpen, testID = "media-grid" }: { media: Pos
 /** 全屏查看:左右翻页,顶上是「图片 i / n」与关闭。 */
 export function MediaViewer({ media, index, onClose }: { media: PostMedia[]; index: number | null; onClose: () => void }) {
   return (
-    <Modal visible={index !== null} animationType="fade" onRequestClose={onClose} transparent={false}>
+    <FadeModal visible={index !== null} onRequestClose={onClose}>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始,计数与页一致。 */}
       {index !== null ? <ViewerPages key={index} media={media} start={index} onClose={onClose} /> : null}
-    </Modal>
+    </FadeModal>
   );
 }
 

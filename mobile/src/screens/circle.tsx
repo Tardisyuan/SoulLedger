@@ -28,7 +28,7 @@ import { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUploads"
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
-import { FlatList, KeyboardAvoidingView, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -56,6 +56,7 @@ import {
   useLayout,
   usePullRefresh,
   useReducedMotion,
+  FadeModal,
   useReloadOnRefocus,
   useRemote,
   useTheme,
@@ -811,7 +812,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
     }
   };
   return (
-    <Modal visible={!!target} transparent animationType="fade" onRequestClose={close}>
+    <FadeModal visible={!!target} onRequestClose={close}>
       <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} accessibilityRole="button" onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
         {asking ? (
@@ -840,7 +841,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
           </View>
         )}
       </View>
-    </Modal>
+    </FadeModal>
   );
 }
 

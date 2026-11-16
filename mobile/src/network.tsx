@@ -47,13 +47,17 @@ export function NetworkProvider({ children, bar = true }: { children: ReactNode;
   // The bar takes the status-bar inset, so the screens under it must not take it again: a
   // native SafeAreaView measures itself and sees that alone; the headers read the context.
   const insets = useSafeAreaInsets();
-  const below = useMemo(() => (online.offline && bar ? { ...insets, top: 0 } : insets), [insets, online.offline, bar]);
+  // 第五十八批 M13: back online the bar folds away over 160 before it goes, so it stays mounted (and keeps the
+  // status-bar inset) until then.
+  const [barUp, setBarUp] = useState(false);
+  if (online.offline && bar && !barUp) setBarUp(true);
+  const below = useMemo(() => (barUp ? { ...insets, top: 0 } : insets), [insets, barUp]);
   // One tree shape online and offline: a provider that came and went would remount every
   // screen under it — their state lost, their data fetched again.
   return (
     <OnlineContext.Provider value={online}>
       <View style={styles.fill}>
-        {online.offline && bar ? <OfflineBar onRetry={() => void check()} /> : null}
+        {barUp ? <OfflineBar open={online.offline} onClosed={() => setBarUp(false)} onRetry={() => void check()} /> : null}
         <View style={styles.fill}>
           <SafeAreaInsetsContext.Provider value={below}>{children}</SafeAreaInsetsContext.Provider>
         </View>
@@ -62,16 +66,17 @@ export function NetworkProvider({ children, bar = true }: { children: ReactNode;
   );
 }
 
-function OfflineBar({ onRetry }: { onRetry: () => void }) {
+function OfflineBar({ open, onClosed, onRetry }: { open: boolean; onClosed: () => void; onRetry: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
-  // v3 MotionSpec 离线条: it opens from 0 to its height over 200ms and pushes the page down
-  // with it (a layout change, on purpose); reduce motion inserts it at once.
+  // v3 MotionSpec 离线条: it opens from 0 to its height and pushes the page down with it (a layout change, on
+  // purpose), and back online it folds away the same way — 160 each (第五十八批 M13 / 第五十九批; was 200 in, none
+  // out). The status-bar inset stays put; only the bar grows. Reduce motion: in and out at once.
   const { offlineBar } = useReducedMotionDurations();
   return (
-    <Grow ms={offlineBar}>
-      <View testID="offline-inset" style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: t.s0 }}>
+    <View testID="offline-inset" style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: t.s0 }}>
+      <Grow ms={offlineBar} open={open} onClosed={onClosed}>
         <View
           testID="offline-bar"
           accessibilityRole="alert"
@@ -84,8 +89,8 @@ function OfflineBar({ onRetry }: { onRetry: () => void }) {
           </Txt>
           <SmallButton testID="offline-retry" title={tr("soul_app.common.retry")} onPress={onRetry} />
         </View>
-      </View>
-    </Grow>
+      </Grow>
+    </View>
   );
 }
 

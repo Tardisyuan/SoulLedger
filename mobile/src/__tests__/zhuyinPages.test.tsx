@@ -341,8 +341,9 @@ describe("a part that failed, and one still loading (补足 C15)", () => {
     expect(retry).toHaveBeenCalled();
   });
 
-  it("loading: a 2px line in ink at 60% on top (第三十批, no spinner; 第四十八批 A9: not the civilization's colour), over static s2 bars", () => {
+  it("loading: a 2px line in ink at 60% on top (第三十批, no spinner; 第四十八批 A9: not the civilization's colour), over static s2 bars", async () => {
     wrap(<Skeleton testID="sk" lines={3} />);
+    await screen.findByTestId("sk-bars"); // it shows only after its 400 wait (第五十八批 M6)
     const t = themeFor("CHINESE", "light");
     // Host views only: `.children` of a host view also lists the composite <View> wrappers, one level per element.
     const bars = screen.getByTestId("sk-bars").findAll((n) => typeof n.type === "string" && flat(n).height === 12);

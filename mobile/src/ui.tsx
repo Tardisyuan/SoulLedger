@@ -9,8 +9,8 @@
  *   pressed is a darker ground (A1: fills darken 24% toward black, ghosts take
  *   `hair`), never an Android ripple, whose colour cannot be held to contrast;
  *   checked controls are solid ink, never the plaque (匾色 is for five places only);
- *   the only motion is opacity — a 120ms fade, the loader breathing, the welcome —
- *   and reduce-motion stills all of it (`useReducedMotionDurations`).
+ *   motion runs on the four tiers 80 / 160 / 240 / 320 and the two named curves, never a bounce; reduce motion
+ *   stills every movement and keeps an 80ms fade where one says what changed (`useReducedMotionDurations`).
  */
 import type { SoulErrorMessage } from "@soulledger/core/api/soul";
 import type { EnumDisplay } from "@soulledger/core/domain/enumDisplay";
@@ -34,6 +34,7 @@ import {
   Animated,
   Easing,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -43,6 +44,7 @@ import {
   TextInput,
   View,
   type LayoutChangeEvent,
+  type ModalProps,
   type PressableProps,
   type ScrollViewProps,
   type StyleProp,
@@ -63,7 +65,7 @@ import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useOnline } from "./online";
 import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./layout";
-import { GUTTER_PT, curves, motion, radius, space, themeFor, touch, type Theme } from "./theme";
+import { GUTTER_PT, HIGHLIGHT_ALPHA, curves, motion, radius, space, themeFor, touch, type Theme } from "./theme";
 
 // ── theme & motion ─────────────────────────────────────────────────────
 
@@ -85,11 +87,21 @@ export const SheetRevealContext = createContext<((field: TextInput | null) => vo
 export const ThemeContext = createContext<Theme>(themeFor(null, "dark"));
 export const useTheme = () => useContext(ThemeContext);
 
+/**
+ * The last answer the OS gave, for the first render of whatever mounts later (a toast, a modal, content after its
+ * skeleton): the OS answers asynchronously, and each of them otherwise started its first frame with full motion.
+ */
+let lastReduced = false;
+
 /** The OS "reduce motion" setting, live. */
 export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReducedState] = useState(lastReduced);
   useEffect(() => {
     let alive = true;
+    const setReduced = (value: boolean) => {
+      lastReduced = value;
+      setReducedState(value);
+    };
     AccessibilityInfo.isReduceMotionEnabled()
       .then((value) => alive && setReduced(value))
       .catch(() => {});
@@ -103,14 +115,23 @@ export function useReducedMotion(): boolean {
 }
 
 type Durations = Record<keyof typeof motion, number>;
-/** Holds are waits, not movement: a toast still stays up long enough to read. */
+/** Waits, not movement: a toast still stays up long enough to read, a skeleton still waits and holds. */
+const WAITS: ReadonlySet<string> = new Set(["skeletonDelay", "skeletonHold", "busyDelay"]);
+/**
+ * 第五十八批 M3: under reduce motion these keep an 80ms fade — a page or tab, a toast, content after its skeleton.
+ * Opacity only: each caller drops its translate under reduce motion. (A sheet moves; it stays 0.)
+ */
+export const REDUCED_FADES: readonly (keyof typeof motion)[] = ["fade", "toastIn", "toastOut", "tabFade", "dialogIn", "dialogOut", "reduced"];
 const STILL: Durations = Object.fromEntries(
-  Object.entries(motion).map(([key, ms]) => [key, key.endsWith("Hold") ? ms : 0])
+  Object.entries(motion).map(([key, ms]) => [
+    key,
+    key.endsWith("Hold") || WAITS.has(key) ? ms : (REDUCED_FADES as readonly string[]).includes(key) ? motion.reduced : 0,
+  ])
 ) as Durations;
 
 /**
- * `motion`'s durations, for `Animated` or Reanimated alike — every transition 0
- * under the OS "reduce motion" setting (v2 动效: 减少动态效果时长置 0), holds unchanged.
+ * `motion`'s durations, for `Animated` or Reanimated alike — under the OS "reduce motion" setting every movement 0,
+ * the fades in `REDUCED_FADES` 80 (第五十八批 M3), holds and waits unchanged.
  */
 export function useReducedMotionDurations(): Durations {
   return useReducedMotion() ? STILL : motion;
@@ -142,7 +163,10 @@ export function useLandingFade(on: boolean, reduced: boolean): Animated.Value {
   return opacity;
 }
 
-/** Fades its content in over `fade` (the web's reveal, 200) when it mounts; instantly under reduce-motion. */
+/**
+ * Fades its content in over `fade` (the web's reveal, 160, enter curve) when it mounts — content after its skeleton
+ * (第五十八批 M7); 80 under reduce motion (M3).
+ */
 export function FadeIn({
   children,
   style,
@@ -161,6 +185,78 @@ export function FadeIn({
     <Animated.View onLayout={onLayout} style={[{ opacity }, style]}>
       {children}
     </Animated.View>
+  );
+}
+
+/** False until `ms` after mount, then true: a wait before something appears (a skeleton, a busy line). */
+export function useAfter(ms: number): boolean {
+  const [past, setPast] = useState(ms <= 0);
+  useEffect(() => {
+    if (ms <= 0) return;
+    const timer = setTimeout(() => setPast(true), ms);
+    return () => clearTimeout(timer);
+  }, [ms]);
+  return past;
+}
+
+/**
+ * The wait `useRemote` adds before painting an answer, so a skeleton that has appeared stays its 300 (第五十八批 M6).
+ * `since`: ms since a load with nothing on screen started. Under 400 the skeleton never showed: none. Past 700: none.
+ */
+export function skeletonHoldLeft(since: number): number {
+  return since > motion.skeletonDelay ? Math.max(0, motion.skeletonDelay + motion.skeletonHold - since) : 0;
+}
+
+/**
+ * 第五十八批 M8: a refresh of what is already on screen — back online, a version bump, a refocus, a push, a released
+ * pull — runs the top line (civHead.tsx `Topline`) once. No spinner. `runTopline()` from anywhere; `Topline` listens.
+ */
+const toplineListeners = new Set<() => void>();
+export function runTopline(): void {
+  toplineListeners.forEach((fn) => fn());
+}
+/** A counter that goes up on every `runTopline()`. */
+export function useToplineRuns(): number {
+  const [runs, setRuns] = useState(0);
+  useEffect(() => {
+    const fn = () => setRuns((n) => n + 1);
+    toplineListeners.add(fn);
+    return () => {
+      toplineListeners.delete(fn);
+    };
+  }, []);
+  return runs;
+}
+
+/**
+ * 第五十八批 M4: an RN `Modal` (a confirmation, a photo viewer) that fades on the shared values — in over `dialogIn`
+ * (240, enter curve), out over `dialogOut` (160, exit curve), both 80 under reduce motion (not a cut: a whole layer
+ * appearing at once is harsher than an 80 fade). RN's own `animationType="fade"` has a fixed length and ignores
+ * reduce motion, so this one is always `animationType="none"` and `transparent`, the content carrying its own ground.
+ * It stays up through its fade-out.
+ */
+export function FadeModal({ visible, children, ...rest }: Omit<ModalProps, "animationType" | "transparent"> & { visible: boolean }) {
+  const { dialogIn, dialogOut } = useReducedMotionDurations();
+  const [mounted, setMounted] = useState(visible);
+  if (visible && !mounted) setMounted(true);
+  const [opacity] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!mounted) return;
+    const run = Animated.timing(opacity, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? dialogIn : dialogOut,
+      easing: visible ? EASE.enter : EASE.exit,
+      useNativeDriver: true,
+    });
+    run.start(({ finished }) => finished && !visible && setMounted(false));
+    return () => run.stop();
+  }, [visible, mounted, opacity, dialogIn, dialogOut]);
+  return (
+    <Modal {...rest} visible={mounted} transparent animationType="none">
+      <Animated.View testID="fade-modal" style={[styles.fill, { opacity }]}>
+        {children}
+      </Animated.View>
+    </Modal>
   );
 }
 
@@ -331,7 +427,7 @@ type PullScrollProps = Pick<ScrollViewProps, "refreshControl" | "bounces" | "ove
  * v3 B2: no spinner. The content follows the finger down, at most 56; a release at 56 reloads
  * and the content waits there, a static ↻ in the gap (v3: 印框旋转不使用), until the reload is
  * done — what `onRefresh` returned settles, or else `refreshing` goes false — then goes back
- * over 200ms on cubic-bezier(.2,.8,.2,1); a release short of 56 goes back the same way. While
+ * over 160ms (第五十九批, was 200) on cubic-bezier(.2,.8,.2,1); a release short of 56 goes back the same way. While
  * it waits nothing re-triggers it. Under reduce motion the content does not follow the finger:
  * at 56 it stands at 56 with the ↻, short of it nothing, and nothing animates (v3: 仅显示静态刷新
  * 指示). With a screen reader on, the system RefreshControl instead (both platforms): a screen
@@ -350,7 +446,7 @@ type PullScrollProps = Pick<ScrollViewProps, "refreshControl" | "bounces" | "ove
  * worklet (on the RN runtime it warns and does nothing) — hence the declarative offsets, with
  * `enabled` following `onScroll`'s offset. The scroller neither bounces nor overscrolls: the
  * pull is the only thing that moves the content past its top. The offset is set from JS on
- * every move anyway, so the 200ms return runs on the JS driver too (one driver for one value).
+ * every move anyway, so the 160ms return runs on the JS driver too (one driver for one value).
  */
 export function usePullRefresh(
   refreshing: boolean | undefined,
@@ -387,6 +483,8 @@ export function usePullRefresh(
 
   const trigger = () => {
     if (!onRefresh) return;
+    // 第五十八批 M8: the pull keeps its own indicator (an answer to the gesture); released, the top line runs too.
+    runTopline();
     setMinHeld(true);
     setTimeout(() => setMinHeld(false), motion.pullMinHold);
     const result = onRefresh();
@@ -699,45 +797,77 @@ export function Section({
  * (RN Animated — the height cannot go to the native driver). It measures itself first (at
  * height 0, clipped), then lets go of the height once there, so content that loads later
  * is never cut. `ms` 0 (arrived open, or reduce motion): no wrapper at all.
+ *
+ * `open` false (第五十八批 M13, the offline bars): it folds back to nothing over the same `ms` on the exit curve, then
+ * calls `onClosed` — the caller keeps it mounted until then. `ms` 0: `onClosed` at once.
  */
-export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
+export function Grow({ ms, open = true, onClosed, children }: { ms: number; open?: boolean; onClosed?: () => void; children: ReactNode }) {
   const [height] = useState(() => new Animated.Value(0));
   const [opacity] = useState(() => new Animated.Value(ms ? 0 : 1));
   const [natural, setNatural] = useState<number | null>(null);
   const [done, setDone] = useState(!ms);
+  const measured = useRef(0);
+  const closed = useRef(onClosed);
+  useEffect(() => {
+    closed.current = onClosed;
+  });
   // Reduce motion is answered asynchronously: a body mounted before the answer lets go at once.
   if (!ms && !done) setDone(true);
   useEffect(() => {
-    if (natural === null || done) return;
+    if (natural === null || done || !open) return;
     const run = Animated.parallel([
       Animated.timing(height, { toValue: natural, duration: ms, easing: EASE.enter, useNativeDriver: false }),
       Animated.timing(opacity, { toValue: 1, duration: ms, easing: EASE.enter, useNativeDriver: false }),
     ]);
     run.start(({ finished }) => finished && setDone(true));
     return () => run.stop();
-  }, [natural, done, height, opacity, ms]);
+  }, [natural, done, height, opacity, ms, open]);
+  useEffect(() => {
+    if (open) return;
+    if (!ms) {
+      closed.current?.();
+      return;
+    }
+    height.setValue(measured.current);
+    const run = Animated.parallel([
+      Animated.timing(height, { toValue: 0, duration: ms, easing: EASE.exit, useNativeDriver: false }),
+      Animated.timing(opacity, { toValue: 0, duration: ms, easing: EASE.exit, useNativeDriver: false }),
+    ]);
+    run.start(({ finished }) => finished && closed.current?.());
+    return () => run.stop();
+  }, [open, ms, height, opacity]);
+  const sized = !done || !open;
   // One tree shape before and after: letting go drops the style, not the wrappers — returning the
   // bare children here remounted them (and whatever they held) the moment the growth ended.
   return (
-    <Animated.View testID={done ? undefined : "grow"} style={done ? undefined : { height, opacity, overflow: "hidden" }}>
-      <View onLayout={done ? undefined : (e) => natural === null && setNatural(e.nativeEvent.layout.height)}>{children}</View>
+    <Animated.View testID={sized ? "grow" : undefined} style={sized ? { height, opacity, overflow: "hidden" } : undefined}>
+      <View
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          measured.current = h;
+          if (!done && natural === null) setNatural(h);
+        }}
+      >
+        {children}
+      </View>
     </Animated.View>
   );
 }
 
 /**
- * The row a tapped push points at (a comment, a judgment, a disposition, the residence block): ink at 6%
- * behind it for two seconds, then gone. Not scrolled, not moved. Under reduce-motion it is not drawn.
+ * The row a tapped push points at (a comment, a judgment, a disposition, the residence block): ink at
+ * `HIGHLIGHT_ALPHA` (10%, 第五十九批, three surfaces alike) behind it for two seconds, then gone. Not scrolled, not
+ * moved. Under reduce-motion it is not drawn.
  */
 export function LandingWash({ on, children, testID }: { on: boolean; children: ReactNode; testID?: string }) {
   const t = useTheme();
   const reduced = useReducedMotion();
-  const opacity = useLandingFade(on, reduced);
+  const fade = useLandingFade(on, reduced);
+  const [opacity] = useState(() => Animated.multiply(fade, HIGHLIGHT_ALPHA));
   return (
     <View testID={testID}>
       {on && !reduced ? (
-        // 6% ink as an 8-digit hex (the theme's ink is `#RRGGBB`): the life rows already sit on s1.
-        <Animated.View testID="landing-wash" pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, backgroundColor: `${t.ink}0F` }]} />
+        <Animated.View testID="landing-wash" pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, backgroundColor: t.ink }]} />
       ) : null}
       {children}
     </View>
@@ -1113,9 +1243,10 @@ export function Button({
   const inert = disabled || busy;
   // A1 按钮, v4 `.btn`: primary = ink under the page's ground (第三十批: 墨色实底 — the civilization's colour is
   // kept to the top line, the seal, the spine and focus); danger = solid neg under `--onNeg`
-  // (dark ink on dark's pink), always with ✕; secondary = ghost, the `--line2` outline. Disabled and
-  // busy: s2 ground, ink3 text, same opacity. Pressed: fills darken 24%, the ghost takes hair.
-  const look = inert
+  // (dark ink on dark's pink), always with ✕; secondary = ghost, the `--line2` outline. Disabled: s2 ground, ink3
+  // text, same opacity. Busy (第五十八批 M10) keeps its look, its words and its width: it only stops taking presses,
+  // and past 160 a line runs along its foot (`BusyLine`). Pressed: fills darken 24%, the ghost takes hair.
+  const look = disabled
     ? { bg: t.s2, border: t.s2, ink: t.inkSubtle, pressed: t.s2 }
     : kind === "primary"
       ? { bg: t.ink, border: t.ink, ink: t.s0, pressed: shade(t.ink) }
@@ -1137,15 +1268,61 @@ export function Button({
           { backgroundColor: pressed ? look.pressed : look.bg, borderColor: pressed && kind !== "secondary" ? look.pressed : look.border },
         ]}
       >
-        {busy ? <Loader size={20} /> : kind === "danger" ? <Icon name="close" size={14} color={look.ink} strokeWidth={1.6} /> : null}
+        {kind === "danger" ? <Icon name="close" size={14} color={look.ink} strokeWidth={1.6} /> : null}
         <Text numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.buttonText, { color: look.ink }]}>
           {title}
         </Text>
+        {busy && !disabled ? <BusyLine color={look.ink} testID={testID ? `${testID}-busy` : "button-busy"} /> : null}
       </Pressable>
       {reason && inert ? <DisabledReason testID={reasonTestID}>{reason}</DisabledReason> : null}
     </View>
   );
 }
+
+/**
+ * 第五十八批 M10, one busy look for both apps and the web: a 2px line along a busy button's foot, 34% wide, running
+ * back and forth one pass per `loadingLine` (1.2s) — shown only once the wait passes `busyDelay` (160), so a quick
+ * answer shows nothing. In the button's own text colour at 60% (canvas on an ink button, ink on an outline): never
+ * the civilization's. Reduce motion: still, in the middle. Hidden from a screen reader: the button's own label and
+ * `busy` state say it.
+ */
+export function BusyLine({ color, testID }: { color: string; testID?: string }) {
+  const reduced = useReducedMotion();
+  const shown = useAfter(motion.busyDelay);
+  const [width, setWidth] = useState(0);
+  const [x] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!shown || reduced || !width) return;
+    const leg = (toValue: number) => Animated.timing(x, { toValue, duration: motion.loadingLine, easing: EASE.standard, useNativeDriver: true });
+    const run = Animated.loop(Animated.sequence([leg(1), leg(0)]));
+    run.start();
+    return () => run.stop();
+  }, [shown, reduced, width, x]);
+  if (!shown) return null;
+  const run = BUSY_LINE_WIDTH * width;
+  return (
+    <View
+      testID={testID}
+      pointerEvents="none"
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      style={styles.busyTrack}
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+    >
+      <Animated.View
+        testID={testID ? `${testID}-run` : undefined}
+        style={{
+          width: `${BUSY_LINE_WIDTH * 100}%`,
+          height: touch.topline,
+          backgroundColor: color,
+          opacity: 0.6,
+          transform: [{ translateX: reduced ? (width - run) / 2 : x.interpolate({ inputRange: [0, 1], outputRange: [0, width - run] }) }],
+        }}
+      />
+    </View>
+  );
+}
+const BUSY_LINE_WIDTH = 0.34;
 
 /** The sentence under a control that cannot be used right now. Body text, not an error. */
 export function DisabledReason({ children, testID }: { children: ReactNode; testID?: string }) {
@@ -1495,11 +1672,15 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
  * progress line that takes a page head's top line keeps the civilization's colour; this one sits in the content), over s2 bars in
  * the shape of what is coming — hairline-ruled rows, static, no shimmer. Under reduce motion the line stands
  * still. `${testID}-bars` holds the bars.
+ *
+ * 第五十八批 M6: nothing for the first `skeletonDelay` (400) — a quick load never flashes it; once shown it stays at
+ * least `skeletonHold` (300), which `useRemote` keeps by holding back an answer that lands inside that window.
  */
 export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: string }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const reduced = useReducedMotion();
+  const shown = useAfter(motion.skeletonDelay);
   const [x] = useState(() => new Animated.Value(0));
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -1509,6 +1690,7 @@ export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: strin
     return () => run.stop();
   }, [x, reduced, width]);
   const widths = ["70%", "90%", "50%", "80%", "60%"] as const;
+  if (!shown) return null;
   return (
     <View testID={testID} accessible accessibilityRole="progressbar" accessibilityLabel={tr("soul_app.common.loading")} accessibilityState={{ busy: true }}>
       <View testID={testID ? `${testID}-line` : undefined} onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={[styles.progressTrack, { backgroundColor: t.hair }]}>
@@ -1578,22 +1760,37 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
   const [loading, setLoading] = useState(true);
   const seq = useRef(0);
   const current = useRef(fetcher);
+  const shown = useRef<T | null>(null);
+  useEffect(() => {
+    shown.current = data;
+  }, [data]);
   const run = useCallback(() => {
     const mine = ++seq.current;
-    return fetcher()
-      .then(
-        (value) => {
-          if (mine !== seq.current) return;
+    // Nothing on screen: the page shows its skeleton, and an answer landing in the skeleton's first 300 waits for
+    // them to pass (第五十八批 M6, `skeletonHoldLeft`). With data on screen there is no skeleton and no wait.
+    const cold = shown.current === null;
+    const started = Date.now();
+    const settle = (apply: () => void) =>
+      new Promise<void>((done) => {
+        const wait = cold ? skeletonHoldLeft(Date.now() - started) : 0;
+        const go = () => {
+          if (mine === seq.current) {
+            apply();
+            setLoading(false);
+          }
+          done();
+        };
+        if (wait > 0) setTimeout(go, wait);
+        else go();
+      });
+    return fetcher().then(
+      (value) =>
+        settle(() => {
           setData(value);
           setError(null);
-        },
-        (e: unknown) => {
-          if (mine === seq.current) setError(e);
-        }
-      )
-      .finally(() => {
-        if (mine === seq.current) setLoading(false);
-      });
+        }),
+      (e: unknown) => settle(() => setError(e))
+    );
   }, [fetcher]);
   useEffect(() => {
     if (current.current !== fetcher) {
@@ -1647,6 +1844,7 @@ export function useReloadOnRefocus(reload: () => unknown, state?: RemoteState) {
         return;
       }
       if (okAt.current > wroteAt && Date.now() - okAt.current < REFOCUS_FRESH_MS) return;
+      runTopline();
       void reload();
     }, [reload])
   );
@@ -1655,7 +1853,10 @@ export function useReloadOnRefocus(reload: () => unknown, state?: RemoteState) {
   // pending. Subscribed only while focused, so a page behind it does not refetch.
   useFocusEffect(
     useCallback(() => {
-      const sub = Notifications.addNotificationReceivedListener(() => void reload());
+      const sub = Notifications.addNotificationReceivedListener(() => {
+        runTopline();
+        void reload();
+      });
       return () => sub.remove();
     }, [reload])
   );
@@ -1683,7 +1884,9 @@ export function useReloadOnReconnect(reload: () => unknown, state?: RemoteState)
   useEffect(() => {
     if (back === seen.current) return; // a new `reload` alone is not a return to the network
     seen.current = back;
-    if (neededNow.current) void reload();
+    if (!neededNow.current) return;
+    runTopline();
+    void reload();
   }, [back, reload]);
 }
 
@@ -1745,6 +1948,8 @@ export const styles = StyleSheet.create({
     paddingVertical: space[2],
   },
   buttonText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, textAlign: "center" },
+  // M10: the busy line's track, along the button's inner foot.
+  busyTrack: { position: "absolute", left: 0, right: 0, bottom: 0, height: touch.topline, overflow: "hidden" },
   notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
   failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
   failedText: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },

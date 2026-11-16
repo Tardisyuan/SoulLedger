@@ -13,7 +13,7 @@ import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-han
 import { AccessibilityInfo, Animated, Platform, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 
 import { EdgeBack, LoadingRows, TAB_FONT_SCALE, TabBar } from "../kit";
-import { motion, themeFor } from "../shared";
+import { EASE, motion, themeFor } from "../shared";
 import { renderOfficer } from "./harness";
 
 const flat = (node: { props: { style?: unknown } }): ViewStyle => StyleSheet.flatten(node.props.style as StyleProp<ViewStyle>) ?? {};
@@ -34,7 +34,10 @@ describe("the bottom bar at large text", () => {
 describe("the iOS back swipe from the left edge", () => {
   const realOS = Platform.OS;
   const setOS = (os: string) => Object.defineProperty(Platform, "OS", { value: os, configurable: true });
-  afterEach(() => setOS(realOS));
+  afterEach(() => {
+    setOS(realOS);
+    jest.restoreAllMocks();
+  });
 
   const swipe = (dx: number, velocityX = 0) =>
     act(() =>
@@ -46,21 +49,33 @@ describe("the iOS back swipe from the left edge", () => {
       ])
     );
 
-  it("past a third of the width it goes back; short of it, it does not", () => {
+  // 第五十八批 M1 / M12: past the line the page follows on off the right edge over 160 (exit curve) and only then goes
+  // back; short of it, it slides back over 160 on the exit curve, no spring. Mutation seen red: the follow-off back to
+  // `x.setValue(0); onBack()` (the 'not yet' assertion); the snap-back easing back to EASE.enter.
+  const settle = () => act(async () => void (await new Promise((r) => setTimeout(r, 300))));
+  it("past a third of the width it follows off, then goes back; short of it, it slides back", async () => {
     setOS("ios");
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    const timing = jest.spyOn(Animated, "timing");
     const onBack = jest.fn();
     render(
       <EdgeBack onBack={onBack}>
         <Text>page</Text>
       </EdgeBack>
     );
+    await act(async () => {});
     swipe(100); // 750-wide test window: a third is 250
+    expect(timing.mock.calls.at(-1)![1]).toMatchObject({ toValue: 0, duration: 160, easing: EASE.exit });
+    await settle();
     expect(onBack).not.toHaveBeenCalled();
     swipe(300);
+    expect(timing.mock.calls.at(-1)![1]).toMatchObject({ toValue: 750, duration: 160, easing: EASE.exit });
+    expect(onBack).not.toHaveBeenCalled(); // still on its way off
+    await settle();
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it("a fling goes back however short it was", () => {
+  it("a fling goes back however short it was", async () => {
     setOS("ios");
     const onBack = jest.fn();
     render(
@@ -69,6 +84,7 @@ describe("the iOS back swipe from the left edge", () => {
       </EdgeBack>
     );
     swipe(60, 900);
+    await settle();
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
@@ -86,7 +102,9 @@ describe("the iOS back swipe from the left edge", () => {
 
 describe("the loading line travels (Design batch 48 A9: the head's top line turned progress line)", () => {
   afterEach(() => jest.restoreAllMocks());
-  const lay = () => {
+  // The rows show only after their 400 wait (第五十八批 M6).
+  const lay = async () => {
+    await screen.findByTestId("state-loading-track");
     act(() => screen.getByTestId("state-loading-track").props.onLayout({ nativeEvent: { layout: { width: 400, height: 2 } } }));
   };
   it.each([[false, 1], [true, 0]])("reduce motion %s: %i loop(s); the 30%% run keeps the civilization's colour", async (reduced, loops) => {
@@ -94,7 +112,7 @@ describe("the loading line travels (Design batch 48 A9: the head's top line turn
     const loop = jest.spyOn(Animated, "loop");
     renderOfficer(<LoadingRows />);
     await act(async () => {});
-    lay();
+    await lay();
     const line = StyleSheet.flatten(screen.getByTestId("state-loading-line").props.style);
     expect(line).toMatchObject({ height: 2, width: "30%", backgroundColor: themeFor("CHINESE", "light").plaque });
     expect(loop).toHaveBeenCalledTimes(loops);
@@ -106,7 +124,7 @@ describe("the loading line travels (Design batch 48 A9: the head's top line turn
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
     renderOfficer(<LoadingRows inContent />);
     await act(async () => {});
-    lay();
+    await lay();
     const theme = themeFor("CHINESE", "light");
     const line = StyleSheet.flatten(screen.getByTestId("state-loading-line").props.style);
     expect(line).toMatchObject({ backgroundColor: theme.ink, opacity: 0.6 });
@@ -125,7 +143,7 @@ describe("the loading line travels (Design batch 48 A9: the head's top line turn
     const timing = jest.spyOn(Animated, "timing");
     renderOfficer(<LoadingRows />);
     await act(async () => {});
-    lay();
+    await lay();
     expect(timing.mock.calls.some(([, c]) => c.duration === motion.loadingLine)).toBe(true);
     expect(motion.loadingLine).toBe(1200);
   });
