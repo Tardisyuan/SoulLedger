@@ -16,8 +16,11 @@
 """
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from django.db.models import Q
+
+from apps.core.versioned import VersionedMemo
 
 ALL, ORG_CHILD, ORG, SELF, DEFINE = "ALL", "ORG_CHILD", "ORG", "SELF", "DEFINE"
 
@@ -119,21 +122,53 @@ def _user_q(model, path, user, cache=None) -> Q:
     return Q(**{f"{prefix}__in": cache[key]})
 
 
-def _children(user, cache) -> dict:
-    """本殿机构 parent → [子] 表,一次查询,存在 cache(请求上)。
-    # ponytail: 每请求一次整殿 (id, parent_id) 广搜;机构上千再给 Organization 加 path 列改前缀查询。
+#: Every live role's rules and each hall's org tree, one copy per process, current while the state cache's version
+#: `v:datascope` is unchanged (apps/core/versioned.py; review 2026-11-16). Any save / delete of a RoleDataScope (and
+#: its orgs), a Role or an Organization bumps it (`_bump` below, connected in apps/perm/apps.py). Before: 3 queries
+#: per officer request under a configured scope (rules, their orgs, the hall's whole org table).
+_shared = VersionedMemo("datascope")
+
+
+class Rule(NamedTuple):
+    scope: str
+    org_ids: tuple
+
+
+def _bump(sender=None, using=None, **_kwargs):
+    _shared.bump(using=using)
+
+
+def connect_invalidation():
+    from django.db.models.signals import m2m_changed, post_delete, post_save
+
+    for model in ("perm.RoleDataScope", "perm.Role", "org.Organization"):
+        post_save.connect(_bump, sender=model, dispatch_uid=f"datascope-save-{model}")
+        post_delete.connect(_bump, sender=model, dispatch_uid=f"datascope-delete-{model}")
+    from apps.perm.models import RoleDataScope
+
+    m2m_changed.connect(_bump, sender=RoleDataScope.orgs.through, dispatch_uid="datascope-orgs")
+
+
+def _tree(tenant_id) -> dict:
+    """本殿机构 parent → [子] 表,一次查询。
+    # ponytail: 整殿 (id, parent_id) 广搜,每版本每进程一次;机构上千再给 Organization 加 path 列改前缀查询。
     """
+    from apps.org.models import Organization
+
+    rows = Organization._base_manager.filter(is_deleted=False)
+    if tenant_id is not None:
+        rows = rows.filter(tenant_id=tenant_id)
+    children = {}
+    for pk, parent in rows.values_list("id", "parent_id"):
+        children.setdefault(parent, []).append(pk)
+    return children
+
+
+def _children(user, cache) -> dict:
+    """本殿机构 parent → [子] 表(按殿存在进程副本里,键带殿 id),请求上再备忘一份。"""
     key = ("children", getattr(user, "tenant_id", None))
     if key not in cache:
-        from apps.org.models import Organization
-
-        rows = Organization._base_manager.filter(is_deleted=False)
-        if key[1] is not None:
-            rows = rows.filter(tenant_id=key[1])
-        children = {}
-        for pk, parent in rows.values_list("id", "parent_id"):
-            children.setdefault(parent, []).append(pk)
-        cache[key] = children
+        cache[key] = _shared.get(("tree", key[1]), lambda: _tree(key[1]))
     return cache[key]
 
 
@@ -149,20 +184,26 @@ def _with_descendants(roots, user, cache) -> set:
     return seen
 
 
+def _all_rules() -> dict:
+    """{角色名: {resource: Rule}},全部活角色的活配置行(进程副本 `_shared` 的内容)。"""
+    from apps.perm.models import RoleDataScope
+
+    out = {}
+    for row in RoleDataScope.objects.filter(role__is_deleted=False).select_related("role").prefetch_related("orgs"):
+        out.setdefault(row.role.name, {})[row.resource] = Rule(row.scope, tuple(o.pk for o in row.orgs.all()))
+    return out
+
+
 def _rows(user, cache) -> dict:
-    """{角色名: {resource: RoleDataScope}},只含活角色的活配置行。一次查询,按人存在 cache
+    """{角色名: {resource: Rule}},只含活角色的活配置行。按人存在 cache
     (`visible_to(目标用户, 行)` 与请求人共用一份 cache)。"""
     key = ("rows", user.pk)
     if key not in cache:
         from apps.perm.checker import live_extra_roles
-        from apps.perm.models import RoleDataScope
 
         names = [r for r in (getattr(user, "role", None), *live_extra_roles(user)) if r]
-        by_role = {name: {} for name in names}
-        for row in (RoleDataScope.objects.filter(role__name__in=names, role__is_deleted=False)
-                    .select_related("role").prefetch_related("orgs")):
-            by_role[row.role.name][row.resource] = row
-        cache[key] = by_role
+        rules = _shared.get("rules", _all_rules)
+        cache[key] = {name: dict(rules.get(name, {})) for name in names}
     return cache[key]
 
 
@@ -191,7 +232,7 @@ def org_ids(user, resource, cache=None):
         if row.scope in (ORG, ORG_CHILD) and own:
             ids |= {own} if row.scope == ORG else _with_descendants([own], user, cache)
         elif row.scope == DEFINE:
-            ids |= _with_descendants([o.pk for o in row.orgs.all()], user, cache)
+            ids |= _with_descendants(row.org_ids, user, cache)
     return ids if configured else None
 
 
