@@ -45,6 +45,16 @@ def valid_timezone(name) -> bool:
 VISIT_SETTINGS = {"visit_address": 80, "visit_hours": 40, "visit_phone": 40}
 
 
+def _civilization_of(code, declared):
+    from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION, Civilization
+
+    if code in TENANT_CIVILIZATION:
+        return TENANT_CIVILIZATION[code]
+    if declared in Civilization.values:
+        return Civilization(declared)
+    return UNKNOWN_CIVILIZATION
+
+
 class Tenant(AuditUserFields, models.Model):
     """A tenant represents a civilization's afterlife system (Chinese Diyu, European Heaven-Hell, Egyptian Duat)."""
 
@@ -90,13 +100,23 @@ class Tenant(AuditUserFields, models.Model):
     @property
     def civilization(self) -> str:
         """这个租户代表的文明,读 `TENANT_CIVILIZATION`(唯一一份映射);不在表里是 `UNKNOWN`。"""
-        from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION, Civilization
+        return _civilization_of(self.code, self.declared_civilization)
 
-        if self.code in TENANT_CIVILIZATION:
-            return TENANT_CIVILIZATION[self.code]
-        if self.declared_civilization in Civilization.values:
-            return Civilization(self.declared_civilization)
-        return UNKNOWN_CIVILIZATION
+    def save(self, *args, **kwargs):
+        """A hall's civilization is fixed once it exists (user decision 2026-11-16): its rows live in that
+        civilization's database and its officers act in it. `.update()` bypasses this, as it bypasses every save."""
+        fields = kwargs.get("update_fields")
+        if not self._state.adding and (fields is None or {"code", "declared_civilization"} & set(fields)):
+            using = kwargs.get("using") or self._state.db or "default"
+            old = type(self)._base_manager.using(using).filter(pk=self.pk).values_list(
+                "code", "declared_civilization").first()
+            if old is not None and _civilization_of(*old) != self.civilization:
+                from django.core.exceptions import ValidationError
+
+                raise ValidationError({"declared_civilization": ValidationError(
+                    f"{old[0]} is a hall of {_civilization_of(*old)}; a hall's civilization does not change.",
+                    code="civilization_fixed")})
+        super().save(*args, **kwargs)
 
     @property
     def known_civilization(self):

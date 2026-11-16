@@ -25,6 +25,7 @@ import { UserImportDialog } from "@/src/components/users/UserImportDialog";
 import { OfficerInviteDialog } from "@/src/components/users/OfficerInviteDialog";
 import { OfficerHandoverDialog, previewTotal } from "@/src/components/users/OfficerHandoverDialog";
 import { useSecondFactor } from "@/src/components/users/SecondFactorPrompt";
+import { MigrateCivilizationDialog } from "@/src/components/users/MigrateCivilizationDialog";
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -114,7 +115,7 @@ function UsersRoute() {
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [rolesUser, setRolesUser] = useState<User | null>(null);
   // 批量启用 / 停用与设置角色同一道门:服务端 `user.manage`(只有管理员持有)。没有它就没有勾选列。
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, isSystemAdmin } = usePermissions();
   const canManage = hasPermission("user.manage");
   const myId = useTenant().user?.id;
   const [impersonateUser, setImpersonateUser] = useState<User | null>(null);
@@ -137,6 +138,9 @@ function UsersRoute() {
   });
   const [resetMfaUser, setResetMfaUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  // 迁移文明(SYSTEM_ADMIN,Design 第五十四批 H1):完成后这一行底色高亮 2 秒,一眼找到刚改的那一行。
+  const [migrateUser, setMigrateUser] = useState<User | null>(null);
+  const [justMoved, setJustMoved] = useState<number | null>(null);
 
   // 搜索停手 300ms 才进查询键;输入框仍绑原值。
   const debouncedSearch = useDebouncedValue(search);
@@ -380,27 +384,27 @@ function UsersRoute() {
               data-located={user.username === located ? "" : undefined}
               className={cn(
                 "px-4 py-3 text-[oklch(var(--color-ink))] font-medium",
-                user.username === located && LOCATED_BG
+                (user.username === located || user.id === justMoved) && LOCATED_BG
               )}
             >
               {user.username}
             </td>
-            {show("email") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+            {show("email") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", (user.username === located || user.id === justMoved) && LOCATED_BG)}>
               {user.email}
             </td>}
-            {show("role") && <td className={cn("whitespace-nowrap px-4 py-3", user.username === located && LOCATED_BG)}>
+            {show("role") && <td className={cn("whitespace-nowrap px-4 py-3", (user.username === located || user.id === justMoved) && LOCATED_BG)}>
               {/* 规范 v1 §2「徽章 · 只有常态」:无底色,字与 1 px 边同色。角色是身份,
                   不是系统状态,所以不借反馈色 —— 一律中性,名字本身区分。 */}
               <UserRoleChips role={user.role} extraRoles={user.extra_roles} customLabelOf={customRoleLabel} />
             </td>}
-            {show("tenant") && <td className={cn("whitespace-nowrap px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+            {show("tenant") && <td className={cn("whitespace-nowrap px-4 py-3 text-[oklch(var(--color-ink-muted))]", (user.username === located || user.id === justMoved) && LOCATED_BG)}>
               {tenantLabel(t, user.tenant, locale) || "-"}
             </td>}
             {/* 机构与职务只由管理员在编辑弹层里设(`PATCH /users/{id}/`);此前列表上没有,机构页的「查看人员」因此总是空的也没人看得出。 */}
-            {show("organization") && <td data-testid="user-organization" className={cn("whitespace-nowrap px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+            {show("organization") && <td data-testid="user-organization" className={cn("whitespace-nowrap px-4 py-3 text-[oklch(var(--color-ink-muted))]", (user.username === located || user.id === justMoved) && LOCATED_BG)}>
               {[localName(user.organization, locale), user.position].filter(Boolean).join(" · ") || "-"}
             </td>}
-            {show("status") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
+            {show("status") && <td className={cn("px-4 py-3", (user.username === located || user.id === justMoved) && LOCATED_BG)}>
               {/* 状态 = 颜色 + 字形(规范 v1 §1.2),不只靠颜色。 */}
               <Badge tone={user.is_active ? "success" : "neutral"} glyph={user.is_active ? "✓" : "○"}>
                 {user.is_active ? t("users.active") : t("users.inactive")}
@@ -424,13 +428,13 @@ function UsersRoute() {
                 </span>
               ) : null}
             </td>}
-            {show("mfa") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
+            {show("mfa") && <td className={cn("px-4 py-3", (user.username === located || user.id === justMoved) && LOCATED_BG)}>
               {/* 三态,字形 + 文字(A12):✓ 已开启 + 日期 / ○ 未开启 · 角色不要求 / ! 要求开启 · 未开启。 */}
               {user.mfa ? (
                 <MfaCell mfa={user.mfa} />
               ) : null}
             </td>}
-            <td className={cn("px-4 py-3 text-right", user.username === located && LOCATED_BG)}>
+            <td className={cn("px-4 py-3 text-right", (user.username === located || user.id === justMoved) && LOCATED_BG)}>
               {/* 一行九颗按钮(review-2026-11-01 Web 6)→ 一个主动作「编辑」+「⋯」菜单。
                   出现条件与原来逐颗相同;删除、停用照旧走各自的确认框。 */}
               <ActionsMenu
@@ -443,6 +447,10 @@ function UsersRoute() {
                     ? [{ key: "impersonate", label: t("admin.users.impersonate"), onSelect: () => setImpersonateUser(user) }]
                     : []),
                   // 自己的密码走「修改密码」:重置会把自己也退出去。
+                  // 迁移文明:只给 SYSTEM_ADMIN;灵魂账号(只经跨文明调拨换文明)与 SYSTEM_ADMIN 自己(不属任何文明)没有这一项。
+                  ...(isSystemAdmin && user.role !== "SOUL" && user.role !== "SYSTEM_ADMIN"
+                    ? [{ key: "migrate-civ", label: t("users.migrate_civ.menu"), onSelect: () => setMigrateUser(user) }]
+                    : []),
                   ...(canManage && user.id !== myId
                     ? [{ key: "password", label: t("users.reset_password.action"), onSelect: () => setResetPasswordUser(user) }]
                     : []),
@@ -538,6 +546,16 @@ function UsersRoute() {
       />
 
       {impersonateUser ? <ImpersonateDialog user={impersonateUser} onClose={() => setImpersonateUser(null)} /> : null}
+      {migrateUser ? (
+        <MigrateCivilizationDialog
+          user={migrateUser}
+          onClose={() => setMigrateUser(null)}
+          onDone={(moved) => {
+            setJustMoved(moved.id);
+            window.setTimeout(() => setJustMoved((id) => (id === moved.id ? null : id)), 2000);
+          }}
+        />
+      ) : null}
       {resetPasswordUser ? <PasswordResetDialog user={resetPasswordUser} onClose={() => setResetPasswordUser(null)} /> : null}
       {secondFactor.prompt}
       {resetMfaUser ? <MfaResetDialog user={resetMfaUser} onClose={() => setResetMfaUser(null)} /> : null}

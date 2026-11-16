@@ -521,6 +521,16 @@ class ProblemCode(StrEnum):
     IMPERSONATE_SELF = "impersonate_self"
     CANNOT_DEACTIVATE_SELF = "cannot_deactivate_self"
     BACKUP_INCOMPLETE = "backup_incomplete"
+    # Moving an account to another civilization (2026-11-16, `apps/authentication/civilization_move.py`).
+    ACCOUNT_HAS_OPEN_WORK = "account_has_open_work"
+    CIVILIZATION_INVALID = "civilization_invalid"
+    HALL_NOT_ALLOWED = "hall_not_allowed"
+    HALL_OF_ANOTHER_CIVILIZATION = "hall_of_another_civilization"
+    ORGANIZATION_OF_ANOTHER_HALL = "organization_of_another_hall"
+    SAME_CIVILIZATION = "same_civilization"
+    SOUL_ACCOUNT = "soul_account"
+    SYSTEM_ADMIN_ACCOUNT = "system_admin_account"
+    SYSTEM_ADMIN_ONLY = "system_admin_only"
 
 
 PROBLEM_CODES = frozenset(c.value for c in ProblemCode)

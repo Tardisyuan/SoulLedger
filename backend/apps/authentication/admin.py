@@ -34,8 +34,11 @@ class UserAdmin(BaseUserAdmin):
     list_display = ["username", "email", "role", "is_active", "is_staff"]
     list_filter = ["role", "is_active", "is_staff"]
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("SoulLedger", {"fields": ("role", "actor")}),
+        ("SoulLedger", {"fields": ("role", "actor", "tenant", "civilization", "organization")}),
     )
+    #: Shown, never edited: an account changes hall and civilization only through the system administrator's
+    #: `migrate-civilization` action (apps/authentication/civilization_move.py, user decision 2026-11-16).
+    readonly_fields = ("tenant", "civilization", "organization")
 
     #: Changing any of these through the admin ends the user's sessions, as the API does (L-11):
     #: refresh tokens blacklisted, `session_version` bumped, devices signed out, push registrations dropped.

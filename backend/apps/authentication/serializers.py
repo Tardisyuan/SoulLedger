@@ -12,6 +12,9 @@ from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
 from apps.core.problems import ProblemSerializer
 from apps.core.tenant import is_admin, is_civilization_admin, is_hall_less_admin, is_tenant_exempt, reaches_hall
+from apps.org.models import Organization
+from apps.souls.models import Civilization
+from apps.tenants.models import Tenant
 
 from . import signin_sessions
 from .models import OfficerMfa
@@ -22,7 +25,7 @@ User = get_user_model()
 
 
 class UserTenantRefSerializer(serializers.Serializer):
-    """The three keys `UserManagementSerializer.get_tenant` returns.
+    """The keys `UserManagementSerializer.get_tenant` returns.
 
     Schema-only, never instantiated — the method builds the dict by hand. This
     is a **reference**, not the full tenant: it carries id, code and
@@ -34,6 +37,8 @@ class UserTenantRefSerializer(serializers.Serializer):
     code = serializers.CharField()
     display_name = serializers.CharField()
     display_name_en = serializers.CharField(required=False, allow_blank=True)
+    #: The hall's civilization (`Tenant.civilization`): the migrate dialog's "now" chip and the cell it greys out.
+    civilization = serializers.CharField()
 
 
 class UserOrganizationRefSerializer(serializers.Serializer):
@@ -646,6 +651,29 @@ class UserDeactivateSerializer(SecondFactorProofSerializer):
     handover_to = serializers.IntegerField(required=False, allow_null=True)
 
 
+class MigrateCivilizationSerializer(SecondFactorProofSerializer):
+    """`POST /users/{id}/migrate-civilization/` (SYSTEM_ADMIN). `tenant` = hall code of the new civilization, required
+    for a hall-bound account and refused for a civilization ADMIN; `organization` defaults to that hall's root."""
+
+    civilization = serializers.ChoiceField(choices=Civilization.choices)
+    tenant = serializers.SlugRelatedField(slug_field="code", queryset=Tenant.objects.all(), required=False,
+                                          allow_null=True)
+    organization = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(), required=False,
+                                                      allow_null=True)
+    reason = serializers.CharField(max_length=400, required=False, allow_blank=True, default="")
+
+
+class MigrateOpenWorkSerializer(serializers.Serializer):
+    """`GET /users/{id}/migrate-civilization/open-work/` and the `open_work` of its 409: the dialog's four rows.
+    `kinds` is the count per kind behind them (`apps/authentication/civilization_move.py::GROUPS`), non-zero only."""
+
+    claimed = serializers.IntegerField()
+    approvals = serializers.IntegerField()
+    dispatch = serializers.IntegerField()
+    cross = serializers.IntegerField()
+    kinds = serializers.DictField(child=serializers.IntegerField())
+
+
 class OpenWorkSerializer(serializers.Serializer):
     """What an officer still holds: the counts of `handover.preview(source, None)`."""
 
@@ -713,7 +741,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
     def get_tenant(self, obj):
         if obj.tenant:
             return {"id": obj.tenant.id, "code": obj.tenant.code, "display_name": obj.tenant.display_name,
-                    "display_name_en": obj.tenant.display_name_en}
+                    "display_name_en": obj.tenant.display_name_en, "civilization": obj.tenant.civilization}
         return None
 
     @extend_schema_field(UserOrganizationRefSerializer(allow_null=True))
@@ -851,6 +879,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'password': 'Passwords are not changed here; use /users/{id}/reset_password/.'}
             )
+        # 殿与文明也不在这里改(2026-11-16):原样回传的值放行(编辑框会带着当前殿),换值则说出唯一的路。
+        if self.instance is not None:
+            same = {'tenant': self.instance.tenant_id, 'civilization': self.instance.civilization}
+            for key, now in same.items():
+                if key in data and str(data[key] or '') != str(now or ''):
+                    raise serializers.ValidationError({key: serializers.ErrorDetail(
+                        "An account's hall and civilization are not changed here; the system administrator moves "
+                        "it with /users/{id}/migrate-civilization/.", code='civilization_fixed')})
         return super().to_internal_value(data)
 
     def validate_organization(self, value):

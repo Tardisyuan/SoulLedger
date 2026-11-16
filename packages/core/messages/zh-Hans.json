@@ -3772,7 +3772,32 @@
       "admin_target_global_only": "只有全局管理员能对另一位管理员这样操作。",
       "second_factor_unavailable": "请先给自己的账号开启两步验证。"
     },
-    "row_menu": "{{name}} 的更多操作"
+    "row_menu": "{{name}} 的更多操作",
+    "migrate_civ": {
+      "menu": "迁移文明",
+      "title": "迁移文明 · {{name}}",
+      "from": "现在",
+      "to": "迁到",
+      "current": "当前",
+      "hall": "新文明里的殿",
+      "hall_wait": "先选文明",
+      "reason": "原因",
+      "reason_hint": "写进审计记录，之后不能改。",
+      "reason_required": "请写原因。",
+      "consequence": "迁移后这个账号所有设备都会下线，重新登录后只能看到新文明的数据。",
+      "submit": "迁到{{civ}}",
+      "blocked_title": "还有没办完的事，暂时不能迁移",
+      "blocked_body": "先办完，或转给别人，再迁移。",
+      "blocked": {
+        "claimed": "认领中的案子 {{n}} 件",
+        "approvals": "待它审批的节点 {{n}} 个",
+        "dispatch": "进行中的调拨 {{n}} 件",
+        "cross": "进行中的联审 {{n}} 件",
+        "open": "去看 ›"
+      },
+      "done": "已把 {{name}} 迁到{{civ}} · {{hall}}",
+      "done_no_hall": "已把 {{name}} 迁到{{civ}}"
+    }
   },
   "settings": {
     "title": "设置",
@@ -9329,7 +9354,8 @@
     "audit": {
       "view_start": "以管理员身份查看 {{hall}}",
       "view_end": "以管理员身份查看 {{hall}} · {{minutes}} 分钟 · 看过 {{pages}} 个页面"
-    }
+    },
+    "case_prefix_shared": "另一个文明的殿已在用这个案号前缀。各文明的案号要分得开，请换一个。"
   },
   "earthGods": {
     "title": "土地公",
@@ -10535,5 +10561,8 @@
         "media": "带图"
       }
     }
+  },
+  "errors": {
+    "cross_civilization": "没有保存：所选的对象属于另一个文明，不能关联。请重新选择，或刷新后再试。"
   }
 }

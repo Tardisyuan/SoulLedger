@@ -37,7 +37,7 @@ from apps.audit.signals import create_batch_audit_log
 from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export
-from apps.core.permissions import CodenamePermission, IsAdminPermission, TenantPermission
+from apps.core.permissions import CodenamePermission, IsAdminPermission, IsGlobalAdminPermission, TenantPermission
 from apps.core.problems import ProblemSerializer, problem
 from apps.core.schema import DetailResponseSerializer
 from apps.core.tenant import (
@@ -77,6 +77,8 @@ from .serializers import (
     LoginResponseSerializer,
     LogoutRequestSerializer,
     MfaRequiredResponseSerializer,
+    MigrateCivilizationSerializer,
+    MigrateOpenWorkSerializer,
     OfficerHasOpenWorkSerializer,
     OfficerInviteSerializer,
     OfficerTokenObtainPairSerializer,
@@ -308,6 +310,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         'import_csv': ['user.manage'],
         'reset_mfa': ['user.manage'],
         'invite': ['user.manage'],
+        'migrate_civilization': ['user.manage'],
+        'migrate_civilization_open_work': ['user.manage'],
     }
 
     def get_serializer_class(self):
@@ -483,6 +487,45 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             return problem(status.HTTP_409_CONFLICT, "not_enabled", "该账号未开启两步验证")
         mfa.admin_reset(user, actor=request.user, reason=serializer.validated_data["reason"], request=request)
         return Response({"detail": "两步验证已重置"})
+
+    @extend_schema(responses={200: MigrateOpenWorkSerializer, 403: ProblemSerializer, 404: ProblemSerializer})
+    @action(detail=True, methods=['get'], url_path='migrate-civilization/open-work',
+            permission_classes=[TenantPermission, IsGlobalAdminPermission])
+    def migrate_civilization_open_work(self, request, pk=None):
+        """迁移文明对话框打开时、从「去看」回来时查一次:手上没办完的事,按对话框的四行计数(为 0 也给)。"""
+        from .civilization_move import grouped, open_work
+
+        user = User.objects.filter(pk=pk).first() if str(pk).isdigit() else None
+        if user is None:
+            return problem(status.HTTP_404_NOT_FOUND, 'not_found', 'No such account.')
+        work = open_work(user)
+        return Response({**grouped(work), 'kinds': work})
+
+    @extend_schema(request=MigrateCivilizationSerializer,
+                   responses={200: UserManagementSerializer, 400: ProblemSerializer, 403: ProblemSerializer,
+                              409: ProblemSerializer})
+    @action(detail=True, methods=['post'], url_path='migrate-civilization',
+            permission_classes=[TenantPermission, IsGlobalAdminPermission])
+    def migrate_civilization(self, request, pk=None):
+        """SYSTEM_ADMIN 把账号迁到另一个文明(2026-11-16):殿、机构、文明一次改;灵魂账号、手上有在途事务的拒绝;
+        之后退出全部设备,审计记谁、从哪到哪、理由。条件见 `apps/authentication/civilization_move.py`。"""
+        from .civilization_move import MoveRefusedError, migrate
+
+        user = User.objects.select_related('tenant').filter(pk=pk).first() if str(pk).isdigit() else None
+        if user is None:
+            return problem(status.HTTP_404_NOT_FOUND, 'not_found', 'No such account.')
+        body = MigrateCivilizationSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        refused = _target_refusal(request, user)
+        if refused:
+            return refused
+        data = body.validated_data
+        try:
+            migrate(user, civilization=data['civilization'], hall=data.get('tenant'),
+                    organization=data.get('organization'), reason=data['reason'], actor=request.user, request=request)
+        except MoveRefusedError as e:
+            return problem(e.status, e.code, e.detail, **e.extra)
+        return Response(UserManagementSerializer(user).data)
 
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):

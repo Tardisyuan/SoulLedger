@@ -22787,6 +22787,94 @@ paths:
               schema:
                 $ref: '#/components/schemas/OfficerHasOpenWork'
           description: ''
+  /api/v1/users/{id}/migrate-civilization/:
+    post:
+      operationId: v1_users_migrate_civilization_create
+      description: |-
+        SYSTEM_ADMIN 把账号迁到另一个文明(2026-11-16):殿、机构、文明一次改;灵魂账号、手上有在途事务的拒绝;
+        之后退出全部设备,审计记谁、从哪到哪、理由。条件见 `apps/authentication/civilization_move.py`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this User.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MigrateCivilization'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MigrateCivilization'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MigrateCivilization'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserManagement'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: ''
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: ''
+  /api/v1/users/{id}/migrate-civilization/open-work/:
+    get:
+      operationId: v1_users_migrate_civilization_open_work_retrieve
+      description: 迁移文明对话框打开时、从「去看」回来时查一次:手上没办完的事,按对话框的四行计数(为 0 也给)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this User.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrateOpenWork'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: ''
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: ''
   /api/v1/users/{id}/own_roles/:
     get:
       operationId: v1_users_own_roles_retrieve
@@ -36673,6 +36761,54 @@ components:
           default: false
       required:
       - pending_token
+    MigrateCivilization:
+      type: object
+      description: |-
+        `POST /users/{id}/migrate-civilization/` (SYSTEM_ADMIN). `tenant` = hall code of the new civilization, required
+        for a hall-bound account and refused for a civilization ADMIN; `organization` defaults to that hall's root.
+      properties:
+        mfa_method:
+          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
+        mfa_code:
+          type: string
+        civilization:
+          $ref: '#/components/schemas/CivilizationEnum'
+        tenant:
+          type: string
+          nullable: true
+        organization:
+          type: integer
+          nullable: true
+        reason:
+          type: string
+          default: ''
+          maxLength: 400
+      required:
+      - civilization
+    MigrateOpenWork:
+      type: object
+      description: |-
+        `GET /users/{id}/migrate-civilization/open-work/` and the `open_work` of its 409: the dialog's four rows.
+        `kinds` is the count per kind behind them (`apps/authentication/civilization_move.py::GROUPS`), non-zero only.
+      properties:
+        claimed:
+          type: integer
+        approvals:
+          type: integer
+        dispatch:
+          type: integer
+        cross:
+          type: integer
+        kinds:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - approvals
+      - claimed
+      - cross
+      - dispatch
+      - kinds
     ModelEntry:
       type: object
       properties:
@@ -42967,6 +43103,7 @@ components:
       - SENTENCE_NODE_REFUSED
       - TOO_MANY_REQUESTS
       - account_devoured
+      - account_has_open_work
       - account_retired
       - admin_always_all
       - admin_only
@@ -43027,6 +43164,7 @@ components:
       - chat_unavailable
       - city_god_has_open_cases
       - city_gods_diyu_only
+      - civilization_invalid
       - civilization_mismatch
       - civilization_or_soul
       - claimed_by_other
@@ -43123,6 +43261,8 @@ components:
       - grievance_not_major
       - grievance_open
       - hall_inactive
+      - hall_not_allowed
+      - hall_of_another_civilization
       - hall_required
       - handover_blocked
       - has_children
@@ -43282,6 +43422,7 @@ components:
       - open_case
       - open_judgment
       - order_locked
+      - organization_of_another_hall
       - origin_flow_open
       - origin_refused
       - original_judge
@@ -43344,6 +43485,7 @@ components:
       - role_in_use
       - role_invalid
       - role_referenced_by_workflow_templates
+      - same_civilization
       - same_officer
       - same_tenant
       - second_factor_required
@@ -43366,6 +43508,7 @@ components:
       - shortening_pending
       - shortening_used
       - skipped_not_a_verdict
+      - soul_account
       - soul_alive
       - soul_away
       - soul_cannot_reincarnate
@@ -43383,6 +43526,8 @@ components:
       - soup_not_taken
       - soup_refused
       - statute_retired
+      - system_admin_account
+      - system_admin_only
       - system_void
       - target_dispatch_disabled
       - target_outranks_caller
@@ -43470,6 +43615,7 @@ components:
         * `SENTENCE_NODE_REFUSED` - SENTENCE_NODE_REFUSED
         * `TOO_MANY_REQUESTS` - TOO_MANY_REQUESTS
         * `account_devoured` - account_devoured
+        * `account_has_open_work` - account_has_open_work
         * `account_retired` - account_retired
         * `admin_always_all` - admin_always_all
         * `admin_only` - admin_only
@@ -43530,6 +43676,7 @@ components:
         * `chat_unavailable` - chat_unavailable
         * `city_god_has_open_cases` - city_god_has_open_cases
         * `city_gods_diyu_only` - city_gods_diyu_only
+        * `civilization_invalid` - civilization_invalid
         * `civilization_mismatch` - civilization_mismatch
         * `civilization_or_soul` - civilization_or_soul
         * `claimed_by_other` - claimed_by_other
@@ -43626,6 +43773,8 @@ components:
         * `grievance_not_major` - grievance_not_major
         * `grievance_open` - grievance_open
         * `hall_inactive` - hall_inactive
+        * `hall_not_allowed` - hall_not_allowed
+        * `hall_of_another_civilization` - hall_of_another_civilization
         * `hall_required` - hall_required
         * `handover_blocked` - handover_blocked
         * `has_children` - has_children
@@ -43785,6 +43934,7 @@ components:
         * `open_case` - open_case
         * `open_judgment` - open_judgment
         * `order_locked` - order_locked
+        * `organization_of_another_hall` - organization_of_another_hall
         * `origin_flow_open` - origin_flow_open
         * `origin_refused` - origin_refused
         * `original_judge` - original_judge
@@ -43847,6 +43997,7 @@ components:
         * `role_in_use` - role_in_use
         * `role_invalid` - role_invalid
         * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
+        * `same_civilization` - same_civilization
         * `same_officer` - same_officer
         * `same_tenant` - same_tenant
         * `second_factor_required` - second_factor_required
@@ -43869,6 +44020,7 @@ components:
         * `shortening_pending` - shortening_pending
         * `shortening_used` - shortening_used
         * `skipped_not_a_verdict` - skipped_not_a_verdict
+        * `soul_account` - soul_account
         * `soul_alive` - soul_alive
         * `soul_away` - soul_away
         * `soul_cannot_reincarnate` - soul_cannot_reincarnate
@@ -43886,6 +44038,8 @@ components:
         * `soup_not_taken` - soup_not_taken
         * `soup_refused` - soup_refused
         * `statute_retired` - statute_retired
+        * `system_admin_account` - system_admin_account
+        * `system_admin_only` - system_admin_only
         * `system_void` - system_void
         * `target_dispatch_disabled` - target_dispatch_disabled
         * `target_outranks_caller` - target_outranks_caller
@@ -51205,7 +51359,7 @@ components:
     UserTenantRef:
       type: object
       description: |-
-        The three keys `UserManagementSerializer.get_tenant` returns.
+        The keys `UserManagementSerializer.get_tenant` returns.
 
         Schema-only, never instantiated — the method builds the dict by hand. This
         is a **reference**, not the full tenant: it carries id, code and
@@ -51220,7 +51374,10 @@ components:
           type: string
         display_name_en:
           type: string
+        civilization:
+          type: string
       required:
+      - civilization
       - code
       - display_name
       - id

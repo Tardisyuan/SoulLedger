@@ -22,7 +22,10 @@ export interface User {
   role: string;
   /** 兼任角色(角色名)。权限 = `role` 与这里每个角色的并集;列表 / 详情都带。 */
   extra_roles?: string[];
-  tenant?: { id?: number; code: string; display_name: string } | null;
+  /** `civilization`: the hall's (`Tenant.civilization`), on the list and detail rows. */
+  tenant?: { id?: number; code: string; display_name: string; display_name_en?: string; civilization?: string } | null;
+  /** A hall-less ADMIN's civilization (§7.5); null for everyone else. */
+  civilization?: string | null;
   tenant_id?: number;
   display_name?: string;
   permissions?: string[];
@@ -242,6 +245,23 @@ export interface PasswordResetLink {
   expires_in: number;
 }
 
+/** The four rows of the migrate dialog's blocked state (`GET /users/{id}/migrate-civilization/open-work/` and the
+ *  `open_work` of its 409 `account_has_open_work`). Zero rows are not shown. `kinds`: the count per kind behind them. */
+export interface MigrateOpenWork {
+  claimed: number;
+  approvals: number;
+  dispatch: number;
+  cross: number;
+  kinds?: Record<string, number>;
+}
+
+/** POST /users/{id}/migrate-civilization/ body (SYSTEM_ADMIN). `tenant` = hall code; omitted for a civilization ADMIN. */
+export interface MigrateCivilizationInput {
+  civilization: string;
+  tenant?: string;
+  reason: string;
+}
+
 export const usersApi = {
   /** `user.manage`. 201 = new, 200 = re-sent to a still-pending address. 400 `{code, field}`. */
   invite: (data: OfficerInviteInput) => api.post<User>("/users/invite/", data),
@@ -271,6 +291,13 @@ export const usersApi = {
    *  the reason is required and audited. 409 `not_enabled` on a row that has it off. */
   resetMfa: (id: string | number, reason: string, proof?: SecondFactorProof) =>
     api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason, ...proof }),
+  /** SYSTEM_ADMIN. Open work that blocks moving this account to another civilization. */
+  migrateOpenWork: (id: string | number) =>
+    api.get<MigrateOpenWork>(`/users/${id}/migrate-civilization/open-work/`),
+  /** SYSTEM_ADMIN. Hall, organization and civilization in one change; every session of the account ends. 400 with
+   *  the condition's `code` (`reason_required`, `hall_required` …), 409 `account_has_open_work` / `soul_account`. */
+  migrateCivilization: (id: string | number, data: MigrateCivilizationInput, proof?: SecondFactorProof) =>
+    api.post<User>(`/users/${id}/migrate-civilization/`, { ...data, ...proof }),
   /** The import's first step: same row checks as `import`, nothing written. */
   // `dry_run` rides in the query: core has no DOM types, so the FormData it is handed can only be passed through.
   importPreview: (data: FormData) =>

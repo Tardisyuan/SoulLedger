@@ -34,6 +34,10 @@ describe("hallCreateErrors", () => {
     expect(hallCreateErrors(bad({ code: "invalid", errors: [{ field: "code", code: "invalid", detail: "This value does not match the required pattern." }] }), "x", t)).toEqual({ code: "halls.code_invalid" });
     expect(hallCreateErrors({ response: { status: 500, data: {} } }, "X", t)).toBeNull();
   });
+  it("案号前缀与另一个文明的殿相同:有自己的一句,不落到「格式不对」", () => {
+    const shared = bad({ code: "invalid", errors: [{ field: "code", code: "case_prefix_shared", detail: "The case-number prefix of GR_X is already used by CN_X of another civilization; choose a code whose first segment differs." }] });
+    expect(hallCreateErrors(shared, "GR_X", t)).toEqual({ code: "halls.case_prefix_shared" });
+  });
 });
 
 describe("新建殿", () => {

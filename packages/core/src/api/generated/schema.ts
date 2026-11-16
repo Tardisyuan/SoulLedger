@@ -10323,6 +10323,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/{id}/migrate-civilization/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description SYSTEM_ADMIN 把账号迁到另一个文明(2026-11-16):殿、机构、文明一次改;灵魂账号、手上有在途事务的拒绝;
+         *     之后退出全部设备,审计记谁、从哪到哪、理由。条件见 `apps/authentication/civilization_move.py`。
+         */
+        post: operations["v1_users_migrate_civilization_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/migrate-civilization/open-work/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 迁移文明对话框打开时、从「去看」回来时查一次:手上没办完的事,按对话框的四行计数(为 0 也给)。 */
+        get: operations["v1_users_migrate_civilization_open_work_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{id}/own_roles/": {
         parameters: {
             query?: never;
@@ -16256,6 +16293,32 @@ export interface components {
             /** @default false */
             remember_device: boolean;
         };
+        /**
+         * @description `POST /users/{id}/migrate-civilization/` (SYSTEM_ADMIN). `tenant` = hall code of the new civilization, required
+         *     for a hall-bound account and refused for a civilization ADMIN; `organization` defaults to that hall's root.
+         */
+        MigrateCivilization: {
+            mfa_method?: components["schemas"]["MfaSecondFactorMethodEnum"];
+            mfa_code?: string;
+            civilization: components["schemas"]["CivilizationEnum"];
+            tenant?: string | null;
+            organization?: number | null;
+            /** @default  */
+            reason: string;
+        };
+        /**
+         * @description `GET /users/{id}/migrate-civilization/open-work/` and the `open_work` of its 409: the dialog's four rows.
+         *     `kinds` is the count per kind behind them (`apps/authentication/civilization_move.py::GROUPS`), non-zero only.
+         */
+        MigrateOpenWork: {
+            claimed: number;
+            approvals: number;
+            dispatch: number;
+            cross: number;
+            kinds: {
+                [key: string]: number;
+            };
+        };
         ModelEntry: {
             /** @description 模型名(平台 API 里的 id),填进「模型名」 */
             name: string;
@@ -19431,6 +19494,7 @@ export interface components {
          *     * `SENTENCE_NODE_REFUSED` - SENTENCE_NODE_REFUSED
          *     * `TOO_MANY_REQUESTS` - TOO_MANY_REQUESTS
          *     * `account_devoured` - account_devoured
+         *     * `account_has_open_work` - account_has_open_work
          *     * `account_retired` - account_retired
          *     * `admin_always_all` - admin_always_all
          *     * `admin_only` - admin_only
@@ -19491,6 +19555,7 @@ export interface components {
          *     * `chat_unavailable` - chat_unavailable
          *     * `city_god_has_open_cases` - city_god_has_open_cases
          *     * `city_gods_diyu_only` - city_gods_diyu_only
+         *     * `civilization_invalid` - civilization_invalid
          *     * `civilization_mismatch` - civilization_mismatch
          *     * `civilization_or_soul` - civilization_or_soul
          *     * `claimed_by_other` - claimed_by_other
@@ -19587,6 +19652,8 @@ export interface components {
          *     * `grievance_not_major` - grievance_not_major
          *     * `grievance_open` - grievance_open
          *     * `hall_inactive` - hall_inactive
+         *     * `hall_not_allowed` - hall_not_allowed
+         *     * `hall_of_another_civilization` - hall_of_another_civilization
          *     * `hall_required` - hall_required
          *     * `handover_blocked` - handover_blocked
          *     * `has_children` - has_children
@@ -19746,6 +19813,7 @@ export interface components {
          *     * `open_case` - open_case
          *     * `open_judgment` - open_judgment
          *     * `order_locked` - order_locked
+         *     * `organization_of_another_hall` - organization_of_another_hall
          *     * `origin_flow_open` - origin_flow_open
          *     * `origin_refused` - origin_refused
          *     * `original_judge` - original_judge
@@ -19808,6 +19876,7 @@ export interface components {
          *     * `role_in_use` - role_in_use
          *     * `role_invalid` - role_invalid
          *     * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
+         *     * `same_civilization` - same_civilization
          *     * `same_officer` - same_officer
          *     * `same_tenant` - same_tenant
          *     * `second_factor_required` - second_factor_required
@@ -19830,6 +19899,7 @@ export interface components {
          *     * `shortening_pending` - shortening_pending
          *     * `shortening_used` - shortening_used
          *     * `skipped_not_a_verdict` - skipped_not_a_verdict
+         *     * `soul_account` - soul_account
          *     * `soul_alive` - soul_alive
          *     * `soul_away` - soul_away
          *     * `soul_cannot_reincarnate` - soul_cannot_reincarnate
@@ -19847,6 +19917,8 @@ export interface components {
          *     * `soup_not_taken` - soup_not_taken
          *     * `soup_refused` - soup_refused
          *     * `statute_retired` - statute_retired
+         *     * `system_admin_account` - system_admin_account
+         *     * `system_admin_only` - system_admin_only
          *     * `system_void` - system_void
          *     * `target_dispatch_disabled` - target_dispatch_disabled
          *     * `target_outranks_caller` - target_outranks_caller
@@ -19925,7 +19997,7 @@ export interface components {
          *     * `wrong_status` - wrong_status
          * @enum {string}
          */
-        ProblemCodeEnum: "BATCH_TOO_LARGE" | "KEY_NO_DEATH_PERMISSION" | "MAX_RETRIES" | "NOT_FAILED" | "NOT_RETRYABLE" | "NO_CITY_GOD" | "SENTENCE_NODE_REFUSED" | "TOO_MANY_REQUESTS" | "account_devoured" | "account_retired" | "admin_always_all" | "admin_only" | "admin_only_permission" | "admin_role" | "admin_target_global_only" | "admitted_in_concluded_case" | "alive" | "already_claimed" | "already_concluded" | "already_decided" | "already_deferred" | "already_deleted" | "already_enabled" | "already_handled" | "already_lifted" | "already_resolved" | "api_key_required" | "appeal_closed" | "appeal_not_from_judgment" | "appeal_open" | "appeal_rounds_used" | "appeal_used" | "appeal_window_closed" | "application_open" | "approval_flow_required" | "approval_in_progress" | "approval_started" | "assigned_to_other" | "assignee_out_of_scope" | "assistant_busy" | "assistant_not_configured" | "assistant_unavailable" | "at_city_god" | "authentication_failed" | "backup_incomplete" | "bad_before" | "bad_encoding" | "bad_encoding_gbk" | "bad_gateway" | "bad_request" | "bad_response" | "bad_signature" | "bad_type" | "birth_in_future" | "builtin_role" | "cannot_deactivate_self" | "cannot_delete_self" | "cannot_enter_judgment" | "cannot_reopen" | "cannot_withdraw" | "capture_refused" | "case_full" | "case_type_not_for_civilization" | "case_type_required" | "catalogue_permission" | "chat_not_configured" | "chat_unavailable" | "city_god_has_open_cases" | "city_gods_diyu_only" | "civilization_mismatch" | "civilization_or_soul" | "claimed_by_other" | "closed" | "concluded" | "condition_empty" | "condition_invalid" | "condition_overlap" | "conflict" | "conflict_unacknowledged" | "conflicting_change" | "cooldown" | "cooldown_over" | "cosigners_pending" | "countersign_no_signers" | "credential_expired" | "credential_not_pending" | "credential_not_printable" | "credential_not_revealable" | "credential_not_revealed" | "credential_void" | "cross_civilization_target_required" | "cross_civilization_target_same" | "cross_civilization_target_terminal" | "cross_civilization_target_unknown" | "cross_judgment_incomplete" | "cross_judgment_invalid" | "cross_judgment_merged" | "cross_judgment_open" | "curability_required" | "current_session" | "dangling_route" | "deadline_passed" | "death_before_birth" | "declined" | "defer_reason_required" | "deliver_needs_upheld" | "desired_form_required" | "destination_not_applicable" | "device_login_invalid" | "device_login_revoked" | "dims_mismatch" | "dispatch_not_started" | "display_name_length" | "display_name_sensitive" | "display_name_taken" | "disposition_not_executed" | "draft_conflict" | "duat_unfinished" | "duplicate" | "duplicate_columns" | "duplicate_media" | "duplicate_word" | "email_in_person" | "email_invalid" | "email_taken" | "email_unchanged" | "embedding_unavailable" | "empty_changes" | "empty_file" | "empty_post" | "end_has_exit" | "error" | "escalate_past_final" | "eternal_light_locked" | "eternal_not_allowed" | "eternal_not_last" | "eternal_sentence" | "event_after_death" | "event_before_birth" | "expired" | "export_in_progress" | "fail_reason_contradicts_record" | "fail_reason_invalid" | "fail_reason_not_failed" | "fail_reason_not_selectable" | "fail_reason_note_required" | "fail_reason_note_too_long" | "fail_reason_required" | "feedback_to_hall_only" | "file_required" | "file_too_large" | "final_required" | "final_review_required" | "five_heinous_must_fail" | "forbidden" | "foreign_node" | "foreign_realm" | "foreign_stops_choice_required" | "gateway_timeout" | "gone" | "greek_account_required" | "greek_mark_not_applicable" | "grievance_not_major" | "grievance_open" | "hall_inactive" | "hall_required" | "handover_blocked" | "has_children" | "held_until_fated_date" | "idempotency_in_progress" | "idempotency_key_invalid" | "idempotency_key_reused" | "image_not_found" | "images_unavailable" | "impersonate_admin" | "impersonate_self" | "impersonate_unavailable" | "impersonation_ended" | "impersonation_expired" | "impersonation_invalid" | "impersonation_read_only" | "implausible_lifespan" | "import_rows_invalid" | "incurable_is_eternal_in_tartarus" | "initial_password_expired" | "invalid" | "invalid_assignee" | "invalid_batch" | "invalid_case_type" | "invalid_changes" | "invalid_city_god" | "invalid_civilization" | "invalid_confirm_token" | "invalid_credentials" | "invalid_days" | "invalid_death_date" | "invalid_draft" | "invalid_escort" | "invalid_kind" | "invalid_month" | "invalid_officer" | "invalid_old_password" | "invalid_outcome" | "invalid_parameter" | "invalid_range" | "invalid_record_id" | "invalid_resolution" | "invalid_state_transition" | "invalid_station" | "invalid_target" | "invalid_transition" | "invalid_verdict" | "invalid_word" | "invite_link_invalid" | "judgment_has_workflow" | "judgment_not_concluded" | "judgment_not_found" | "jump_target_required" | "ladder_running" | "lifespan_not_ended" | "locked" | "login_locked" | "malformed_csv" | "media_not_found" | "method_not_allowed" | "mfa_required" | "mfa_setup_required" | "missing_columns" | "missing_id_column" | "missing_permission" | "mixed_id_columns" | "model_not_found" | "month_too_large" | "mortal_sin_unrepented" | "muted" | "name_empty" | "name_taken" | "no_active_account" | "no_appeal_above_minos" | "no_approver" | "no_chat_identity" | "no_city_god" | "no_draft" | "no_email" | "no_end" | "no_eval_officer" | "no_eval_soul" | "no_exit" | "no_grievance_filed" | "no_mortal_sin" | "no_nodes" | "no_pending_flow" | "no_pending_node" | "no_realm" | "no_rows" | "no_successor" | "no_tenant" | "no_verdict_document" | "node_changed" | "node_locked" | "node_not_found" | "node_not_pending" | "node_not_retryable" | "not_a_draft" | "not_a_request" | "not_acceptable" | "not_alive" | "not_allowed" | "not_an_image" | "not_appealable" | "not_at_city_god" | "not_authenticated" | "not_author" | "not_awaiting" | "not_cancellable" | "not_cancelled" | "not_city_god_officer" | "not_claimant" | "not_claimed" | "not_concluded" | "not_current" | "not_current_hall" | "not_deferred" | "not_deletable" | "not_diyu" | "not_eligible" | "not_empty" | "not_enabled" | "not_escalatable" | "not_finished" | "not_foreign" | "not_found" | "not_home" | "not_home_hall" | "not_in_cooldown" | "not_in_initial_review" | "not_in_tenant" | "not_in_wangsi" | "not_inbox" | "not_initiator" | "not_next" | "not_original_judge" | "not_pending" | "not_picked" | "not_refused" | "not_reincarnating" | "not_requester" | "not_reviewer" | "not_serving" | "not_started" | "not_the_approver" | "not_tudi_officer" | "not_uploader" | "not_verified" | "not_weighed" | "not_withdrawable" | "not_your_seal" | "note_required" | "nothing_to_change" | "officer_has_open_work" | "one_segment" | "open_case" | "open_judgment" | "order_locked" | "origin_flow_open" | "origin_refused" | "original_judge" | "overwrite_disabled" | "parent_not_found" | "parse_error" | "passed_has_no_destination" | "password_change_required" | "password_unchanged" | "past_life_read_only" | "payload_too_large" | "peer_blocked" | "peer_retired" | "pending_invalid" | "permission_changed" | "permission_denied" | "plan_busy" | "plan_closed" | "plan_held" | "plan_in_progress" | "plan_in_retrial" | "plan_in_transit" | "post_sealed" | "precondition_failed" | "private_address" | "proof_required" | "rate_limited" | "realm_full" | "realm_not_allowed" | "realm_not_found" | "reason_locked" | "reason_required" | "rebirth_blocked" | "rebirth_continent_not_applicable" | "rebirth_form_not_applicable" | "rebirth_form_reason_required" | "rebirth_not_applicable" | "rebirth_not_approved" | "rebirth_quota_full" | "rebirth_target_unavailable" | "rebuild_running" | "refused" | "registration_exists" | "reject_and_fail_route" | "reject_not_earlier" | "remind_too_soon" | "report_limit" | "request_closed" | "request_pending" | "request_throttled" | "reset_code_attempts_exceeded" | "reset_code_expired" | "reset_code_wrong" | "reset_link_invalid" | "retry_has_no_destination" | "retry_not_a_destination" | "retry_with_open_cross" | "role_forbidden" | "role_forbidden_permission" | "role_in_use" | "role_invalid" | "role_referenced_by_workflow_templates" | "same_officer" | "same_tenant" | "second_factor_required" | "second_factor_unavailable" | "segment_changed" | "segment_closed" | "segment_done" | "segment_not_found" | "segment_started" | "self" | "self_conversation" | "self_moderation" | "self_report" | "self_route" | "sentence_in_progress" | "sentence_plan_active" | "session_revoked" | "session_unknown" | "shared_source_only" | "shortening_pending" | "shortening_used" | "skipped_not_a_verdict" | "soul_alive" | "soul_away" | "soul_cannot_reincarnate" | "soul_cannot_reopen" | "soul_devoured" | "soul_has_pending_judgment" | "soul_is_here" | "soul_not_found" | "soul_not_in_underworld" | "soul_or_judgment" | "soul_recycled" | "soul_residing" | "soul_state" | "soup_already_taken" | "soup_not_taken" | "soup_refused" | "statute_retired" | "system_void" | "target_dispatch_disabled" | "target_outranks_caller" | "template_not_found" | "template_role_missing" | "tenant_forbidden" | "tenant_not_found" | "term_conflict" | "term_not_applicable" | "term_not_ended" | "term_not_served" | "term_start_before_death" | "term_start_on_a_living_soul" | "terminal_cosmology" | "threshold_out_of_range" | "throttled" | "ticket_expired" | "ticket_invalid" | "timeout_incomplete" | "timeout_role_missing" | "token_not_valid" | "too_early" | "too_large" | "too_many" | "too_many_media" | "too_many_pending" | "too_many_pixels" | "too_many_rows" | "totp_required" | "transition_not_manual" | "tudi_city_god_not_county" | "tudi_gods_diyu_only" | "unavailable" | "unbaptised_no_purgatory" | "undeliverable" | "unferried" | "unknown_civilization" | "unknown_clause" | "unknown_columns" | "unknown_node" | "unknown_print_key" | "unpriced_backup_model" | "unpriced_model" | "unprocessable" | "unreachable" | "unsupported_media_type" | "untested_connection" | "untested_embedding" | "untruthful_confession" | "use_draft_endpoint" | "user_inactive" | "user_not_found" | "username_taken" | "verdict_contradicts_weighing" | "verdict_not_accepted" | "verdict_pdf_not_configured" | "verdict_pdf_unavailable" | "verdict_required" | "verdict_unchanged" | "verify_link_invalid" | "warrant_open" | "wavering_has_no_destination" | "wavering_with_open_cross" | "weak_password" | "webhook_inactive" | "weighing_flow_required" | "workflow_closed" | "workflow_finished" | "workflow_in_progress" | "workflow_in_use" | "workflow_required" | "workflow_running" | "workflow_started" | "wrong" | "wrong_password" | "wrong_status";
+        ProblemCodeEnum: "BATCH_TOO_LARGE" | "KEY_NO_DEATH_PERMISSION" | "MAX_RETRIES" | "NOT_FAILED" | "NOT_RETRYABLE" | "NO_CITY_GOD" | "SENTENCE_NODE_REFUSED" | "TOO_MANY_REQUESTS" | "account_devoured" | "account_has_open_work" | "account_retired" | "admin_always_all" | "admin_only" | "admin_only_permission" | "admin_role" | "admin_target_global_only" | "admitted_in_concluded_case" | "alive" | "already_claimed" | "already_concluded" | "already_decided" | "already_deferred" | "already_deleted" | "already_enabled" | "already_handled" | "already_lifted" | "already_resolved" | "api_key_required" | "appeal_closed" | "appeal_not_from_judgment" | "appeal_open" | "appeal_rounds_used" | "appeal_used" | "appeal_window_closed" | "application_open" | "approval_flow_required" | "approval_in_progress" | "approval_started" | "assigned_to_other" | "assignee_out_of_scope" | "assistant_busy" | "assistant_not_configured" | "assistant_unavailable" | "at_city_god" | "authentication_failed" | "backup_incomplete" | "bad_before" | "bad_encoding" | "bad_encoding_gbk" | "bad_gateway" | "bad_request" | "bad_response" | "bad_signature" | "bad_type" | "birth_in_future" | "builtin_role" | "cannot_deactivate_self" | "cannot_delete_self" | "cannot_enter_judgment" | "cannot_reopen" | "cannot_withdraw" | "capture_refused" | "case_full" | "case_type_not_for_civilization" | "case_type_required" | "catalogue_permission" | "chat_not_configured" | "chat_unavailable" | "city_god_has_open_cases" | "city_gods_diyu_only" | "civilization_invalid" | "civilization_mismatch" | "civilization_or_soul" | "claimed_by_other" | "closed" | "concluded" | "condition_empty" | "condition_invalid" | "condition_overlap" | "conflict" | "conflict_unacknowledged" | "conflicting_change" | "cooldown" | "cooldown_over" | "cosigners_pending" | "countersign_no_signers" | "credential_expired" | "credential_not_pending" | "credential_not_printable" | "credential_not_revealable" | "credential_not_revealed" | "credential_void" | "cross_civilization_target_required" | "cross_civilization_target_same" | "cross_civilization_target_terminal" | "cross_civilization_target_unknown" | "cross_judgment_incomplete" | "cross_judgment_invalid" | "cross_judgment_merged" | "cross_judgment_open" | "curability_required" | "current_session" | "dangling_route" | "deadline_passed" | "death_before_birth" | "declined" | "defer_reason_required" | "deliver_needs_upheld" | "desired_form_required" | "destination_not_applicable" | "device_login_invalid" | "device_login_revoked" | "dims_mismatch" | "dispatch_not_started" | "display_name_length" | "display_name_sensitive" | "display_name_taken" | "disposition_not_executed" | "draft_conflict" | "duat_unfinished" | "duplicate" | "duplicate_columns" | "duplicate_media" | "duplicate_word" | "email_in_person" | "email_invalid" | "email_taken" | "email_unchanged" | "embedding_unavailable" | "empty_changes" | "empty_file" | "empty_post" | "end_has_exit" | "error" | "escalate_past_final" | "eternal_light_locked" | "eternal_not_allowed" | "eternal_not_last" | "eternal_sentence" | "event_after_death" | "event_before_birth" | "expired" | "export_in_progress" | "fail_reason_contradicts_record" | "fail_reason_invalid" | "fail_reason_not_failed" | "fail_reason_not_selectable" | "fail_reason_note_required" | "fail_reason_note_too_long" | "fail_reason_required" | "feedback_to_hall_only" | "file_required" | "file_too_large" | "final_required" | "final_review_required" | "five_heinous_must_fail" | "forbidden" | "foreign_node" | "foreign_realm" | "foreign_stops_choice_required" | "gateway_timeout" | "gone" | "greek_account_required" | "greek_mark_not_applicable" | "grievance_not_major" | "grievance_open" | "hall_inactive" | "hall_not_allowed" | "hall_of_another_civilization" | "hall_required" | "handover_blocked" | "has_children" | "held_until_fated_date" | "idempotency_in_progress" | "idempotency_key_invalid" | "idempotency_key_reused" | "image_not_found" | "images_unavailable" | "impersonate_admin" | "impersonate_self" | "impersonate_unavailable" | "impersonation_ended" | "impersonation_expired" | "impersonation_invalid" | "impersonation_read_only" | "implausible_lifespan" | "import_rows_invalid" | "incurable_is_eternal_in_tartarus" | "initial_password_expired" | "invalid" | "invalid_assignee" | "invalid_batch" | "invalid_case_type" | "invalid_changes" | "invalid_city_god" | "invalid_civilization" | "invalid_confirm_token" | "invalid_credentials" | "invalid_days" | "invalid_death_date" | "invalid_draft" | "invalid_escort" | "invalid_kind" | "invalid_month" | "invalid_officer" | "invalid_old_password" | "invalid_outcome" | "invalid_parameter" | "invalid_range" | "invalid_record_id" | "invalid_resolution" | "invalid_state_transition" | "invalid_station" | "invalid_target" | "invalid_transition" | "invalid_verdict" | "invalid_word" | "invite_link_invalid" | "judgment_has_workflow" | "judgment_not_concluded" | "judgment_not_found" | "jump_target_required" | "ladder_running" | "lifespan_not_ended" | "locked" | "login_locked" | "malformed_csv" | "media_not_found" | "method_not_allowed" | "mfa_required" | "mfa_setup_required" | "missing_columns" | "missing_id_column" | "missing_permission" | "mixed_id_columns" | "model_not_found" | "month_too_large" | "mortal_sin_unrepented" | "muted" | "name_empty" | "name_taken" | "no_active_account" | "no_appeal_above_minos" | "no_approver" | "no_chat_identity" | "no_city_god" | "no_draft" | "no_email" | "no_end" | "no_eval_officer" | "no_eval_soul" | "no_exit" | "no_grievance_filed" | "no_mortal_sin" | "no_nodes" | "no_pending_flow" | "no_pending_node" | "no_realm" | "no_rows" | "no_successor" | "no_tenant" | "no_verdict_document" | "node_changed" | "node_locked" | "node_not_found" | "node_not_pending" | "node_not_retryable" | "not_a_draft" | "not_a_request" | "not_acceptable" | "not_alive" | "not_allowed" | "not_an_image" | "not_appealable" | "not_at_city_god" | "not_authenticated" | "not_author" | "not_awaiting" | "not_cancellable" | "not_cancelled" | "not_city_god_officer" | "not_claimant" | "not_claimed" | "not_concluded" | "not_current" | "not_current_hall" | "not_deferred" | "not_deletable" | "not_diyu" | "not_eligible" | "not_empty" | "not_enabled" | "not_escalatable" | "not_finished" | "not_foreign" | "not_found" | "not_home" | "not_home_hall" | "not_in_cooldown" | "not_in_initial_review" | "not_in_tenant" | "not_in_wangsi" | "not_inbox" | "not_initiator" | "not_next" | "not_original_judge" | "not_pending" | "not_picked" | "not_refused" | "not_reincarnating" | "not_requester" | "not_reviewer" | "not_serving" | "not_started" | "not_the_approver" | "not_tudi_officer" | "not_uploader" | "not_verified" | "not_weighed" | "not_withdrawable" | "not_your_seal" | "note_required" | "nothing_to_change" | "officer_has_open_work" | "one_segment" | "open_case" | "open_judgment" | "order_locked" | "organization_of_another_hall" | "origin_flow_open" | "origin_refused" | "original_judge" | "overwrite_disabled" | "parent_not_found" | "parse_error" | "passed_has_no_destination" | "password_change_required" | "password_unchanged" | "past_life_read_only" | "payload_too_large" | "peer_blocked" | "peer_retired" | "pending_invalid" | "permission_changed" | "permission_denied" | "plan_busy" | "plan_closed" | "plan_held" | "plan_in_progress" | "plan_in_retrial" | "plan_in_transit" | "post_sealed" | "precondition_failed" | "private_address" | "proof_required" | "rate_limited" | "realm_full" | "realm_not_allowed" | "realm_not_found" | "reason_locked" | "reason_required" | "rebirth_blocked" | "rebirth_continent_not_applicable" | "rebirth_form_not_applicable" | "rebirth_form_reason_required" | "rebirth_not_applicable" | "rebirth_not_approved" | "rebirth_quota_full" | "rebirth_target_unavailable" | "rebuild_running" | "refused" | "registration_exists" | "reject_and_fail_route" | "reject_not_earlier" | "remind_too_soon" | "report_limit" | "request_closed" | "request_pending" | "request_throttled" | "reset_code_attempts_exceeded" | "reset_code_expired" | "reset_code_wrong" | "reset_link_invalid" | "retry_has_no_destination" | "retry_not_a_destination" | "retry_with_open_cross" | "role_forbidden" | "role_forbidden_permission" | "role_in_use" | "role_invalid" | "role_referenced_by_workflow_templates" | "same_civilization" | "same_officer" | "same_tenant" | "second_factor_required" | "second_factor_unavailable" | "segment_changed" | "segment_closed" | "segment_done" | "segment_not_found" | "segment_started" | "self" | "self_conversation" | "self_moderation" | "self_report" | "self_route" | "sentence_in_progress" | "sentence_plan_active" | "session_revoked" | "session_unknown" | "shared_source_only" | "shortening_pending" | "shortening_used" | "skipped_not_a_verdict" | "soul_account" | "soul_alive" | "soul_away" | "soul_cannot_reincarnate" | "soul_cannot_reopen" | "soul_devoured" | "soul_has_pending_judgment" | "soul_is_here" | "soul_not_found" | "soul_not_in_underworld" | "soul_or_judgment" | "soul_recycled" | "soul_residing" | "soul_state" | "soup_already_taken" | "soup_not_taken" | "soup_refused" | "statute_retired" | "system_admin_account" | "system_admin_only" | "system_void" | "target_dispatch_disabled" | "target_outranks_caller" | "template_not_found" | "template_role_missing" | "tenant_forbidden" | "tenant_not_found" | "term_conflict" | "term_not_applicable" | "term_not_ended" | "term_not_served" | "term_start_before_death" | "term_start_on_a_living_soul" | "terminal_cosmology" | "threshold_out_of_range" | "throttled" | "ticket_expired" | "ticket_invalid" | "timeout_incomplete" | "timeout_role_missing" | "token_not_valid" | "too_early" | "too_large" | "too_many" | "too_many_media" | "too_many_pending" | "too_many_pixels" | "too_many_rows" | "totp_required" | "transition_not_manual" | "tudi_city_god_not_county" | "tudi_gods_diyu_only" | "unavailable" | "unbaptised_no_purgatory" | "undeliverable" | "unferried" | "unknown_civilization" | "unknown_clause" | "unknown_columns" | "unknown_node" | "unknown_print_key" | "unpriced_backup_model" | "unpriced_model" | "unprocessable" | "unreachable" | "unsupported_media_type" | "untested_connection" | "untested_embedding" | "untruthful_confession" | "use_draft_endpoint" | "user_inactive" | "user_not_found" | "username_taken" | "verdict_contradicts_weighing" | "verdict_not_accepted" | "verdict_pdf_not_configured" | "verdict_pdf_unavailable" | "verdict_required" | "verdict_unchanged" | "verify_link_invalid" | "warrant_open" | "wavering_has_no_destination" | "wavering_with_open_cross" | "weak_password" | "webhook_inactive" | "weighing_flow_required" | "workflow_closed" | "workflow_finished" | "workflow_in_progress" | "workflow_in_use" | "workflow_required" | "workflow_running" | "workflow_started" | "wrong" | "wrong_password" | "wrong_status";
         /** @description One validation error. A coded field refusal adds its facts as further members (`region`, `city_god` …). */
         ProblemFieldError: {
             /** @description Dotted path (`items.0.name`); absent = the whole request. */
@@ -23268,7 +23340,7 @@ export interface components {
             extra_roles: string[];
         };
         /**
-         * @description The three keys `UserManagementSerializer.get_tenant` returns.
+         * @description The keys `UserManagementSerializer.get_tenant` returns.
          *
          *     Schema-only, never instantiated — the method builds the dict by hand. This
          *     is a **reference**, not the full tenant: it carries id, code and
@@ -23280,6 +23352,7 @@ export interface components {
             code: string;
             display_name: string;
             display_name_en?: string;
+            civilization: string;
         };
         /**
          * @description User serializer for updates (email, role, is_active, organization, position).
@@ -42820,6 +42893,96 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["OfficerHasOpenWork"];
+                };
+            };
+        };
+    };
+    v1_users_migrate_civilization_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this User. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrateCivilization"];
+                "application/x-www-form-urlencoded": components["schemas"]["MigrateCivilization"];
+                "multipart/form-data": components["schemas"]["MigrateCivilization"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserManagement"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    v1_users_migrate_civilization_open_work_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this User. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrateOpenWork"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };

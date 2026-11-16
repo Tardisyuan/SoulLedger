@@ -3765,7 +3765,32 @@
       "use_totp": "Iri Em Medu Tera · 6",
       "wrong": "Medu Nen Maat. Wehem Iri: Sep {{n}}."
     },
-    "row_menu": "{{name}}: Aha Ky"
+    "row_menu": "{{name}}: Aha Ky",
+    "migrate_civ": {
+      "menu": "Hab Er Taui Ky",
+      "title": "Hab {{name}} Er Taui Ky",
+      "from": "Hru Pen",
+      "to": "Er",
+      "current": "Em Tepy",
+      "hall": "Wesekhet Em Taui Mawy",
+      "hall_wait": "Setep Taui Tepy",
+      "reason": "Khet",
+      "reason_hint": "Sesh Em Medu Maa; Nen Semawy Er Khet.",
+      "reason_required": "Sesh Khet.",
+      "consequence": "Er Khet Hab: Ren Aq Pen Per Aq Em Medjat Neb. Aq Mawy: Maa Taui Mawy Wa.",
+      "submit": "Er {{civ}}",
+      "blocked_title": "Iri Nen Khetem Djer: Nen Hab Djer",
+      "blocked_body": "Iri-N Tepy, Mi Redi Er Sab Ky; Er Khet Hab.",
+      "blocked": {
+        "claimed": "Shesep-N: Sep {{n}}",
+        "approvals": "Sekhet Wat Hesy: {{n}}",
+        "dispatch": "Em Hab: {{n}}",
+        "cross": "Wedja Taui Ky: {{n}}",
+        "open": "Maa ›"
+      },
+      "done": "Hab-N {{name}} Er {{civ}} · {{hall}}",
+      "done_no_hall": "Hab-N {{name}} Er {{civ}}"
+    }
   },
   "settings": {
     "title": "Smen",
@@ -9303,7 +9328,8 @@
     "audit": {
       "view_start": "Iaut Em Tepy · Maa {{hall}}",
       "view_end": "Iaut Em Tepy · Maa {{hall}} · At {{minutes}} · Per {{pages}}"
-    }
+    },
+    "case_prefix_shared": "Wesekhet Em Taui Ky: Tepy Ren Sep Pen Em Iri. Setep Tepy Ky."
   },
   "earthGods": {
     "title": "Netjer Ta",
@@ -10509,5 +10535,8 @@
         "media": "Tut"
       }
     }
+  },
+  "errors": {
+    "cross_civilization": "Nen Sau: Khet Pen Em Taui Ky. Setep Wehem, Mi Wehem Maa."
   }
 }

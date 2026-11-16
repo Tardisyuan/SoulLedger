@@ -3772,7 +3772,32 @@
       "admin_target_global_only": "Only the global administrator can do this to another administrator.",
       "second_factor_unavailable": "Turn on two-step verification on your own account first."
     },
-    "row_menu": "More actions for {{name}}"
+    "row_menu": "More actions for {{name}}",
+    "migrate_civ": {
+      "menu": "Move to another civilization",
+      "title": "Move {{name}} to another civilization",
+      "from": "Now",
+      "to": "Move to",
+      "current": "Current",
+      "hall": "Hall in the new civilization",
+      "hall_wait": "Choose a civilization first",
+      "reason": "Reason",
+      "reason_hint": "Goes into the audit log and can’t be edited later.",
+      "reason_required": "A reason is required.",
+      "consequence": "After the move, this account is signed out on every device. Once it signs in again, it sees only the new civilization’s data.",
+      "submit": "Move to {{civ}}",
+      "blocked_title": "Unfinished work: this account can’t be moved yet",
+      "blocked_body": "Finish these or hand them to someone else, then move the account.",
+      "blocked": {
+        "claimed": "Claimed cases: {{n}}",
+        "approvals": "Approval steps waiting on it: {{n}}",
+        "dispatch": "Transfers in progress: {{n}}",
+        "cross": "Joint judgments in progress: {{n}}",
+        "open": "View ›"
+      },
+      "done": "Moved {{name}} to {{civ}} · {{hall}}",
+      "done_no_hall": "Moved {{name}} to {{civ}}"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -9329,7 +9354,8 @@
     "audit": {
       "view_start": "Viewed {{hall}} as administrator",
       "view_end": "Viewed {{hall}} as administrator · {{minutes}} min · {{pages}} pages"
-    }
+    },
+    "case_prefix_shared": "A hall in another civilization already uses this case-number prefix. Prefixes must differ between civilizations; choose another."
   },
   "earthGods": {
     "title": "Earth Gods",
@@ -10535,5 +10561,8 @@
         "media": "Has images"
       }
     }
+  },
+  "errors": {
+    "cross_civilization": "Not saved: the selected item belongs to another civilization and can’t be linked. Choose again, or refresh and try again."
   }
 }

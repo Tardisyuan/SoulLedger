@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant, type TenantCreateBody } from "@soulledger/core/api";
-import { problemFieldErrors, responseStatus } from "@soulledger/core/api/client";
+import { problemFieldCodes, problemFieldErrors, responseStatus } from "@soulledger/core/api/client";
 import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
@@ -20,7 +20,7 @@ type FieldErrors = Partial<Record<"code" | "civilization", string>>;
 
 /**
  * `POST /tenants/` 的 400 → 各字段下的一句话。后端的句子是英文固定句式(`TenantCreateSerializer`),这里只认形状:
- * 代号已占用(`already exists`)、其余代号错误一律「格式不对」;文明错误是「`<code>` is a `<CIV>` hall.」,
+ * 代号已占用(`already exists`)、案号前缀与另一个文明的殿相同(`case_prefix_shared`,按错误码认)、其余代号错误一律「格式不对」;文明错误是「`<code>` is a `<CIV>` hall.」,
  * 挂在文明下面(第五十四批 K-2:要改的通常是文明)。认不出的返回 null,调用方给通用提示。
  */
 export function hallCreateErrors(error: unknown, code: string, t: Translate): FieldErrors | null {
@@ -28,7 +28,11 @@ export function hallCreateErrors(error: unknown, code: string, t: Translate): Fi
   const fields = problemFieldErrors(error);
   const out: FieldErrors = {};
   if ("code" in fields) {
-    out.code = /already exists/i.test(fields.code) ? t("halls.code_taken") : t("halls.code_invalid");
+    out.code = /already exists/i.test(fields.code)
+      ? t("halls.code_taken")
+      : (problemFieldCodes(error).code ?? []).includes("case_prefix_shared")
+        ? t("halls.case_prefix_shared")
+        : t("halls.code_invalid");
   }
   if ("civilization" in fields) {
     const civ = /\bis an? ([A-Z]+) hall/.exec(fields.civilization)?.[1];
