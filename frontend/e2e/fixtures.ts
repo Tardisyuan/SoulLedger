@@ -1523,6 +1523,20 @@ export class ApiMock {
       // 待我选站(第四十三批 W-2):首页待办条一格,审批页「实例」页签最上面一组(没有就不画)。
       pick_nodes: emptyGroup,
     });
+    // 概览「我的数」卡(HallOverview MyStatsCard):一个对象,全 0 = 空态。
+    this.on("GET", "/officer-app/stats/", {
+      concluded_this_month: 0, concluded_total: 0, open_claims: 0, appeals_reviewed: 0, appeals_in_review: 0,
+    });
+    // 一件待办的详情(TodoItemDetailSerializer):转生申请详情读它的功过结余与前面几步;没有 facts = 两样都不画。
+    this.on("GET", "/officer-app/items/:kind/:id/", (call) => {
+      const [, , , kind, id] = call.path.split("/");
+      return {
+        body: {
+          kind, id, title: "", created_at: "2026-09-17T04:00:00Z", actionable: true, state: "actionable",
+          handled_by: null, handled_at: null,
+        },
+      };
+    });
     // 菜单按钮配置(第四十批 W-b):一个数组,不是分页;没有行 = 全部允许。
     this.on("GET", "/menus/buttons/config/", []);
     this.on("GET", "/judgment/:id/precedents/", []);
