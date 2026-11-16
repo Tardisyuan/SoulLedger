@@ -30,8 +30,9 @@ from urllib.parse import quote
 import jwt
 import requests
 from django.conf import settings
-from apps.core.cache import data_cache as cache  # a pure cache: may be flushed (apps/core/cache.py)
 from django.utils.module_loading import import_string
+
+from apps.core.cache import data_cache as cache  # a pure cache: may be flushed (apps/core/cache.py)
 
 logger = logging.getLogger(__name__)
 

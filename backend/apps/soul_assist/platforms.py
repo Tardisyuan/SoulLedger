@@ -28,10 +28,10 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 import requests
-from apps.core.cache import data_cache as cache  # a pure cache: may be flushed (apps/core/cache.py)
 from django.utils import timezone
 
 from apps.core import outbound
+from apps.core.cache import data_cache as cache  # a pure cache: may be flushed (apps/core/cache.py)
 from apps.soul_assist import config
 
 logger = logging.getLogger(__name__)
