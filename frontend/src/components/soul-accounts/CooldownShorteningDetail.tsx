@@ -8,7 +8,12 @@ import {
   useCooldownShortening,
   useRejectCooldownShortening,
 } from "@soulledger/core/hooks/useSoulAccounts";
+import { useTodoNextAfter } from "@soulledger/core/hooks/useTodoNext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { RecentReasons } from "@/src/components/approval/RecentReasons";
+import { NextTodoBar } from "@/src/components/approval/NextTodoBar";
+import { rememberReason } from "@/src/lib/recentRejectReasons";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
@@ -27,8 +32,18 @@ import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
  * 按钮从不预先禁用(除了请求在途)。服务端拒绝 -> 顶部 toast「未能决定:原因」,弹层不关,
  * 详情按服务端现状刷新(`useCooldownShortening` 不看列表的筛选,行被决定走了也读得到)。
  */
-export function CooldownShorteningDetail({ row: listed, onClose }: { row: OfficerCooldownShortening; onClose: () => void }) {
+export function CooldownShorteningDetail({
+  row: listed,
+  onClose,
+  onOpenNext,
+}: {
+  row: OfficerCooldownShortening;
+  onClose: () => void;
+  /** 「下一件」: open the to-do's next 缩短冷却申请 in this dialog's place. */
+  onOpenNext?: (id: string) => void;
+}) {
   const { t, formatDateTime } = useI18n();
+  const me = useTenant().user;
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();
   const r = useCooldownShortening(listed.id, listed).data;
@@ -44,13 +59,20 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
 
   const ended = cooldownEnded(r);
   const canDecide = r.status === "PENDING" && !ended && hasPermission("workflow.approve");
+  // 「下一件」 (officer App D1): in the to-do's order, read while this one still waits.
+  const [decided, setDecided] = useState(false);
+  const todoNext = useTodoNextAfter("cooldown", r.id, canDecide || decided);
+  const nextItem = decided ? (todoNext?.next ?? null) : null;
   const busy = approve.isPending || reject.isPending;
   const onError = (error: unknown) =>
     showToast(
       t("soul_accounts.cooldown.decide_failed", { reason: t(failureKey(classifySoulAccountError(error), "soul_accounts.cooldown.failed")) }),
       "error"
     );
-  const onSuccess = () => showToast(t("soul_accounts.cooldown.decided"), "success");
+  const onSuccess = () => {
+    showToast(t("soul_accounts.cooldown.decided"), "success");
+    setDecided(true);
+  };
 
   const doApprove = () => {
     const n = Number(days);
@@ -70,7 +92,17 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
       return;
     }
     setNoteError(null);
-    reject.mutate({ id: r.id, note }, { onSuccess, onError });
+    reject.mutate(
+      { id: r.id, note },
+      {
+        onSuccess: () => {
+          // Only a reject the server took is remembered (D8).
+          rememberReason(me?.id, note);
+          onSuccess();
+        },
+        onError,
+      }
+    );
   };
 
   const field = (label: string, value: ReactNode) => (
@@ -112,6 +144,12 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
         </Button>
       </div>
     </div>
+  ) : decided ? (
+    <NextTodoBar
+      todo={todoNext}
+      nextTarget={nextItem && onOpenNext ? { onClick: () => onOpenNext(nextItem.target.id) } : null}
+      leave={{ label: t("common.close"), target: { onClick: onClose } }}
+    />
   ) : (
     <div className="flex justify-end">
       <Button type="button" size="lg" variant="secondary" className="w-full sm:w-auto sm:h-(--control-h-md)" onClick={onClose}>
@@ -216,7 +254,8 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
                 )}
               </Field>
             </div>
-            <div ref={noteBox}>
+            <div ref={noteBox} className="space-y-3">
+              <RecentReasons userId={me?.id} value={note} onChange={(v) => { setNote(v); setNoteError(null); }} max={2000} />
               <TextAreaField
                 label={t("soul_accounts.cooldown.note_label")}
                 description={noteError ? undefined : t("soul_accounts.cooldown.note_hint")}
