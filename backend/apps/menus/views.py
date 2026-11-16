@@ -117,8 +117,9 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         )
 
     def list(self, request, *args, **kwargs):
-        """The sidebar's call (no query parameters but the page) is served from `menu_rows`; the same rows
-        `get_queryset` returns, narrowed by the same `menu_is_visible_to`. Anything else takes the queryset path."""
+        # The sidebar's call (no query parameters but the page) is served from `menu_rows`: the same rows
+        # `get_queryset` returns, narrowed by the same `menu_is_visible_to`. Anything else takes the queryset path.
+        # (A comment, not a docstring: drf-spectacular would publish a docstring as the operation's description.)
         user = request.user
         if set(request.query_params) - {"page", "page_size"} or not user.is_authenticated:
             return super().list(request, *args, **kwargs)
