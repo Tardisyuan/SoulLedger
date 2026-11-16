@@ -10,6 +10,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MissingValue } from "@/src/components/ui/DomainValue";
+import { LoadMoreSkeleton } from "@/components/ui/skeleton";
 import { MOTION_EASINGS } from "@/lib/motion";
 
 /**
@@ -138,14 +139,18 @@ export function QueueMinePanel({
               })}
             </AnimatePresence>
           </ul>
+          {/* 第五十八批 M9:加载更多进行中,列表底部两行骨架;按钮不置灰,只是再按无效。 */}
+          {query.isFetchingNextPage ? <LoadMoreSkeleton /> : null}
           {query.hasNextPage && total !== undefined && (
             <button
               type="button"
               data-testid="queue-mine-more"
-              onClick={() => void query.fetchNextPage()}
-              disabled={query.isFetchingNextPage}
+              onClick={() => {
+                if (!query.isFetchingNextPage) void query.fetchNextPage();
+              }}
+              aria-disabled={query.isFetchingNextPage || undefined}
               /* 同行内动作:1px ink3 框、11 字。 */
-              className="mt-2 inline-flex rounded-control h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-disabled-ink))]"
+              className="mt-2 inline-flex rounded-control h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
             >
               {t("judgment.claim.load_more", { n: String(total - loaded.length) })}
             </button>

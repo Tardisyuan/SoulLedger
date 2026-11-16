@@ -214,8 +214,10 @@ describe("按钮:主 = 墨色实底(第三十批),危险 = neg.strong 实底", (
   it("disabled uses the disabled pair, not a faded copy", () => {
     for (const [variant, size] of MATRIX) {
       const classes = classesOf(variant, size);
-      expect(classes).toContain("disabled:bg-[oklch(var(--color-disabled-surface))]");
-      expect(classes).toContain("disabled:text-[oklch(var(--color-disabled-ink))]");
+      expect(classes).toContain("disabled:not-aria-busy:bg-[oklch(var(--color-disabled-surface))]");
+      expect(classes).toContain("disabled:not-aria-busy:text-[oklch(var(--color-disabled-ink))]");
+      // M10: a busy button is disabled but not greyed — every disabled look is gated on not-busy.
+      expect(classes.filter((c) => /^disabled:(bg|text|border)-/.test(c))).toEqual([]);
       expect(classes).not.toContain("disabled:opacity-50");
     }
   });
@@ -301,20 +303,39 @@ describe("behaviour", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
-  it("keeps its width while loading: the spinner lies over the label, the label stays in the flow (v3)", () => {
-    render(<Button loading>Save</Button>);
-    const button = screen.getByRole("button");
-    const label = button.querySelector("[data-button-label]") as HTMLElement;
-    // The label still takes its room and is still the name: transparent, not invisible / hidden / removed.
-    expect(label).toHaveTextContent("Save");
-    expect(label.className.split(/\s+/)).toContain("opacity-0");
-    expect(label.className).not.toMatch(/\b(invisible|hidden|sr-only)\b/);
-    // The spinner is out of the flow, over the label, and is the only other child.
-    const overlay = button.querySelector("[aria-hidden=\"true\"]")!.parentElement as HTMLElement;
-    expect(overlay.parentElement).toBe(button);
-    expect(overlay.className.split(/\s+/)).toEqual(expect.arrayContaining(["absolute", "inset-0"]));
-    expect(button.className.split(/\s+/)).toContain("relative");
-    expect(button.children).toHaveLength(2);
+  it("busy (M10): label and width unchanged, no spinner, a bottom-edge line in the button's own colour after 160ms", () => {
+    render(<Button variant="primary" loading>Save</Button>);
+    const button = screen.getByRole("button", { name: "Save" });
+    // The label is the button's own text node, not hidden, not wrapped in a faded copy.
+    expect(button.firstChild?.textContent).toBe("Save");
+    expect(button.querySelector(".opacity-0, [data-button-label]")).toBeNull();
+    // No spinner: nothing rotates inside a button.
+    expect(button.querySelector(".animate-spin, [role=status]")).toBeNull();
+    expect(CODE).not.toMatch(/Spinner/);
+    const line = button.querySelector("[data-button-busy]") as HTMLElement;
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(line.className).toBe("button-busy");
+    expect(button.className.split(/\s+/)).toEqual(expect.arrayContaining(["relative", "overflow-hidden"]));
+    expect(button.children).toHaveLength(1);
+  });
+
+  it("not busy: no line", () => {
+    render(<Button>Save</Button>);
+    expect(screen.getByRole("button").querySelector("[data-button-busy]")).toBeNull();
+  });
+
+  it("the busy line's CSS: waits 160, runs like the top line, button colour at 60%, still under reduced motion", () => {
+    const css = readFileSync(path.join(__dirname, "..", "..", "app", "globals.css"), "utf8");
+    const rule = (sel: string) => new RegExp(`\\n\\s*${sel.replace(/[.:()]/g, "\\$&")} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+    expect(rule(".button-busy")).toMatch(/height: 2px;/);
+    expect(rule(".button-busy")).toMatch(/animation: button-busy-wait 0s linear var\(--transition-duration-fast\) backwards;/);
+    expect(css).toMatch(/@keyframes button-busy-wait \{\s*from \{\s*visibility: hidden;/);
+    const after = rule(".button-busy::after");
+    expect(after).toMatch(/width: 34%;/);
+    expect(after).toMatch(/background: color-mix\(in oklab, currentColor 60%, transparent\);/);
+    expect(after).toMatch(/animation: page-head-progress var\(--transition-duration-loading-line\) var\(--ease-standard\) infinite;/);
+    expect(after).not.toMatch(/--color-main/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.button-busy::after \{\s*animation: none;\s*left: 33%;/);
   });
 
   it("does not force a type, so migrated submit buttons keep submitting", () => {

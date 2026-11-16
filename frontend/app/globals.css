@@ -226,8 +226,8 @@
    * 而不是 `both`:动画结束后不留 transform —— 留着的 transform 会让页面里每个
    * `position: fixed` 的元素改以这个包裹层为参照。挂在 `app/template.tsx`。 */
   --animate-page-enter: page-enter var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */
-  /* 规范 v3「骨架 → 内容」:200ms 淡入。PageShell 在骨架换成内容的那一刻挂上它。 */
-  --animate-content-in: content-in var(--transition-duration-reveal) var(--ease-enter) backwards; /* @kind other */
+  /* 「骨架 → 内容」:160 淡入(第五十八批 M7 / 第五十九批,此前 200 = reveal)。PageShell 在骨架换成内容的那一刻挂上它。 */
+  --animate-content-in: content-in var(--transition-duration-fast) var(--ease-enter) backwards; /* @kind other */
   /* 规范 v3「表格交互 · 展开 / 收起」(Design 第三批回复,2026-10-03):展开 grid-template-rows
    * 0fr→1fr,240ms 进场曲线;收起 1fr→0fr,160ms 出场曲线,内容在前 80ms 淡出。整节折叠用同一对。
    * 减少动态效果下瞬时(上面那条 1ms 规则,不进 `data-motion="fade"` 的 80ms 例外)。
@@ -1000,6 +1000,38 @@
   .page-wait-line[data-in-content]::after {
     background: oklch(var(--color-ink) / 0.6);
   }
+  /* 按钮忙碌(第五十八批 M10,`Button loading`):文字与宽度不变,超过 160ms(--transition-duration-fast)还没回来,
+     底边走一条 2px 的线 —— 动法同页头顶线(宽 34%,--transition-duration-loading-line 一趟)。颜色是按钮自己的字色 60%:
+     墨底按钮上是 canvas 60%,描边按钮上是墨 60%,不用文明色。160ms 以内回来的什么都不显示:0s 动画的 backwards
+     在延迟期间把整条线藏起来。减少动态效果:线不走,停在中间(1ms 规则不碰 delay,160 的门槛仍在)。
+     TODO(batch59 token): motion.button-busy 生成变量后,2px / 34% 改读它。 */
+  .button-busy {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 2px;
+    overflow: hidden;
+    pointer-events: none;
+    animation: button-busy-wait 0s linear var(--transition-duration-fast) backwards;
+  }
+  .button-busy::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 34%;
+    background: color-mix(in oklab, currentColor 60%, transparent);
+    animation: page-head-progress var(--transition-duration-loading-line) var(--ease-standard) infinite;
+  }
+  @keyframes button-busy-wait {
+    from {
+      visibility: hidden;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .button-busy::after {
+      animation: none;
+      left: 33%;
+    }
+  }
   .page-sk {
     display: block;
     border-radius: var(--radius-control);
@@ -1067,17 +1099,22 @@
       repeating-linear-gradient(90deg, var(--tl) 0 4px, transparent 4px 8px) left top / 100% 2px no-repeat;
   }
   /* 加载中:顶线变成一根进度线 —— 底是 line,一段 32% 的 civT 来回走。减少动态效果时停在左边。 */
-  .page-head-topline[data-loading] {
+  .page-head-topline:is([data-loading], [data-refresh]) {
     overflow: hidden;
     background: oklch(var(--color-line));
   }
-  .page-head-topline[data-loading]::after {
+  .page-head-topline:is([data-loading], [data-refresh])::after {
     content: "";
     position: absolute;
     inset: 0 auto 0 0;
     width: 32%;
     background: oklch(var(--color-main-ink));
     animation: page-head-progress var(--transition-duration-loading-line) var(--ease-standard) infinite;
+  }
+  /* 已有内容时刷新(第五十八批 M8:重取、重连、版本更新、定时):同一根线只走一趟,播完 PageHead 收到 animationend 撤掉。
+     减少动态效果:上面那条 1ms 照样触发 animationend,线等于不走。 */
+  .page-head-topline[data-refresh]::after {
+    animation-iteration-count: 1;
   }
   @media (prefers-reduced-motion: reduce) {
     .page-head-topline[data-loading]::after {
@@ -1628,7 +1665,8 @@ html.theme-switching *::after {
      motion.highlight-fade, the same recipe as the apps' landing grounds (motionParity.test.ts). */
   from,
   80% {
-    background-color: oklch(var(--color-accent) / 0.22);
+    /* 第五十九批:墨 10%(此前 accent 22%)。TODO(batch59 token): motion.highlight 的强度令牌生成后改读它。 */
+    background-color: oklch(var(--color-ink) / 0.1);
   }
   to {
     background-color: transparent;
@@ -2524,15 +2562,16 @@ html.theme-switching *::after {
 }
 
 /* ── 行程拓扑(2026-11-10 用户:「可视化度太低」;src/components/realms/RouteTopology.tsx,界域页用)──────
-   借落地页徽记的两样效果:描线(已行的段逐段画出)、呼吸(当前站一圈金环慢慢扩散,3.2 s,避开魂火 0.5–1 Hz)。
+   借落地页徽记的两样效果:描线(已行的段逐段画出)、呼吸(当前站一圈金环,第五十八批 M5 起同卷宗脊:--now-breath 播 --now-breath-count 次就停)。
    灵魂详情的四格进度与行程条已换成文件末尾的「行程块」(第二十五批),那条 11 s 的扫光随之去掉。颜色只用文明的 civT / glow / metal,线型规则不变(实 = 已行,虚 = 待行)。 */
 .route-walked {
   box-shadow: 0 0 6px oklch(var(--color-glow) / 0.55);
 }
 .route-row .route-walked {
   transform-origin: left;
-  animation: route-draw 0.45s cubic-bezier(0.4, 0, 0.2, 1) backwards;
-  animation-delay: calc(var(--i, 0) * 60ms + 150ms);
+  /* 第五十八批:时长只用四档 —— 450 → slow 320,逐段 60 → press 80,起步 150 → fast 160。 */
+  animation: route-draw var(--transition-duration-slow) cubic-bezier(0.4, 0, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * var(--transition-duration-press) + var(--transition-duration-fast));
 }
 .route-done {
   box-shadow: 0 0 5px oklch(var(--color-glow) / 0.6);
@@ -2548,7 +2587,8 @@ html.theme-switching *::after {
   position: absolute;
   inset: -6px;
   border: 1px solid oklch(var(--color-metal));
-  animation: route-pulse 3.2s ease-out infinite;
+  /* 第五十八批 M5:同卷宗脊的呼吸,--now-breath × --now-breath-count 后停住;换站时类名落到另一个点上,重播。 */
+  animation: now-breath var(--now-breath) ease-in-out var(--now-breath-count);
 }
 /* 横排的轨道:整条路下面一道文明色的淡底(像一条路),虚线、实线画在它中间。 */
 .route-row {
@@ -2576,14 +2616,16 @@ li:last-child > .route-row {
     transform: scaleX(0);
   }
 }
-@keyframes route-pulse {
-  0% {
-    transform: scale(0.5);
-    opacity: 0.9;
-  }
+/* 「你在这里」的呼吸:值 = BREATHE_MOTION(与 dossier.module.css 的 spine-now 同一组,sealMotionTokens.test.ts 对账)。 */
+@keyframes now-breath {
+  0%,
   100% {
-    transform: scale(1.7);
-    opacity: 0;
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.7;
   }
 }
 
@@ -2623,7 +2665,8 @@ li:last-child > .route-row {
    欢迎页用落地页同一个 LandingEmblem(描线 + 扫光)。 */
 .soul-head-emblem {
   opacity: 0.3;
-  animation: soul-head-emblem-in 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) 0.15s backwards;
+  /* 第五十八批:900 = count(与概览数字滚动同一下),起步 150 → fast 160。 */
+  animation: soul-head-emblem-in var(--transition-duration-count) cubic-bezier(0.2, 0.8, 0.3, 1) var(--transition-duration-fast) backwards;
 }
 @keyframes soul-head-emblem-in {
   from {
@@ -2658,7 +2701,8 @@ li:last-child > .route-row {
 }
 .kpi-fill {
   transform-origin: left;
-  animation: route-draw 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s backwards;
+  /* 第五十八批:进度条随 KPI 数字一起走 count(此前 800),起步 200 → fast 160。 */
+  animation: route-draw var(--transition-duration-count) cubic-bezier(0.4, 0, 0.2, 1) var(--transition-duration-fast) backwards;
 }
 @media (prefers-reduced-motion: reduce) {
   .soul-head-emblem,
@@ -2978,7 +3022,7 @@ li:last-child > .route-row {
   stroke-width: 1.6;
   transform-box: fill-box;
   transform-origin: center;
-  animation: journey-breathe 4.2s ease-out infinite;
+  animation: now-breath var(--now-breath) ease-in-out var(--now-breath-count);
 }
 .journey-terminal {
   fill: none;
@@ -3177,24 +3221,12 @@ li:last-child > .route-row {
     stroke-dashoffset: 1;
   }
 }
-@keyframes journey-breathe {
-  0% {
-    transform: scale(0.75);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.55);
-    opacity: 0;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .journey-walked {
     animation: none;
   }
   .journey-pulse {
     animation: none;
-    transform: scale(1.15);
-    opacity: 0.6;
   }
 }
 /* 胶囊:「已行 N 站」「待行 N 站」「示意」(Design 第二十五批 §三)。 */

@@ -224,7 +224,7 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     // 地府没有自己的背景规则:实线就是基础那条的 main-ink。
     expect(rule('[data-civ="cn"] .page-head-topline')).toBe("");
     // 加载态写在形状后面,同样重的选择器,底(line)盖过形状。
-    expect(css.indexOf('[data-civ="gr"] .page-head-topline {')).toBeLessThan(css.indexOf(".page-head-topline[data-loading] {"));
+    expect(css.indexOf('[data-civ="gr"] .page-head-topline {')).toBeLessThan(css.indexOf(".page-head-topline:is([data-loading], [data-refresh]) {"));
   });
 });
 
