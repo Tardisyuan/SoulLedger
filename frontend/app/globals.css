@@ -1665,8 +1665,8 @@ html.theme-switching *::after {
      motion.highlight-fade, the same recipe as the apps' landing grounds (motionParity.test.ts). */
   from,
   80% {
-    /* 第五十九批:墨 10%(此前 accent 22%)。TODO(batch59 token): motion.highlight 的强度令牌生成后改读它。 */
-    background-color: oklch(var(--color-ink) / 0.1);
+    /* 第五十九批:墨 10%(此前 accent 22%),读 motion.highlight-alpha 令牌。 */
+    background-color: oklch(var(--color-ink) / var(--highlight-alpha));
   }
   to {
     background-color: transparent;
