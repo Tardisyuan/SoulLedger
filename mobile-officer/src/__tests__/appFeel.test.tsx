@@ -8,9 +8,10 @@
 import { act, render, screen, within } from "@testing-library/react-native";
 import { State, type PanGesture } from "react-native-gesture-handler";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
-import { Platform, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
+import { AccessibilityInfo, Animated, Platform, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 
-import { EdgeBack, TAB_FONT_SCALE, TabBar } from "../kit";
+import { EdgeBack, LoadingRows, TAB_FONT_SCALE, TabBar } from "../kit";
+import { themeFor } from "../shared";
 import { renderOfficer } from "./harness";
 
 const flat = (node: { props: { style?: unknown } }): ViewStyle => StyleSheet.flatten(node.props.style as StyleProp<ViewStyle>) ?? {};
@@ -78,5 +79,22 @@ describe("the iOS back swipe from the left edge", () => {
     );
     // Nothing wrapped round the page: no detector, no view that would follow a finger.
     expect((screen.toJSON() as { type: string }).type).toBe("Text");
+  });
+});
+
+describe("the loading line travels (Design batch 48 A9: the head's top line turned progress line)", () => {
+  afterEach(() => jest.restoreAllMocks());
+  const lay = () => {
+    act(() => screen.getByTestId("state-loading-track").props.onLayout({ nativeEvent: { layout: { width: 400, height: 2 } } }));
+  };
+  it.each([[false, 1], [true, 0]])("reduce motion %s: %i loop(s); the 30%% run keeps the civilization's colour", async (reduced, loops) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    const loop = jest.spyOn(Animated, "loop");
+    renderOfficer(<LoadingRows />);
+    await act(async () => {});
+    lay();
+    const line = StyleSheet.flatten(screen.getByTestId("state-loading-line").props.style);
+    expect(line).toMatchObject({ height: 2, width: "30%", backgroundColor: themeFor("CHINESE", "light").plaque });
+    expect(loop).toHaveBeenCalledTimes(loops);
   });
 });

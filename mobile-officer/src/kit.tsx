@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
+import { Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -89,11 +89,32 @@ function GoneView() {
 export function LoadingRows() {
   const t = useTheme();
   const { t: tr } = useI18n();
+  const reduced = useReducedMotion();
+  const [x] = useState(() => new Animated.Value(0));
+  const [width, setWidth] = useState(0);
+  // The 30% run travels left to right and starts again, as the soul app's `Skeleton` line and the web's page-head
+  // top line do; it stood still here from the start (found on the simulator 2026-11-16). Reduce motion: still.
+  useEffect(() => {
+    if (reduced || !width) return;
+    const run = Animated.loop(Animated.timing(x, { toValue: 1, duration: motion.breath, easing: Easing.inOut(Easing.ease), useNativeDriver: true }));
+    run.start();
+    return () => run.stop();
+  }, [x, reduced, width]);
   return (
     <View testID="state-loading" accessible accessibilityLabel={tr("soul_app.common.loading")} accessibilityState={{ busy: true }}>
       {/* 第三十批 一.5: a 2px line in the civilization's colour at the top, never a spinner. It takes the head's top line,
           so it counts as the top line (第四十八批第三节 A9) and keeps the colour. */}
-      <View testID="state-loading-line" style={{ height: touch.topline, width: "30%", backgroundColor: t.plaque }} />
+      <View testID="state-loading-track" onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ height: touch.topline, overflow: "hidden" }}>
+        <Animated.View
+          testID="state-loading-line"
+          style={{
+            height: touch.topline,
+            width: "30%",
+            backgroundColor: t.plaque,
+            transform: [{ translateX: reduced ? 0 : x.interpolate({ inputRange: [0, 1], outputRange: [-0.3 * width, width] }) }],
+          }}
+        />
+      </View>
       {[0, 1, 2, 3, 4].map((i) => (
         <View key={i} style={[styles.skeletonRow, { borderBottomColor: t.hair }]}>
           <View style={{ width: i % 2 ? "60%" : "78%", height: 12, backgroundColor: t.s2 }} />
