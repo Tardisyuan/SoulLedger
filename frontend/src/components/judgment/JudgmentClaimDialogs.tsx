@@ -169,7 +169,8 @@ export function ReleaseForDialog({
     <ReasonDialog
       {...rest}
       title={t("officer_app.case.release_for", { name: holder })}
-      hint={t("officer_app.reassign.reason", { name: holder })}
+      // 第五十九批 N6: the box's label already marks it required; the hint says what happens next.
+      hint={t("judgment.claim.release_for_hint", { name: holder })}
       confirmText={t("officer_app.case.release_for", { name: holder })}
     />
   );

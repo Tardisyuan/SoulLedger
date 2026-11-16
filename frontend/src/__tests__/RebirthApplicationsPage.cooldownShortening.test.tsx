@@ -303,6 +303,10 @@ it("a decided or expired request offers no decision even to an approver", async 
   await openTab();
   const dialog = await openDetail();
   expect(within(dialog).getByText("理由不足")).toBeInTheDocument();
-  expect(within(dialog).getByText(/judge/)).toBeInTheDocument();
+  // 第五十九批 N14: one 「{name} · {time} 处理」 line beside the status tag, not a separate 「决定人」 cell.
+  const handled = within(dialog).getByTestId("handled-by");
+  expect(handled.textContent).toBe(tZh("common.handled_by", { name: "judge", time: "dt(2026-10-09T00:00:00Z)" }));
+  expect(handled.parentElement).toContainElement(within(dialog).getByText(tZh("soul_accounts.cooldown_status.REJECTED")));
+  expect(within(dialog).queryByText("决定人")).toBeNull();
   expect(within(dialog).queryByTestId("cooldown-decision")).not.toBeInTheDocument();
 });

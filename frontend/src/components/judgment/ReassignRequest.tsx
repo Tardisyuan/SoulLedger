@@ -10,15 +10,15 @@ import { ReassignDialog, ReleaseForDialog, claimRefusalMessage } from "@/src/com
 
 /**
  * 「请管理员改派」在审判页头(2026-11-16,官员端 App `screens/detail.tsx` 的 O-a 在网页上的那一半):
- * 判官请求改派后,能改派的人(`judgment.assign`)打开案子就看到谁、何时请求、理由,页头的主动作是「改派给…」。
- * 条件与 App 同一条:案子未结、有请求、经办人不是我。请求在认领人变动时由服务端清掉,所以改派一成,这一行自己消失。
+ * 判官请求改派后,打开案子的人看到谁、何时请求、理由;只有能改派的人(`judgment.assign`)页头才有主动作「改派给…」,
+ * 其余人只看到这一行(第五十九批 N5)。条件与 App 同一条:案子未结、有请求、经办人不是我。
+ * 请求在认领人变动时由服务端清掉,所以改派一成,这一行自己消失。
  */
 export function reassignRequestShown(
   j: Pick<Judgment, "reassign_requested_at" | "claimed_by" | "is_final" | "concluded_at">,
   me: number | null | undefined,
-  canAssign: boolean,
 ): boolean {
-  return canAssign && !!j.reassign_requested_at && !j.is_final && !j.concluded_at && j.claimed_by !== me;
+  return !!j.reassign_requested_at && !j.is_final && !j.concluded_at && j.claimed_by !== me;
 }
 
 /** 「替{name}放回」:持 `judgment.assign`、案子未结、在别人手上(App `rules.ts::judgmentAdminItems` 同一条)。 */

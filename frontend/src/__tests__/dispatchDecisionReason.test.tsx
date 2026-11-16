@@ -89,3 +89,26 @@ describe("a withheld soul name on a dispatch", () => {
     expect(screen.queryByLabelText(WITHHELD)).not.toBeInTheDocument();
   });
 });
+
+// 第五十九批 N14: 「{name} · {time} 处理」 beside the status tag; a withheld name is the deciding hall's.
+describe("who decided a dispatch", () => {
+  const AT = "2026-11-10T00:00:00Z";
+  it("names the decider when the reader may see them", async () => {
+    renderPage({ status: "APPROVED", decided_at: AT, decided_by_name: "anubis" });
+    expect((await screen.findByTestId("handled-by")).textContent).toBe("common.handled_by");
+  });
+
+  it("writes the target hall for an approval whose decider's name is withheld", async () => {
+    renderPage({ status: "REJECTED", decided_at: AT, decided_by_name: null });
+    expect((await screen.findByTestId("handled-by")).textContent).toBe("common.handled_by_hall");
+  });
+
+  it.each([
+    ["a withdrawal without a name", { status: "CANCELLED", decided_at: AT, decided_by_name: null }],
+    ["an undecided proposal", { status: "PROPOSED", decided_at: null, decided_by_name: null }],
+  ])("names no one for %s", async (_label, over) => {
+    renderPage(over);
+    await screen.findByText("先在彼处受罚");
+    expect(screen.queryByTestId("handled-by")).toBeNull();
+  });
+});
