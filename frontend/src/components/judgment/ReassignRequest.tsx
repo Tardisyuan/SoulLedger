@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import type { Judgment } from "@soulledger/core/api/judgment";
-import { useReassignJudgment } from "@soulledger/core/hooks/useJudgments";
+import { useReassignJudgment, useReleaseJudgment } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
-import { ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { ReassignDialog, ReleaseForDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 
 /**
  * 「请管理员改派」在审判页头(2026-11-16,官员端 App `screens/detail.tsx` 的 O-a 在网页上的那一半):
@@ -19,6 +19,15 @@ export function reassignRequestShown(
   canAssign: boolean,
 ): boolean {
   return canAssign && !!j.reassign_requested_at && !j.is_final && !j.concluded_at && j.claimed_by !== me;
+}
+
+/** 「替{name}放回」:持 `judgment.assign`、案子未结、在别人手上(App `rules.ts::judgmentAdminItems` 同一条)。 */
+export function releaseForShown(
+  j: Pick<Judgment, "claimed_by" | "is_final" | "concluded_at">,
+  me: number | null | undefined,
+  canAssign: boolean,
+): boolean {
+  return canAssign && j.claimed_by != null && j.claimed_by !== me && !j.is_final && !j.concluded_at;
 }
 
 /** 页头副标题里的一行:「◐ {name}请求改派 · {time}」,再一行理由(有才写)。 */
@@ -64,6 +73,39 @@ export function ReassignToButton({ judgmentId }: { judgmentId: string }) {
               onSuccess: () => {
                 setOpen(false);
                 showToast(t("judgment.claim.done_reassign", { n: "1" }), "success");
+              },
+              onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+            }
+          )
+        }
+      />
+    </>
+  );
+}
+
+/** 页头的「替{name}放回」:理由必填(`ReleaseForDialog`),放回后案子回到待认领。 */
+export function ReleaseForButton({ judgmentId, holder }: { judgmentId: string; holder: string }) {
+  const { t } = useI18n();
+  const { showToast } = useToast();
+  const [open, setOpen] = useState(false);
+  const release = useReleaseJudgment();
+  return (
+    <>
+      <Button type="button" variant="secondary" size="sm" data-testid="desk-release-for" onClick={() => setOpen(true)}>
+        {t("officer_app.case.release_for", { name: holder })}
+      </Button>
+      <ReleaseForDialog
+        isOpen={open}
+        holder={holder}
+        pending={release.isPending}
+        onCancel={() => setOpen(false)}
+        onConfirm={(reason) =>
+          release.mutate(
+            { id: judgmentId, reason },
+            {
+              onSuccess: () => {
+                setOpen(false);
+                showToast(t("officer_app.case.done_released"), "success");
               },
               onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
             }

@@ -2009,6 +2009,7 @@
       "sentence_requests": "去处请求待批",
       "reports": "举报待处理",
       "pick_nodes": "待我选站 · 外域流程",
+      "reassign_requests": "改派请求",
       "go_pick": "选站 →",
       "sentence_requests_by_civ": {
         "cn": "受刑请求待批"

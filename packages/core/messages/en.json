@@ -2009,6 +2009,7 @@
       "sentence_requests": "Placement plan requests",
       "reports": "Reports to review",
       "pick_nodes": "Stations to pick · other realms' flows",
+      "reassign_requests": "Reassign requests",
       "go_pick": "Pick →",
       "sentence_requests_by_civ": {
         "cn": "Sentence plan requests"
