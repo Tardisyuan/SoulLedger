@@ -347,6 +347,16 @@ describe("scrim and the sheet radius (batch 55)", () => {
     expect(radiusOf(css("src/components/judgment/sealReadback.module.css"), ".panel")).toBe("var(--radius-sheet)");
     expect(radiusOf(CSS, ".demo-preview-card")).toBe("var(--radius-sheet)");
   });
+  it("batch 56: what you tap is 4, large surfaces 12; no 14 / 8 left on the demo site", () => {
+    expect(radiusOf(CSS, ".demo-home-card")).toBe("var(--radius-sheet)");
+    expect(radiusOf(CSS, ".demo-peek")).toBe("var(--radius-sheet)");
+    expect(radiusOf(CSS, ".demo-home-enter")).toBe("var(--radius-control)");
+    expect(radiusOf(CSS, ".demo-peek-sheet,\n.demo-peek-phone")).toBe("var(--radius-sheet)");
+    // The phone's own block (after the shared one) no longer overrides it with a literal.
+    expect(CSS.split(".demo-peek-phone {")[2]?.split("}")[0]).not.toMatch(/border-radius/);
+    const demo = CSS.split("\n").filter((l) => /^\s*border-radius:\s*(14|8)px;/.test(l));
+    expect(demo).toEqual([]);
+  });
 });
 
 /** 文明皮的六个通用名(v4 五个 + 第三十批的印),`[data-civ="x"]` 把它们各自指到 `--color-civ-x` 加这个后缀。 */

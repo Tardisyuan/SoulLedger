@@ -3348,7 +3348,7 @@ li:last-child > .route-row {
 }
 /* 四张卡:圆角 14;特点短语与缩略图用本文明的字色;入口 1px 描边(窄屏只是一行字)。 */
 .demo-home-card {
-  border-radius: 14px;
+  border-radius: var(--radius-sheet);
   /* 「从这里开始」按卡宽决定画不画(下面的容器查询)。 */
   container-type: inline-size;
 }
@@ -3382,7 +3382,7 @@ li:last-child > .route-row {
 @media (min-width: 48rem) {
   .demo-home-enter {
     border: 1px solid oklch(var(--color-line-strong));
-    border-radius: 8px;
+    border-radius: var(--radius-control);
   }
 }
 .demo-shape-walked,
@@ -3432,7 +3432,7 @@ li:last-child > .route-row {
   max-height: 100dvh;
   overflow-y: auto;
   border: 1px solid oklch(var(--color-line));
-  border-radius: 14px;
+  border-radius: var(--radius-sheet);
   background: oklch(var(--color-surface-1));
   box-shadow: var(--shadow-overlay);
 }
@@ -3472,13 +3472,12 @@ li:last-child > .route-row {
 .demo-peek-sheet,
 .demo-peek-phone {
   border: 1px solid oklch(var(--color-line-strong));
-  border-radius: 8px;
+  border-radius: var(--radius-sheet);
   background: oklch(var(--color-surface-2));
 }
 .demo-peek-phone {
   width: 72px;
   height: 140px;
-  border-radius: 12px;
 }
 .demo-peek-line {
   display: block;

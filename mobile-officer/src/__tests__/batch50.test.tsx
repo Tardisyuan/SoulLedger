@@ -69,6 +69,8 @@ describe("C1 · after sealing, the detail stays and says so", () => {
     fireEvent.press(screen.getByTestId("mock-seal"));
     expect(await screen.findByTestId("detail-sealed")).toHaveTextContent(/^已落印 · 进入审批/);
     expect(screen.getByTestId("detail-sealed")).toHaveTextContent(/驳回会重开一案/);
+    // 第五十六批：页面里的一块，面板圆角 6(此前 10)。
+    expect(StyleSheet.flatten(screen.getByTestId("detail-sealed").props.style)).toMatchObject({ borderRadius: 6 });
     expect(screen.getByTestId("detail-dimmed")).toHaveStyle({ opacity: 0.55 });
     expect(screen.queryByTestId("judgment-seal")).toBeNull(); // the strip carries the seal, not the header
     expect(screen.queryByTestId("judgment-actions")).toBeNull();
