@@ -1721,7 +1721,8 @@
       "terminate_confirm_title": "结束这个流程？",
       "terminate_confirm_message": "结束后不能再推进或裁决。理由会记入审计日志。",
       "terminate_success": "流程已结束",
-      "terminate_error": "结束流程失败"
+      "terminate_error": "结束流程失败",
+      "deadline": "{{time}} 截止"
     },
     "verdicts": {
       "passed": "通过",
