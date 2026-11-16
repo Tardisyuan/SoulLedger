@@ -499,7 +499,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if user is None:
             return problem(status.HTTP_404_NOT_FOUND, 'not_found', 'No such account.')
         work = open_work(user)
-        return Response({**grouped(work), 'kinds': work})
+        rows = grouped(work)
+        return Response({'claimed': rows['claimed'], 'approvals': rows['approvals'], 'dispatch': rows['dispatch'],
+                         'cross': rows['cross'], 'kinds': work})
 
     @extend_schema(request=MigrateCivilizationSerializer,
                    responses={200: UserManagementSerializer, 400: ProblemSerializer, 403: ProblemSerializer,
