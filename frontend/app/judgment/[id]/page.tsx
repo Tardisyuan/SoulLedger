@@ -94,6 +94,7 @@ import { useArchiveJudgment, useCaseAttachments, useDeferJudgment, useJudgmentNe
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { OwnerOrgField } from "@/src/components/organizations/OwnerOrgField";
 import { DeferDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { ReassignRequestLine, ReassignToButton, reassignRequestShown } from "@/src/components/judgment/ReassignRequest";
 import {
   EMPTY_REASONS,
   RejectReasonPanel,
@@ -493,6 +494,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const canWangsi = canEditCase && hasPermission("wangsi.execute");
   // 城隍初审中(第五十三批 J-1):十殿不能认领、暂缓、结案(服务端 409 `at_city_god`),按钮置灰并说原因。
   const atCityGod = isAtCityGod(judgment?.city_god_status);
+  // 有人请求改派:能改派的人在页头读到请求,主动作是「改派给…」(App O-a)。
+  const reassignAsked = !!judgment && reassignRequestShown(judgment, user?.id, hasPermission("judgment.assign"));
   // 城隍以外的「还不能结案」(枉死城 / 木乃伊 / 到不了殿 / 未渡河):服务端算好的码,与结案的拒绝同一条规则。
   const concludeHeld = !!judgment?.conclude_refusal && !atCityGod;
   const buttonOn = useMenuButtonConfig();
@@ -802,6 +805,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {t("judgment.claim.not_yours_readonly", { name: judgment.claimed_by_name ?? "" })}
         </span>
       )}
+      {reassignAsked && <ReassignRequestLine judgment={judgment} />}
       {overridingClaim && (
         <span data-testid="desk-claim-override" role="note" className="basis-full text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">! </span>
@@ -939,8 +943,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       title={<DomainText value={soulName} />}
       subtitle={subtitle}
       actions={
-        previousId || nextId || isFinal || canDefer ? (
+        previousId || nextId || isFinal || canDefer || reassignAsked ? (
           <span className="inline-flex items-center gap-4">
+            {reassignAsked && <ReassignToButton judgmentId={judgment.id} />}
             {/* 「放进待定」是页头的一个动作,不是第五个裁决(Design 第十一批 1a);理由框见下(D5 仍必填)。 */}
             {canDefer && (
               <Button type="button" variant="secondary" size="sm" className="gap-2" data-testid="desk-defer" onClick={() => setDeferAsking(true)}>
