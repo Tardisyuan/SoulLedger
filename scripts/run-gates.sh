@@ -248,10 +248,10 @@ remote_verdict() {
 
 # ── THE WINDOWS PC: A THIRD HOST WHEN UNRAID IS FULL AND THE PC IS IDLE (2026-11-17, user decision) ──
 # GATES_REMOTE_WIN (.prepush.env) names an ssh host: sshd inside WSL on the PC, with docker, the same images and
-# its own sl-pg-test. A gate run goes there only when every unRAID gate slot is held right now (--e2e: when
-# unRAID's e2e.lock is held), the PC answers, has the image, runs no other job of ours, no game from
-# GATES_REMOTE_WIN_GAMES is running and Windows' CPU is under GATES_REMOTE_WIN_MAX_CPU %. Otherwise nothing
-# changes: the run goes to GATES_REMOTE exactly as before and waits there. The PC takes one job at a time,
+# its own sl-pg-test. A gate run goes there when unRAID's slot 1 is held right now (the order: win_route) and the
+# PC is idle: it answers, has the image, runs no other job of ours, and no game from GATES_REMOTE_WIN_GAMES runs
+# (--e2e: when unRAID's e2e.lock is held). Otherwise nothing changes: the run goes to GATES_REMOTE exactly as
+# before and takes a slot or waits there. The PC takes one job at a time,
 # gate or E2E: both take its run.lock.
 # The user's two conditions: (1) a game that starts during a run drops the run to nice 19 and
 # GATES_REMOTE_WIN_GAME_CPUS CPUs — never stops it — and restores it when the game exits (win_watch, beside
@@ -271,18 +271,15 @@ win_exe() {
 win_game() {
     local d="$1" g tl; shift
     [ -e "$d/game-running" ] && { echo "game-running flag"; return 0; }
-    tl=$(win_exe /mnt/c/Windows/System32/tasklist.exe /FO CSV /NH) || { echo "cannot ask Windows"; return 0; }
+    tl=$(win_exe "${WIN_TASKLIST:-/mnt/c/Windows/System32/tasklist.exe}" /FO CSV /NH) || { echo "cannot ask Windows"; return 0; }
     for g in "$@"; do grep -qi "^\"$g\"" <<<"$tl" && { echo "$g"; return 0; }; done; return 0
 }
-# win_probe <dir> <image> <max cpu %> <game.exe>… — on the PC: "idle", or why not.
+# win_probe <dir> <image> <game.exe>… — on the PC: "idle" (no game, no job of ours running), or why not.
 win_probe() {
-    local d="$1" img="$2" max="$3" g cpu; shift 3
+    local d="$1" img="$2" g; shift 2
     docker image inspect "$img" >/dev/null 2>&1 || { echo "no $img image"; return; }
     mkdir -p "$d" && ( flock -n 9 ) 9>"$d/run.lock" || { echo "already running a job of ours"; return; }
     g=$(win_game "$d" "$@"); [ -z "$g" ] || { echo "game: $g"; return; }
-    cpu=$(win_exe /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -c \
-        "(Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average" | tr -dc 0-9)
-    [ -n "$cpu" ] && [ "$cpu" -lt "$max" ] || { echo "Windows CPU at ${cpu:-?}% (limit $max%)"; return; }
     echo idle
 }
 # win_watch <container> <dir> <cpus> <cpus while a game runs> <game.exe>… — on the PC, beside the run, until the
@@ -311,23 +308,30 @@ win_bg() {
 }
 win_bg_end() { [ "$WIN_WATCH" = 1 ] && printf '%s' 'kill $W 2>/dev/null; '; return 0; }
 # win_route <gate|e2e> <image> — point GATES_REMOTE (and its dir, database, sizes) at the PC when the rule holds.
+# THE ORDER A GATE RUN TAKES (2026-11-17, user decision): unRAID slot 1 (run.lock) free → unRAID; else the PC if
+# idle → the PC; else unRAID, where remote_slots takes slot 2 or queues as before. A run the PC turned down (a game,
+# a job of ours there) goes to unRAID and stays there, even if the game ends. --e2e: the PC only when unRAID's
+# e2e.lock is held. Each run prints its choice: `slot: …`.
 win_route() {
     [ -n "${GATES_REMOTE_WIN:-}" ] && [ -n "${GATES_REMOTE:-}" ] || return 1
-    local locks=e2e.lock state why url
-    [ "$1" = gate ] && { locks=run.lock; [ "${GATES_REMOTE_SLOTS:-2}" = 1 ] || locks="run.lock run.2.lock"; }
-    state=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" \
-        "for l in $locks; do flock -n $RDIR/\$l true && { echo free; exit; }; done; echo full" 2>/dev/null)
-    [ "$state" = full ] || [ "${GATES_REMOTE_WIN_FORCE:-}" = 1 ] || return 1  # FORCE: try the PC whatever unRAID has free
+    local lock=e2e.lock what="e2e.lock" state why url where
+    [ "$1" = gate ] && lock=run.lock what="slot 1"
+    state=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "flock -n $RDIR/$lock true && echo free || echo busy" 2>/dev/null)
+    if [ "$state" != busy ] && [ "${GATES_REMOTE_WIN_FORCE:-}" != 1 ]; then  # FORCE: try the PC whatever unRAID has free
+        echo "$P: slot: $GATES_REMOTE ($GATES_REMOTE $what ${state:-unknown})"; return 1
+    fi
     why=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE_WIN" \
-        "$(declare -f win_exe win_game win_probe); win_probe $WIN_DIR $2 ${GATES_REMOTE_WIN_MAX_CPU:-40} $WIN_GAMES" 2>/dev/null)
-    [ "$why" = idle ] || { echo "$P: $GATES_REMOTE is full ($locks held); not using $GATES_REMOTE_WIN: ${why:-unreachable}"; return 1; }
+        "$(declare -f win_exe win_game win_probe); win_probe $WIN_DIR $2 $WIN_GAMES" 2>/dev/null)
+    if [ "$why" != idle ]; then
+        [ "$1" = gate ] && where="$GATES_REMOTE slot 2, or its queue" || where="$GATES_REMOTE, its e2e.lock queue"
+        echo "$P: slot: $where ($GATES_REMOTE $what $state, $GATES_REMOTE_WIN not used: ${why:-unreachable})"; return 1
+    fi
     if [ "$1" = gate ]; then
         url="${GATES_REMOTE_WIN_DB_URL:-$(ssh -o BatchMode=yes "$GATES_REMOTE_WIN" cat /etc/sl-gates/pg.url 2>/dev/null)}"
         [ -n "$url" ] || { echo "$P: not using $GATES_REMOTE_WIN: no GATES_REMOTE_WIN_DB_URL and no /etc/sl-gates/pg.url there"; return 1; }
         GATES_REMOTE_DB_URL="$url"
     fi
-    [ "$state" = full ] && why="is full ($locks held)" || why="is not full, but GATES_REMOTE_WIN_FORCE=1"
-    echo "$P: $GATES_REMOTE $why and $GATES_REMOTE_WIN is idle — this run goes there"
+    echo "$P: slot: $GATES_REMOTE_WIN ($GATES_REMOTE $what $state${GATES_REMOTE_WIN_FORCE:+, GATES_REMOTE_WIN_FORCE=1}, win idle)"
     GATES_REMOTE="$GATES_REMOTE_WIN" RDIR="$WIN_DIR" RWORK="$WIN_DIR/work/$RID" GATES_REMOTE_SLOTS=1 ELOCK=run.lock WIN_WATCH=1
     SLOT_CPUS="${GATES_REMOTE_WIN_CPUS:-16}" SLOT_MEM="${GATES_REMOTE_WIN_MEMORY:-32g}" SLOT_WORKERS="${GATES_REMOTE_WIN_WORKERS:-6}"
     GATES_REMOTE_CPUS="$SLOT_CPUS" GATES_REMOTE_MEMORY="$SLOT_MEM" GATES_REMOTE_E2E_CPUS="$SLOT_CPUS" GATES_REMOTE_E2E_MEMORY="$SLOT_MEM"
