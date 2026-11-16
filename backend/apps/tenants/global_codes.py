@@ -125,8 +125,15 @@ def claim_org_code(org, using=None):
     try:
         claim(ORG_CODE, org.code, org.tenant_id, using=alias)
     except IntegrityError:
-        # The same code already claimed: refuse like the UNIQUE index did, whatever database holds the row.
-        raise IntegrityError(f"organization code {org.code!r} is already taken") from None
+        # The same code already claimed: refuse like the UNIQUE index did, whatever database holds the row --
+        # unless the claim is this hall's own and no row of its database holds the code (stage 4: a shard
+        # transaction that rolled back after its claim committed, e.g. the hall's root unit `tenant_root` made in a
+        # request that then failed). One hall's rows are in one database, whose UNIQUE index decides between two
+        # writers of it there; without this the hall's deterministic root code could never be written again.
+        mine = _model().objects.using(CONTROL_ALIAS).filter(kind=ORG_CODE, value=org.code, tenant_id=org.tenant_id)
+        held = type(org)._base_manager.using(alias).filter(code=org.code).exists()
+        if alias == CONTROL_ALIAS or held or not mine.exists():
+            raise IntegrityError(f"organization code {org.code!r} is already taken") from None
     return old
 
 

@@ -167,12 +167,25 @@ def _diff(src, dst):
             + [("differs", pk) for pk in src.keys() & dst.keys() if src[pk] != dst[pk]])
 
 
+def _control_masters(model, civ):
+    """Whether control is the master of `model`'s rows of `civ`: always for REFERENCE (D4); for SHARD rows until
+    the civilization's writes are cut over (stage 4), and after it for the control-mastered models
+    (`apps.core.shard_reads.control_mastered`: their reads stay on control, so their writes do)."""
+    from apps.core.shard_reads import control_mastered
+
+    return placement(model) == REFERENCE or civ not in settings.SHARD_WRITE_CIVS or control_mastered(model)
+
+
 def _sides(model, shard, civ, halls, direction):
-    """(source queryset, target queryset) for one model and shard, or None when not compared that way."""
+    """(source queryset, target queryset) for one model and shard, or None when not compared that way: each
+    direction only writes over the side that is not the master (a write-cut shard's own rows are never
+    overwritten from control, control's master rows never from a shard)."""
     if direction == CONTROL_TO_SHARD:
+        if not _control_masters(model, civ):
+            return None  # stage 4: the shard is this model's master (the sync runs shard-to-control)
         return owned(model, "default", civ, halls), owned(model, shard, civ, halls)
-    if placement(model) == REFERENCE:
-        return None  # control stays the master of reference tables (D4)
+    if placement(model) == REFERENCE or (civ in settings.SHARD_WRITE_CIVS and _control_masters(model, civ)):
+        return None  # control stays the master of reference tables (D4) and of the control-mastered models
     # The shard is the master of its own rows; its soul copies are not its rows.
     return owned(model, shard, civ, halls, copies=False), owned(model, "default", civ, halls, copies=False)
 
@@ -263,6 +276,31 @@ def apply_fix(found, direction):
                 for i in range(0, len(rows), step):
                     # raw: the values as read, no pre_save -- bulk_create would stamp auto_now columns anew.
                     model._base_manager.using(target)._insert(rows[i:i + step], fields=fields, raw=True, using=target)
+    # Raw inserts and deletes send no signal: the per-process caches built from these rows (apps/core/versioned.py,
+    # e.g. the data scope's org tree from Organization) are told here, now and at the target's commit.
+    from apps.core.versioned import bump_for
+
+    for model in found:
+        bump_for(model, using=target)
+
+
+def sync_direction(shard):
+    """Which way a civilization's sync runs: shard-to-control once its writes are cut over (stage 4: control stays
+    a full mirror until stage 5, so taking the civilization back off SHARD_WRITE_CIVS stays cheap), else
+    control-to-shard. A write-cut shard still takes control's REFERENCE and control-mastered rows (`_sides`)."""
+    return SHARD_TO_CONTROL if civilization_of(shard) in settings.SHARD_WRITE_CIVS else CONTROL_TO_SHARD
+
+
+def sync(shards):
+    """The sync of each shard, each in its own direction (`sync_direction`): {alias: rows fixed}."""
+    out = {}
+    for shard in shards:
+        n = 0
+        if sync_direction(shard) == SHARD_TO_CONTROL:
+            n += len(reconcile([shard], fix=True, direction=SHARD_TO_CONTROL)[shard])
+        n += len(reconcile([shard], fix=True)[shard])
+        out[shard] = n
+    return out
 
 
 def reconcile(shards, *, fix=False, direction=CONTROL_TO_SHARD, retry_window=0):
@@ -293,7 +331,10 @@ def _enqueue():
 
 
 def _on_write(sender, using="default", **kwargs):
-    if using != "default" or not shard_aliases():
+    """A write to a master queues the sync: control, or (stage 4) a shard whose writes are cut over."""
+    if not shard_aliases():
+        return
+    if using != "default" and not (using in shard_aliases() and sync_direction(using) == SHARD_TO_CONTROL):
         return
     conn = transaction.get_connection(using)
     if conn.in_atomic_block and any(func is _enqueue for _, func, _ in conn.run_on_commit):
@@ -301,10 +342,37 @@ def _on_write(sender, using="default", **kwargs):
     transaction.on_commit(_enqueue, using=using)
 
 
+def _copy_hall(sender, instance, using="default", raw=False, **kwargs):
+    """Stage 4: a hall saved on control is copied into every shard at once (REFERENCE, D4), in that shard's open
+    transaction when there is one. A new hall of a write-cut civilization is seeded on its shard in the same request
+    (`tenants.views.TenantViewSet.create`), whose foreign keys to the hall must hold at the shard's commit -- the
+    next sync is too late. Only while some civilization's writes are cut over; before that the sync copies it."""
+    if not settings.SHARD_WRITE_CIVS or using != "default" or raw:
+        return
+    fields = [f for f in sender._meta.concrete_fields if not f.primary_key]
+    for alias in shard_aliases():
+        rows = sender._base_manager.using(alias).filter(pk=instance.pk)
+        if rows.exists():
+            rows.update(**{f.attname: getattr(instance, f.attname) for f in fields})
+        else:
+            sender._base_manager.using(alias)._insert([instance], fields=sender._meta.concrete_fields, raw=True,
+                                                      using=alias)
+
+
+def connect_hall_copies():
+    from django.db.models.signals import post_save
+
+    post_save.connect(_copy_hall, sender=apps.get_model("tenants", "Tenant"), dispatch_uid="shard_sync_copy_hall")
+
+
 def connect():
     for model in compared_models():
         uid = f"shard_sync:{model._meta.label}"
         post_save.connect(_on_write, sender=model, dispatch_uid=uid)
         post_delete.connect(_on_write, sender=model, dispatch_uid=uid)
-        if model._meta.auto_created:
+        if model in _through_models():  # add() / remove() send no post_save
             m2m_changed.connect(_on_write, sender=model, dispatch_uid=uid)
+
+
+def _through_models():
+    return {f.remote_field.through for m in apps.get_models() for f in m._meta.local_many_to_many}

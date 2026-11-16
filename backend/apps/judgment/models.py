@@ -622,9 +622,20 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         if refresh_claimable_since(self) and kwargs.get("update_fields") is not None:
             kwargs["update_fields"] = [*kwargs["update_fields"], "claimable_since"]
         if self._state.adding and not self.case_number:
-            # 发号与写入在同一个事务里:写入失败,号跟着回滚,不留空号。
-            with transaction.atomic():
+            from apps.tenants.global_codes import row_alias
+
+            alias = row_alias(self, kwargs.get("using"))
+            if alias == "default":
+                # 发号与写入在同一个事务里:写入失败,号跟着回滚,不留空号。
+                with transaction.atomic(using="default"):
+                    self.case_number = JudgmentCaseCounter.next_number(self.tenant)
+                    super().save(*args, **kwargs)
+                return
+            # 分库阶段 4:案子写在分库,计数行在控制库(CONTROL)。号在控制库自己的事务里先提交、不握锁跨库;
+            # 分库写失败留下空号,永不复用 —— 与 WF 号同一条(缺口 4b,global_codes.next_workflow_number)。
+            with transaction.atomic(using="default"):
                 self.case_number = JudgmentCaseCounter.next_number(self.tenant)
+            with transaction.atomic(using=alias):
                 super().save(*args, **kwargs)
             return
         super().save(*args, **kwargs)
@@ -1480,7 +1491,8 @@ class CityGod(AuditUserFields, models.Model):
     name = models.CharField(max_length=100)
     regions = models.JSONField(default=list, blank=True)
     is_default = models.BooleanField(default=False)
-    officers = models.ManyToManyField("authentication.User", blank=True, related_name="city_gods", db_constraint=False)
+    officers = models.ManyToManyField("authentication.User", blank=True, related_name="city_gods",
+                                      through="CityGodOfficer")
     #: 四级之一(docs/08 §二);空 = 未定级(这一列之前建的城隍)。
     rank = models.CharField(max_length=12, choices=CityGodRank.choices, blank=True, default="")
     #: 这位城隍设了哪些司(`CityGodBureau` 的值);docs/08:「级别越高,下属二十四司配置越齐全」—— 按实际配置记,不按级别推。
@@ -1500,3 +1512,15 @@ class CityGod(AuditUserFields, models.Model):
 
     def __str__(self):
         return self.name
+
+
+class CityGodOfficer(models.Model):
+    """`CityGod.officers`' through row (stage 4 gap 4c), the M2M's own table made explicit: the user is a control row
+    and Django's collector, deleting a user on control, would look for this shard table there (or, from stage 5, not
+    find it). Both keys are bare ids (DO_NOTHING, no constraint), cleared by apps.core.bare_ids on every database."""
+    citygod = models.ForeignKey(CityGod, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
+    user = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
+
+    class Meta:
+        db_table = "judgment_citygod_officers"
+        unique_together = [("citygod", "user")]

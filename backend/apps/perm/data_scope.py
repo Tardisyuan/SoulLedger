@@ -147,6 +147,7 @@ def connect_invalidation():
     from apps.perm.models import RoleDataScope
 
     m2m_changed.connect(_bump, sender=RoleDataScope.orgs.through, dispatch_uid="datascope-orgs")
+    _shared.watch("perm.RoleDataScope", "perm.Role", "org.Organization", RoleDataScope.orgs.through._meta.label)
 
 
 def _tree(tenant_id) -> dict:

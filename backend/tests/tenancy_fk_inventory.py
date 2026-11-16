@@ -187,6 +187,14 @@ EDGES = {
     'death_sync.TudiGod.officers->authentication.User': ('m2m', 'BARE', 'officers registering in the name of a 土地公; the serializer admits only officers of that hall (claims.is_assignable)'),
     'perm.RoleDataScope.orgs->org.Organization': ('m2m', 'BARE', 'DEFINE units of a global role; may name units of any hall on purpose, hall isolation filters first (datascope design)'),
     'judgment.CityGod.officers->authentication.User': ('m2m', 'BARE', 'officers assigned to a city god; the serializer admits only officers of that hall (claims.is_assignable)'),
+    # Stage 4 gap 4c: the three M2M through tables, explicit; both keys bare (DO_NOTHING), as the auto-created
+    # ones were since 1B, cleared by apps.core.bare_ids on every database.
+    'death_sync.TudiGodOfficer.tudigod->death_sync.TudiGod': ('U->S', 'BARE', "TudiGod.officers' through row, owner side; follows its tudi god (gap 4c: bare like its other end)"),
+    'death_sync.TudiGodOfficer.user->authentication.User': ('user-other', 'BARE', "TudiGod.officers' through row: a control user named from a shard"),
+    'judgment.CityGodOfficer.citygod->judgment.CityGod': ('U->S', 'BARE', "CityGod.officers' through row, owner side; follows its city god (gap 4c: bare like its other end)"),
+    'judgment.CityGodOfficer.user->authentication.User': ('user-other', 'BARE', "CityGod.officers' through row: a control user named from a shard"),
+    'perm.RoleDataScopeOrg.organization->org.Organization': ('U->S', 'BARE', "RoleDataScope.orgs' through row: a shard organization named from control"),
+    'perm.RoleDataScopeOrg.roledatascope->perm.RoleDataScope': ('U->U', 'BARE', "RoleDataScope.orgs' through row, owner side (gap 4c: bare like its other end)"),
     'actors.Actor.tenant->tenants.Tenant': ('tenantcol', 'DB', 'ownership column: the row belongs to this tenant'),
     'audit.AuditLog.tenant->tenants.Tenant': ('tenantcol', 'DB', 'PROTECT: a hall with audit history cannot be deleted'),
     'authentication.User.tenant->tenants.Tenant': ('tenantcol', 'DB', "the officer's hall; nullable (ADMIN and some accounts have none)"),

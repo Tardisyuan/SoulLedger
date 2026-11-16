@@ -29,7 +29,8 @@ class TudiGod(AuditUserFields, models.Model):
     regions = models.JSONField(default=list, blank=True)
     city_god = models.ForeignKey("judgment.CityGod", on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="tudi_gods")
-    officers = models.ManyToManyField("authentication.User", blank=True, related_name="tudi_gods", db_constraint=False)
+    officers = models.ManyToManyField("authentication.User", blank=True, related_name="tudi_gods",
+                                      through="TudiGodOfficer")
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
@@ -43,6 +44,17 @@ class TudiGod(AuditUserFields, models.Model):
 
     def __str__(self):
         return self.name
+
+
+class TudiGodOfficer(models.Model):
+    """`TudiGod.officers`' through row (stage 4 gap 4c), made explicit like `judgment.CityGodOfficer`: both keys
+    are bare ids (DO_NOTHING, no constraint), cleared by apps.core.bare_ids on every database."""
+    tudigod = models.ForeignKey(TudiGod, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
+    user = models.ForeignKey("authentication.User", on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
+
+    class Meta:
+        db_table = "death_sync_tudigod_officers"
+        unique_together = [("tudigod", "user")]
 
 
 class ExternalApiKey(AuditUserFields, models.Model):

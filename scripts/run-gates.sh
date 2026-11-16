@@ -1634,10 +1634,16 @@ def check(name, url):
     # sqlite / in-memory needs no socket.
     if url.startswith("sqlite"):
         print(f"{name} ok in-memory"); return
-    m = re.search(r"@?([\w.-]+):(\d+)", url)
-    if not m:
-        print(f"{name} unknown {url or '(unset)'}"); return
-    host, port = m.group(1), int(m.group(2))
+    # urlsplit, not a regex: a regex for "word:digits" matched "user:6…" when a password began
+    # with a digit (the Windows PC's sl-pg-test, 2026-11-17) and probed host "sl" port 6.
+    from urllib.parse import urlsplit
+    try:
+        u = urlsplit(url)
+        host, port = u.hostname, u.port or {"postgres": 5432, "postgresql": 5432, "redis": 6379}.get(u.scheme)
+    except ValueError:
+        host = port = None
+    if not host or not port:
+        print(f"{name} unknown {'(set)' if url else '(unset)'}"); return
     s = socket.socket(); s.settimeout(3)
     try:
         s.connect((host, port)); print(f"{name} ok {host}:{port}")
