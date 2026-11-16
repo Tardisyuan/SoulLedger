@@ -133,7 +133,10 @@ def _what_115_had(rng, halls_by_civ, accounts):
         to the hall it resided in -- plus a block and an assistant conversation (the paths through SoulAccount);
     (b) souls held in a realm (open path entries), so the occupancy's average stay is a duration;
     (c) rows of several civilizations tied on their list's first order key;
-    (d) a workflow template in every civilization whose steps name a role (the role list's template count)."""
+    (d) a workflow template in every civilization whose steps name a role (the role list's template count);
+    (e) shadow-diff --all 2026-11-16: an original concluded in a Chinese hall whose approval flow is IN_PROGRESS, its
+        disposition with no hall (written before `DispositionViewSet.create_tenant` filled it in), beside a sibling
+        case of the same hall whose precedents list it. Returns (that case, the sibling)."""
     from datetime import datetime, timedelta
 
     from django.utils import timezone
@@ -186,6 +189,18 @@ def _what_115_had(rng, halls_by_civ, accounts):
         template = WorkflowTemplate.objects.filter(tenant__in=halls).first()
         WorkflowTemplate._base_manager.filter(pk=template.pk).update(nodes_json=[
             {"node_order": 1, "node_name": "trial", "approver_type": "ROLE", "approver_role": "JUDGE"}])
+    from apps.disposition.models import Disposition  # (e)
+    from tests import sentence_plan_support as sp
+
+    hall = halls_by_civ["CHINESE"][0]
+    cases = []
+    for name in ("hall-less disposition", "its sibling"):
+        _soul, case = sp.open_case(hall, name=name)
+        assert case.conclude("FAILED", "") is True
+        cases.append(case)
+    Disposition._base_manager.filter(judgment=cases[0]).update(
+        tenant=None, destination_realm=Realm._base_manager.filter(tenant=hall).first())
+    return cases
 
 
 class LettersMatrix:
@@ -258,7 +273,7 @@ def _build(rng):
     home, away, home2, away2 = _pairs(rng, halls_by_civ)
     movers = [_residence(rng, home, away, cache, counter, returned=False),
               _residence(rng, home2, away2, cache, counter, returned=True)]
-    _what_115_had(rng, halls_by_civ, [account for account, _ in movers])
+    hall_less_case, sibling = _what_115_had(rng, halls_by_civ, [account for account, _ in movers])
 
     def user(name, role, hall=None, **kw):
         u = User.objects.create_user(username=name, password="x", role=role, tenant=hall, **kw)
@@ -276,7 +291,8 @@ def _build(rng):
     code, out = _reconcile("--all")
     assert code == 0 and "not copied" not in out and "dangling" not in out, f"SHARDED_READS_SEED={SEED}\n{out}"
     print(f"models the filler could not make in some hall: {sorted(unmade)}")
-    return {"callers": callers, "crossed": crossed, "halls": halls, "why_not_crossed": why}
+    return {"callers": callers, "crossed": crossed, "halls": halls, "why_not_crossed": why,
+            "hall_less_disposition": (hall_less_case, sibling)}
 
 
 def _pairs(rng, halls_by_civ):
@@ -423,6 +439,43 @@ def test_the_world_has_what_115_had(world):
     with override_settings(SHARD_READ_CIVS=[]):
         named = {ref["template_id"] for ref in role_template_references().get("JUDGE", [])}
     assert len(named) >= len(CIVS), named
+
+
+@sharded
+def test_a_disposition_with_no_hall_is_read_beside_its_judgment(world):
+    """(e): the judgment desk's `flow_progress.waiting` reads a judgment's disposition; one with no hall lives in
+    control only, beside a judgment read from its hall's shard. Every caller of the judgment's hall, the
+    civilization's ADMIN and SYSTEM_ADMIN get what the single database answers. The precedents' 「去向」 joins the
+    same row (`select_related("disposition__…")`); that query also joins `soul` (a crossing key), so it is answered
+    from control (CROSSING_JOINS_ON_CONTROL) and is held here so it stays that way."""
+    from apps.disposition.models import Disposition
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    case, sibling = world["hall_less_disposition"]
+    disposition = Disposition._base_manager.get(judgment=case)
+    assert disposition.tenant_id is None and not disposition.is_executed
+    assert ApprovalWorkflow._base_manager.get(judgment=case).status == ApprovalWorkflowStatus.IN_PROGRESS
+    hall = case.tenant
+    who = {k: c for k, c in world["callers"].items()
+           if k.endswith(f"@{hall.code}") or k in (f"ADMIN@{hall.civilization}", "SYSTEM_ADMIN")}
+    urls = [f"/api/v1/judgment/{case.pk}/", f"/api/v1/judgment/{sibling.pk}/precedents/?limit=20"]
+    mismatches, seen = [], []
+    for name, client in who.items():
+        for url in urls:
+            with override_settings(SHARD_READ_CIVS=[]):
+                base = _fetch(client, url)
+            with override_settings(SHARD_READ_CIVS=list(CIVS)):
+                cut = _fetch(client, url)
+            if base != cut:
+                mismatches.append(f"{name} GET {url}: {shadow.diff(base, cut)}")
+            body = base[1]
+            if base[0] == 200 and isinstance(body, dict) and body.get("flow_progress"):
+                seen.append(body["flow_progress"]["waiting"])
+            if base[0] == 200 and isinstance(body, list):
+                seen.extend(r["realm_code"] for r in body if r["id"] == str(case.pk))
+    # The single database does see it waiting, and the precedent's 「去向」.
+    assert "approval_in_progress" in seen and disposition.destination_realm.realm_code in seen, (who.keys(), seen)
+    assert not mismatches, f"SHARDED_READS_SEED={SEED}\n" + "\n".join(mismatches)
 
 
 @sharded
