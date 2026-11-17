@@ -77,7 +77,10 @@ def test_the_stage_drops_exactly_the_bare_constraints_and_its_reverse_restores_t
     migrate_to(before)
     reversed_ = _constrained()
     assert bare <= reversed_, f"the reverse did not restore: {sorted(bare - reversed_)[:10]}"
-    assert reversed_ - bare == at_latest  # and touched no other constraint
+    # and touched no other constraint -- of the tables that exist there too: a later migration's new table (the
+    # stage-4 saga's ShardOutbox) is dropped with its constraints when the app migrates back past it.
+    there = set(connection.introspection.table_names())
+    assert reversed_ - bare == {c for c in at_latest if c[0] in there}
     assert stored() == user.pk
 
     migrate_to_latest()

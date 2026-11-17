@@ -114,11 +114,15 @@ def world(request):
 
 # ---- observing every database ---------------------------------------------------------------------------------------
 
-def _snapshot():
+def _snapshot(tables=None):
+    """Every row of every model on every alias -- or of the `tables` named (a row changes only by a write, and the
+    wrapper on every connection sees every write, so the tables nobody wrote are the same rows)."""
     out = {}
     for alias in settings.DATABASES:
         for m in apps.get_models(include_auto_created=True):
             if m._meta.label in SAGA_TABLES or not router.allow_migrate_model(alias, m):
+                continue
+            if tables is not None and m._meta.db_table not in tables:
                 continue
             rows = sorted(_VOLATILE.sub("~", repr(r[1:])) for r in m._base_manager.using(alias).values_list())
             if rows:
@@ -135,10 +139,10 @@ def _pending():
 INJECTED_FROM_BUS = []
 
 
-def _writes_during(action, fail_at=None):
-    """Run `action` with a wrapper on every connection; the writes made (alias, table), in order. Write number
-    `fail_at` raises InjectedError instead."""
-    seen = []
+def _writes_during(action, fail_at=None, seen=None):
+    """Run `action` with a wrapper on every connection; the writes made (alias, table), in order (into `seen` too,
+    which survives a raise). Write number `fail_at` raises InjectedError instead."""
+    seen = [] if seen is None else seen
 
     def wrapper(alias):
         def wrap(execute, sql, params, many, context):
@@ -225,26 +229,34 @@ def _every_step(label, action, seed):
     _rollback(snap)
     _rollback(start_points)
     assert _snapshot() == before
+    dry_tables = {t for _, t in steps}
+
+    def only(snapshot, tables):
+        return {key: rows for key, rows in snapshot.items() if apps.get_model(key[1])._meta.db_table in tables}
+
     for k in range(1, len(steps) + 1):
         points = _savepoints()
+        seen = []
         try:
-            _writes_during(_run(action), fail_at=k)
+            _writes_during(_run(action), fail_at=k, seen=seen)
         except InjectedError:
             pass
         except Exception as e:  # noqa: BLE001 -- the next query after a swallowed failure
             if not INJECTED_FROM_BUS:
                 raise
             del e
-        relay_until_quiet()
-        now = _snapshot()
+        seen_after = []
+        _writes_during(relay_until_quiet, seen=seen_after)
+        tables = dry_tables | {t for _, t in seen + seen_after}
+        now, start, end = _snapshot(tables), only(before, tables), only(done, tables)
         where = f"seed {seed} {label}: failing at write {k} {steps[k - 1]}"
-        if now not in (before, done):
+        if now not in (start, end):
             # A write made from inside the event bus is best effort (single-database G4, `_VOLATILE`): the path may
             # complete without that one row. Anything else half-applied is a failure.
             table = steps[k - 1][1]
-            assert INJECTED_FROM_BUS == [True] and _without(now, table) == _without(done, table), (
+            assert INJECTED_FROM_BUS == [True] and _without(now, table) == _without(end, table), (
                 f"{where} left neither the start nor the done state: "
-                f"{sorted(set(now) ^ set(done) | {key for key in now if now.get(key) != done.get(key)})}")
+                f"{sorted(set(now) ^ set(end) | {key for key in now if now.get(key) != end.get(key)})}")
         assert not _pending(), f"{where}: still pending after relaying"
         _ownership()
         _rollback(points)
@@ -503,8 +515,9 @@ def test_a_cross_civilization_rebirth_moves_the_primary_and_retires_the_origin_r
 @sharded
 @pytest.mark.parametrize("world", [5], indirect=True)
 def test_the_routes_that_move_a_soul_across_civilizations_run_the_saga_over_http(world):
-    """Through the URLconf's own dispatch routes (found by their view action, not typed here): execute from the
-    target hall, the relay, return-home from the home hall, the relay."""
+    """Through the URLconf's own dispatch routes (found by their view action, not typed here), signed in the way
+    production does (a JWT naming the officer's hall, so the request's hall is not the master step 1 acts on):
+    execute by the target hall's ADMIN, the relay, return-home by the home hall's ADMIN, the relay."""
     from django.urls import get_resolver, reverse
     from rest_framework.test import APIClient
 
@@ -524,14 +537,16 @@ def test_the_routes_that_move_a_soul_across_civilizations_run_the_saga_over_http
     def url(action, pk):
         return reverse(routes[action], kwargs={"pk": pk})
 
-    admin = User.objects.create_user(username="saga_sys", password="x", role="SYSTEM_ADMIN")
-    client = APIClient()
-    client.force_authenticate(admin)
+    from tests.conftest import sign_in
+
+    there = User.objects.create_user(username="saga_there", password="x", role="ADMIN", tenant=halls[w["tgt"]])
+    home = User.objects.create_user(username="saga_home", password="x", role="ADMIN", tenant=halls[w["src"]])
+    client = sign_in(APIClient(), there)
     r = client.post(url("execute", record.pk), {}, format="json", HTTP_IDEMPOTENCY_KEY="saga-exec")
     assert r.status_code == 200, (w, r.content)
     relay_until_quiet()
     assert DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.EXECUTED
-    r = client.post(url("return_home", record.pk), {"reason": "saga"}, format="json")
+    r = sign_in(APIClient(), home).post(url("return_home", record.pk), {"reason": "saga"}, format="json")
     assert r.status_code == 200, (w, r.content)
     relay_until_quiet()
     assert DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.RETURNED

@@ -502,7 +502,13 @@ def test_every_constrained_key_of_the_world_refuses_another_civilization(fresh_w
     civilization, and accepted for a row of the same hall. Runs without shard databases."""
     from django.db.models.signals import pre_save
 
-    from apps.core.sharding import CrossCivilizationKeyError, _refuse_cross_civilization, same_civilization_keys
+    from apps.core.sharding import (
+        CrossCivilizationKeyError,
+        _hall_id,
+        _refuse_cross_civilization,
+        same_civilization_keys,
+        tenant_path,
+    )
 
     world = fresh_world
     keys = [(m, f) for m in compared_models() for f in same_civilization_keys(m)]
@@ -514,7 +520,9 @@ def test_every_constrained_key_of_the_world_refuses_another_civilization(fresh_w
     for model, f in keys:
         tried = False
         for here in world.rng.sample(known, len(known)):
-            rows = world.pool[(model, here.pk)]
+            # Rows still in `here`: the world moved some souls to another civilization's hall afterwards.
+            rows = [r for r in world.pool[(model, here.pk)]
+                    if _hall_id(model._base_manager.get(pk=r.pk), tenant_path(model)) == here.pk]
             same = world.pool[(f.related_model, here.pk)]
             other = [r for h in known if h.civilization != here.civilization for r in world.pool[(f.related_model, h.pk)]]
             if not (rows and same and other):
