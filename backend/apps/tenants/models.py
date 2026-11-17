@@ -193,6 +193,25 @@ class GlobalCode(models.Model):
         return f"{self.kind}:{self.value}"
 
 
+class OpenCaseClaim(models.Model):
+    """The control database's one-open-case-per-soul claim (sharding stage 4 part C; apps/tenants/global_codes.py
+    `claim_open_case`). Once civilizations write to their own shards, a REOPEN filed in a soul's home hall and a case
+    opened where it resides are written on two databases, and no row lock spans both: the UNIQUE `soul_id` here does.
+    Taken before the case row is written, released when that case closes or its write rolls back.
+
+    Bare ids, no foreign keys: the row has no path to a hall and stays in control (apps.core.sharding: CONTROL)."""
+
+    soul_id = models.UUIDField(unique=True)
+    #: The case it was taken for (its pk is drawn before the row is written): release names it, so a late release
+    #: of a closed case never drops the claim of the next one.
+    judgment_id = models.UUIDField()
+    tenant_id = models.BigIntegerField(null=True, blank=True)
+    claimed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"open case {self.judgment_id} of soul {self.soul_id}"
+
+
 class ShardMessageState(models.TextChoices):
     PENDING = "PENDING"
     DONE = "DONE"

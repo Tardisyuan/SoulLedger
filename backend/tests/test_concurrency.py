@@ -1419,6 +1419,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_a_shard_workflow_takes_its_number_from_the_control_counter_and_a_rollback_does_not_reuse_it 同文件,两个引擎都跑。
         "tests/test_global_codes_across_shards.py::"
         "test_two_civilizations_creating_workflows_at_once_get_distinct_numbers",
+        # 2026-11-17 分库第 4 阶段 C 限制 2:灵魂原属殿开重审、暂居殿同时开审,两份审判写在两个库,没有一把行锁跨两库;
+        # 控制库的 OpenCaseClaim(soul_id 唯一)只放一个过去(只在 `--ds=config.settings_sharded -m sharded` 下跑)。
+        # 串行版 test_a_reopen_at_home_and_a_case_where_the_soul_resides_open_one_case 同文件,两个引擎都跑。
+        "tests/test_cross_civilization_saga_limits.py::"
+        "test_two_civilizations_opening_a_case_on_one_soul_at_once_open_exactly_one",
         # 2026-10-29 数据范围 B2:范围过滤后的灵魂列表走 (tenant, owner_org) 索引。EXPLAIN 的计划与
         # 统计只在 PostgreSQL 上有意义;同文件的五种范围断言每个引擎都跑。
         "tests/test_data_scope_solver.py::test_the_scoped_soul_list_uses_the_tenant_owner_index",

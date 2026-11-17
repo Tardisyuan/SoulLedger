@@ -11,7 +11,12 @@ The transfer state machine, EXECUTING -> EXECUTED, in three steps:
   2  target master   (relay) the target may refuse (a hall that closed its dispatch meanwhile: `Refused`); else
                      upsert the soul there as PRIMARY (tenant = the target hall), its path station, its event, the
                      target's side of a sentence plan stop -- plus the inbox row, in one transaction.
-  3  source master   (relay) the record EXECUTED (or RETURNED), and the source row DEMOTED (`_retire`).
+  3  source master   (relay) the record EXECUTED (or RETURNED), and the source row DEMOTED (`_retire`); a soul moving
+                     on from a residence to a third civilization also sends its home's master HOME_FOLLOWS, so the
+                     home shard's copy names the new residence.
+
+Between 2 and 3 the soul has a primary-looking row on both masters; while the message is PENDING every read across
+them takes the source's row as the primary and does not see the target's (`shard_saga.arriving`, `legs`).
 
 Compensation only when the target refused: the source's own step-1 rows back (the path station reopened); the
 record was never moved, so it is APPROVED again the moment the message closes.
@@ -160,14 +165,37 @@ def _executed(payload):
     if record.status != DispatchStatus.APPROVED:
         return  # closed before (a redelivery): the record has moved on, and so may the soul
     soul = payload["soul"]
-    # Demoted first: until then the soul has a primary-looking row on both masters (step 2 made the target's), and a
-    # read through `record.soul` (the audit signal of the save below) would find two.
-    # ponytail: that window is open between step 2 and step 3 for every reader; it closes with the relay (seconds).
-    # A read-side dedupe of a soul seen on two masters would close it for good.
+    # Demoted first: until then the soul has a primary-looking row on both masters (step 2 made the target's). Every
+    # other reader takes the source's as the primary while this message is pending (`shard_saga.arriving`); this step
+    # reads the arrived one, so the source's must stop looking primary before `record.soul` (the audit signal of the
+    # save below) is read.
     _retire(saga.master_of(record.source_tenant), soul["id"], record.target_tenant_id, soul["home_tenant_id"])
+    home = _hall(soul["home_tenant_id"])
+    if saga.master_of(home) not in {saga.master_of(record.source_tenant), saga.master_of(record.target_tenant)}:
+        # A soul moving on from one residence to a third civilization: its home shard's copy still names the residence
+        # it left, so `primary_alias` and the home hall's D6 writes would go to a master that no longer holds it.
+        saga.send(HOME_FOLLOWS, record.source_tenant, home, {
+            "soul_id": soul["id"], "home_id": home.pk, "from": record.source_tenant_id, "to": record.target_tenant_id})
     if not record.transition_to(
             DispatchStatus.EXECUTED, in_saga=True, executed_at=timezone.now(), source_owner_org_id=soul["owner_org_id"]):
         raise ValueError(f"Cannot execute dispatch in status: {record.status}")
+
+
+HOME_FOLLOWS = "soul.home_copy_follows"
+
+
+@handler(HOME_FOLLOWS)
+def _home_copy_follows(payload):
+    """Step 3's message to the home hall's master: its copy of the soul names the new residence -- only while it
+    still names the one left (a later move, or the soul come home, rewrote it already)."""
+    from contextlib import nullcontext
+
+    from apps.core.shard_reads import CONTROL_ALIAS, control_mirror_writes
+
+    alias = saga.master_of(_hall(payload["home_id"]))
+    with control_mirror_writes() if alias == CONTROL_ALIAS else nullcontext():
+        _soul_model()._base_manager.using(alias).filter(pk=payload["soul_id"], tenant_id=payload["from"]).update(
+            tenant_id=payload["to"])
 
 
 def _not_executed(payload):
@@ -180,7 +208,7 @@ def _not_executed(payload):
             pk=payload["closed_entry"]).update(left_at=None)
 
 
-handler(EXECUTE, done=_executed, refused=_not_executed)(_arrive)
+handler(EXECUTE, done=_executed, refused=_not_executed, moves=True)(_arrive)
 
 
 def _arrive_at_plan_stop(soul, record):
@@ -313,7 +341,7 @@ def _left_residence(payload):
             "trigger": payload["trigger"], "at": timezone.now().isoformat()}, subject=subject)
 
 
-handler(RETURN, done=_left_residence)(_come_home)
+handler(RETURN, done=_left_residence, moves=True)(_come_home)
 
 RETURN_SETTLED = "dispatch.return_settled"
 
@@ -408,4 +436,4 @@ def _migrate_leave(payload):
     _retire(saga.master_of(_hall(values["tenant_id"])), values["id"], payload["target"], payload["target"])
 
 
-handler(MIGRATE, done=_migrate_leave)(_migrate_arrive)
+handler(MIGRATE, done=_migrate_leave, moves=True)(_migrate_arrive)

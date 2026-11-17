@@ -26,10 +26,11 @@ def sync_shards():
     return result
 
 
-@shared_task(name="sharding.relay_outbox")
+@shared_task(name="sharding.relay_outbox", **time_limits("sharding.relay_outbox"))
 def relay_outbox():
     """Stage 4 part C: deliver the pending cross-civilization saga messages (apps/tenants/shard_saga.py). Queued on
-    the commit that wrote one; `sync_shards` sweeps what a lost kick left. On demand, not in the beat registry."""
+    the commit that wrote one, and swept by beat every 5 minutes (apps/scheduler/registry.py): a kick lost to a
+    broker outage is a PENDING row in PostgreSQL, delivered by the next sweep or `manage.py relay_outbox`."""
     from apps.tenants.shard_saga import relay
 
     return {"closed": relay()}
