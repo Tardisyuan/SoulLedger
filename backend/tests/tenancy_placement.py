@@ -37,6 +37,8 @@ PLACEMENT = {
     'souls.SoulRecord': ('SHARD', 'tenant', 'own tenant column'),
     'judgment.JudgmentCaseCounter': ('CONTROL', None, 'no tenant column and no foreign-key chain to a hall: global'),
     'tenants.GlobalCode': ('CONTROL', None, 'stage-4 registry of global codes; tenant_id is a bare record of the claimer, not a path'),
+    'tenants.ShardOutbox': ('SHARD', 'tenant', 'own tenant column: a saga message lives on its source hall\'s master, beside the rows it was written with'),
+    'tenants.ShardInbox': ('SHARD', 'tenant', 'own tenant column: an applied message lives on its target hall\'s master'),
     'judgment.Judgment': ('SHARD', 'tenant', 'own tenant column'),
     'judgment.Statute': ('SHARD', 'tenant', 'own tenant column'),
     'judgment.JudgmentCitation': ('SHARD', 'tenant', 'own tenant column'),

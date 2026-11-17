@@ -518,6 +518,26 @@ class DispatchService:
         _after_commit(send)
 
     @staticmethod
+    def check_executable(dispatch_record, soul):
+        """The checks `execute` asks under the soul's row lock (the saga's step 1 asks them too)."""
+        # 提议时 propose() 检查过这两条;批准到执行之间灵魂可能已经不在源租户
+        # (例如被另一条路径调走又没回来)。在行锁下再问一次。
+        if soul.tenant_id != dispatch_record.source_tenant_id or soul.is_residing:
+            raise ValueError("Soul is no longer held by the source tenant at its home")
+        # 提议到执行之间灵魂可能已离开冥府(转生、失踪):同一条状态规则,锁下再问一次。
+        if soul.current_state not in DISPATCHABLE_SOUL_STATES:
+            raise SoulNotDispatchableError(soul.current_state)
+        # 手动移交:提案挂着期间源殿可能又开了一案(F-DISP-06,2026-11-12)。提议时那条规则(11-11:不带着
+        # 源殿未结的审判移交)在这里锁下再问一次,否则未结案留在源殿、灵魂到了目标殿,两边都动不了。
+        # 受刑计划的调拨不受这条约束(与 `_check_proposable` 的 `manual` 同一个区分)。
+        from apps.judgment.models import open_judgments
+        from apps.sentence_plan.models import SentenceNode
+
+        manual = not SentenceNode.all_objects.filter(dispatch_record_id=dispatch_record.pk).exists()
+        if manual and open_judgments(soul).filter(tenant_id=dispatch_record.source_tenant_id).exists():
+            raise SoulHasPendingJudgmentError()
+
+    @staticmethod
     def execute(dispatch_record, executor):
         """
         Execute an approved dispatch: the soul starts residing in the target tenant.
@@ -536,24 +556,16 @@ class DispatchService:
         # 批准到执行之间殿也可能关掉;灵魂真正进殿是这一刻,再问一次。
         DispatchService.check_target_accepts(dispatch_record.target_tenant)
 
+        from apps.dispatch import transfer
+        from apps.tenants import shard_saga
+
+        if shard_saga.crosses(dispatch_record.source_tenant, dispatch_record.target_tenant):
+            # 两殿的行写在两个库(分库第 4 阶段):三步 saga,`apps/dispatch/transfer.py`。
+            return transfer.execute(dispatch_record, executor)
+
         with transaction.atomic():
             soul = Soul.lock(dispatch_record.soul_id)
-            # 提议时 propose() 检查过这两条;批准到执行之间灵魂可能已经不在源租户
-            # (例如被另一条路径调走又没回来)。在行锁下再问一次。
-            if soul.tenant_id != dispatch_record.source_tenant_id or soul.is_residing:
-                raise ValueError("Soul is no longer held by the source tenant at its home")
-            # 提议到执行之间灵魂可能已离开冥府(转生、失踪):同一条状态规则,锁下再问一次。
-            if soul.current_state not in DISPATCHABLE_SOUL_STATES:
-                raise SoulNotDispatchableError(soul.current_state)
-            # 手动移交:提案挂着期间源殿可能又开了一案(F-DISP-06,2026-11-12)。提议时那条规则(11-11:不带着
-            # 源殿未结的审判移交)在这里锁下再问一次,否则未结案留在源殿、灵魂到了目标殿,两边都动不了。
-            # 受刑计划的调拨不受这条约束(与 `_check_proposable` 的 `manual` 同一个区分)。
-            from apps.judgment.models import open_judgments
-            from apps.sentence_plan.models import SentenceNode
-
-            manual = not SentenceNode.all_objects.filter(dispatch_record_id=dispatch_record.pk).exists()
-            if manual and open_judgments(soul).filter(tenant_id=dispatch_record.source_tenant_id).exists():
-                raise SoulHasPendingJudgmentError()
+            DispatchService.check_executable(dispatch_record, soul)
             old_tenant = soul.tenant
             source_owner_org_id = soul.owner_org_id
             soul.tenant = dispatch_record.target_tenant
@@ -712,6 +724,66 @@ class DispatchService:
     RETURN_ON_PLAN_CANCELLED = "PLAN_CANCELLED"
 
     @staticmethod
+    def check_returnable(locked):
+        """`end_residence`'s checks under the soul's row lock (the saga's step 1 asks them too)."""
+        from apps.judgment.models import open_judgments
+
+        if not locked.is_residing:
+            raise ValueError("Soul is not residing away from its home tenant")
+        # 在灵魂行锁下问。开新审判(`JudgmentViewSet.perform_create`)也锁灵魂行(G7),两者串行。
+        open_ids = list(open_judgments(locked).values_list("pk", flat=True))
+        if open_ids:
+            raise ResidenceReturnBlockedError(open_ids)
+
+    @staticmethod
+    def audit_return(locked, record, residence, home, actor, trigger, reason):
+        from apps.audit.models import AuditAction, AuditLog
+
+        AuditLog.objects.create(
+            tenant=home,
+            user=actor if getattr(actor, "is_authenticated", False) else None,
+            action=AuditAction.UPDATE,
+            resource="dispatch_record",
+            resource_id=str(record.id) if record else str(locked.pk),
+            changes={"soul_tenant": [residence.code, home.code], "trigger": trigger},
+            description=f"暂居结束({trigger}):{locked.name} {residence.code} → {home.code} {reason}"[:500],
+        )
+
+    @staticmethod
+    def void_residence_dispositions(locked, residence, record):
+        """A residence ended by hand: the residence's rows (its dispositions, the stop's path entry) -- written where
+        the residence is."""
+        # 暂居地还没执行的处置(手动调拨、不挂计划节点的)随暂居一起作废(审查 11-01 P1 #7):灵魂已不在那里,
+        # 它执行不了(`_execute_without_node` 查租户),留着又会让 `assert_may_be_reborn` 一直报
+        # `disposition_not_executed`。挂在节点上的由下面的 ABORTED 当作赦免。
+        from apps.core.recycle_bin import system_void
+        from apps.disposition.expiry import serving
+        from apps.disposition.models import Disposition
+        from apps.sentence_plan.services import pardon_served
+
+        here = Disposition.all_objects.filter(
+            soul_id=locked.pk, tenant_id=residence.pk, is_deleted=False, sentence_node_id__isnull=True,
+        )
+        left = here.filter(is_executed=False)
+        if left.exists():
+            system_void(left, f"residence_ended:{record.pk if record is not None else locked.pk}")
+        # 已执行、正在服的:手动结束就是赦免这一段,与挂在节点上的同一笔(`pardon_term`),否则要等到期满日
+        # `_unserved_term` 才放行。永久刑期不算赦免,`serving` 不认它,`assert_may_be_reborn` 照旧挡。
+        now = timezone.now()
+        for served in here.select_for_update(of=("self",)).filter(is_executed=True):
+            if serving(served):
+                pardon_served(locked, served, None, now)
+
+    @staticmethod
+    def advance_plan_after_manual_return(locked, record):
+        """A residence ended by hand: the plan's side (the home hall's rows)."""
+        # 手动结束:这一站的节点 ABORTED,然后推进(设计稿 §3.3 调用点表)。自动回归由
+        # `SentencePlanService.advance` 发起,它自己接着推进,这里不再调。
+        from apps.sentence_plan.services import SentencePlanService
+        SentencePlanService.on_residence_ended_by_hand(locked, record)
+        SentencePlanService.advance(locked)
+
+    @staticmethod
     def end_residence(soul, *, actor, trigger, reason=""):
         """暂居结束:`soul.tenant` 回到 `soul.home_tenant`,暂居记录 EXECUTED → RETURNED。
 
@@ -725,18 +797,18 @@ class DispatchService:
             ValueError: 灵魂没有在暂居。
             ResidenceReturnBlockedError: 灵魂还有未结案的审判(任何租户的),什么都不写。
         """
-        from apps.audit.models import AuditAction, AuditLog
-        from apps.judgment.models import open_judgments
         from apps.souls.models import Soul
+        from apps.tenants import shard_saga
+
+        if shard_saga.crosses(soul.tenant, soul.home_tenant):
+            # 暂居地与原属地写在两个库(分库第 4 阶段):三步 saga,`apps/dispatch/transfer.py`。
+            from apps.dispatch import transfer
+
+            return transfer.end_residence(soul, actor=actor, trigger=trigger, reason=reason)
 
         with transaction.atomic():
             locked = Soul.lock(soul.pk)
-            if not locked.is_residing:
-                raise ValueError("Soul is not residing away from its home tenant")
-            # 在灵魂行锁下问。开新审判(`JudgmentViewSet.perform_create`)也锁灵魂行(G7),两者串行。
-            open_ids = list(open_judgments(locked).values_list("pk", flat=True))
-            if open_ids:
-                raise ResidenceReturnBlockedError(open_ids)
+            DispatchService.check_returnable(locked)
             residence = locked.tenant
             record = (
                 DispatchRecord._base_manager.select_for_update(of=("self",))
@@ -768,41 +840,10 @@ class DispatchService:
                 "reason": reason,
             }
             _log(locked, payload, actor)  # 灵魂已回到原属殿,记在那里
-            AuditLog.objects.create(
-                tenant=home,
-                user=actor if getattr(actor, "is_authenticated", False) else None,
-                action=AuditAction.UPDATE,
-                resource="dispatch_record",
-                resource_id=str(record.id) if record else str(locked.pk),
-                changes={"soul_tenant": [residence.code, home.code], "trigger": trigger},
-                description=f"暂居结束({trigger}):{locked.name} {residence.code} → {home.code} {reason}"[:500],
-            )
+            DispatchService.audit_return(locked, record, residence, home, actor, trigger, reason)
             if trigger == DispatchService.RETURN_MANUAL:
-                # 暂居地还没执行的处置(手动调拨、不挂计划节点的)随暂居一起作废(审查 11-01 P1 #7):灵魂已不在那里,
-                # 它执行不了(`_execute_without_node` 查租户),留着又会让 `assert_may_be_reborn` 一直报
-                # `disposition_not_executed`。挂在节点上的由下面的 ABORTED 当作赦免。
-                from apps.core.recycle_bin import system_void
-                from apps.disposition.expiry import serving
-                from apps.disposition.models import Disposition
-                from apps.sentence_plan.services import pardon_served
-
-                here = Disposition.all_objects.filter(
-                    soul_id=locked.pk, tenant_id=residence.pk, is_deleted=False, sentence_node_id__isnull=True,
-                )
-                left = here.filter(is_executed=False)
-                if left.exists():
-                    system_void(left, f"residence_ended:{record.pk if record is not None else locked.pk}")
-                # 已执行、正在服的:手动结束就是赦免这一段,与挂在节点上的同一笔(`pardon_term`),否则要等到期满日
-                # `_unserved_term` 才放行。永久刑期不算赦免,`serving` 不认它,`assert_may_be_reborn` 照旧挡。
-                now = timezone.now()
-                for served in here.select_for_update(of=("self",)).filter(is_executed=True):
-                    if serving(served):
-                        pardon_served(locked, served, None, now)
-                # 手动结束:这一站的节点 ABORTED,然后推进(设计稿 §3.3 调用点表)。自动回归由
-                # `SentencePlanService.advance` 发起,它自己接着推进,这里不再调。
-                from apps.sentence_plan.services import SentencePlanService
-                SentencePlanService.on_residence_ended_by_hand(locked, record)
-                SentencePlanService.advance(locked)
+                DispatchService.void_residence_dispositions(locked, residence, record)
+                DispatchService.advance_plan_after_manual_return(locked, record)
 
         # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。归属机构一起同步:
         # 调用方之后整行 `save()` 时,旧的 owner_org(暂居殿的根)不能被写回去(数据范围 B3b)。
@@ -918,7 +959,7 @@ class CrossTenantJudgmentService:
     """
 
     @staticmethod
-    @transaction.atomic
+    @transaction.atomic()
     def create(title, description, initiating_tenant, creator):
         """
         Create a new cross-tenant judgment.
@@ -943,7 +984,7 @@ class CrossTenantJudgmentService:
         return judgment
 
     @staticmethod
-    @transaction.atomic
+    @transaction.atomic()
     def add_participant(judgment, participant_tenant, participant_actor, role, node_order=None):
         """
         Add a participant to a cross-tenant judgment.
@@ -984,17 +1025,30 @@ class CrossTenantJudgmentService:
                 is_deleted=False, node_order__gt=node_order).exists():
             raise OrderLockedError()
 
-        participant = CrossTenantJudgmentParticipant.objects.create(
-            judgment=judgment,
-            participant_tenant=participant_tenant,
-            participant_actor=participant_actor,
-            role=role,
-            tenant=participant_tenant,
-            node_order=node_order,
-        )
-        if running and role != ParticipantRole.ADVISOR:
-            # 顾问席不走审批段(用户 2026-10-29,审查 D)。
-            segments.append_foreign(workflow, participant_tenant)
+        seat = {
+            "judgment": judgment,
+            "participant_tenant": participant_tenant,
+            "participant_actor": participant_actor,
+            # 名字随席位存一份(分库第 4 阶段 C):神祇可能在另一个文明的库里,联审页不再 join 它。
+            "participant_actor_name": participant_actor.name if participant_actor is not None else None,
+            "participant_actor_name_en": participant_actor.name_en if participant_actor is not None else None,
+            "role": role,
+            "tenant": participant_tenant,
+            "node_order": node_order,
+        }
+        segment = running and role != ParticipantRole.ADVISOR  # 顾问席不走审批段(用户 2026-10-29,审查 D)。
+        from apps.tenants import shard_saga
+
+        if shard_saga.crosses(judgment.tenant, participant_tenant):
+            # 席位与它的审批段属被邀殿,写在另一个库(分库第 4 阶段 C):经 saga 写过去(`apps/dispatch/transfer.py`)。
+            from apps.dispatch import transfer
+
+            participant = transfer.seat(judgment.tenant, CrossTenantJudgmentParticipant(**seat),
+                                        workflow if segment else None)
+        else:
+            participant = CrossTenantJudgmentParticipant.objects.create(**seat)
+            if segment:
+                segments.append_foreign(workflow, participant_tenant)
 
         # Notify initiating tenant, through the bus so the row lands in the
         # model the notification API actually serves.
@@ -1066,7 +1120,7 @@ class CrossTenantJudgmentService:
             raise ValueError(f"node_order {node_order} is already taken")
 
     @staticmethod
-    @transaction.atomic
+    @transaction.atomic()
     def reorder_nodes(judgment, participant_ids):
         """发起方重排各站顺序(设计稿 §2.2「发起方 seat 时给,ACTIVE 前可改」)。
 
@@ -1096,7 +1150,7 @@ class CrossTenantJudgmentService:
         return locked
 
     @staticmethod
-    @transaction.atomic
+    @transaction.atomic()
     def submit_sentence(participant, realm_code, sentence_years, notes, user):
         """参与方填自己文明那一站的处置内容。联审结束前可重填。
 
@@ -1185,7 +1239,7 @@ class CrossTenantJudgmentService:
         return errors
 
     @staticmethod
-    @transaction.atomic
+    @transaction.atomic()
     def activate(judgment):
         """
         Convene a cross-tenant judgment: PROPOSED -> ACTIVE.
@@ -1233,7 +1287,7 @@ class CrossTenantJudgmentService:
         _after_commit(send)
 
     @staticmethod
-    @transaction.atomic
+    @transaction.atomic()
     def conclude(judgment, conclusion_type, conclude_by, note="", check=True, by_workflow=False):
         """
         Conclude a cross-tenant judgment.
@@ -1310,7 +1364,7 @@ class CrossTenantJudgmentService:
         return tenant is not None and tenant.pk == judgment.initiating_tenant_id
 
     @staticmethod
-    @transaction.atomic
+    @transaction.atomic()
     def cancel(judgment, reason, cancelled_by):
         """取消会审:PROPOSED / ACTIVE → CANCELLED,不会有结论。
 

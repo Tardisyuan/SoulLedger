@@ -670,7 +670,10 @@ def apply_contacts(soul, contact_email="", contact_phone=""):
     for field, value in updates.items():
         setattr(soul, field, value)
     if updates:
-        soul.save(update_fields=list(updates))
+        # 灵魂暂居在另一个文明、而事务开在原属殿的库上(分库第 4 阶段 C,D6):写成发给主库的消息。
+        from apps.tenants import shard_saga
+
+        shard_saga.save_fields(soul, list(updates), source=soul.home_tenant)
     if "contact_email" in updates:
         sync_login_email(soul, old_email)
 

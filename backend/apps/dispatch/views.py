@@ -702,12 +702,12 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
 
 def _participants_with_names():
-    """The participant serializer reads `participant_tenant.code` and
-    `participant_actor.name`; a bare `prefetch_related("participants")` paid one
-    query per seat for each (PQ-01)."""
+    """The participant serializer reads `participant_tenant.code`; a bare `prefetch_related("participants")` paid
+    one query per seat for it (PQ-01). The actor's names are the seat's own snapshot (stage 4 part C): no join to an
+    actor that may live in another civilization's shard."""
     return Prefetch(
         "participants",
-        queryset=CrossTenantJudgmentParticipant.objects.select_related("participant_tenant", "participant_actor"),
+        queryset=CrossTenantJudgmentParticipant.objects.select_related("participant_tenant"),
     )
 
 

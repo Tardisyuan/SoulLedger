@@ -811,9 +811,13 @@ class JudgmentService:
         from apps.judgment.models import Judgment, JudgmentKind, open_judgments
         from apps.sentence_plan.services import in_progress_plan
         from apps.souls.models import Soul
+        from apps.tenants import shard_saga
 
         with transaction.atomic():
-            soul = Soul.lock(soul.pk)
+            # A REOPEN the home hall opens while the soul resides in a civilization written on another database
+            # (stage 4 part C, D6): the soul's row is not in this transaction and cannot be locked from it. Read it;
+            # the open-case check below reads every master. A REOPEN writes nothing on the soul.
+            soul = Soul.lock(soul.pk) if shard_saga.held(soul) else Soul.all_objects.get(pk=soul.pk)
             if in_tenant is not None and soul.tenant_id != in_tenant.pk:
                 raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
             if reach_of is not None:

@@ -14,6 +14,9 @@ class DispatchConfig(AppConfig):
 
         from apps.core.recycle_bin import register_bin_type
 
+        from . import (
+            transfer,  # noqa: F401 -- registers the cross-civilization saga handlers (apps/tenants/shard_saga.py)
+        )
         from .models import DispatchRecord, DispatchStatus
 
         def label(record):

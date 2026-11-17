@@ -191,3 +191,44 @@ class GlobalCode(models.Model):
 
     def __str__(self):
         return f"{self.kind}:{self.value}"
+
+
+class ShardMessageState(models.TextChoices):
+    PENDING = "PENDING"
+    DONE = "DONE"
+    REFUSED = "REFUSED"
+
+
+class ShardOutbox(models.Model):
+    """A cross-civilization saga message (sharding stage 4 part C, apps/tenants/shard_saga.py), written in the SAME
+    local transaction as the business rows it accompanies, on the source hall's master. The relay delivers it to the
+    target hall's master (which records it in ShardInbox) and then closes it here: DONE, or REFUSED when the target
+    refused and the source compensated. PENDING is the saga in flight (a dispatch whose transfer is EXECUTING)."""
+
+    message_id = models.UUIDField(unique=True)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="+")
+    target_tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="+")
+    kind = models.CharField(max_length=64)
+    #: What the message is about ("dispatch:<id>"): a second saga on it is refused while this one is in flight.
+    subject = models.CharField(max_length=80, blank=True, default="", db_index=True)
+    payload = models.JSONField(default=dict)
+    state = models.CharField(max_length=10, choices=ShardMessageState.choices, default=ShardMessageState.PENDING,
+                             db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    done_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.kind} {self.message_id} {self.state}"
+
+
+class ShardInbox(models.Model):
+    """A saga message applied on the target hall's master, in the same transaction as what it applied. The unique
+    `message_id` is the idempotence: a redelivery fails to insert and applies nothing."""
+
+    message_id = models.UUIDField(unique=True)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="+")
+    kind = models.CharField(max_length=64)
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.kind} {self.message_id}"

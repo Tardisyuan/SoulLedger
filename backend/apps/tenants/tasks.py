@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.conf import settings
 
 from apps.scheduler.registry import time_limits
 
@@ -17,4 +18,18 @@ def sync_shards():
     if not shards:
         return {"skipped": "no_shard_databases"}
     # A row a commit changes between compare and fix is picked up by the next run.
-    return sync(shards)
+    result = sync(shards)
+    if settings.SHARD_WRITE_CIVS:  # the sweep for saga messages whose on-commit kick was lost
+        from apps.tenants.shard_saga import relay
+
+        relay()
+    return result
+
+
+@shared_task(name="sharding.relay_outbox")
+def relay_outbox():
+    """Stage 4 part C: deliver the pending cross-civilization saga messages (apps/tenants/shard_saga.py). Queued on
+    the commit that wrote one; `sync_shards` sweeps what a lost kick left. On demand, not in the beat registry."""
+    from apps.tenants.shard_saga import relay
+
+    return {"closed": relay()}

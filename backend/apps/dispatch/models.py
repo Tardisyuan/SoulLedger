@@ -3,6 +3,7 @@ Dispatch models — cross-tenant soul dispatching and joint judgment.
 """
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 
@@ -164,12 +165,20 @@ class DispatchRecord(AuditUserFields, models.Model):
     def can_transition_to(self, new_status: str) -> bool:
         return new_status in self.VALID_TRANSITIONS.get(self.status, [])
 
-    def transition_to(self, new_status: str, **kwargs) -> bool:
+    def transition_to(self, new_status: str, *, in_saga: bool = False, **kwargs) -> bool:
         from django.db import transaction as db_transaction
         with db_transaction.atomic():
             locked = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=self.pk)
             if not locked.can_transition_to(new_status):
                 return False
+            # Stage 4 part C: a cross-civilization execution in flight (its saga message pending, the transfer
+            # EXECUTING) owns the record until the saga closes it (`apps/dispatch/transfer.py`); nobody cancels or
+            # executes it meanwhile. Nothing to ask while no civilization writes to its shard.
+            if not in_saga and settings.SHARD_WRITE_CIVS:
+                from apps.dispatch.transfer import executing
+
+                if executing(locked):
+                    return False
             locked.status = new_status
             for field, value in kwargs.items():
                 if hasattr(locked, field):
@@ -301,6 +310,10 @@ class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):
         blank=True,
         related_name="judgment_participations",
     )
+    # The seated actor's names as they were at seating (sharding stage 4 part C): the actor is a bare id that may
+    # name a row of another civilization's shard, so the bench reads its names here instead of joining to it.
+    participant_actor_name = models.CharField(max_length=255, null=True, blank=True)
+    participant_actor_name_en = models.CharField(max_length=255, null=True, blank=True)
     role = models.CharField(
         max_length=20,
         choices=ParticipantRole.choices,

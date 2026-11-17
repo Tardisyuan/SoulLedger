@@ -635,9 +635,16 @@ class ReincarnationService:
             # 灵魂此刻不在暂居(`assert_may_be_reborn` 要求 REINCARNATING,暂居的灵魂进不了那个状态)。
             if target_hall is not None:
                 from apps.org.ownership import tenant_root
+                from apps.tenants import shard_saga
 
                 # 重读一次再写:`transition_to` 写的是它自己锁到的那一份,手上这份的状态与版本已旧(同一事务,锁已在手)。
                 moved = Soul.lock(soul.pk)
+                if shard_saga.crosses(moved.tenant, target_hall):
+                    # 两个文明写在两个库(分库第 4 阶段):灵魂经 saga 迁到目标库(`apps/dispatch/transfer.py`)。
+                    from apps.dispatch import transfer
+
+                    transfer.migrate(moved, target_hall)
+                    return reincarnation
                 moved.tenant = target_hall
                 moved.home_tenant = target_hall
                 moved.owner_org = tenant_root(target_hall)

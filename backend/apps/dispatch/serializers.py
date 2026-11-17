@@ -319,8 +319,9 @@ class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
     participant_tenant_display_name = serializers.CharField(
         source="participant_tenant.display_name", read_only=True
     )
-    participant_actor_name = serializers.CharField(source="participant_actor.name", read_only=True, allow_null=True)
-    participant_actor_name_en = serializers.CharField(source="participant_actor.name_en", read_only=True, allow_null=True)
+    # The seat's snapshot of its actor's names (the actor may live in another civilization's shard).
+    participant_actor_name = serializers.CharField(read_only=True, allow_null=True)
+    participant_actor_name_en = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = CrossTenantJudgmentParticipant
