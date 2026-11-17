@@ -15,7 +15,19 @@ bench, and the origin side's writes to a soul that resides elsewhere (D6) -- go 
               unique, so a redelivery inserts nothing and applies nothing -- and applies the handler; then, on the
               source master, one transaction that runs the handler's `done` (or `refused`) and closes the row.
   refused     only a handler raising `Refused` (the target will not take it: a hall closed meanwhile) compensates.
-              Any other error leaves the row PENDING; the next relay retries it, and the inbox makes that safe.
+              Any other error leaves the row PENDING (its `attempts` and `last_error` noted); the next relay retries
+              it, and the inbox makes that safe. After MAX_ATTEMPTS failures it is FAILED: a dead letter the relay
+              stops trying, which `check_soul_ownership` and `relay_outbox` report (exit 1) until an operator fixes
+              the cause and `relay_outbox --retry-failed` puts it back.
+  order       per subject: on a master, messages of one subject are delivered in the order they were written (pk),
+              and one that fails -- or is FAILED -- holds back the later ones of its subject, never anything else.
+  in transit  while a move of a soul is open (PENDING or FAILED), its rows are read-only. Step 1 copied the source
+              row into the message, step 2 writes that copy on the target and step 3 retires the source row, so a
+              write to the soul in between would be lost; it is refused instead (`SoulInTransit`, 423 `locked`) by
+              the save / delete signals and `SoulQuerySet.update` (`refuse_in_transit`). The move's own steps are
+              exempt. Refusing is the fix rather than re-reading the source at step 2 (a write between steps 2 and 3
+              would still be lost) or forwarding later writes (it would need a merge rule against what the arrival
+              itself writes: the station, the hall, the owner).
 
 A crash between the steps leaves a PENDING row; relaying until quiescent finishes the saga, never half of it
 (tests/test_cross_civilization_saga.py injects a failure at every write and checks exactly that).
@@ -33,15 +45,29 @@ from contextvars import ContextVar
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
+from django.db.models import F
 from django.utils import timezone
 
+from apps.core.problems import Problem
 from apps.core.shard_reads import CONTROL_ALIAS, master_alias, read_context
 
 log = logging.getLogger(__name__)
 
+#: Failed deliveries before a message is FAILED (a dead letter). The beat sweep runs every 5 minutes.
+MAX_ATTEMPTS = 10
+
 
 class Refused(Exception):  # noqa: N818 -- a refusal, not a failure
     """The target hall will not take the message: the source compensates (`refused` handler)."""
+
+
+class SoulInTransit(Problem):
+    """A write to a soul whose move between masters is open (module doc, "in transit"): refused, 423 `locked`."""
+
+    def __init__(self, soul_ids):
+        super().__init__(423, "locked", "This soul is moving between civilizations (a dispatch, a return home or a "
+                         "rebirth in flight) and cannot be changed until the move completes. Try again shortly.",
+                         soul_ids=sorted(map(str, soul_ids)))
 
 
 _HANDLERS = {}
@@ -79,23 +105,29 @@ def _models():
     return ShardOutbox, ShardInbox, ShardMessageState
 
 
+def _open():
+    """The states of a message not closed: PENDING, and FAILED (a dead letter is a saga still in flight)."""
+    _, _, state = _models()
+    return (state.PENDING, state.FAILED)
+
+
 def in_flight(subject, hall):
-    """A saga on `subject` sent from `hall` is still PENDING."""
-    outbox, _, state = _models()
-    return outbox._base_manager.using(master_of(hall)).filter(subject=subject, state=state.PENDING).exists()
+    """A saga on `subject` sent from `hall` is still open (PENDING or FAILED)."""
+    outbox, _, _ = _models()
+    return outbox._base_manager.using(master_of(hall)).filter(subject=subject, state__in=_open()).exists()
 
 
 def arriving():
-    """[(soul pk, target hall pk)] of every soul move still PENDING on any master: between step 2 (the target's row
+    """[(soul pk, target hall pk)] of every soul move still open on any master: between step 2 (the target's row
     written as primary) and step 3 (the source's row demoted) a soul has a primary-looking row on two masters, and
     a read across them takes the SOURCE row as the primary -- the target's is not visible until the move closes
     (`apps.core.shard_reads.legs`). Empty while no civilization writes to its shard."""
     if not settings.SHARD_WRITE_CIVS or not _MOVES:
         return []
-    outbox, _, state = _models()
+    outbox, _, _ = _models()
     out = []
     for alias, hall_ids in masters():
-        rows = (outbox._base_manager.using(alias).filter(tenant_id__in=hall_ids, state=state.PENDING, kind__in=_MOVES)
+        rows = (outbox._base_manager.using(alias).filter(tenant_id__in=hall_ids, state__in=_open(), kind__in=_MOVES)
                 .exclude(message_id=_delivering.get()).values_list("payload", "target_tenant_id"))
         out.extend((payload["soul"]["id"], target) for payload, target in rows)
     return out
@@ -173,21 +205,62 @@ def masters():
 
 
 def pending(alias, hall_ids):
+    """The PENDING messages of `hall_ids` on `alias` in the order they were written: the pk, one master's sequence,
+    not an application server's clock."""
     outbox, _, state = _models()
-    return list(outbox._base_manager.using(alias).filter(tenant_id__in=hall_ids, state=state.PENDING)
-                .order_by("created_at", "pk"))
+    return list(outbox._base_manager.using(alias).filter(tenant_id__in=hall_ids, state=state.PENDING).order_by("pk"))
+
+
+def failed():
+    """[(alias, message)] of every dead letter (FAILED) on every master."""
+    outbox, _, state = _models()
+    return [(alias, m) for alias, ids in masters()
+            for m in outbox._base_manager.using(alias).filter(tenant_id__in=ids, state=state.FAILED).order_by("pk")]
 
 
 def relay():
-    """Deliver every PENDING message on every master once. Returns how many were closed (DONE or REFUSED)."""
+    """Deliver every PENDING message on every master once, in order per subject (module doc). Returns how many were
+    closed (DONE or REFUSED)."""
+    outbox, _, state = _models()
     closed = 0
     for alias, hall_ids in masters():
+        held_back = set(outbox._base_manager.using(alias).filter(tenant_id__in=hall_ids, state=state.FAILED)
+                        .exclude(subject="").values_list("subject", flat=True))
         for msg in pending(alias, hall_ids):
+            if msg.subject and msg.subject in held_back:
+                continue
             try:
                 closed += deliver(msg)
-            except Exception:  # stays PENDING; the inbox makes the retry safe
-                log.exception("saga message %s (%s) not delivered; it stays pending", msg.message_id, msg.kind)
+            except SoulInTransit:  # waits for a move of its soul to close: not a failure of its own, not counted
+                log.info("saga message %s (%s) waits for a soul in transit", msg.message_id, msg.kind)
+                held_back.add(msg.subject)
+            except Exception as e:  # stays PENDING (FAILED after MAX_ATTEMPTS); the inbox makes the retry safe
+                log.exception("saga message %s (%s) not delivered", msg.message_id, msg.kind)
+                _note_failure(alias, msg, e)
+                held_back.add(msg.subject)
     return closed
+
+
+def _note_failure(alias, msg, error):
+    outbox, _, state = _models()
+    dead = msg.attempts + 1 >= MAX_ATTEMPTS
+    with on_master(msg.tenant):
+        outbox._base_manager.using(alias).filter(pk=msg.pk, state=state.PENDING).update(
+            attempts=F("attempts") + 1, last_error=f"{type(error).__name__}: {error}"[:2000],
+            state=state.FAILED if dead else state.PENDING)
+    if dead:
+        log.error("saga message %s (%s) FAILED after %s attempts: %s", msg.message_id, msg.kind, MAX_ATTEMPTS, error)
+
+
+def retry_failed():
+    """Every dead letter back to PENDING, its attempts reset (once its cause is fixed). Returns how many."""
+    outbox, _, state = _models()
+    n = 0
+    for alias, ids in masters():
+        with transaction.atomic(using=alias):
+            n += outbox._base_manager.using(alias).filter(tenant_id__in=ids, state=state.FAILED).update(
+                state=state.PENDING, attempts=0)
+    return n
 
 
 def relay_until_quiet(rounds=10):
@@ -266,7 +339,8 @@ def save_fields(instance, fields, *, source):
     values = {f: getattr(instance, instance._meta.get_field(f).attname) for f in fields}
     return send("row.save", source, hall_of(instance), {
         "model": instance._meta.label, "pk": str(instance.pk),
-        "values": json.loads(json.dumps(values, cls=DjangoJSONEncoder))})
+        "values": json.loads(json.dumps(values, cls=DjangoJSONEncoder))},
+        subject=f"row:{instance._meta.label}:{instance.pk}")  # two saves of one row land in the order made
 
 
 @handler("row.save")
@@ -279,3 +353,48 @@ def _row_save(payload):
         field = model._meta.get_field(name)
         setattr(obj, field.attname, field.to_python(value))
     obj.save(update_fields=list(payload["values"]))
+
+
+# ---- a soul in transit is read-only (module doc) ---------------------------------------------------------------
+
+def _moving(aliases, soul_ids=None):
+    """Souls (of `soul_ids`, or any) with a move open on any of `aliases` -- except the move being delivered, whose
+    own steps write the soul."""
+    outbox, _, _ = _models()
+    out = set()
+    for alias in aliases:
+        rows = outbox._base_manager.using(alias).filter(state__in=_open(), kind__in=_MOVES)
+        if soul_ids is not None:
+            rows = rows.filter(payload__soul__id__in=[str(pk) for pk in soul_ids])
+        out |= set(rows.exclude(message_id=_delivering.get()).values_list("payload__soul__id", flat=True))
+    return out
+
+
+def _refuse_row(sender, instance, using=None, raw=False, **kwargs):
+    """pre_save / pre_delete of a Soul: refused while a move of it is open on the database written (the source's
+    master, where step 1 wrote the move's message; every read takes the source row as the soul until step 3)."""
+    if raw or not settings.SHARD_WRITE_CIVS or not _MOVES or instance._state.adding:
+        return
+    moving = _moving([using or CONTROL_ALIAS], [instance.pk])
+    if moving:
+        raise SoulInTransit(moving)
+
+
+def refuse_in_transit(queryset):
+    """`SoulQuerySet.update`: refused when it touches a soul with a move open on any master."""
+    if not settings.SHARD_WRITE_CIVS or not _MOVES:
+        return
+    moving = _moving([alias for alias, _ in masters()])
+    if moving:
+        hit = set(map(str, queryset.filter(pk__in=moving).values_list("pk", flat=True)))
+        if hit:
+            raise SoulInTransit(hit)
+
+
+def connect_transit_guard():
+    from django.db.models.signals import pre_delete, pre_save
+
+    from apps.souls.models import Soul
+
+    pre_save.connect(_refuse_row, sender=Soul, dispatch_uid="shard_saga:soul_in_transit_save")
+    pre_delete.connect(_refuse_row, sender=Soul, dispatch_uid="shard_saga:soul_in_transit_delete")

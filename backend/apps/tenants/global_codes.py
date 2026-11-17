@@ -108,11 +108,6 @@ def next_workflow_number(*, using):
         return counters.get(key=WORKFLOW_NUMBER_KEY).last
 
 
-#: A claim whose case is neither on any master nor closed is a write in flight -- or one that rolled back after the
-#: claim committed (a caller's transaction failing after `open_case` returned). Past this age it is taken as the second.
-OPEN_CASE_GRACE_SECONDS = 60
-
-
 class OpenCaseTaken(Exception):  # noqa: N818 -- an answer, not a failure
     """Another case of the soul holds the claim. `open_ids`: that case, when it is on a master already."""
 
@@ -121,40 +116,68 @@ class OpenCaseTaken(Exception):  # noqa: N818 -- an answer, not a failure
         self.open_ids = list(open_ids)
 
 
+def _case_txn(alias):
+    """`<alias>:<xid>`: the database a case is about to be written on and the transaction writing it there -- known
+    on PostgreSQL inside a transaction (`pg_current_xact_id`), else `<alias>:` (unknown)."""
+    from django.db import connections
+
+    conn = connections[alias]
+    if conn.vendor != "postgresql" or not conn.in_atomic_block:
+        return f"{alias}:"
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT pg_current_xact_id()::text")
+        return f"{alias}:{cursor.fetchone()[0]}"
+
+
+def _writer_finished(case_txn):
+    """Whether the transaction that took a claim has ended (committed or rolled back). Unknown -- not PostgreSQL, a
+    claim from before `case_txn` existed -- is "not finished": a claim is never taken over on a guess."""
+    from django.db import connections
+
+    alias, _, xid = case_txn.partition(":")
+    if not xid or alias not in connections or connections[alias].vendor != "postgresql":
+        return False
+    with connections[alias].cursor() as cursor:
+        cursor.execute("SELECT pg_xact_status(%s::xid8)", [xid])
+        status = cursor.fetchone()[0]
+    return status != "in progress"  # committed, aborted, or NULL: too old to be in progress
+
+
 def claim_open_case(soul_pk, judgment_pk, tenant_id):
     """Claim the soul's one open case for `judgment_pk`, on control, before the case row is written (stage 4 part C).
     Control in autocommit (the case goes to a shard): committed at once, so a second opener on another database is
     refused however its transaction interleaves -- and the caller must `release_open_case` if its write then fails.
     Inside a control transaction: committed or rolled back with it. Returns whether it committed at once.
 
-    A claim held by a case that is closed (a release missed: a bulk update closed it) or that never appeared within
-    OPEN_CASE_GRACE_SECONDS is stale and taken over; any other is OpenCaseTaken."""
-    from datetime import timedelta
-
+    A claim held by a case that is closed (a release missed: a bulk update closed it) is stale and taken over. So is
+    one whose case is not on its database once the transaction that took it has ended (`case_txn`): that write rolled
+    back -- including a caller's transaction failing after `open_case` returned. While that transaction is in progress,
+    or when it cannot be known (not PostgreSQL), the claim stands: OpenCaseTaken, never two open cases. No clock."""
     from django.db import connections
-    from django.utils import timezone
 
+    from apps.core.shard_reads import write_alias_of
     from apps.judgment.models import Judgment
     from apps.tenants.models import OpenCaseClaim
 
     claims = OpenCaseClaim.objects.using(CONTROL_ALIAS)
     # A test case's own wrapping transaction is not the code's (`shard_reads._code_transaction_open` reads them alike).
     autocommit = all(b._from_testcase for b in connections[CONTROL_ALIAS].atomic_blocks)
+    case_txn = _case_txn(write_alias_of(Judgment(tenant_id=tenant_id)))
     for _ in range(2):
         try:
             with transaction.atomic(using=CONTROL_ALIAS):
-                claims.create(soul_id=soul_pk, judgment_id=judgment_pk, tenant_id=tenant_id)
+                claims.create(soul_id=soul_pk, judgment_id=judgment_pk, tenant_id=tenant_id, case_txn=case_txn)
             return autocommit
         except IntegrityError:
             held = claims.filter(soul_id=soul_pk).first()
             if held is None:
                 continue  # released meanwhile
-            case = Judgment.all_objects.filter(pk=held.judgment_id).values_list("verdict", "is_final", "is_deleted").first()
+            alias = held.case_txn.partition(":")[0]
+            cases = Judgment._base_manager.using(alias) if alias in connections else Judgment.all_objects
+            case = cases.filter(pk=held.judgment_id).values_list("verdict", "is_final", "is_deleted").first()
             if case is not None and case == (None, False, False):
                 raise OpenCaseTaken([held.judgment_id]) from None
-            # ponytail: a vanished case is told from one in flight by age alone; a write slower than the grace
-            # period could be taken over. Upgrade path: claim inside a control transaction held open to commit.
-            if case is None and held.claimed_at > timezone.now() - timedelta(seconds=OPEN_CASE_GRACE_SECONDS):
+            if case is None and not _writer_finished(held.case_txn):
                 raise OpenCaseTaken([]) from None
             claims.filter(pk=held.pk, judgment_id=held.judgment_id).delete()
     raise OpenCaseTaken([])

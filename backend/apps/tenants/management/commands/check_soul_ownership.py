@@ -14,7 +14,9 @@ Copies allowed besides the primary row:
   the shard of `home_tenant`'s civ  only while the soul resides in another civilization (an executed
                                   cross-civilization dispatch: `tenant` and `home_tenant` of different
                                   civilizations) -- the home shard's rows point at it (D6)
-Any other row of the soul is a copy nothing justifies. Prints one line per problem, exits 1 when any.
+Any other row of the soul is a copy nothing justifies. A saga message that is a dead letter (FAILED: a move, a
+seat, a D6 write that will not be delivered on its own) is a problem too. Prints one line per problem, exits 1
+when any.
 """
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -64,6 +66,14 @@ def ownership_problems(aliases):
     return problems
 
 
+def dead_letters():
+    """One line per FAILED saga message (apps/tenants/shard_saga.py): nothing delivers it until an operator does."""
+    from apps.tenants import shard_saga
+
+    return [f"saga message {m.message_id} ({m.kind} {m.subject}) on {alias} FAILED after {m.attempts} attempts: "
+            f"{m.last_error}" for alias, m in shard_saga.failed()]
+
+
 class Command(BaseCommand):
     help = "Each soul has one primary row (its owner's database) and copies only where residence justifies them."
 
@@ -72,7 +82,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         aliases = [CONTROL_ALIAS, *shard_aliases()]
-        problems = ownership_problems(aliases)
+        problems = ownership_problems(aliases) + dead_letters()
         for line in problems:
             self.stdout.write(line)
         self.stdout.write(f"{len(problems)} problem(s) on {aliases}")
