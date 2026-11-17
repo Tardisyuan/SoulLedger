@@ -156,11 +156,29 @@ class World:
                 continue
             if f.null and (settle or self.rng.random() < 0.2):
                 setattr(obj, f.attname, None)
+            elif isinstance(f, models.UUIDField):  # never uuid4(): a seed replays the world only if every id is drawn
+                setattr(obj, f.attname, self.value(f))
             elif f.has_default() and (settle or (not f.choices and self.rng.random() < 0.5)):
                 setattr(obj, f.attname, f.get_default())
             else:
                 setattr(obj, f.attname, self.value(f))
         return obj
+
+    def follow(self, old_hall, new_hall):
+        """A soul moved from `old_hall` to `new_hall`: the pool files its rows under the hall they are in now. A row
+        owned through the soul (`soul__tenant`: a rebirth application, its cooldown request) went with it; filed under
+        the hall it was built in, it was "a row of that hall" to every test drawing from the pool, which then paired
+        it with a row that stayed (SHARD_SYNC_SEED=609690: an Egyptian application named by a request whose soul
+        had moved to a Chinese hall)."""
+        for (model, hall_pk), rows in list(self.pool.items()):
+            path = tenant_path(model)
+            if hall_pk != old_hall or not rows or path is None:
+                continue
+            gone = set(model._base_manager.filter(pk__in=[r.pk for r in rows], **{path: new_hall})
+                       .values_list("pk", flat=True))
+            if gone:
+                self.pool[(model, hall_pk)] = [r for r in rows if r.pk not in gone]
+                self.pool[(model, new_hall)].extend(r for r in rows if r.pk in gone)
 
     def row(self, model, hall, depth=0, fresh=False):
         key = (model, getattr(hall, "pk", None))
@@ -213,6 +231,7 @@ def _dispatch_across(world, soul, target):
         status=DispatchStatus.EXECUTED, soul=soul, source_tenant=home, target_tenant=target, tenant=home,
         source_owner_org=soul.owner_org_id, target_realm=world.row(Realm, target).pk)
     type(soul)._base_manager.filter(pk=soul.pk).update(tenant=target, owner_org=world.row(Organization, target).pk)
+    world.follow(soul.tenant_id, target.pk)
     return rec
 
 
@@ -224,7 +243,9 @@ def _return_home(world, soul, rec):
 
     DispatchRecord._base_manager.filter(pk=rec.pk).update(status=DispatchStatus.RETURNED)
     source_owner_org = DispatchRecord._base_manager.values_list("source_owner_org", flat=True).get(pk=rec.pk)
+    away = DispatchRecord._base_manager.values_list("target_tenant", flat=True).get(pk=rec.pk)
     type(soul)._base_manager.filter(pk=soul.pk).update(tenant=soul.home_tenant_id, owner_org=source_owner_org)
+    world.follow(away, soul.home_tenant_id)
 
 
 def _crossing_edges():
@@ -347,7 +368,12 @@ def _build_world(seed):
             w.crossed.append(f)
     # One soul goes and comes back. While it was away its residence wrote rows pointing at it; they stay
     # there. First, so the re-pointing cannot pick another mover's dispatch record and take its residence.
-    movers = list(Soul._base_manager.filter(tenant__in=known, tenant=F("home_tenant")).select_related("home_tenant"))
+    # In the pool's order, not the database's: an unordered queryset comes back in PostgreSQL's physical order,
+    # which a seed does not fix (the pks are uuid4 too), so a seed picked other movers on another run
+    # (SHARD_SYNC_SEED=180751: red in a gate run, green alone).
+    staying = dict(Soul._base_manager.filter(tenant__in=known, tenant=F("home_tenant")).select_related("home_tenant")
+                   .in_bulk())
+    movers = [staying[s.pk] for h in known for s in w.pool[(Soul, h.pk)] if s.pk in staying]
     soul, *moved = w.rng.sample(movers, 4)
     rec = _dispatch_across(w, soul, w.rng.choice(abroad(soul.home_tenant.civilization)))
     residence = apps.get_model("tenants", "Tenant")._base_manager.get(
