@@ -48,12 +48,13 @@ class TenantMiddleware(BaseMiddleware):
             set_current_tenant(tenant)
 
         # Stage 3: a socket of a caller with no hall (SYSTEM_ADMIN, a soul account) reads the way its HTTP
-        # requests do -- every leg -- instead of having no shard context (apps/core/shard_reads.py).
+        # requests do (SYSTEM_ADMIN every leg, a soul account its soul's shard: context_for_user) instead of having no shard context (apps/core/shard_reads.py).
         from apps.core.shard_reads import context_for_user, read_context
 
         try:
             if tenant is None and user is not None:
-                with read_context(context_for_user(user)):
+                # A soul account's context reads its soul's hall from control: a query, so off the event loop.
+                with read_context(await database_sync_to_async(context_for_user)(user)):
                     return await super().__call__(scope, receive, send)
             return await super().__call__(scope, receive, send)
         finally:

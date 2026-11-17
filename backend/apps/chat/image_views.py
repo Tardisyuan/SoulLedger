@@ -100,6 +100,9 @@ class MeChatImageSendView(ChatView):
 
 class MeChatImageView(ChatView):
     """这一世账号能看的书信图的签名地址(约一小时有效)。不是会话参与方、对方还没发出:404。"""
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "an image lives with its conversation: the other soul's hall, a residence's inbox")
 
     @extend_schema(operation_id="v1_me_chat_image_url", responses={200: ChatImageSerializer,
                                                                     404: ChatErrorSerializer})

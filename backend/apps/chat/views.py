@@ -94,6 +94,10 @@ class MeChatSessionView(ChatView):
 
 
 class MeChatConversationsView(ChatView):
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "a DIRECT conversation lives in the initiator's hall, an inbox in the hall written to")
+
     @extend_schema(responses={200: ConversationSerializer(many=True), 403: ChatErrorSerializer})
     def get(self, request):
         """**这一世**参与的会话,包括已闭的(只读,带 `closed_at`)。按账号筛,不按灵魂:

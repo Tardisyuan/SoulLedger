@@ -52,7 +52,7 @@ def session_is_current(token, user) -> bool:
 SOUL_RECYCLED = {"detail": "灵魂已移入回收站,账号暂停使用。", "code": "soul_recycled"}
 
 
-def soul_is_recycled(account) -> bool:
+def soul_is_recycled(account, using=None) -> bool:
     """灵魂在回收站里:access 与刷新一律 401 `soul_recycled`(审计 2026-11-11 A2-01)。
 
     软删不动账号(恢复出回收站后照常能登录),所以在认证这一侧挡,不在删除那一侧停用账号。
@@ -60,7 +60,8 @@ def soul_is_recycled(account) -> bool:
     """
     from apps.souls.models import Soul
 
-    return account is not None and Soul.all_objects.filter(pk=account.soul_id, is_deleted=True).exists()
+    # `using`: a database named by the caller; None asks the router (db_manager(None) is the manager as it is).
+    return account is not None and Soul.all_objects.db_manager(using).filter(pk=account.soul_id, is_deleted=True).exists()
 
 
 def _parses_as(token_class, raw) -> bool:
@@ -152,7 +153,13 @@ class SoulJWTAuthentication(JWTAuthentication):
         account = getattr(user, "soul_account", None)
         if account is None or account.retired_at is not None:
             raise AuthenticationFailed("账号已停用。", code="account_retired")
-        if soul_is_recycled(account):
+        # A read request asks the soul's primary shard, where it reads next (apps/core/shard_reads.py::
+        # soul_read_context; tests/test_soul_reads_one_shard.py counts it), not every leg. A write request, and a soul
+        # with no hall, ask the router as before: a write reads where it writes, and a recycling just written there.
+        from apps.core.shard_reads import FANOUT, reads_control, soul_primary_alias
+
+        where = soul_primary_alias(user)
+        if soul_is_recycled(account, using=None if where == FANOUT or reads_control() else where):
             raise AuthenticationFailed(SOUL_RECYCLED)
         # 官员关闭两步验证、重置密码、改密码、邮箱重置、转世都会 `session_version`+1:更早签发的 access 立刻 401。
         if not session_is_current(validated_token, user):
