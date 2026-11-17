@@ -60,8 +60,8 @@ def soul_is_recycled(account, using=None) -> bool:
     """
     from apps.souls.models import Soul
 
-    souls = Soul.all_objects.using(using) if using else Soul.all_objects
-    return account is not None and souls.filter(pk=account.soul_id, is_deleted=True).exists()
+    # `using`: a database named by the caller; None asks the router (db_manager(None) is the manager as it is).
+    return account is not None and Soul.all_objects.db_manager(using).filter(pk=account.soul_id, is_deleted=True).exists()
 
 
 def _parses_as(token_class, raw) -> bool:
