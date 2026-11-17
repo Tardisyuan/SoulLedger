@@ -8,7 +8,9 @@ bench, and the origin side's writes to a soul that resides elsewhere (D6) -- go 
 
   send        writes a ShardOutbox row on the SOURCE hall's master, in the caller's transaction: it commits or rolls
               back with the business rows it accompanies. Nothing is delivered until that commit.
-  relay       (Celery `sharding.relay_outbox`, kicked on commit and swept by `sharding.sync_shards`) for each PENDING
+  relay       (Celery `sharding.relay_outbox`, kicked on commit and swept by beat every 5 minutes and by
+              `sharding.sync_shards`; by hand `manage.py relay_outbox` -- a broker outage loses a kick, never a
+              message, which is a row here) for each PENDING
               row on a master: on the TARGET hall's master, one transaction that inserts ShardInbox(message_id) --
               unique, so a redelivery inserts nothing and applies nothing -- and applies the handler; then, on the
               source master, one transaction that runs the handler's `done` (or `refused`) and closes the row.
@@ -26,6 +28,7 @@ import json
 import logging
 import uuid
 from contextlib import contextmanager
+from contextvars import ContextVar
 
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
@@ -42,13 +45,21 @@ class Refused(Exception):  # noqa: N818 -- a refusal, not a failure
 
 
 _HANDLERS = {}
+#: Kinds that move a soul's primary row (payload["soul"]["id"]) to the target hall's master: until their step 3
+#: closes them, reads take the source row as the primary (`arriving`).
+_MOVES = set()
+#: The message being delivered: its own steps read the soul where it is arriving (step 2 logs it as the target
+#: hall's soul, step 3 reads it there once the source row is demoted), not as the rest of the world reads it.
+_delivering = ContextVar("shard_saga_delivering", default=None)
 
 
-def handler(kind, *, done=None, refused=None):
+def handler(kind, *, done=None, refused=None, moves=False):
     """Register `apply(payload)` for messages of `kind`, run on the target hall's master; `done(payload)` and
-    `refused(payload)` run on the source hall's master after it."""
+    `refused(payload)` run on the source hall's master after it. `moves`: the message moves a soul (`arriving`)."""
     def register(apply):
         _HANDLERS[kind] = (apply, done, refused)
+        if moves:
+            _MOVES.add(kind)
         return apply
     return register
 
@@ -72,6 +83,22 @@ def in_flight(subject, hall):
     """A saga on `subject` sent from `hall` is still PENDING."""
     outbox, _, state = _models()
     return outbox._base_manager.using(master_of(hall)).filter(subject=subject, state=state.PENDING).exists()
+
+
+def arriving():
+    """[(soul pk, target hall pk)] of every soul move still PENDING on any master: between step 2 (the target's row
+    written as primary) and step 3 (the source's row demoted) a soul has a primary-looking row on two masters, and
+    a read across them takes the SOURCE row as the primary -- the target's is not visible until the move closes
+    (`apps.core.shard_reads.legs`). Empty while no civilization writes to its shard."""
+    if not settings.SHARD_WRITE_CIVS or not _MOVES:
+        return []
+    outbox, _, state = _models()
+    out = []
+    for alias, hall_ids in masters():
+        rows = (outbox._base_manager.using(alias).filter(tenant_id__in=hall_ids, state=state.PENDING, kind__in=_MOVES)
+                .exclude(message_id=_delivering.get()).values_list("payload", "target_tenant_id"))
+        out.extend((payload["soul"]["id"], target) for payload, target in rows)
+    return out
 
 
 def sent(subject, hall):
@@ -126,8 +153,9 @@ def _kick():
 
     try:
         relay_outbox.delay()
-    except Exception:  # broker down: the beat sweep (`sharding.sync_shards`) relays it later
-        log.warning("saga relay not queued; the next sync_shards sweep relays it", exc_info=True)
+    except Exception:  # broker down: the message is a PostgreSQL row; the beat sweep (`sharding.relay_outbox`,
+        # every 5 minutes) or `manage.py relay_outbox` delivers it once the broker -- or just the worker -- is back
+        log.warning("saga relay not queued; the next relay_outbox sweep relays it", exc_info=True)
 
 
 def masters():
@@ -171,6 +199,14 @@ def relay_until_quiet(rounds=10):
 
 def deliver(msg):
     """Apply `msg` on its target (once: the inbox), then close it on its source. 1 if closed, 0 if it was not open."""
+    token = _delivering.set(msg.message_id)
+    try:
+        return _deliver(msg)
+    finally:
+        _delivering.reset(token)
+
+
+def _deliver(msg):
     outbox, inbox, state = _models()
     apply, done, refused = _HANDLERS[msg.kind]
     target = msg.target_tenant

@@ -477,7 +477,24 @@ def legs(model):
     for civ in cut:
         narrow = functools.partial(_own_souls, civ=civ) if model._meta.concrete_model is Soul else (lambda qs: qs)
         out.append((alias_for_civilization(civ), narrow, functools.partial(_civ_rows, path=path, civ=civ)))
+    if model._meta.concrete_model is Soul:
+        out = _not_arriving(out)
     return out
+
+
+def _not_arriving(out):
+    """The dedupe point of a soul in mid-move (stage 4 part C): while its move is PENDING the target's row is not
+    visible on any leg -- the source's is the primary until step 3 closes the move (`shard_saga.arriving`)."""
+    from django.db.models import Q
+
+    from apps.tenants.shard_saga import arriving
+
+    rows = arriving()
+    if not rows:
+        return out
+    hidden = functools.reduce(operator.or_, (Q(pk=pk, tenant_id=hall) for pk, hall in rows))
+    return [(alias, lambda qs, narrow=narrow: narrow(qs).exclude(hidden), on_control)
+            for alias, narrow, on_control in out]
 
 
 def _own_souls(qs, civ):

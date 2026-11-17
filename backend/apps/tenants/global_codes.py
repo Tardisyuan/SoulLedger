@@ -22,6 +22,11 @@ Where the row goes decides the transaction, and the alias is the one `Model.save
                    A shard transaction that fails afterwards leaves the code claimed / the number spent: a gap,
                    never a reuse. `check_global_codes` lists such unused claims; it does not fail on them.
 
+One open case per soul (stage 4 part C): an `OpenCaseClaim(soul_id)` row, UNIQUE, claimed by `claim_open_case`
+before a case row is written while any civilization writes to its shard -- the soul's home hall (a REOPEN) and the
+hall it resides in write cases on two databases, and no row lock spans both. Released when the case closes
+(`_release_on_close`) or its write fails (`JudgmentService.open_case`); a stale one is taken over (its docstring).
+
 Release (rows deleted or renamed; no reclaim of unused claims):
   soul_code   never released. It is a login name and the key of cross-hall chat lookup; a purged soul's code
               is retired (the generator draws from 31^10 values, so nobody waits for one).
@@ -98,6 +103,84 @@ def next_workflow_number(*, using):
         counters.get_or_create(key=WORKFLOW_NUMBER_KEY)
         counters.filter(key=WORKFLOW_NUMBER_KEY).update(last=F("last") + 1)
         return counters.get(key=WORKFLOW_NUMBER_KEY).last
+
+
+#: A claim whose case is neither on any master nor closed is a write in flight -- or one that rolled back after the
+#: claim committed (a caller's transaction failing after `open_case` returned). Past this age it is taken as the second.
+OPEN_CASE_GRACE_SECONDS = 60
+
+
+class OpenCaseTaken(Exception):  # noqa: N818 -- an answer, not a failure
+    """Another case of the soul holds the claim. `open_ids`: that case, when it is on a master already."""
+
+    def __init__(self, open_ids):
+        super().__init__("This soul already has an open case.")
+        self.open_ids = list(open_ids)
+
+
+def claim_open_case(soul_pk, judgment_pk, tenant_id):
+    """Claim the soul's one open case for `judgment_pk`, on control, before the case row is written (stage 4 part C).
+    Control in autocommit (the case goes to a shard): committed at once, so a second opener on another database is
+    refused however its transaction interleaves -- and the caller must `release_open_case` if its write then fails.
+    Inside a control transaction: committed or rolled back with it. Returns whether it committed at once.
+
+    A claim held by a case that is closed (a release missed: a bulk update closed it) or that never appeared within
+    OPEN_CASE_GRACE_SECONDS is stale and taken over; any other is OpenCaseTaken."""
+    from datetime import timedelta
+
+    from django.db import connections
+    from django.utils import timezone
+
+    from apps.judgment.models import Judgment
+    from apps.tenants.models import OpenCaseClaim
+
+    claims = OpenCaseClaim.objects.using(CONTROL_ALIAS)
+    # A test case's own wrapping transaction is not the code's (`shard_reads._code_transaction_open` reads them alike).
+    autocommit = all(b._from_testcase for b in connections[CONTROL_ALIAS].atomic_blocks)
+    for _ in range(2):
+        try:
+            with transaction.atomic(using=CONTROL_ALIAS):
+                claims.create(soul_id=soul_pk, judgment_id=judgment_pk, tenant_id=tenant_id)
+            return autocommit
+        except IntegrityError:
+            held = claims.filter(soul_id=soul_pk).first()
+            if held is None:
+                continue  # released meanwhile
+            case = Judgment.all_objects.filter(pk=held.judgment_id).values_list("verdict", "is_final", "is_deleted").first()
+            if case is not None and case == (None, False, False):
+                raise OpenCaseTaken([held.judgment_id]) from None
+            # ponytail: a vanished case is told from one in flight by age alone; a write slower than the grace
+            # period could be taken over. Upgrade path: claim inside a control transaction held open to commit.
+            if case is None and held.claimed_at > timezone.now() - timedelta(seconds=OPEN_CASE_GRACE_SECONDS):
+                raise OpenCaseTaken([]) from None
+            claims.filter(pk=held.pk, judgment_id=held.judgment_id).delete()
+    raise OpenCaseTaken([])
+
+
+def release_open_case(judgment_pk):
+    """Give the soul's claim back: the case `judgment_pk` closed, or its write rolled back."""
+    from apps.tenants.models import OpenCaseClaim
+
+    OpenCaseClaim.objects.using(CONTROL_ALIAS).filter(judgment_id=judgment_pk).delete()
+
+
+def _release_on_close(sender, instance, using=None, **kwargs):
+    """A saved case that is no longer open gives its claim back once its write commits (only while civilizations
+    write to their shards: before that no claim is taken)."""
+    from django.conf import settings
+
+    if not settings.SHARD_WRITE_CIVS or (instance.verdict is None and not instance.is_final and not instance.is_deleted):
+        return
+    pk = instance.pk
+    transaction.on_commit(lambda: release_open_case(pk), using=using)
+
+
+def connect_open_case_release():
+    from django.db.models.signals import post_save
+
+    from apps.judgment.models import Judgment
+
+    post_save.connect(_release_on_close, sender=Judgment, dispatch_uid="global_codes:open_case_release")
 
 
 def case_prefix_clash(code, civilization):

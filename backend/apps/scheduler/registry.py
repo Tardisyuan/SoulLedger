@@ -181,6 +181,10 @@ REGISTRY: tuple[JobSpec, ...] = (
     # (`reconcile_shards --all --fix`)。写入后另有 on_commit 去抖触发;这一条兜住 `.update()` 这类不发信号的写。
     # GLOBAL:分库按文明,不按殿。没配分库时什么也不做。
     JobSpec("sharding.sync_shards", GLOBAL, "*/10 * * * *", max_runtime=540),
+    # 跨文明 saga 的发件箱(分库第 4 阶段 C,apps/tenants/shard_saga.py):提交时另有 on_commit 投递;broker 宕机时
+    # 那次投递丢了,消息仍是 PostgreSQL 里的 PENDING 行,由这一条(或 `manage.py relay_outbox`)补投。收件箱去重,
+    # 重投无害。GLOBAL:每个主库都扫。锁 240s 同上面五分钟一次的几条。
+    JobSpec("sharding.relay_outbox", GLOBAL, "*/5 * * * *", max_runtime=240),
     # ---- this app's own maintenance --------------------------------------------
     # Every 5 minutes: the finest-grained job above is 5-minutely, so a stuck
     # run is noticed within one period of its own max_runtime; two indexed

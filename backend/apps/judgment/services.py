@@ -1,6 +1,9 @@
 """
 Judgment domain services — cross-context orchestration for judgment lifecycle.
 """
+from contextlib import contextmanager
+
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -787,6 +790,37 @@ def _withdrawn_case_stations(soul) -> dict:
     return {field: getattr(withdrawn, field) for field in (*RETRIAL_CARRIES, *STATION_CARRIES)}
 
 
+def _claim_open_case(soul, fields, tenant, claimed):
+    """The control-side claim of the soul's one open case (stage 4 part C, `global_codes.claim_open_case`), for the
+    case about to be written: its pk is drawn here. A claim committed at once goes into `claimed`, to be released
+    if the write fails."""
+    import uuid
+
+    from apps.tenants import global_codes
+
+    fields.setdefault("id", uuid.uuid4())
+    try:
+        if global_codes.claim_open_case(soul.pk, fields["id"], tenant.pk if tenant else soul.tenant_id):
+            claimed.append(fields["id"])
+    except global_codes.OpenCaseTaken as e:
+        raise OpenCaseRefusedError(
+            "This soul already has an open case. Conclude it before opening another.", "open_case", e.open_ids,
+        ) from None
+
+
+@contextmanager
+def _released_on_failure(claimed):
+    """A claim committed on control before a case write that then fails is given back (the write rolled back)."""
+    try:
+        yield
+    except BaseException:
+        from apps.tenants import global_codes
+
+        for pk in claimed:
+            global_codes.release_open_case(pk)
+        raise
+
+
 class JudgmentService:
     @staticmethod
     def open_case(soul, *, actor=None, in_tenant=None, reach_of=None, tenant=None, **fields):
@@ -813,10 +847,12 @@ class JudgmentService:
         from apps.souls.models import Soul
         from apps.tenants import shard_saga
 
-        with transaction.atomic():
+        claimed = []
+        with _released_on_failure(claimed), transaction.atomic():
             # A REOPEN the home hall opens while the soul resides in a civilization written on another database
             # (stage 4 part C, D6): the soul's row is not in this transaction and cannot be locked from it. Read it;
-            # the open-case check below reads every master. A REOPEN writes nothing on the soul.
+            # the open-case check below reads every master, and the control-side claim decides a race with the
+            # residence (no lock spans the two databases). A REOPEN writes nothing on the soul.
             soul = Soul.lock(soul.pk) if shard_saga.held(soul) else Soul.all_objects.get(pk=soul.pk)
             if in_tenant is not None and soul.tenant_id != in_tenant.pk:
                 raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
@@ -830,6 +866,8 @@ class JudgmentService:
                 if open_ids:
                     raise OpenCaseRefusedError(
                         "This soul already has an open case. Conclude it before opening another.", "open_case", open_ids)
+                if settings.SHARD_WRITE_CIVS:
+                    _claim_open_case(soul, fields, tenant, claimed)
             plan = in_progress_plan(soul)
             # A case on a soul that no conclusion can move is a case that never ends (review 2026-11-01 #10): an
             # ORIGINAL concludes JUDGING → DISPOSED, an AMENDMENT / REOPEN acts on a sentence plan in progress. So a
