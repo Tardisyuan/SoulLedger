@@ -110,7 +110,9 @@ def sent(subject, hall):
 @contextmanager
 def on_master(hall):
     """A transaction on `hall`'s master, acting as that hall: its writes, its `atomic()` and its reads that may act
-    are that master's, whatever request or task we are in (the request's own hall would otherwise decide)."""
+    are that master's, whatever request or task we are in (the request's own hall would otherwise decide). On a
+    shard it is the hall's business transaction (`shard_reads._install_atomic`): the shard's and control's, so a
+    handler's control lock or write (a user, an account, a notification) is inside it and rolls back with it."""
     from apps.core import request_local
     from apps.tenants import managers
 
@@ -119,7 +121,7 @@ def on_master(hall):
     request = request_local._request_var.set(None)
     tenant = managers._tenant_var.set(hall)
     try:
-        with read_context(alias), transaction.atomic(using=alias):
+        with read_context(alias), transaction.atomic(using=alias if alias == CONTROL_ALIAS else None):
             yield alias
     finally:
         managers._tenant_var.reset(tenant)

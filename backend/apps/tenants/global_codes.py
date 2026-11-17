@@ -17,10 +17,13 @@ Where the row goes decides the transaction, and the alias is the one `Model.save
                    exactly the behaviour before the registry existed (tests/test_global_codes.py proves it).
   row on a shard   the claim / bump runs on the control connection, which is a different connection from the
                    shard's, so the shard's rollback cannot undo it. Called while the control connection is in
-                   autocommit (no control transaction open) it commits at once; called inside a control
-                   transaction it commits with that transaction. Either way it is written before the shard row.
-                   A shard transaction that fails afterwards leaves the code claimed / the number spent: a gap,
-                   never a reuse. `check_global_codes` lists such unused claims; it does not fail on them.
+                   autocommit (no control transaction open) it commits at once: a shard transaction that fails
+                   afterwards leaves the code claimed / the number spent, a gap, never a reuse. Called inside a
+                   business `atomic()` -- control's transaction is open there in every context once anything is
+                   write-cut (`shard_reads._install_atomic`) -- it commits or rolls back with that transaction, which
+                   commits AFTER the shard's: a failed shard write takes the claim back with it (nothing used it);
+                   only a control commit failing after the shard's committed loses a claim whose row stands, and
+                   `check_global_codes` fails on that row ("unregistered"). It lists unused claims, without failing.
 
 One open case per soul (stage 4 part C): an `OpenCaseClaim(soul_id)` row, UNIQUE, claimed by `claim_open_case`
 before a case row is written while any civilization writes to its shard -- the soul's home hall (a REOPEN) and the

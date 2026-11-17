@@ -54,9 +54,9 @@ control before (`master_alias`); control stays a full mirror (shard-to-control s
               write-cut civilizations), or -- asked about the rows of one row (a related manager, which Django
               routes itself and which cannot merge) -- that row's hall's master. So a write request reads its own
               writes and still finds another civilization's row its payload names, as the single database does.
-  atomic      `transaction.atomic()` with no `using` is the context's master shard's transaction (control's plus
-              every write-cut shard's where it has none), so a business transaction holds where its rows are
-              (`_install_atomic`). A write to a shard outside the open transaction is refused (WriteOutsideTransaction).
+  atomic      `transaction.atomic()` with no `using` is control's transaction plus the context's master shard's
+              (every write-cut shard's where it has none), so a business transaction holds where its rows and its
+              locks are; the shards commit first (`_install_atomic`). A write to a shard outside the open transaction is refused (WriteOutsideTransaction).
   mirror      control keeps a mirror of each write-cut civilization's rows (shard-to-control sync). A direct write
               there (`.using("default")`, loaddata) is refused (ControlMirrorWrite): the sync would undo it.
               RULE: no data migration that writes SHARD rows while any civilization is write-cut. Its historical
@@ -1469,17 +1469,26 @@ def _transaction_aliases():
 
 
 def _install_atomic():
-    """Stage 4: the code's `transaction.atomic()` names no database and means "this business transaction".
+    """Stage 4: the code's `transaction.atomic()` names no database and means "this business transaction": control's
+    transaction plus one on each shard the context writes to (PLAN 阶段 4; VERIFY-stage4 must-fix 2). A business
+    transaction holds on every database its rows and its locks are on, control included.
 
-      one civilization   (a hall's request or task whose civilization writes to its shard) the transaction is
-                         that SHARD's, not control's: `atomic()`, and `on_commit` / `set_rollback` /
-                         `get_connection()` with no `using`, all mean the shard. A control write inside it (a code
-                         claim, a WF or case number, a user) is control's own autocommit, committed before the
-                         shard row: a failure after it leaves a gap, never a reuse (apps/tenants/global_codes.py)
-                         -- not one control transaction committing after the shard's.
+      one civilization   (a hall's request or task whose civilization writes to its shard) control's and that
+                         shard's; `on_commit` / `set_rollback` / `get_connection()` with no `using` mean the shard.
+                         So a control row lock (`User.objects.select_for_update()`) works inside it, and a control
+                         write (a user, a soul account, a notification) rolls back with the shard.
       no single one      (MASTER: SYSTEM_ADMIN, a soul account, a global task, a command; or no context) control's
-                         transaction as before, plus one on every write-cut shard inside it, committed first.
+                         plus one on every write-cut shard.
       nothing cut        exactly Django's: the patched paths return before doing anything else.
+
+    Commit order: the shards first, then control. A shard whose commit fails rolls control back; a `set_rollback`
+    on any of them rolls back all of them. A failure BETWEEN the two commits -- the shard committed, then control's
+    commit fails (its connection lost at that instant) -- leaves the shard's rows without control's: a user / account
+    / notification write lost, and a code claim or WF number drawn inside the block lost while the shard row that
+    holds it stands; `check_global_codes` reports that row as unregistered and fails. The other order would keep
+    control's writes whenever the shard's commit fails, the common failure (a constraint checked at commit, a
+    serialization error), so the shards go first. Claims and numbers taken with control in autocommit (no business
+    transaction open) still commit at once, before the shard row: a gap, never a reuse (apps/tenants/global_codes.py).
 
     A write to a shard while the code holds a transaction that is not open there is refused (`_refuse_outside`): it
     would autocommit outside the business transaction (a third database). Decided once at the enter and kept to the
@@ -1494,39 +1503,16 @@ def _install_atomic():
     def routed_connection(using=None):
         if using is None and settings.SHARD_WRITE_CIVS:
             for kind, held in reversed(_atomic_extra.get()):
-                if kind == "inner":
-                    return get_connection(held.using)
+                if kind == "one":
+                    return get_connection(held[-1].using)
             using = _single_master()
         return get_connection(using)
 
-    def entering(self):
-        shard = _single_master() if self.using is None else None
-        if shard is not None:
-            inner = Atomic(shard, self.savepoint, self.durable)
-            inner.__enter__()
-            _atomic_extra.set((*_atomic_extra.get(), ("inner", inner)))
-            return
-        enter(self)
-        extra = []
-        if self.using is None and settings.SHARD_WRITE_CIVS:
-            try:
-                for alias in _transaction_aliases():
-                    a = Atomic(alias, self.savepoint, False)
-                    a.__enter__()
-                    extra.append(a)
-            except BaseException as e:
-                for a in reversed(extra):
-                    a.__exit__(type(e), e, e.__traceback__)
-                leave(self, type(e), e, e.__traceback__)
-                raise
-        _atomic_extra.set((*_atomic_extra.get(), ("extra", extra)))
-
-    def leaving(self, exc_type, exc, tb):
-        stack = _atomic_extra.get()  # empty only if this context did not see the enter: nothing of ours to close
-        kind, held = stack[-1] if stack else ("extra", [])
-        _atomic_extra.set(stack[:-1])
-        if kind == "inner":
-            return held.__exit__(exc_type, exc, tb)
+    def close(held, exc_type, exc, tb):
+        """Exit `held` (control's first in it) innermost first: the shards commit before control."""
+        if exc_type is None and any(connections[a.using].needs_rollback for a in held):
+            for a in held:  # set_rollback on one of them: all of them
+                connections[a.using].needs_rollback = True
         failed = None
         for a in reversed(held):
             try:
@@ -1534,10 +1520,35 @@ def _install_atomic():
             except BaseException as e:  # a shard's commit failed: control rolls back with it
                 if exc_type is None:
                     failed, exc_type, exc, tb = e, type(e), e, e.__traceback__
-        result = leave(self, exc_type, exc, tb)
         if failed is not None:
             raise failed
-        return result
+
+    def entering(self):
+        if self.using is not None or not settings.SHARD_WRITE_CIVS:
+            enter(self)
+            _atomic_extra.set((*_atomic_extra.get(), ("django", ())))
+            return
+        shard = _single_master()
+        aliases = [shard] if shard is not None else _transaction_aliases()
+        held = []
+        try:
+            for i, alias in enumerate([CONTROL_ALIAS, *aliases]):
+                a = Atomic(alias, self.savepoint, self.durable and (i == 0 or shard is not None))
+                a.__enter__()
+                held.append(a)
+        except BaseException as e:
+            close(held, type(e), e, e.__traceback__)
+            raise
+        _atomic_extra.set((*_atomic_extra.get(), ("one" if shard is not None else "all", tuple(held))))
+
+    def leaving(self, exc_type, exc, tb):
+        stack = _atomic_extra.get()  # empty only if this context did not see the enter: Django's own
+        kind, held = stack[-1] if stack else ("django", ())
+        _atomic_extra.set(stack[:-1])
+        if kind == "django":
+            return leave(self, exc_type, exc, tb)
+        close(held, exc_type, exc, tb)
+        return False
 
     entering._shard_reads = leaving._shard_reads = routed_connection._shard_reads = True
     Atomic.__enter__, Atomic.__exit__ = entering, leaving
