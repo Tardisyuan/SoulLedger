@@ -239,6 +239,10 @@ def _soul_error(exc):
 
 
 class MeJudgmentAppealsView(SoulAPIView):
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "the appealable judgments, their appeals and deadlines, a residence court's among them")
+
     @extend_schema(responses={200: MeJudgmentAppealListSerializer, 403: SoulErrorSerializer})
     def get(self, request):
         account = self.account

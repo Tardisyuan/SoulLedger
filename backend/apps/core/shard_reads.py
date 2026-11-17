@@ -18,8 +18,8 @@ Where a read of a SHARD model goes (`route`), first answer wins:
 
 The read context (`current_context`): an explicit `read_context(...)` (a management command reads control, below),
 else the request's hall (or the tenant contextvar a per-hall Celery task sets); else the user -- a
-civilization ADMIN reads its civilization, SYSTEM_ADMIN, a soul account and an anonymous caller (sign-in by
-soul code) read everywhere (FANOUT), a caller that reaches no hall reads control (scope_to_tenant answers it
+civilization ADMIN reads its civilization, a soul account its soul's primary hall's (`soul_read_context`),
+SYSTEM_ADMIN and an anonymous caller (sign-in by soul code) read everywhere (FANOUT), a caller that reaches no hall reads control (scope_to_tenant answers it
 nothing anyway). A hall of UNKNOWN civilization, and a civilization not cut over, read control: that is where
 their rows live (D2). Outside a request, inside Celery -- a task's body, or a Celery signal's receivers
 (worker_ready, task_postrun, beat's before_task_publish) -- reads go where the task's writes go: control
@@ -202,7 +202,9 @@ def context_for_user(user):
     from apps.core.tenant import is_civilization_admin, is_tenant_exempt
     from apps.soul_accounts.authentication import SOUL_ROLE
 
-    if is_tenant_exempt(user) or getattr(user, "role", None) == SOUL_ROLE:
+    if getattr(user, "role", None) == SOUL_ROLE:
+        return soul_read_context(user)
+    if is_tenant_exempt(user):
         return FANOUT
     # An ADMIN viewing one hall (`hall_view`) never gets here: impersonation sets it only on a request whose token
     # names that hall, so `request.tenant` answered first (current_context).
@@ -211,6 +213,82 @@ def context_for_user(user):
     if getattr(user, "tenant_id", None) is not None:  # force_authenticate: request_tenant's fallback
         return alias_for_reads(user.tenant.civilization)
     return CONTROL_ALIAS  # reaches no hall: scope_to_tenant answers it nothing, from control
+
+
+#: Where a soul account's own reads go, and whether it has rows abroad: cached on the user object (one per request,
+#: authentication loads it).
+_SOUL_CONTEXT_ATTR = "_shard_soul_read_context"
+#: The attribute a soul view sets -- to the reason -- when it shows the soul's rows in another civilization's shard
+#: (`soul_read_context`). tests/test_soul_reads_one_shard.py lists the views that set it.
+READS_SOUL_ROWS_ABROAD = "reads_soul_rows_abroad"
+
+
+def soul_read_context(user):
+    """A soul account reads the shard of its soul's PRIMARY: SoulAccount -> soul -> hall -> civilization, read from
+    control (which holds every soul row: stage 3 writes there, stage 4 mirrors each shard back). Never "any shard
+    that has the soul": after a residence or a cross-civilization transfer another shard keeps a copy (D6), and
+    the copy is not where the soul's rows are written.
+    Every leg (FANOUT), as before, for:
+      * a soul with no hall, or a hall of no known civilization: nothing says where its rows are;
+      * a soul with rows outside its primary's civilization (a residence court's judgments, a letter in another
+        hall's inbox, a DIRECT conversation in the other soul's hall), on a view that shows such rows: the view says
+        so with READS_SOUL_ROWS_ABROAD. The whole request, not one queryset: what the view reads next by the
+        row's ids (the confessions of a residence judgment, its appeals) is in that row's shard too."""
+    primary, abroad = _soul_reads(user)
+    return FANOUT if abroad and _view_shows_rows_abroad() else primary
+
+
+def soul_primary_alias(user):
+    """The alias of the soul's primary (FANOUT: no hall, no known civilization): `soul_read_context` without the view."""
+    return _soul_reads(user)[0]
+
+
+def _view_shows_rows_abroad():
+    from apps.core.request_local import get_current_request
+
+    match = getattr(get_current_request(), "resolver_match", None)
+    func = getattr(match, "func", None)
+    view = getattr(func, "view_class", None) or getattr(func, "cls", None)
+    return bool(getattr(view, READS_SOUL_ROWS_ABROAD, None))
+
+
+def _soul_reads(user):
+    """(primary, rows abroad) of a soul account: two control queries, once per request."""
+    if not settings.SHARD_READ_CIVS:
+        return FANOUT, True  # nothing is cut over: no query (the context is never asked then anyway)
+    cached = getattr(user, _SOUL_CONTEXT_ATTR, None)
+    if cached is not None:
+        return cached
+    from apps.souls.models import Civilization, Soul
+
+    soul = (Soul._base_manager.using(CONTROL_ALIAS).filter(accounts__user_id=user.pk).select_related("tenant")
+            .order_by().first())
+    civ = soul.tenant.civilization if soul is not None and soul.tenant is not None else None
+    cached = (alias_for_reads(civ), _rows_abroad(soul, civ)) if civ in Civilization.values else (FANOUT, True)
+    setattr(user, _SOUL_CONTEXT_ATTR, cached)
+    return cached
+
+
+def _rows_abroad(soul, civ):
+    """Does a row naming `soul` through a crossing key live outside `civ`'s halls (another civilization's shard, or
+    control: a row with no hall)? One EXISTS per crossing key to Soul, in one control query. The rows that hang off
+    such a row (a judgment's confessions) are in its hall; the rows that follow the soul (`soul__tenant`) are in
+    its primary's."""
+    from apps.core.tenant import civilization_halls
+    from apps.souls.models import Soul
+
+    mine = civilization_halls(civ).values("pk")
+    found = [models.Exists(f.model._base_manager.filter(**{f.attname: models.OuterRef("pk")})
+                           .exclude(**{f"{tenant_path(f.model)}__in": mine})) for f in _keys_to_soul()]
+    return Soul._base_manager.using(CONTROL_ALIAS).filter(pk=soul.pk).filter(
+        functools.reduce(operator.or_, found)).exists()
+
+
+@functools.cache
+def _keys_to_soul():
+    from apps.souls.models import Soul
+
+    return tuple(f for f in crossing_keys() if f.related_model._meta.concrete_model is Soul)
 
 
 def in_write_transaction():

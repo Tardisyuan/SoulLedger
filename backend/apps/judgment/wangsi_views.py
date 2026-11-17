@@ -123,6 +123,10 @@ class MeWangsiFileSerializer(serializers.Serializer):
 
 
 class MeWangsiView(SoulAPIView):
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "the untimely judgments, a residence court's among them")
+
     def _mine(self):
         account = self.account
         return Judgment.objects.filter(soul_id=account.soul_id, cycle=account.cycle, untimely=True).order_by(

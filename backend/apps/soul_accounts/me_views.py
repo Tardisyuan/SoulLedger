@@ -267,6 +267,11 @@ class SoulLogoutView(APIView):
 
 
 class MeView(SoulAPIView):
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "the vestibule entry, the Duat confession tally and the wangsi date: path entries and judgments "
+        "a residence court wrote")
+
     @extend_schema(responses={200: MeProfileSerializer, 403: SoulErrorSerializer})
     def get(self, request):
         account = self.account
@@ -372,6 +377,10 @@ def build_lives(account, *, past: bool):
 
 
 class MeLifeView(SoulAPIView):
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "build_lives: this life's records, judgments, dispositions, a residence court's among them")
+
     @extend_schema(responses={200: MeLifeSerializer, 403: SoulErrorSerializer})
     def get(self, request):
         account = self.account
@@ -379,6 +388,10 @@ class MeLifeView(SoulAPIView):
 
 
 class MePastLivesView(SoulAPIView):
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "build_lives: every past life's rows and the reincarnations, a residence court's among them")
+
     @extend_schema(responses={200: MeLifeSerializer(many=True), 403: SoulErrorSerializer})
     def get(self, request):
         account = self.account
@@ -388,6 +401,9 @@ class MePastLivesView(SoulAPIView):
 
 class MeSentencePlanView(SoulAPIView):
     """本人本世的受刑计划(App「我的受刑」)。只读;从 `self.account` 出发,不接受任何 id。"""
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "the plan, its nodes and its origin judgment, which a residence court opened")
 
     @extend_schema(responses={200: MeSentencePlanSerializer, 403: SoulErrorSerializer})
     def get(self, request):
@@ -397,6 +413,10 @@ class MeSentencePlanView(SoulAPIView):
 
 
 class MeRebirthApplicationsView(SoulAPIView):
+    #: Stage 4 (apps/core/shard_reads.py::soul_read_context): every leg for a soul with rows abroad --
+    reads_soul_rows_abroad = (
+        "rebirth.eligibility reads the served plan, which a residence court may have opened")
+
     @extend_schema(responses={200: MeRebirthApplicationListSerializer, 403: SoulErrorSerializer})
     def get(self, request):
         account = self.account
