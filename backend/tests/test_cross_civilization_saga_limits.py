@@ -12,7 +12,8 @@ apps/tenants/global_codes.py; tests/test_cross_civilization_saga.py is the saga'
   4 relay sweep     a broker outage loses the on-commit kick, never the message (a PostgreSQL row): the beat job
                     `sharding.relay_outbox` or `manage.py relay_outbox` delivers each once, the inbox dedupes.
 
-Worlds are random; the seed is in every failure message.
+Worlds are random: fixed seeds -- the first three forcing each write cut (only the source's civilization, only the
+target's, both) -- and one drawn per run (`RUN`, `SAGA_SEED=<n>` replays it); the seed is in every failure message.
 
     cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true DATABASE_URL=sqlite:///:memory: \\
       REDIS_URL=redis://127.0.0.1:6399/0 .venv/bin/python -m pytest --ds=config.settings_sharded -m sharded \\
@@ -27,6 +28,7 @@ from django.core.management import call_command
 from django.db import connection, connections, transaction
 
 from tests.test_cross_civilization_saga import (
+    RUN,
     InjectedError,
     _account,
     _approved,
@@ -35,6 +37,7 @@ from tests.test_cross_civilization_saga import (
     _redeliver,
     _snapshot,
     _world,
+    seed_of,
 )
 from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
@@ -42,7 +45,8 @@ from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 SQLITE = connection.vendor == "sqlite"
 NEEDS_ROW_LOCKS = pytest.mark.skipif(
     SQLITE, reason="SQLite serializes writers; two openers cannot both be past the read check at once. Run on PG.")
-SEEDS = [3, 29, 64, 205, 918]
+#: (seed, forced write cut). RUN draws its world (and its cut) per run.
+SEEDS = [(RUN, None), (3, "tgt"), (29, "src"), (64, "both"), (205, None), (918, None)]
 
 
 @pytest.fixture(autouse=True)
@@ -56,7 +60,8 @@ def _reads_everywhere():
 
 @pytest.fixture
 def world(request):
-    w = _world(request.param)
+    seed, forced = request.param
+    w = _world(seed_of(seed), forced)
     halls = _halls()
     _assign(*CIVS)
     with cut(*w["cut"]):
@@ -151,7 +156,7 @@ def test_between_step_2_and_step_3_a_dispatched_soul_reads_as_its_source_row_onl
 
 
 @sharded
-@pytest.mark.parametrize("world", SEEDS[:3], indirect=True)
+@pytest.mark.parametrize("world", SEEDS[:4], indirect=True)
 def test_between_step_2_and_step_3_a_soul_going_home_reads_as_its_residence_row_only(world, monkeypatch):
     from apps.dispatch.services import DispatchService
     from apps.dispatch.transfer import RETURN
@@ -168,7 +173,7 @@ def test_between_step_2_and_step_3_a_soul_going_home_reads_as_its_residence_row_
 
 
 @sharded
-@pytest.mark.parametrize("world", SEEDS[:3], indirect=True)
+@pytest.mark.parametrize("world", SEEDS[:4], indirect=True)
 def test_between_step_2_and_step_3_a_reborn_soul_reads_as_its_origin_row_only(world, monkeypatch):
     from apps.dispatch import transfer
 
@@ -247,7 +252,7 @@ def test_a_reopen_at_home_and_a_case_where_the_soul_resides_open_one_case(world,
 
 
 @sharded
-@pytest.mark.parametrize("world", SEEDS[:3], indirect=True)
+@pytest.mark.parametrize("world", SEEDS[:4], indirect=True)
 def test_a_case_write_that_fails_gives_the_claim_back(world, blind_read_check):
     from apps.judgment.services import OpenCaseRefusedError
     from apps.tenants.shard_saga import master_of
@@ -269,7 +274,7 @@ def test_a_case_write_that_fails_gives_the_claim_back(world, blind_read_check):
 
 
 @sharded
-@pytest.mark.parametrize("world", SEEDS[:3], indirect=True)
+@pytest.mark.parametrize("world", SEEDS[:4], indirect=True)
 def test_a_closed_case_gives_the_claim_back_and_a_stale_one_is_taken_over(world, blind_read_check,
                                                                           django_capture_on_commit_callbacks):
     from apps.tenants.models import OpenCaseClaim
@@ -357,7 +362,7 @@ def _three(seed):
 
 
 @sharded
-@pytest.mark.parametrize("seed", SEEDS)
+@pytest.mark.parametrize("seed", [s for s, _ in SEEDS])
 def test_a_soul_moving_on_to_a_third_civilization_takes_its_home_copy_along(seed, monkeypatch):
     """Today the business refuses to dispatch a residing soul onward (it goes home first:
     `DispatchService.check_executable` / `propose`), so this relaxes that one check and keeps the rest: the saga's
@@ -375,6 +380,7 @@ def test_a_soul_moving_on_to_a_third_civilization_takes_its_home_copy_along(seed
             return None
         return checked(record, soul)
     monkeypatch.setattr(DispatchService, "check_executable", staticmethod(onward_allowed))
+    seed = seed_of(seed)
     t = _three(seed)
     halls = _halls()
     _assign(*CIVS)
@@ -408,7 +414,7 @@ def test_a_soul_moving_on_to_a_third_civilization_takes_its_home_copy_along(seed
 # ---- 4: the relay sweep after a broker outage -----------------------------------------------------------------------
 
 @sharded
-@pytest.mark.parametrize("world", SEEDS[:4], indirect=True)
+@pytest.mark.parametrize("world", SEEDS[:5], indirect=True)
 def test_a_broker_outage_loses_no_message_and_the_sweep_delivers_each_once(world, monkeypatch,
                                                                            django_capture_on_commit_callbacks):
     from apps.dispatch.models import DispatchRecord, DispatchStatus

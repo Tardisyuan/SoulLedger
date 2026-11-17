@@ -12,14 +12,16 @@ databases, where one transaction cannot hold it and a saga does:
   replica       the source row a transfer leaves behind is a copy (gap 4d): deleting it leaves control's SoulAccount.
   D6            an origin-side write to a soul residing on another master becomes a message to it.
 
-Worlds are random (two civilizations, which of them write to their shards, a target realm or not); the seed is in
-every failure message. The routes the HTTP test drives are found in the URLconf by their view action.
+Worlds are random (two civilizations, which of them write to their shards, a target realm or not): the fixed seeds
+replay the same worlds every run, and `RUN` draws a new one each run (`SAGA_SEED=<n>` replays it); the seed is
+printed and in every failure message. The routes the HTTP test drives are found in the URLconf by their view action.
 
     cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true DATABASE_URL=sqlite:///:memory: \\
       REDIS_URL=redis://127.0.0.1:6399/0 .venv/bin/python -m pytest --ds=config.settings_sharded -m sharded \\
       --no-cov tests/test_cross_civilization_saga.py
 """
 import io
+import os
 import random
 import re
 import traceback
@@ -35,10 +37,12 @@ from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 _WRITE = re.compile(r'^\s*(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+"?(\w+)"?', re.I)
-#: Clocks and fresh ids differ between two runs that end in the same state; ids also appear as strings (an event's
-#: payload names the disposition it made).
-_VOLATILE = re.compile(r"datetime\.(?:datetime|date)\([^)]*\)|UUID\('[^']*'\)"
-                       r"|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+#: Clocks differ between two runs that end in the same state.
+_CLOCK = re.compile(r"datetime\.(?:datetime|date)\([^)]*\)")
+#: Ids, as UUID objects or as strings (an event's payload names the disposition it made). Only the ones a run drew
+#: fresh are masked (`_snapshot(known=...)`): a row naming an existing soul, record or case names it verbatim, so
+#: one pointing at the wrong one does not compare equal.
+_UUID = re.compile(r"UUID\('([^']*)'\)|([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
 SAGA_TABLES = ("tenants.ShardOutbox", "tenants.ShardInbox")
 
 
@@ -48,12 +52,28 @@ class InjectedError(Exception):
 
 # ---- the world ----------------------------------------------------------------------------------------------------
 
-def _world(seed):
-    """Two halls of two civilizations; the write cut chosen so their masters differ. Returns a dict."""
+#: A parameter that draws a new world each run (module doc).
+RUN = "run"
+
+
+def seed_of(param):
+    """`param`, or for RUN this run's seed: `SAGA_SEED`, else drawn (printed either way, so a failure replays)."""
+    if param != RUN:
+        return param
+    seed = int(os.environ["SAGA_SEED"]) if os.environ.get("SAGA_SEED") else random.randrange(10**6)
+    print(f"saga world seed {seed} (replay: SAGA_SEED={seed})")
+    return seed
+
+
+def _world(seed, cut=None):
+    """Two halls of two civilizations; the write cut chosen so their masters differ -- the source's, the target's or
+    both (`cut`: "src" / "tgt" / "both" forces it). Returns a dict."""
     rng = random.Random(seed)
     src_civ, tgt_civ = rng.sample(CIVS, 2)
     others = [c for c in CIVS if c not in (src_civ, tgt_civ)]
-    cut_civs = rng.choice([[src_civ], [tgt_civ], [src_civ, tgt_civ]]) + rng.sample(others, rng.randint(0, 2))
+    modes = {"src": [src_civ], "tgt": [tgt_civ], "both": [src_civ, tgt_civ]}
+    chosen = rng.choice(list(modes.values()))
+    cut_civs = (modes[cut] if cut else chosen) + rng.sample(others, rng.randint(0, 2))
     return {"seed": seed, "src": src_civ, "tgt": tgt_civ, "cut": sorted(set(cut_civs)), "realm": rng.random() < 0.5}
 
 
@@ -103,8 +123,7 @@ def _reads_everywhere():
 
 @pytest.fixture
 def world(request):
-    seed = getattr(request, "param", None)
-    seed = random.randrange(10**6) if seed is None else seed
+    seed = seed_of(getattr(request, "param", RUN))
     w = seed if isinstance(seed, dict) else _world(seed)
     halls = _halls()
     _assign(*CIVS)
@@ -114,9 +133,22 @@ def world(request):
 
 # ---- observing every database ---------------------------------------------------------------------------------------
 
-def _snapshot(tables=None):
+def _ids(snapshot):
+    """Every id a snapshot names."""
+    return {a or b for rows in snapshot.values() for row in rows for a, b in _UUID.findall(row)}
+
+
+def _snapshot(tables=None, known=None):
     """Every row of every model on every alias -- or of the `tables` named (a row changes only by a write, and the
-    wrapper on every connection sees every write, so the tables nobody wrote are the same rows)."""
+    wrapper on every connection sees every write, so the tables nobody wrote are the same rows). Clocks masked; with
+    `known`, also every id not in it (drawn fresh by the run), so two runs to the same state compare equal while a
+    reference to an existing row is compared as it is."""
+    def mask(text):
+        text = _CLOCK.sub("~", text)
+        if known is None:
+            return text
+        return _UUID.sub(lambda m: m.group(0) if (m.group(1) or m.group(2)) in known else "~id", text)
+
     out = {}
     for alias in settings.DATABASES:
         for m in apps.get_models(include_auto_created=True):
@@ -124,7 +156,7 @@ def _snapshot(tables=None):
                 continue
             if tables is not None and m._meta.db_table not in tables:
                 continue
-            rows = sorted(_VOLATILE.sub("~", repr(r[1:])) for r in m._base_manager.using(alias).values_list())
+            rows = sorted(mask(repr(r[1:])) for r in m._base_manager.using(alias).values_list())
             if rows:
                 out[(alias, m._meta.label)] = rows
     return out
@@ -216,19 +248,20 @@ def _every_step(label, action, seed):
     from apps.tenants.shard_saga import relay_until_quiet
 
     start_points = _savepoints()
-    before, sent_before = _snapshot(), set(_messages())
+    known = _ids(_snapshot())
+    before, sent_before = _snapshot(known=known), set(_messages())
     steps = _writes_during(_run(action))
     assert not _pending(), f"seed {seed} {label}: messages still pending after the dry run"
-    done = _snapshot()
+    done = _snapshot(known=known)
     assert done != before, f"seed {seed} {label}: the path wrote nothing"
     assert {a for a, _ in steps} - {"default"}, f"seed {seed} {label}: no shard was written; not a cross-db path"
     _ownership()
     snap = _savepoints()
     _redeliver(sent_before)
-    assert _snapshot() == done, f"seed {seed} {label}: redelivering the messages changed the world"
+    assert _snapshot(known=known) == done, f"seed {seed} {label}: redelivering the messages changed the world"
     _rollback(snap)
     _rollback(start_points)
-    assert _snapshot() == before
+    assert _snapshot(known=known) == before
     dry_tables = {t for _, t in steps}
 
     def only(snapshot, tables):
@@ -248,7 +281,7 @@ def _every_step(label, action, seed):
         seen_after = []
         _writes_during(relay_until_quiet, seen=seen_after)
         tables = dry_tables | {t for _, t in seen + seen_after}
-        now, start, end = _snapshot(tables), only(before, tables), only(done, tables)
+        now, start, end = _snapshot(tables, known), only(before, tables), only(done, tables)
         where = f"seed {seed} {label}: failing at write {k} {steps[k - 1]}"
         if now not in (start, end):
             # A write made from inside the event bus is best effort (single-database G4, `_VOLATILE`): the path may
@@ -268,7 +301,7 @@ def _without(snapshot, table):
 
 # ---- the paths ------------------------------------------------------------------------------------------------------
 
-SEEDS = [11, 23, 57, 91, 404, 777]
+SEEDS = [RUN, 11, 23, 57, 91, 404, 777]
 
 
 @sharded
@@ -285,7 +318,7 @@ def test_executing_a_dispatch_across_civilizations_ends_at_the_start_or_the_end(
 
 
 @sharded
-@pytest.mark.parametrize("world", SEEDS[:3], indirect=True)
+@pytest.mark.parametrize("world", SEEDS[:4], indirect=True)
 def test_ending_a_residence_across_civilizations_ends_at_the_start_or_the_end(world):
     from apps.dispatch.models import DispatchRecord
     from apps.dispatch.services import DispatchService
@@ -303,7 +336,7 @@ def test_ending_a_residence_across_civilizations_ends_at_the_start_or_the_end(wo
 
 
 @sharded
-@pytest.mark.parametrize("world", SEEDS[:2], indirect=True)
+@pytest.mark.parametrize("world", SEEDS[:3], indirect=True)
 def test_seating_another_civilization_on_a_joint_bench_ends_at_the_start_or_the_end(world):
     from apps.dispatch.models import CrossTenantJudgmentParticipant, ParticipantRole
     from apps.dispatch.services import CrossTenantJudgmentService

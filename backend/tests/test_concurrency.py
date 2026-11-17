@@ -1424,6 +1424,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 串行版 test_a_reopen_at_home_and_a_case_where_the_soul_resides_open_one_case 同文件,两个引擎都跑。
         "tests/test_cross_civilization_saga_limits.py::"
         "test_two_civilizations_opening_a_case_on_one_soul_at_once_open_exactly_one",
+        # 2026-11-17 阶段 4 复查:开案占号不再按 60 秒判「消失」—— 占号记下写案子的事务(pg_current_xact_id),
+        # 那个事务还在跑就拒、回滚后才接管;SQLite 没有事务状态可问(一律拒,不接管)。SQLite 版
+        # test_a_claim_whose_writer_cannot_be_known_finished_is_never_taken_over 同文件,两个引擎都跑。
+        "tests/test_cross_civilization_saga_hardening.py::"
+        "test_a_claim_is_held_while_its_case_transaction_runs_and_taken_over_once_it_rolls_back",
         # 2026-10-29 数据范围 B2:范围过滤后的灵魂列表走 (tenant, owner_org) 索引。EXPLAIN 的计划与
         # 统计只在 PostgreSQL 上有意义;同文件的五种范围断言每个引擎都跑。
         "tests/test_data_scope_solver.py::test_the_scoped_soul_list_uses_the_tenant_owner_index",
