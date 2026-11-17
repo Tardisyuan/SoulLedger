@@ -207,6 +207,9 @@ class OpenCaseClaim(models.Model):
     judgment_id = models.UUIDField()
     tenant_id = models.BigIntegerField(null=True, blank=True)
     claimed_at = models.DateTimeField(auto_now_add=True)
+    #: "<alias>:<xid>": the database the case is written on and, on PostgreSQL, the transaction writing it. A claim
+    #: whose case is not there is stale only once that transaction is no longer in progress (`claim_open_case`).
+    case_txn = models.CharField(max_length=100, blank=True, default="")
 
     def __str__(self):
         return f"open case {self.judgment_id} of soul {self.soul_id}"
@@ -216,6 +219,9 @@ class ShardMessageState(models.TextChoices):
     PENDING = "PENDING"
     DONE = "DONE"
     REFUSED = "REFUSED"
+    #: A dead letter: delivery failed `shard_saga.MAX_ATTEMPTS` times. Still open (a move stays in transit); reported
+    #: by `check_soul_ownership` / `relay_outbox` until `relay_outbox --retry-failed`.
+    FAILED = "FAILED"
 
 
 class ShardOutbox(models.Model):
@@ -235,6 +241,9 @@ class ShardOutbox(models.Model):
                              db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     done_at = models.DateTimeField(null=True, blank=True)
+    #: Failed deliveries so far, and the last one's error (the relay notes them; `Refused` is not a failure).
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.TextField(blank=True, default="")
 
     def __str__(self):
         return f"{self.kind} {self.message_id} {self.state}"

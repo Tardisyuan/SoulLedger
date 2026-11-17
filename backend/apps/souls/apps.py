@@ -62,4 +62,8 @@ class SoulsConfig(AppConfig):
         shard_ids.connect()
         # ... and nothing writes control's mirror of those rows, or a third database inside a transaction.
         shard_reads.connect_write_guards()
+        # ... nor a soul whose move between two masters is in flight (part C: its rows are read-only meanwhile).
+        from apps.tenants import shard_saga
+
+        shard_saga.connect_transit_guard()
         shard_sync.connect_hall_copies()

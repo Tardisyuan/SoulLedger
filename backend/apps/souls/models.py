@@ -12,7 +12,7 @@ from django.utils import timezone
 from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
 from apps.souls.dates import ERROR, check_soul_dates, parse_historical_date, to_legacy_date
-from apps.souls.querysets import SoulManager
+from apps.souls.querysets import SoulManager, SoulQuerySet
 
 if TYPE_CHECKING:  # the annotation on Soul.die only; judgment imports souls, so not at runtime
     from apps.judgment.models import Judgment
@@ -461,7 +461,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             ),
         ]
 
-    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    # unfiltered; declared first so it's _base_manager. SoulQuerySet for its `update` (a soul in transit, shard_saga).
+    all_objects = models.Manager.from_queryset(SoulQuerySet)()
     objects = SoulManager()
 
     @classmethod

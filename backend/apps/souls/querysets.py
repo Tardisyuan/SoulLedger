@@ -72,6 +72,14 @@ class SoulQuerySet(QuerySet):
         qs = self.annotate_karma_balance()
         return qs.order_by('-_karmic_balance' if descending else '_karmic_balance')
 
+    def update(self, **kwargs):
+        # A soul moving between civilizations is read-only until its move closes (apps/tenants/shard_saga.py,
+        # "in transit"); save() and delete() are refused by signals, a bulk update here.
+        from apps.tenants.shard_saga import refuse_in_transit
+
+        refuse_in_transit(self)
+        return super().update(**kwargs)
+
 
 class SoulManager(TenantManager):
     """Custom Manager for Soul model combining TenantManager with SoulQuerySet.
