@@ -1424,6 +1424,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 串行版 test_a_reopen_at_home_and_a_case_where_the_soul_resides_open_one_case 同文件,两个引擎都跑。
         "tests/test_cross_civilization_saga_limits.py::"
         "test_two_civilizations_opening_a_case_on_one_soul_at_once_open_exactly_one",
+        # 2026-11-17 分库第 4 阶段复查 must-fix 2:写切殿的业务事务也开控制库事务;另一个连接握着官员行时,停用请求在
+        # 控制库的行锁上等(只在 `--ds=config.settings_sharded -m sharded` 下跑)。同文件其余各条(锁在事务里、
+        # 分库提交失败时控制库一起回滚)两个引擎都跑。
+        "tests/test_control_locks_in_a_write_cut_hall.py::"
+        "test_deactivating_an_officer_waits_for_a_lock_another_transaction_holds_on_the_user",
         # 2026-10-29 数据范围 B2:范围过滤后的灵魂列表走 (tenant, owner_org) 索引。EXPLAIN 的计划与
         # 统计只在 PostgreSQL 上有意义;同文件的五种范围断言每个引擎都跑。
         "tests/test_data_scope_solver.py::test_the_scoped_soul_list_uses_the_tenant_owner_index",

@@ -221,33 +221,64 @@ def test_a_per_hall_task_reads_and_writes_its_shard_and_a_global_one_every_maste
 
 
 @sharded
-def test_a_halls_transaction_is_its_shards_and_a_control_write_inside_it_commits_first():
-    """One civilization: `atomic()` is the shard's transaction (a failure rolls the shard row back), and a control
-    write inside it -- a hall-less row here, a code claim or a case number in the product -- is control's own
-    autocommit, committed before the shard row (part B: a gap, never a reuse). No single civilization (MASTER):
-    control's transaction plus the shards', all rolled back together. Mutation: atomic() opens nothing on the
-    shard -> the shard row survives the rollback."""
+def test_a_halls_transaction_holds_on_its_shard_and_on_control_and_rolls_back_as_one():
+    """One civilization: `atomic()` is control's transaction and the shard's (VERIFY-stage4 must-fix 2): a control
+    write -- a hall-less row here; a user, a soul account in the product -- rolls back with the shard row, whether
+    the block raises, says `set_rollback` (no `using`: the shard), or the shard's commit fails (the shards commit
+    first). No single civilization (MASTER): the same, over every write-cut shard. Mutations: control not opened ->
+    control is in autocommit and its row survives; control committed before the shard -> its row survives the
+    shard's failed commit. The row locks are on real PostgreSQL: tests/test_control_locks_in_a_write_cut_hall.py."""
+    from contextlib import nullcontext
+    from unittest import mock
+
+    from django.db import DatabaseError
+
     from apps.audit.models import AuditAction, AuditLog
     from apps.souls.models import Soul
 
     halls = _halls()
     _assign("GREEK")
+
+    def code_blocks(alias):
+        return [b for b in connections[alias].atomic_blocks if not b._from_testcase]
+
+    def both(tag):
+        Soul.objects.create(name=tag, tenant=halls["GREEK"])
+        AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id=tag)
+
+    def gone(tag):
+        return (not Soul._base_manager.using(GREEK).filter(name=tag).exists()
+                and not AuditLog._base_manager.using("default").filter(resource_id=tag).exists())
+
     with cut("GREEK"):
-        with _in_hall(halls["GREEK"]):
-            with pytest.raises(RuntimeError), transaction.atomic():
-                assert transaction.get_connection().alias == GREEK
-                assert not [b for b in connections["default"].atomic_blocks if not b._from_testcase]
-                Soul.objects.create(name="rolled back", tenant=halls["GREEK"])
-                AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="x")
-                raise RuntimeError
-            assert not Soul._base_manager.using(GREEK).filter(name="rolled back").exists()
-            assert AuditLog._base_manager.using("default").filter(resource_id="x").exists()
-        with pytest.raises(RuntimeError), transaction.atomic():  # no context: MASTER
-            Soul.objects.create(name="rolled back too", tenant=halls["GREEK"])
-            AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="y")
-            raise RuntimeError
-        assert not Soul._base_manager.using(GREEK).filter(name="rolled back too").exists()
-        assert not AuditLog._base_manager.using("default").filter(resource_id="y").exists()
+        for hall in (halls["GREEK"], None):  # one civilization, then MASTER
+            with _in_hall(hall) if hall else nullcontext():
+                with pytest.raises(RuntimeError), transaction.atomic():
+                    assert code_blocks("default") and code_blocks(GREEK)
+                    assert transaction.get_connection().alias == (GREEK if hall else "default")
+                    both(f"raised {hall}")
+                    raise RuntimeError
+                assert gone(f"raised {hall}")
+                with transaction.atomic():
+                    both(f"set_rollback {hall}")
+                    transaction.set_rollback(True)
+                assert gone(f"set_rollback {hall}")
+                real, calls = connections[GREEK].savepoint_commit, []
+
+                def fails_once(sid, calls=calls, real=real):  # the shard's commit fails; Django's cleanup does not
+                    calls.append(sid)
+                    if len(calls) == 1:
+                        raise DatabaseError("the shard's commit failed")
+                    return real(sid)
+
+                failing = mock.patch.object(connections[GREEK], "savepoint_commit", side_effect=fails_once)
+                with pytest.raises(DatabaseError), failing, transaction.atomic():
+                    both(f"shard commit failed {hall}")
+                assert gone(f"shard commit failed {hall}")
+                with transaction.atomic():
+                    both(f"kept {hall}")
+                assert Soul._base_manager.using(GREEK).filter(name=f"kept {hall}").count() == 1
+                assert AuditLog._base_manager.using("default").filter(resource_id=f"kept {hall}").count() == 1
 
 
 @sharded
