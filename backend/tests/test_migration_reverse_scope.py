@@ -39,7 +39,7 @@ from importlib import import_module
 
 import pytest
 
-from tests.migration_roundtrip import migrate_to, migrate_to_latest, restore_latest_snapshot, snapshot_rows
+from tests.migration_roundtrip import migrate_to, reset_to_latest, restore_latest_snapshot, snapshot_rows
 from tests.migration_schema_editor import SCHEMA_EDITOR
 
 AUTH_0010 = import_module("apps.authentication.migrations.0010_populate_rbac_role")
@@ -201,7 +201,7 @@ def test_auth_0010_forward_runs_with_perm_already_past_0012():
             user_model._base_manager.get(username="fwd_admin").rbac_role_id == admin.pk
         ), "the forward ran but did not populate rbac_role"
     finally:
-        migrate_to_latest()
+        reset_to_latest()
 
 
 @pytest.mark.django_db
@@ -367,7 +367,7 @@ def _latest_without_row_scopes():
         return
     state = migrate_to([("perm", "0030_split_business_codenames")])
     state.get_model("perm", "RowLevelDataScope")._base_manager.all().delete()
-    migrate_to_latest()
+    reset_to_latest()
 
 
 HAND_WRITTEN_SCOPE = (

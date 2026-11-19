@@ -71,7 +71,7 @@ def test_events_0020_widens_the_column_and_reverses(transactional_db):
     column's width in each historical state. The data round-trip harness is not used because it demands that the
     migration change a row's visible content, and a widening changes none. Reversing with a value longer than 30
     characters present would fail on PostgreSQL; there is no such row until 0020 is applied and one is written."""
-    from tests.migration_roundtrip import migrate_to, migrate_to_latest
+    from tests.migration_roundtrip import migrate_to, reset_to_latest
 
     def width(state):
         return state.get_model("events", "SoulEvent")._meta.get_field("event_type").max_length
@@ -83,4 +83,4 @@ def test_events_0020_widens_the_column_and_reverses(transactional_db):
         assert width(migrate_to([before])) == 30
         assert width(migrate_to([after])) == 50
     finally:
-        migrate_to_latest()
+        reset_to_latest()

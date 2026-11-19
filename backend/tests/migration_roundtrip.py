@@ -462,11 +462,22 @@ def migrate_to(targets: list[Target]):
 
 
 def migrate_to_latest():
-    """Put the schema back where the rest of the session expects to find it."""
-    if restore_latest_snapshot():
-        return None
+    """Migrate forward to the latest schema for real, keeping the rows: a test that checks its rows survived
+    the way back (test_explicit_through_round_trip, test_bare_ids_migrations_round_trip) calls this.
+
+    Not the snapshot restore: that puts back the database as it was at this process's first round trip,
+    without anything a later test seeded. It used to be the first thing tried here, so those tests passed
+    only when they were the first round trip on their worker (red on PostgreSQL, 2026-11-19)."""
     executor = MigrationExecutor(connection)
     return migrate_to(executor.loader.graph.leaf_nodes())
+
+
+def reset_to_latest():
+    """Teardown: the latest schema, rows irrelevant (the transactional flush follows). The snapshot restore
+    when there is one, else a real migrate."""
+    if restore_latest_snapshot():
+        return None
+    return migrate_to_latest()
 
 
 def snapshot_rows(

@@ -884,7 +884,7 @@ def test_0016_collision_moves_the_grant_instead_of_dropping_it():
     """
     import importlib
 
-    from tests.migration_roundtrip import migrate_to, migrate_to_latest
+    from tests.migration_roundtrip import migrate_to, reset_to_latest
 
     mod = importlib.import_module("apps.perm.migrations.0016_rename_karma_permissions_to_ledger")
     try:
@@ -905,4 +905,4 @@ def test_0016_collision_moves_the_grant_instead_of_dropping_it():
         )
         assert not RP._base_manager.filter(pk=grant.pk).exists()
     finally:
-        migrate_to_latest()
+        reset_to_latest()

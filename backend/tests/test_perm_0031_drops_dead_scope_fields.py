@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from tests.migration_roundtrip import migrate_to, migrate_to_latest
+from tests.migration_roundtrip import migrate_to, reset_to_latest
 
 BEFORE = ("perm", "0030_split_business_codenames")
 AFTER = ("perm", "0031_drop_dead_scope_fields")
@@ -46,7 +46,7 @@ def test_a_row_level_scope_stops_the_migration_and_survives_it():
     finally:
         state = migrate_to([BEFORE])
         state.get_model("perm", "RowLevelDataScope")._base_manager.all().delete()
-        migrate_to_latest()
+        reset_to_latest()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -83,4 +83,4 @@ def test_round_trip_keeps_roles_and_grants_and_brings_the_columns_back_empty():
 
         migrate_to([AFTER])  # forward again
     finally:
-        migrate_to_latest()
+        reset_to_latest()

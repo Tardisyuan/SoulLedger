@@ -256,12 +256,12 @@ def migration_round_trip(transactional_db, _roundtrip_pg_latest):
     ``transactional_db``'s, so every table is back at its latest version before
     the flush touches it — including when the test failed.
     """
-    from tests.migration_roundtrip import migrate_to_latest, run_round_trip
+    from tests.migration_roundtrip import reset_to_latest, run_round_trip
 
     try:
         yield run_round_trip
     finally:
-        migrate_to_latest()
+        reset_to_latest()
 
 
 def pytest_collection_modifyitems(items):

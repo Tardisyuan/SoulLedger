@@ -124,7 +124,7 @@ def start_cache(tmp_path, monkeypatch, migration_round_trip):
     if not SQLITE:
         pytest.skip("the start-state cache is SQLite only")
     monkeypatch.setenv(rt.CACHE_ENV, str(tmp_path))
-    rt.migrate_to_latest()  # both approaches below start from the same latest database
+    rt.reset_to_latest()  # both approaches below start from the same latest database
     return tmp_path
 
 
@@ -141,7 +141,7 @@ def test_a_hit_is_exactly_what_the_approach_built(start_cache):
     assert len(list(start_cache.glob("*.sqlite3"))) == 1
     built = _copy()
 
-    rt.migrate_to_latest()
+    rt.reset_to_latest()
     rt.migrate_to(CHEAP_START)
     assert _stats()["hit"] == before["hit"] + 1
     assert tables_that_differ(built, _copy()) == []
@@ -150,21 +150,21 @@ def test_a_hit_is_exactly_what_the_approach_built(start_cache):
 def test_a_corrupt_or_foreign_entry_is_a_miss_not_an_error(start_cache):
     rt.migrate_to(CHEAP_START)
     (entry,) = start_cache.glob("*.sqlite3")
-    rt.migrate_to_latest()
+    rt.reset_to_latest()
 
     entry.write_bytes(b"not a database")
     misses = _stats()["miss"]
     rt.migrate_to(CHEAP_START)
     assert _stats()["miss"] == misses + 1
     assert sqlite3.connect(entry).execute("PRAGMA quick_check").fetchone()[0] == "ok"  # rewritten
-    rt.migrate_to_latest()
+    rt.reset_to_latest()
 
     # a valid database whose recorder says otherwise (a latest-schema copy under this key)
     connection.connection.backup(dst := sqlite3.connect(entry))
     dst.close()
     rt.migrate_to(CHEAP_START)
     assert _stats()["miss"] == misses + 2
-    rt.migrate_to_latest()
+    rt.reset_to_latest()
 
     entry.unlink()
     rt.migrate_to(CHEAP_START)
@@ -173,12 +173,26 @@ def test_a_corrupt_or_foreign_entry_is_a_miss_not_an_error(start_cache):
 
 # --- the latest-schema restore ---------------------------------------------------------------------------
 
-def test_a_restore_that_did_not_put_the_schema_back_is_refused(migration_round_trip, monkeypatch):
+def test_migrate_to_latest_keeps_the_rows_a_test_seeded_after_the_snapshot(migration_round_trip):
+    """2026-11-19 (red on PostgreSQL in test_explicit_through_round_trip): `migrate_to_latest` restored the
+    snapshot of the worker's first round trip, losing every row seeded since. It migrates for real now; only
+    teardown (`reset_to_latest`) restores."""
+    from apps.tenants.models import Tenant
+
+    rt.migrate_to(CHEAP_START)
+    rt.reset_to_latest()  # the snapshot now exists and predates the row below
+    Tenant.objects.create(code="RT_KEEP_ME", display_name="rt")
+    rt.migrate_to(CHEAP_START)
     rt.migrate_to_latest()
+    assert Tenant._base_manager.filter(code="RT_KEEP_ME").exists()
+
+
+def test_a_restore_that_did_not_put_the_schema_back_is_refused(migration_round_trip, monkeypatch):
+    rt.reset_to_latest()
     rt.migrate_to(CHEAP_START)
     monkeypatch.setattr(rt, "_restore_latest_db", lambda: True)
     with pytest.raises(AssertionError, match="not at the latest migration"):
-        rt.migrate_to_latest()
+        rt.reset_to_latest()
     monkeypatch.undo()  # the fixture's teardown restores for real
 
 
