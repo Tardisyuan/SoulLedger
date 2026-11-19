@@ -3397,6 +3397,39 @@ class TestPytestProgressNamesTheFailures:
         assert out.count("        FAILED tests/test_a.py::test_two") == 1, "a failure is named once, not on every line"
         assert "FAILED tests/test_b.py::test_failed_name" not in out, "a PASSED test was named"
 
+    def test_the_line_says_what_each_worker_runs_and_what_is_left(self, hook, checkouts, tmp_path):
+        """2026-11-19: 99% for 10–15 minutes said nothing. The scheduler's status file (<log>.status) is read by
+        backend/config/gate_progress.py into the same line; durations go to the git common dir here.
+        Mutation: drop `${now:+ · $now}` from the echo → red."""
+        main, _ = checkouts
+        (main / "backend" / "config").mkdir()
+        (main / "backend" / "config" / "gate_progress.py").write_text(
+            (REPO_ROOT / "backend" / "config" / "gate_progress.py").read_text(encoding="utf-8"))
+        py = tmp_path / "status-python"
+        py.write_text(
+            "#!/bin/bash\n"
+            'case "$1" in\n'
+            "  manage.py) exit 0 ;;\n"
+            '  -m) if [ "$2" = pytest ]; then\n'
+            '        now=$(date +%s); echo "tests/test_a.py::test_one PASSED [ 50%]"\n'
+            '        printf \'{"workers": 2, "left": 31, "known": true, "queued_s": 600, "running": '
+            '[["gw2", "apps/realms/tests.py::test_realms_0015_round_trip", %s, 300]]}\' $((now - 190)) '
+            '>"$SOULLEDGER_GATE_STATUS"; sleep 4\n'
+            '        echo "DURATIONS=$SOULLEDGER_TEST_DURATIONS"; exit 0; fi ;;\n'
+            "esac\n"
+            'exec python3 "$@"\n')
+        py.chmod(0o755)
+        if not shutil.which("redis-server") and not os.environ.get("REDIS_URL"):
+            pytest.skip("the hook refuses without redis-server or a reachable REDIS_URL")
+        proc = _run(hook, main, ["backend/x.py"], PYTHON_BIN=str(py), RUFF_BIN=shutil.which("true"),
+                    REDIS_URL=os.environ.get("REDIS_URL", ""), GATES_PROGRESS_EVERY="2")
+        assert proc.returncode == 0, proc.stdout
+        line = next(ln for ln in proc.stdout.splitlines() if "failed so far" in ln)
+        assert " · running: gw2 test_realms_0015_round_trip 3m1" in line, line
+        assert line.endswith("~31 tests left, est. 6 min"), line  # (600 + 110) / 2 workers
+        assert f"DURATIONS={main / '.git'}/soulledger-test-durations-sqlite.json" in proc.stdout, proc.stdout
+        assert ".status" not in proc.stdout
+
     def test_pytest_runs_with_one_line_per_test(self, hook, checkouts, fake_backend):
         main, _ = checkouts
         args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
