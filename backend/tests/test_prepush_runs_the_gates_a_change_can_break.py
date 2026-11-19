@@ -2135,7 +2135,7 @@ class TestRemoteTimeLimits:
         # The gates have two slots (fd 9 run.lock, fd 8 run.2.lock; TestTwoGateSlots): either free one, or a wait for either.
         assert re.search(rf" fake-host \( (flock -n {first_fd} |\{{ flock -n 9 && S=1; \}} \|\| \{{ flock -n 8 && S=2; \}} )\|\| \{{ echo .*; "
                          r"(flock 9|while :; do .*?; sleep 10; \{ \{ flock -n 9 && S=1; \} \|\| \{ flock -n 8 && S=2; \}; \} && break; done); \} \|\| exit 1; "
-                         r"(remote_prune \(\).*\n\}; \( flock 7; remote_prune \S+ \S+ \d+ [01] \) 7>\S+/prune\.lock; )?docker run", remote, re.S), remote
+                         r"(remote_prune \(\).*\n\}; \( flock 7; remote_prune \S+ \S+ \d+ [01] \d+ \) 7>\S+/prune\.lock \|\| exit 75; )?docker run", remote, re.S), remote
         assert remote.rstrip().endswith(f" 9>/srv/appdata/sl-gates/{lock}"), remote
         # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
         tail = remote.split(inner_end, 1)[1]
@@ -2566,9 +2566,21 @@ class TestUnusedRemoteTreesAreDeleted:
             os.utime(mark, (when, when))
         return t
 
-    def _prune(self, tmp_path, rdir, keep, days="14", dry="0", mounted=(), docker_ok=True):
+    TREE_KB = 400_000  # what the stand-in `df` counts for each synced tree
+
+    def _prune(self, tmp_path, rdir, keep, days="14", dry="0", mounted=(), docker_ok=True, disk_kb=None):
+        want = "1100000" if disk_kb is not None else "0"  # KB free the run needs (the default is 3 GB)
         b = tmp_path / "bin"
         b.mkdir(exist_ok=True)
+        # A stand-in `df -Pk`: a disk of `disk_kb` on which every synced tree takes TREE_KB, so it frees up as
+        # trees are deleted. Without disk_kb the disk is huge (the days rule alone is under test).
+        total = disk_kb if disk_kb is not None else 10**12
+        (b / "df").write_text(
+            "#!/bin/bash\n"
+            f'n=$(ls -d "{rdir}"/work/*/ "{rdir}"/android/work/*/ 2>/dev/null | wc -l)\n'
+            f'echo "Filesystem 1024-blocks Used Available Capacity Mounted"\n'
+            f'echo "tmpfs {total} x $(( {total} - n * {self.TREE_KB} )) 99% /"\n')
+        (b / "df").chmod(0o755)
         (b / "docker").write_text(
             "#!/bin/bash\n"
             + ("" if docker_ok else "exit 1\n")
@@ -2577,8 +2589,57 @@ class TestUnusedRemoteTreesAreDeleted:
         (b / "docker").chmod(0o755)
         env = _clean_env()
         env["PATH"] = f"{b}:{env['PATH']}"
-        return subprocess.run(["bash", "-c", f'{self._function()}remote_prune "$@"', "prune", str(rdir), str(keep), days, dry],
+        return subprocess.run(["bash", "-c", f'{self._function()}remote_prune "$@"', "prune", str(rdir), str(keep), days, dry, want],
                               env=env, capture_output=True, text=True, timeout=60)
+
+    def _full_host(self, tmp_path):
+        """Four trees on a 2 GB stand-in disk: 1.6 GB used, 0.5 GB free; the run needs 1 GB + its own tree."""
+        rdir = tmp_path / "sl-gates"
+        trees = {
+            "oldest": self._tree(rdir, "work/Oldest-1", 5),
+            "old": self._tree(rdir, "work/Old-2", 4),
+            "newer": self._tree(rdir, "android/work/Newer-3", 2),
+            "mine": self._tree(rdir, "work/Mine-4", 100),  # the run's own tree, the oldest mark of all
+        }
+        return rdir, trees
+
+    def test_a_full_host_deletes_its_least_recently_used_trees_until_there_is_room(self, tmp_path):
+        rdir, t = self._full_host(tmp_path)
+        proc = self._prune(tmp_path, rdir, t["mine"], disk_kb=2_097_152)  # all within 14 days: the space rule acts
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert not t["oldest"].exists() and not t["old"].exists(), proc.stdout
+        assert t["newer"].is_dir() and t["mine"].is_dir(), "stopped at the first fit, and left this run's tree\n" + proc.stdout
+        assert f"(prune: deleted {t['oldest']} — only " in proc.stdout and "MB needed)" in proc.stdout, proc.stdout
+
+    def test_a_roomy_host_deletes_nothing_inside_the_period(self, tmp_path):
+        rdir, t = self._full_host(tmp_path)
+        proc = self._prune(tmp_path, rdir, t["mine"], disk_kb=100_000_000)
+        assert proc.returncode == 0 and all(p.is_dir() for p in t.values()), proc.stdout
+
+    def test_a_full_host_never_deletes_a_tree_a_container_mounts(self, tmp_path):
+        rdir, t = self._full_host(tmp_path)
+        proc = self._prune(tmp_path, rdir, t["mine"], mounted=[t["oldest"]], disk_kb=2_097_152)
+        assert proc.returncode == 0, proc.stdout
+        assert t["oldest"].is_dir() and not t["old"].exists() and not t["newer"].exists(), proc.stdout
+
+    def test_a_full_host_never_deletes_the_tree_this_run_is_about_to_use(self, tmp_path):
+        rdir, t = self._full_host(tmp_path)
+        proc = self._prune(tmp_path, rdir, t["mine"], disk_kb=800_000)  # not even one tree's room is left to make
+        assert proc.returncode == 1 and t["mine"].is_dir(), proc.stdout
+        assert not t["oldest"].exists() and not t["old"].exists() and not t["newer"].exists(), proc.stdout
+
+    def test_a_host_that_cannot_make_room_refuses_instead_of_failing_mid_install(self, tmp_path):
+        rdir, t = self._full_host(tmp_path)
+        proc = self._prune(tmp_path, rdir, t["mine"], mounted=[t["oldest"], t["old"], t["newer"]], disk_kb=2_097_152)
+        assert proc.returncode == 1 and all(p.is_dir() for p in t.values()), proc.stdout
+        assert "(prune: REFUSED — " in proc.stdout and "MB needed" in proc.stdout, proc.stdout
+        # Unknown mounts: nothing may go, and it still says why it refuses.
+        proc = self._prune(tmp_path, rdir, t["mine"], docker_ok=False, disk_kb=2_097_152)
+        assert proc.returncode == 1 and all(p.is_dir() for p in t.values()) and "what is mounted is unknown" in proc.stdout, proc.stdout
+
+    def test_a_refusal_stops_the_run_before_its_container_starts(self):
+        run = RUNNER.read_text(encoding="utf-8")
+        assert "$PRUNE_MIN_KB ) 7>$RDIR/prune.lock || exit 75; $(win_bg" in run
 
     def test_only_a_tree_no_run_has_used_for_the_period_is_deleted(self, tmp_path):
         rdir = tmp_path / "sl-gates"
@@ -2674,7 +2735,7 @@ class TestUnusedRemoteTreesAreDeleted:
         assert f"mkdir -p {tree} && touch {tree}/.sl-last-use" in calls[0], calls[0]
         run = calls[-1]
         assert self._function().split("{", 1)[0].strip() == "remote_prune()" and "remote_prune () " in run, run
-        call = f"; ( flock 7; remote_prune /srv/appdata/sl-gates {tree} 14 0 ) 7>/srv/appdata/sl-gates/prune.lock; docker run"
+        call = f"; ( flock 7; remote_prune /srv/appdata/sl-gates {tree} 14 0 3145728 ) 7>/srv/appdata/sl-gates/prune.lock || exit 75; docker run"
         assert call in run and run.index("done; } || exit 1;") < run.index(call) < run.index(") 8>/srv/appdata/sl-gates/run.2.lock 9>/srv/appdata/sl-gates/run.lock"), run
         # What reached the remote shell is the function this file tests, and it parses.
         sent = run[run.index("remote_prune () "):run.index(call)]
@@ -2684,7 +2745,7 @@ class TestUnusedRemoteTreesAreDeleted:
     def test_the_period_and_the_dry_run_are_handed_over_and_a_bad_period_is_refused(self, checkouts, tmp_path):
         main, _ = checkouts
         _, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="0", GATES_REMOTE_PRUNE_DRY="1")
-        assert re.search(r"; remote_prune \S+ \S+ 0 1 \) 7>\S+/prune\.lock; docker run", calls[-1]), calls[-1]
+        assert re.search(r"; remote_prune \S+ \S+ 0 1 \d+ \) 7>\S+/prune\.lock \|\| exit 75; docker run", calls[-1]), calls[-1]
         proc, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="1; rm -rf /")
         assert proc.returncode == 2 and "is not a number of days" in proc.stdout and not calls, proc.stdout
 
