@@ -297,3 +297,104 @@ def test_a_hung_alias_is_killed_at_the_limit_and_fails_the_build(tmp_path, monke
     with pytest.raises(RuntimeError, match=r"\['civ_egyptian'\]"):
         testdb.build_test_databases(set(ALIASES), parallel=True)
     assert time.monotonic() - started < 20
+
+
+# --- SQLite: the missing templates of a worker, at once (2026-11-19) ------------
+
+from config import sqlite_template  # noqa: E402
+
+
+class _SqliteConns:
+    def __init__(self, dbs):
+        self.dbs = dbs
+
+    def __getitem__(self, alias):
+        db = self.dbs[alias]
+        return type("Conn", (), {"vendor": db["vendor"], "settings_dict": db})()
+
+    def close_all(self):
+        pass
+
+
+def test_prebuild_builds_only_the_missing_sqlite_templates_and_nothing_when_all_exist(tmp_path, monkeypatch):
+    dbs = {"default": {"vendor": "sqlite"}, "civ_a": {"vendor": "sqlite"}, "civ_b": {"vendor": "sqlite"},
+           "pg": {"vendor": "postgresql"}, "mirror": {"vendor": "sqlite", "TEST": {"MIRROR": "default"}}}
+    monkeypatch.setattr("django.db.connections", _SqliteConns(dbs))
+    monkeypatch.setattr(sqlite_template, "template_path", lambda d, b, s, alias: tmp_path / f"{alias}-{'0' * 40}.sqlite3")
+    (tmp_path / f"default-{'0' * 40}.sqlite3").write_text("")
+    calls = []
+    monkeypatch.setattr("config.testdb.run_in_children", lambda aliases, build: calls.append(list(aliases)))
+    assert sqlite_template.prebuild(set(dbs), directory=tmp_path, backend_dir=tmp_path) == ["civ_a", "civ_b"]
+    assert calls == [["civ_a", "civ_b"]]
+    for alias in ("civ_a", "civ_b"):
+        (tmp_path / f"{alias}-{'0' * 40}.sqlite3").write_text("")
+    assert sqlite_template.prebuild(set(dbs), directory=tmp_path, backend_dir=tmp_path) == []
+    assert calls == [["civ_a", "civ_b"]], "built again with every template there"
+
+
+def test_the_build_lock_is_per_alias(tmp_path):
+    import threading
+
+    got = threading.Event()
+
+    def other():
+        with sqlite_template._locked(tmp_path, "civ_b"):
+            got.set()
+
+    with sqlite_template._locked(tmp_path, "civ_a"):
+        t = threading.Thread(target=other, daemon=True)
+        t.start()
+        assert got.wait(5), "a second alias waited for the first alias's build"
+
+
+def test_saving_a_template_prunes_only_that_aliases_older_ones(tmp_path):
+    import sqlite3
+
+    for i, alias in enumerate(["default"] * 4 + ["civ_a"] * 4):
+        p = tmp_path / f"{alias}-{i:040d}.sqlite3"
+        p.write_text("")
+        os.utime(p, (1000 + i, 1000 + i))
+    src = sqlite3.connect(":memory:")
+    sqlite_template._save(src, tmp_path / f"default-{'f' * 40}.sqlite3")
+    left = sorted(p.name.split("-")[0] for p in tmp_path.glob("*.sqlite3"))
+    assert left == ["civ_a"] * 4 + ["default"] * sqlite_template.KEEP, left
+
+
+# --- The test clock does not run while test databases are built ----------------
+
+def _clock_probe(tmp_path, body):
+    """A child pytest under a copy of the root conftest, whose database setup takes 4 s against a 2 s limit."""
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    shutil.copy(repo / "conftest.py", tmp_path / "conftest.py")
+    probe = tmp_path / "test_clock_probe.py"
+    probe.write_text(
+        "import time\n"
+        "import django.test.utils as u\n"
+        "def slow_setup(*a, **k):\n"
+        "    time.sleep(4)\n"
+        "    return []\n"
+        "u.setup_databases = slow_setup\n"
+        "u.teardown_databases = lambda *a, **k: None\n"
+        f"def test_probe(django_db_setup):\n    {body}\n"
+    )
+    return subprocess.run(
+        [sys.executable, "-m", "pytest", str(probe), "-c", str(repo / "pytest.ini"), "-q", "--no-header", "--no-cov",
+         "-p", "no:cacheprovider", "-n", "0", "-o", "faulthandler_timeout=2", "-o", "faulthandler_exit_on_timeout=true"],
+        cwd=repo, capture_output=True, text=True, timeout=120,
+        env={**os.environ, "PYTHONPATH": str(repo / "backend"), "DJANGO_SETTINGS_MODULE": "config.settings",
+             "DATABASE_URL": "sqlite:///:memory:"},
+    )
+
+
+def test_a_slow_database_setup_is_not_the_first_tests_time(tmp_path):
+    proc = _clock_probe(tmp_path, "pass")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_the_clock_runs_again_once_the_databases_exist(tmp_path):
+    proc = _clock_probe(tmp_path, "time.sleep(4)")
+    assert proc.returncode != 0 and "Timeout" in proc.stdout + proc.stderr, proc.stdout + proc.stderr

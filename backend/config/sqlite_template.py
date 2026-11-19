@@ -189,9 +189,9 @@ def tables_that_differ(a, b) -> list:
 # --- wiring -------------------------------------------------------------------
 
 @contextlib.contextmanager
-def _locked(directory: Path):
+def _locked(directory: Path, alias: str):
     directory.mkdir(parents=True, exist_ok=True)
-    with open(directory / ".lock", "w") as fh:
+    with open(directory / f".lock-{alias}", "w") as fh:
         fcntl.flock(fh, fcntl.LOCK_EX)
         try:
             yield
@@ -207,7 +207,11 @@ def _save(raw_conn, path: Path) -> None:
     finally:
         dst.close()
     os.replace(tmp, path)
-    olds = sorted(path.parent.glob("*.sqlite3"), key=lambda p: p.stat().st_mtime, reverse=True)[KEEP:]
+    # Newest KEEP of this alias, not of the directory: under settings_sharded five aliases each save one,
+    # and a directory-wide three evicted two of them on every save -- each sharded run went cold again
+    # for some alias, and pushed out the main suite's `default` too (2026-11-19).
+    alias = path.name.rsplit("-", 1)[0]
+    olds = sorted(path.parent.glob(f"{alias}-*.sqlite3"), key=lambda p: p.stat().st_mtime, reverse=True)[KEEP:]
     for old in olds:
         with contextlib.suppress(FileNotFoundError):
             old.unlink()
@@ -316,7 +320,7 @@ def install(*, run_mode: str, directory: Path, backend_dir: Path):
         if path.exists():
             with contextlib.suppress(sqlite3.OperationalError):  # pruned under us: build below
                 return clone()
-        with _locked(directory):
+        with _locked(directory, alias):  # per alias: five aliases build at once (prebuild below)
             if path.exists():
                 return clone()
             result = original(self, verbosity, autoclobber, serialize, keepdb)
@@ -326,3 +330,45 @@ def install(*, run_mode: str, directory: Path, backend_dir: Path):
 
     DatabaseCreation.create_test_db = create_test_db
     return lambda: setattr(DatabaseCreation, "create_test_db", original)
+
+
+# --- build before the first test, every alias at once (2026-11-19) --------------
+#
+# A worker built its missing templates one alias after another. Under settings_sharded that is five
+# migrates: 182 + 168 + 168 + 166 + 178 s on a loaded unRAID slot (2026-11-19, measured, one worker).
+# Now, before its own setup, a worker builds the missing ones each in a forked child at once
+# (config/testdb.py run_in_children: Linux only; SOULLEDGER_TEMPLATE_BUILD_SERIAL=1 keeps the old serial
+# path; a child past the deadline is killed and the run fails). A child runs the same cold path the
+# worker would have (install + create_test_db, under a per-alias lock, so a second worker waits for that
+# alias and then clones), so what a template holds does not change. "verify" runs are left as they were:
+# each worker migrates for real, so a migration round trip never runs on a clone.
+
+def template_path(directory: Path, backend_dir: Path, settings, alias: str) -> Path:
+    return directory / f"{alias}-{input_hash(backend_dir, settings_inputs(settings, alias))}.sqlite3"
+
+
+def prebuild(aliases, *, directory: Path, backend_dir: Path) -> list:
+    """Build the missing templates of the SQLite `aliases`, at once; returns the aliases built.
+    A child that fails or overruns raises RuntimeError naming its alias (traceback on stderr)."""
+    from django.conf import settings
+    from django.db import connections
+
+    from config.testdb import run_in_children
+
+    todo = sorted(a for a in aliases if connections[a].vendor == "sqlite"
+                  and not (connections[a].settings_dict.get("TEST") or {}).get("MIRROR")
+                  and not template_path(directory, backend_dir, settings, a).exists())
+    if not todo:
+        return []
+
+    def build(alias):
+        install(run_mode="use", directory=directory, backend_dir=backend_dir)
+        connections[alias].creation.create_test_db(verbosity=0, autoclobber=True, serialize=False)
+
+    started = time.monotonic()
+    run_in_children(todo, build)
+    seconds = time.monotonic() - started
+    for alias in todo:
+        record("cold", template_path(directory, backend_dir, settings, alias).stem.rsplit("-", 1)[1], seconds)
+    print(f"\nSQLite test templates built at once: {', '.join(todo)} ({seconds:.0f}s)", file=sys.stderr)
+    return todo

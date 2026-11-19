@@ -79,6 +79,7 @@ tests/test_sqlite_template.py                                    README.md confi
 tests/test_system_admin_bootstrap.py                             *
 tests/test_system_mail_speaks_the_recipients_language.py         packages
 tests/test_testdb_name.py                                        conftest.py pytest.ini
+tests/test_testdb_template.py                                    conftest.py pytest.ini
 tests/test_the_image_installs_locked_versions.py                 .dockerignore .github
 tests/test_the_locale_header_reaches_the_name.py                 packages
 tests/test_verdict_document_pdf.py                               frontend

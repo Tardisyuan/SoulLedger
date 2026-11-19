@@ -225,8 +225,10 @@ def django_db_modify_db_settings(django_db_modify_db_settings, request):
     """
     from django.conf import settings
 
-    from config.testdb import run_suffix, suffix_postgres_test_databases, use_templates
+    from config.testdb import pause_test_clock, run_suffix, suffix_postgres_test_databases, use_templates
 
+    # building test databases is not the first test's time; django_db_setup below re-arms the clock
+    request.config.stash[_clock_paused] = pause_test_clock(request.config)
     workerinput = getattr(request.config, "workerinput", {})
     suffix_postgres_test_databases(settings.DATABASES, workerinput.get(_SUFFIX_KEY) or run_suffix())
     use_templates(settings.DATABASES, workerinput.get(_TEMPLATES_KEY) or {})
@@ -240,9 +242,11 @@ def _use_sqlite_template(request):
     and check the cached template) rather than trust a clone with them.
     """
     import os
+    import sys
     from pathlib import Path
 
     from config import sqlite_template
+    from config.testdb import parallel_build_ok
 
     config = request.config
     run_mode = sqlite_template.mode(
@@ -255,10 +259,18 @@ def _use_sqlite_template(request):
     directory = sqlite_template.template_dir(backend_dir) if run_mode != "off" else None
     if directory is None:
         return
+    if run_mode == "use" and parallel_build_ok(os.environ, sys.platform):
+        from pytest_django.fixtures import _get_databases_for_setup
+        from pytest_django.plugin import blocking_manager_key
+
+        aliases, _ = _get_databases_for_setup(request.session.items)
+        with config.stash[blocking_manager_key].unblock():
+            sqlite_template.prebuild(aliases, directory=directory, backend_dir=backend_dir)
     request.addfinalizer(sqlite_template.install(run_mode=run_mode, directory=directory, backend_dir=backend_dir))
 
 
 _SUFFIX_KEY = "soulledger_db_suffix"
+_clock_paused = pytest.StashKey[bool]()
 _TEMPLATES_KEY = "soulledger_db_templates"
 _templates_key = pytest.StashKey[dict]()  # what the workers clone
 _drop_key = pytest.StashKey[dict]()  # what this run built and drops at the end (not a kept template)
@@ -488,7 +500,7 @@ def pytest_terminal_summary(terminalreporter, config):
 
 
 @pytest.fixture(scope="session")
-def django_db_setup(django_db_setup, django_db_blocker):
+def django_db_setup(django_db_setup, django_db_blocker, request):
     """Close the database connection that `database_sync_to_async` left open,
     before pytest-django drops the test database.
 
@@ -507,7 +519,14 @@ def django_db_setup(django_db_setup, django_db_blocker):
     database: pytest-django's DROP has no FORCE, and after the 2026-10-19 drop
     the server held the dead client's session as idle, so the worker database
     stayed on 115. Only `test_soulledger_...` names are touched (config/testdb.py).
+
+    First, the test databases exist: re-arm the faulthandler clock that django_db_modify_db_settings paused.
     """
+    from config.testdb import resume_test_clock
+
+    if request.config.stash.get(_clock_paused, False):
+        request.config.stash[_clock_paused] = False
+        resume_test_clock(request.config)
     yield
     from asgiref.sync import SyncToAsync
     from django.db import connections
