@@ -84,12 +84,8 @@ def test_the_guard_has_subjects():
     assert "password" in {f.name for f in User._meta.fields}
 
 
-# `transaction=True` is required, not stylistic. `apps/audit/signals.py` writes
-# through `transaction.on_commit`, and plain `django_db` wraps the test in an
-# atomic block that is rolled back — the callbacks never run and `AuditLog` is
-# empty. `apps/audit/oncommit_guard.py` exists to catch exactly this mistake,
-# and caught it here: the first run of this file failed with "the password
-# change produced no audit row at all".
+# `transaction=True`: when this was written the audit rows were on-commit writes, which plain `django_db`
+# never runs (since 2026-11-19 they go in with the business write: tests/test_audit_inside_transactions.py).
 @pytest.mark.django_db(transaction=True)
 class TestSecretsNeverReachAuditRows:
     def test_a_password_change_is_recorded_without_the_hash(self, cn_tenant):

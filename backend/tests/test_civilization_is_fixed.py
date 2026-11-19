@@ -160,7 +160,9 @@ def test_system_admin_moves_a_judge_with_hall_and_organization_and_ends_its_sess
     assert judge.organization is not None and judge.organization.tenant_id == halls["gr"].pk
     assert judge.civilization is None
     assert old.get("/api/v1/auth/profile/").status_code == 401  # the old token named the old hall
-    row = AuditLog.objects.get(resource="user", resource_id=str(judge.pk), user=system)
+    # The move's own row; `end_sessions` also saves the user, and that save has its generic UPDATE row.
+    row = AuditLog.objects.get(resource="user", resource_id=str(judge.pk), user=system,
+                               description__startswith="civilization moved")
     assert row.changes["civilization"] == ["CHINESE", "GREEK"]
     assert row.changes["tenant"] == ["CN_DIYU", "GR_FIXED"]
     assert row.changes["reason"] == "transferred"

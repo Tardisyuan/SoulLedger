@@ -86,7 +86,6 @@ def test_the_audit_log_export_audits_itself_and_does_not_list_its_own_row(world)
     assert any("Exported" in line for line in second.content.decode().splitlines())
 
 
-@pytest.mark.allow_uncommitted_audit  # `record_export` writes the row directly, not on_commit
 @pytest.mark.parametrize("case", [_case_ledger_stats, _case_journal, _case_users])
 def test_the_hand_written_exports_hold_the_row_ceiling(world, case, monkeypatch):
     """They streamed every matching row with no ceiling; `export_csv` users stopped at 10,000.
@@ -100,7 +99,6 @@ def test_the_hand_written_exports_hold_the_row_ceiling(world, case, monkeypatch)
     assert not _exports(resource).exists()
 
 
-@pytest.mark.allow_uncommitted_audit  # `record_export` writes the row directly, not on_commit
 def test_a_refused_export_leaves_no_row(world):
     ids = ",".join(str(s.pk) for s in world["souls"])
     assert world["client"].get("/api/v1/souls/export/", {"ids": ids}).status_code == 200
@@ -110,7 +108,6 @@ def test_a_refused_export_leaves_no_row(world):
     assert _exports("soul").count() == 1
 
 
-@pytest.mark.allow_uncommitted_audit
 def test_a_user_export_that_fails_leaves_no_row(world):
     from unittest import mock
 

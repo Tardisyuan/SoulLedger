@@ -17,9 +17,8 @@ post_save 在行写完**之后**触发,所以那次查询拿回来的是**新行
 `old_role.permissions.all()` 与 `instance.permissions.all()` 是同一个 pk 上的同一个
 查询,`old == new` 恒真,于是 **`Role` 的保存从不产生任何 PERMISSION_CHANGE 审计行**。
 
-这个文件必须跑在 `transaction=True` 下:审计写入走 `transaction.on_commit`,普通
-`django_db` 的事务最后回滚、回调永不执行,断言会落在一张空表上 ——
-`apps/audit/oncommit_guard.py` 就是为这件事装的。
+`transaction=True`:写这份时审计写入还走 `transaction.on_commit`,普通 `django_db` 下表是空的
+(2026-11-19 起审计行与业务同一事务写入,见 `tests/test_audit_inside_transactions.py`)。
 """
 import pytest
 

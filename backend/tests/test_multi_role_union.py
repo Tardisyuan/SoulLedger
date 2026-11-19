@@ -276,9 +276,6 @@ def test_batch_deactivate_and_activate_are_audited_and_skip_admins_and_self(worl
     assert AuditLog.objects.filter(action=AuditAction.BATCH_UPDATE).count() == 2
 
 
-# Callbacks are executed below, so "no BATCH_UPDATE row" is a real absence; the guard cannot
-# see that when nothing was written at all.
-@pytest.mark.allow_uncommitted_audit
 def test_batch_without_ids_is_400_and_writes_no_audit(world, django_capture_on_commit_callbacks):
     AuditLog.objects.all().delete()
     # Run on-commit callbacks so "no audit row" is a real absence, not an uncommitted table.

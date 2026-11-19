@@ -23,6 +23,9 @@ LIST = "/api/v1/audit-logs/"
 def _client_for(user, tenant):
     token = RefreshToken.for_user(user)
     token["tenant_code"] = tenant.code
+    # The setup's own generic rows (description "") are in the table since audit rows are written inside the
+    # transaction (2026-11-19); this file is about the rows it seeds.
+    AuditLog.objects.filter(description="").delete()
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return client

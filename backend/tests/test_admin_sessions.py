@@ -145,8 +145,6 @@ class TestForceSignOut:
         assert SignInSession.objects.get(pk=world["sessions"]["eu_judge"].pk).revoked_at is None
         assert AuditLog.objects.filter(description__startswith="管理员强退 cn_judge 的全部会话").count() == 1
 
-    # 强退的审计是同步写的(`officer_reset._audit`,不经 on_commit),所以「没有这一行」在未提交的事务里也成立。
-    @pytest.mark.allow_uncommitted_audit
     def test_out_of_scope_ids_are_404_and_change_nothing(self, world):
         bound = officer_client(world["cn_admin"])
         eu = world["sessions"]["eu_judge"]

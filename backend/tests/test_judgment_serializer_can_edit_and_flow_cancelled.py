@@ -27,9 +27,6 @@ def _get(user, case):
     return response.data
 
 
-# 越过认领的审计行是 `assert_may_edit` 里同步 `AuditLog.objects.create` 的,不走 on_commit,未提交的事务里也看得见;
-# 「读不留痕」这条断言因此不是空断言(test_rbac_be1 里同一个越过在同样的上下文里数到 1 行)。
-@pytest.mark.allow_uncommitted_audit
 def test_can_edit_follows_the_claim_rule(cn):
     holder = plan.officer("ce_holder", "JUDGE", cn)
     other = plan.officer("ce_other", "JUDGE", cn)

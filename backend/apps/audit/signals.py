@@ -170,54 +170,46 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
 
     # Create audit log if there are changes
     if changes and model_name in ('Role', 'RolePermission'):
+        user, tenant, request = _current_context()
+        ip_address = ''
+        user_agent = ''
         try:
-            user, tenant, request = _current_context()
-            ip_address = ''
-            user_agent = ''
-            try:
-                if request:
-                    ip_address = _get_client_ip(request) or ''
-                    user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
-            except Exception:
-                pass
+            if request:
+                ip_address = _get_client_ip(request) or ''
+                user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+        except Exception:
+            pass
 
-            description = f"Role {role_name} permissions updated"
-            if model_name == 'RolePermission':
-                if created:
-                    description = f"Permission added to role {role_name}"
-                elif old_permissions and not new_permissions:
-                    description = f"Permission removed from role {role_name}"
-                else:
-                    description = f"Permission updated on role {role_name}"
+        description = f"Role {role_name} permissions updated"
+        if model_name == 'RolePermission':
+            if created:
+                description = f"Permission added to role {role_name}"
+            elif old_permissions and not new_permissions:
+                description = f"Permission removed from role {role_name}"
+            else:
+                description = f"Permission updated on role {role_name}"
 
-            trace_id = _get_trace_id(request)
+        trace_id = _get_trace_id(request)
 
-            # A savepoint: on PostgreSQL a failed INSERT aborts the caller's transaction, and the `except`
-            # below would swallow the error while every later statement failed (refactor audit 2026-11-08).
-            # On the row's own database (the master of the hall it names), as the post-commit rows below: a bare
-            # `atomic()` opens the context's, where a row of another master is refused (WriteOutsideTransaction).
-            alias = router.db_for_write(AuditLog, instance=AuditLog(tenant=tenant))
-            with transaction.atomic(using=alias):
-                AuditLog.objects.using(alias).create(
-                    tenant=tenant,
-                    user=user,
-                    action=AuditAction.PERMISSION_CHANGE,
-                    # model_name is the CamelCase class name ('Role', 'RolePermission'),
-                    # kept as-is above for the comparisons. Every other write path derives
-                    # `resource` from _meta.label_lower, which lowercases it — lowercase
-                    # here too so this doesn't split the same resource into two spellings
-                    # (e.g. 'rolepermission' vs 'RolePermission') in the audit log.
-                    resource=model_name.lower(),
-                    resource_id=resource_id,
-                    changes=changes,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    description=description,
-                    trace_id=trace_id,
-                )
-            logger.debug(f"Created PERMISSION_CHANGE audit log for {model_name} {resource_id}")
-        except Exception as e:
-            _swallow_or_log(e, "Failed to create permission change audit log")
+        _write_row(
+            router.db_for_write(AuditLog, instance=AuditLog(tenant=tenant)),
+            tenant=tenant,
+            user_id=getattr(user, "pk", None),
+            action=AuditAction.PERMISSION_CHANGE,
+            # model_name is the CamelCase class name ('Role', 'RolePermission'),
+            # kept as-is above for the comparisons. Every other write path derives
+            # `resource` from _meta.label_lower, which lowercases it — lowercase
+            # here too so this doesn't split the same resource into two spellings
+            # (e.g. 'rolepermission' vs 'RolePermission') in the audit log.
+            resource=model_name.lower(),
+            resource_id=resource_id,
+            changes=changes,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            description=description,
+            trace_id=trace_id,
+        )
+        logger.debug(f"Created PERMISSION_CHANGE audit log for {model_name} {resource_id}")
 
 
 def _is_migration_context():
@@ -226,40 +218,28 @@ def _is_migration_context():
     return _in_migration
 
 
-def _swallow_or_log(exc, what):
-    """Decide whether an audit-write failure is expected, and log it if not.
+def _write_row(alias, **row):
+    """Write one audit row INSIDE the business transaction it describes (user decision 2026-11-19): it fails, the
+    business write rolls back, as a `SoulEvent` does (CLAUDE.md, 事件日志是业务记录的一部分).
 
-    WHAT THIS REPLACES. Three copies of:
+    Until then the generic row was an `on_commit` write and every audit failure was logged and swallowed: a
+    mutation could commit with no record of it, and `apps/audit/oncommit_guard.py` existed only because the rows
+    of a `django_db` test never appeared. Pinned by `tests/test_audit_inside_transactions.py`.
 
-        err_str = str(e).lower()
-        migration_related = any(x in err_str for x in [
-            'no such table', 'undefinedtable', 'does not exist',
-            'relation', 'column', 'constraint', 'programmingerror'
-        ])
-        if migration_related:
-            return          # not even a log line
-
-    PostgreSQL's ordinary runtime errors contain those substrings:
-
-        insert or update on table ... violates foreign key **constraint** ...
-        null value in **column** ... violates not-null **constraint**
-        **relation** ... does not exist
-
-    So any real audit-write failure of those shapes was dropped in total
-    silence. (C17's `inet` DataError happened to match none of them, which is
-    the only reason it ever produced a log line.)
-
-    The honest test is **the context, not the message**: `_is_migration_context()`
-    already tracks whether a migration is running, and it is the thing the
-    substring list was standing in for. Outside that context every failure is
-    logged, always -- an audit row that could not be written is exactly the
-    event nobody can afford to have swallowed.
+    - `atomic(using=alias)`: the row's own database (the master of the hall it names, sharding stage 4). A bare
+      `atomic()` opens the context's, where a row of another master is refused (WriteOutsideTransaction). Inside
+      a business transaction on `alias` this is a savepoint; outside one (a plain `save()` in autocommit) it is
+      the row's own transaction -- the business row is already committed then, and only the caller's error says so.
+    - `mark_for_rollback_on_error`: the savepoint alone would let a caller that catches the error commit the
+      business write without its row; this marks the enclosing transaction for rollback, as `Model.save` does.
+    - Callers pass `user_id`, not `user=`: assigning the object asks the router where a User is written, which in a
+      context with no single civilization (SYSTEM_ADMIN) while one is write-cut is NoShardContext. As an on-commit
+      write that error was swallowed and the row lost (a hall created by SYSTEM_ADMIN, test_sharded_writes).
     """
-    if _is_migration_context():
-        logger.debug(f"{what} skipped during migration: {exc}")
-        return
-    logger.error(f"{what}: {exc}", exc_info=True)
+    from apps.audit.models import AuditLog
 
+    with transaction.mark_for_rollback_on_error(using=alias), transaction.atomic(using=alias):
+        AuditLog.objects.using(alias).create(**row)
 
 
 @receiver(pre_migrate)
@@ -444,50 +424,34 @@ def _create_audit_log(action, instance, changes=None):
 
     from apps.audit.models import AuditLog
 
-    try:
-        user, tenant, request = _current_context()
+    user, tenant, request = _current_context()
 
-        ip_address = ''
-        user_agent = ''
-        if request:
-            ip_address = _get_client_ip(request) or ''
-            user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+    ip_address = ''
+    user_agent = ''
+    if request:
+        ip_address = _get_client_ip(request) or ''
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
-        trace_id = _get_trace_id(request)
-        tenant_id = _row_tenant_id(instance, tenant)
+    trace_id = _get_trace_id(request)
+    tenant_id = _row_tenant_id(instance, tenant)
 
-        row = dict(
-            tenant_id=tenant_id,
-            user=user,
-            action=action,
-            resource=_get_resource_name(instance),
-            resource_id=str(instance.pk) if instance.pk else '',
-            changes=changes,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            # Empty, not a sentence: the row's action and resource say it, and the screens name them in the reader's language.
-            description="",
-            trace_id=trace_id,
-        )
+    row = dict(
+        tenant_id=tenant_id,
+        user_id=getattr(user, "pk", None),
+        action=action,
+        resource=_get_resource_name(instance),
+        resource_id=str(instance.pk) if instance.pk else '',
+        changes=changes,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        # Empty, not a sentence: the row's action and resource say it, and the screens name them in the reader's language.
+        description="",
+        trace_id=trace_id,
+    )
 
-        # The database the row is written to: the master of the hall it names (sharding stage 4), which need not be
-        # the one the business transaction was on (a control row of another civilization's hall).
-        alias = router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id))
-
-        def write():
-            # Runs after commit, long after the `try` around it has returned — so it catches its own failure,
-            # or the error reaches whoever committed (refactor audit 2026-11-08). Its own transaction on its own
-            # database: a bare `atomic()` opens the context's (`shard_reads._install_atomic`), and a row of another
-            # master inside it is refused (WriteOutsideTransaction, swallowed below: the row lost, 115 2026-11-19).
-            try:
-                with transaction.atomic(using=alias):
-                    AuditLog.objects.using(alias).create(**row)
-            except Exception as e:
-                _swallow_or_log(e, "Failed to create audit log")
-
-        transaction.on_commit(write)
-    except Exception as e:
-        _swallow_or_log(e, "Failed to create audit log")
+    # The database the row is written to: the master of the hall it names (sharding stage 4), which need not be
+    # the one the business transaction was on (a control row of another civilization's hall).
+    _write_row(router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id)), **row)
 
 
 def _get_client_ip(request):
@@ -588,65 +552,61 @@ def create_batch_audit_log(action, instances, changes=None):
 
     from apps.audit.models import AuditLog
 
-    try:
-        user, tenant, request = _current_context()
+    user, tenant, request = _current_context()
 
-        ip_address = ''
-        user_agent = ''
-        if request:
-            ip_address = _get_client_ip(request) or ''
-            user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+    ip_address = ''
+    user_agent = ''
+    if request:
+        ip_address = _get_client_ip(request) or ''
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
-        # Build resource info for batch operation
-        resource_names = list(set([_get_resource_name(inst) for inst in instances]))
-        resource_ids = [str(inst.pk) for inst in instances if inst.pk]
+    # Build resource info for batch operation
+    resource_names = list(set([_get_resource_name(inst) for inst in instances]))
+    resource_ids = [str(inst.pk) for inst in instances if inst.pk]
 
-        # Create description for batch operation
-        instance_count = len(instances)
-        resource_desc = ', '.join(resource_names)
-        description = f"Batch {action} on {instance_count} {resource_desc}"
+    # Create description for batch operation
+    instance_count = len(instances)
+    resource_desc = ', '.join(resource_names)
+    description = f"Batch {action} on {instance_count} {resource_desc}"
 
-        # Prepare batch changes data
-        batch_changes = {
-            "batch_operation": True,
-            "resource_count": instance_count,
-            "resources": [
-                {"resource": _get_resource_name(inst), "resource_id": str(inst.pk)}
-                for inst in instances if inst.pk
-            ]
-        }
-        if changes:
-            batch_changes["details"] = changes
+    # Prepare batch changes data
+    batch_changes = {
+        "batch_operation": True,
+        "resource_count": instance_count,
+        "resources": [
+            {"resource": _get_resource_name(inst), "resource_id": str(inst.pk)}
+            for inst in instances if inst.pk
+        ]
+    }
+    if changes:
+        batch_changes["details"] = changes
 
-        # Truncate resource and resource_id to fit within database constraints
-        combined_resource = ",".join(resource_names)
-        combined_resource_ids = ",".join(resource_ids[:50])
+    # Truncate resource and resource_id to fit within database constraints
+    combined_resource = ",".join(resource_names)
+    combined_resource_ids = ",".join(resource_ids[:50])
 
-        # Ensure we don't exceed CharField limits (100 chars each)
-        if len(combined_resource) > 100:
-            combined_resource = combined_resource[:97] + "..."
-        if len(combined_resource_ids) > 100:
-            combined_resource_ids = combined_resource_ids[:97] + "..."
+    # Ensure we don't exceed CharField limits (100 chars each)
+    if len(combined_resource) > 100:
+        combined_resource = combined_resource[:97] + "..."
+    if len(combined_resource_ids) > 100:
+        combined_resource_ids = combined_resource_ids[:97] + "..."
 
-        row_tenants = {_row_tenant_id(inst, tenant) for inst in instances}
-        # A savepoint on the row's own database, for the same reasons as the permission-change row above.
-        tenant_id = row_tenants.pop() if len(row_tenants) == 1 else getattr(tenant, "pk", None)
-        alias = router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id))
-        with transaction.atomic(using=alias):
-            AuditLog.objects.using(alias).create(
-                tenant_id=tenant_id,
-                user=user,
-                action=action,
-                resource=combined_resource,
-                resource_id=combined_resource_ids,
-                changes=batch_changes,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                description=description,
-            )
-        logger.debug(f"Created batch {action} audit log for {instance_count} {resource_desc}")
-    except Exception as e:
-        _swallow_or_log(e, "Failed to create batch audit log")
+    row_tenants = {_row_tenant_id(inst, tenant) for inst in instances}
+    tenant_id = row_tenants.pop() if len(row_tenants) == 1 else getattr(tenant, "pk", None)
+    alias = router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id))
+    _write_row(
+        alias,
+        tenant_id=tenant_id,
+        user_id=getattr(user, "pk", None),
+        action=action,
+        resource=combined_resource,
+        resource_id=combined_resource_ids,
+        changes=batch_changes,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        description=description,
+    )
+    logger.debug(f"Created batch {action} audit log for {instance_count} {resource_desc}")
 
 
 def is_audited_model(model) -> bool:

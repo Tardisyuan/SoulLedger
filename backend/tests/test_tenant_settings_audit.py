@@ -1,8 +1,7 @@
 """管理员改殿的设置 / 印字时写审计(`apps/tenants/views.py::audit_hall_change`):
 谁、哪个殿、每个变了的字段 `[旧, 新]`;没变不写;非 ADMIN 被拒也不写。
 
-`transaction=True`:`apps/audit/signals.py` 的泛化 UPDATE 行走 `transaction.on_commit`,
-只有真提交才落盘;不这样,「没写审计」的断言对着一张永远空的表,`oncommit_guard` 会红。
+`transaction=True`:写这份时泛化 UPDATE 行还走 `transaction.on_commit`(2026-11-19 起与业务同一事务写入)。
 泛化行与视图那条都是 `resource="tenant"`,按 `description` 前缀 `hall ` 分开。
 """
 import pytest

@@ -620,7 +620,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         goes with it; the manifest `{"app.Model": rows deleted}` — the events and every cascaded model, the
         counts Django's own `delete()` reports — is written to one `AuditLog` row (resource
         `SOUL_PURGE_RESOURCE`, which audit retention never prunes: the record of a destruction must outlive
-        what it destroyed). That row is written INSIDE the transaction (not the generic on_commit audit row):
+        what it destroyed). That row is written INSIDE the transaction (as every audit row is, 2026-11-19):
         if it cannot be written, nothing is deleted. The soul is row-locked first; on PostgreSQL a concurrent
         event insert needs a key-share lock on it, so it waits and then fails rather than slipping in between
         the two deletes.

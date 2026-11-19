@@ -1,6 +1,6 @@
-"""审计写入失败永远会留下一行日志。
+"""审计写入失败永远不会被静默吞掉:它抛给调用方,业务随之回滚(2026-11-19 用户决定)。
 
-`apps/audit/signals.py` 里有过三份互相手抄的:
+历史:`apps/audit/signals.py` 里先有三份按报错措辞判断「是不是迁移导致的」的手抄副本:
 
     err_str = str(e).lower()
     migration_related = any(x in err_str for x in [
@@ -10,30 +10,18 @@
     if migration_related:
         return          # 连日志都不打
 
-而 PostgreSQL 的日常运行时错误正好含这些子串:
-
-    insert or update on table ... violates foreign key **constraint** ...
-    null value in **column** ... violates not-null **constraint**
-    **relation** ... does not exist
-
-**任何这些形状的真实审计写入失败,被完全静默地丢掉。** C17 那个 `inet` DataError
-恰好一个子串都没命中,这是它还能打出一行日志的唯一原因 —— 也就是说,能不能被看见
-取决于报错措辞,而不取决于严重程度。
-
-判据换成**上下文**:`_is_migration_context()` 本来就在跟踪迁移是否在跑,而那正是
-那份子串清单想要表达的东西。迁移之外,一律记 error。
+而 PostgreSQL 的日常运行时错误正好含这些子串,于是真实的审计写入失败被完全静默地丢掉。之后换成按上下文
+(`_is_migration_context()`)判断、迁移之外一律记 error 再吞掉(`_swallow_or_log`)。现在连吞都不吞了:
+审计行与业务同一事务,写不进就整笔回滚(`tests/test_audit_inside_transactions.py` 逐路径注入失败)。
 """
-import logging
+import ast
+import inspect
+from unittest import mock
 
 import pytest
 from django.db import DatabaseError
 
 from apps.audit import signals
-
-
-@pytest.fixture
-def not_in_migration(monkeypatch):
-    monkeypatch.setattr(signals, "_is_migration_context", lambda: False)
 
 
 @pytest.mark.parametrize(
@@ -45,50 +33,38 @@ def not_in_migration(monkeypatch):
         'relation "audit_auditlog" does not exist',
     ],
 )
-def test_a_real_database_failure_is_logged(caplog, not_in_migration, message):
-    with caplog.at_level(logging.ERROR, logger=signals.logger.name):
-        signals._swallow_or_log(DatabaseError(message), "Failed to create audit log")
+@pytest.mark.django_db
+def test_a_real_database_failure_reaches_the_caller(cn_tenant, message):
+    from apps.audit.models import AuditLog
+    from apps.souls.models import Soul
 
-    assert caplog.records, f"这条失败被静默丢掉了:{message}"
-    assert message in caplog.text
+    with mock.patch.object(AuditLog.objects, "using") as using, pytest.raises(DatabaseError) as raised:
+        using.return_value.create.side_effect = DatabaseError(message)
+        Soul.objects.create(name="失败", tenant=cn_tenant)
+    assert str(raised.value) == message
 
 
-def test_a_migration_time_failure_is_not_logged_as_an_error(caplog, monkeypatch):
-    """反对照。
+@pytest.mark.django_db
+def test_during_a_migration_no_row_is_attempted(cn_tenant, monkeypatch):
+    """反对照:迁移时表可能还不在,审计整段跳过,不是写了再吞。"""
+    from apps.audit.models import AuditLog
+    from apps.souls.models import Soul
 
-    没有它,一个「什么都记 error」的实现同样满足上面三条,而那会让每一次
-    `migrate` 刷出一屏红色 —— 那正是当初写下那份子串清单的原因。真正的分歧点
-    从来不是措辞,是上下文。
-    """
     monkeypatch.setattr(signals, "_is_migration_context", lambda: True)
-    with caplog.at_level(logging.ERROR, logger=signals.logger.name):
-        signals._swallow_or_log(DatabaseError("no such table: audit_auditlog"), "x")
-    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    with mock.patch.object(AuditLog.objects, "using") as using:
+        Soul.objects.create(name="迁移中", tenant=cn_tenant)
+    using.assert_not_called()
 
 
-def test_the_substring_list_is_gone(not_in_migration):
-    """那三份手抄副本不许回来。
+def test_nothing_in_the_signals_swallows_an_audit_write():
+    """形状守卫:按措辞判断的清单、吞异常的 helper、on_commit 延后,都不许回来。
 
-    这条守的是形状而不是行为:上面几条只覆盖三种措辞,而那份清单有七项。
-    有人补回一个 `if 'deadlock' in str(e): return`,上面几条一条都不会红。
-    """
-    import ast
-    import inspect
-
-    # 用 AST 找**赋值**,不在源码里找字符串。第一版是后者,当场就红了 ——
-    # `_swallow_or_log` 的 docstring 里逐字引用了那段被删掉的代码。
-    # 只剥 `#` 注释不够:那段引用在三引号字符串里。
-    # 这个仓库栽在「扫描器读到了自己的文档」上,这是第三次(前两次:
-    # `suiteShape.test.ts` 的规则、`test_execution_records_only_what_happened.py`
-    # 的调用检查)。**注释、docstring 和代码在同一段文本里,只有解析能分开它们。**
+    用 AST,不在源码里找字符串 —— docstring 里会逐字引用被删掉的代码(这个仓库栽在「扫描器读到了自己的
+    文档」上不止一次)。"""
     tree = ast.parse(inspect.getsource(signals))
-    assigned = {
-        node.id
-        for n in ast.walk(tree)
-        if isinstance(n, ast.Assign)
-        for node in n.targets
-        if isinstance(node, ast.Name)
-    }
-    assert "migration_related" not in assigned, (
-        "按报错措辞判断「是不是迁移导致的」又回来了 —— 判据是上下文,不是子串"
-    )
+    assigned = {t.id for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
+    defined = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+    called = {n.func.attr for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
+    assert "migration_related" not in assigned
+    assert "_swallow_or_log" not in defined
+    assert "on_commit" not in called
