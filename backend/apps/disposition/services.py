@@ -1005,6 +1005,14 @@ class DispositionService:
         with transaction.atomic():
             locked = Soul.lock(disposition.soul_id)
             if SentencePlanService.node_for_disposition(disposition) is not None:
+                from apps.dispatch import transfer
+
+                plan_hall = transfer.plan_hall_elsewhere(disposition)
+                if plan_hall is not None:  # served abroad, the plan another master's (VERIFY-stage4-r3 H-2)
+                    if not disposition.is_executed or disposition.is_eternal:
+                        return False
+                    transfer.stop_done(locked, disposition, plan_hall, served=True)
+                    return True
                 node = SentencePlanService.on_term_served(locked, disposition)
                 if node is None:
                     return False
@@ -1145,6 +1153,12 @@ class DispositionService:
             if SentencePlanService.node_for_disposition(disposition) is None and plan_blocks_nodeless(locked):
                 return False
             DispositionService._mark_executed(disposition)
+            from apps.dispatch import transfer
+
+            plan_hall = transfer.plan_hall_elsewhere(disposition)
+            if plan_hall is not None:  # the plan is the home hall's, on a master this transaction does not hold (H-2)
+                transfer.stop_done(locked, disposition, plan_hall, served=False)
+                return True
             node = SentencePlanService.on_disposition_executed(locked, disposition)
             from apps.disposition.expiry import serving
 

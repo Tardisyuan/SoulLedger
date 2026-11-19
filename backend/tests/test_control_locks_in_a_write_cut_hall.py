@@ -55,6 +55,8 @@ INDIRECT = {
     ("apps/tenants/shard_saga.py", "model._base_manager.using(master_of(get_current_tenant())).select_for_update"):
         "SHARD",
     ("apps/dispatch/transfer.py", "here.select_for_update"): "SHARD",
+    ("apps/dispatch/transfer.py", "_soul_model().all_objects.db_manager(saga.master_of(residence)).select_for_update"):
+        "SHARD",
     ("apps/sentence_plan/services.py", "rows = rows.select_for_update"): "SHARD",
     ("apps/social/moderation.py", "queryset.select_for_update"): "SHARD",
     ("apps/social/moderation.py", "model.objects.select_for_update"): "SHARD",

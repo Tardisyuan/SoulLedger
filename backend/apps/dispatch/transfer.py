@@ -305,7 +305,8 @@ def end_residence(soul, *, actor, trigger, reason="", then_advance=False):
         subject = f"soul:{soul.pk}"
         if saga.in_flight(subject, home):
             raise ValueError("Soul is already on its way home")
-        saga.send(RETURN_REQUESTED, home, residence, {"soul_id": str(soul.pk), **payload}, subject=subject)
+        saga.send(RETURN_REQUESTED, home, residence, {"soul_id": str(soul.pk), "home_id": home.pk, **payload},
+                  subject=subject)
         return None  # the caller's soul stays where it is: abroad until the relay brings it home
     with saga.on_master(residence):
         locked = _soul_model().lock(soul.pk, using=saga.master_of(residence))
@@ -373,13 +374,34 @@ def _return_requested(payload):
     from apps.tenants.managers import get_current_tenant
 
     residence = get_current_tenant()
-    locked = _soul_model().lock(payload["soul_id"], using=saga.master_of(residence))
-    if locked.tenant_id != residence.pk or not locked.is_residing or saga.in_flight(f"soul:{locked.pk}", residence):
-        return  # home already, moved on, or on its way home
+    # `.first()`, not `lock()`: the message names the residence it was sent to, and another return may bring the soul
+    # home before it is delivered -- on a shard that return's step 3 deletes the row here (`_retire`). A `get()` made
+    # it a dead letter on subject soul:<pk>, holding back the soul's later returns and its rebirth (VERIFY-stage4-r3 N-1).
+    locked = (_soul_model().all_objects.db_manager(saga.master_of(residence)).select_for_update(of=("self",))
+              .filter(pk=payload["soul_id"]).first())
+    if (locked is None or locked.tenant_id != residence.pk or not locked.is_residing
+            or saga.in_flight(f"soul:{locked.pk}", residence)):
+        _advance_once_home(payload, residence, locked)  # home already, moved on, or on its way home
+        return
     try:
         _leave(locked, residence, {k: payload[k] for k in ("trigger", "reason", "actor", "actor_id", "then_advance")})
     except ResidenceReturnBlockedError as e:
         raise Refused(str(e)) from None
+
+
+def _advance_once_home(payload, residence, row):
+    """The caller's plan still moves on once the soul is home (`then_advance`), though another return brought it: that
+    one's settling may not advance (a residence ending a stop itself does not ask to). Sent on the soul's subject, so
+    the relay delivers it after a return still in flight on this master; `advance` is a function of the plan's state."""
+    if not payload.get("then_advance"):
+        return
+    home_id = payload.get("home_id") or (row.home_tenant_id if row is not None else None)
+    if home_id is None:  # a message sent before it carried `home_id`, its row here gone: any master's copy names it
+        home_id = _soul_model()._base_manager.filter(pk=payload["soul_id"]).values_list(
+            "home_tenant_id", flat=True).first()
+    saga.send(RETURN_SETTLED, residence, _hall(home_id), {
+        "soul_id": payload["soul_id"], "home_id": home_id, "dispatch_id": None, "trigger": payload["trigger"],
+        "then_advance": True, "at": timezone.now().isoformat()}, subject=f"soul:{payload['soul_id']}")
 
 
 def _return_not_requested(payload):
@@ -501,6 +523,137 @@ def _seated(payload):
     seat.save(force_insert=True)
     if payload["workflow"]:
         segments.append_foreign(ApprovalWorkflow._base_manager.get(pk=payload["workflow"]), seat.participant_tenant)
+
+
+# ---- a seat's sentence on another civilization's bench (VERIFY-stage4-r3 H-1) ------------------------------------
+
+SENTENCE = "dispatch.joint_sentence"
+#: The sentence fields of a seat, by attname: what a refused sentence puts back.
+SENTENCE_FIELDS = ("sentence_realm_code", "sentence_years", "sentence_is_eternal", "sentence_memory_reset",
+                   "sentence_notes", "sentence_submitted_at", "sentence_submitted_by_id")
+
+
+def _sentence_subject(seat_pk):
+    return f"sentence:{seat_pk}"
+
+
+def sentence(seat, previous):
+    """`CrossTenantJudgmentService.submit_sentence` where the bench is another master's: the seat's hall wrote its seat
+    (its own row, on its master, in its transaction); the bench takes the sentence on its own master, under the lock
+    `conclude` takes there, only while it is open -- else the seat is put back (`_sentence_refused`)."""
+    saga.send(SENTENCE, seat.tenant, _hall(seat.judgment.tenant_id), {
+        "judgment_id": str(seat.judgment_id), "seat_id": str(seat.pk), "previous": previous,
+        "at": seat.sentence_submitted_at.isoformat()}, subject=_sentence_subject(seat.pk))
+
+
+def sentence_in_flight(judgment):
+    """A seat's sentence sent to `judgment`'s bench and not yet taken: `conclude` waits for it. Asked after it read
+    the seats, so a sentence committed before then is refused here and one committed after it is refused by the bench
+    (CONCLUDED) and put back: the plan gets the sentences the seats end up holding."""
+    from django.conf import settings
+
+    from apps.dispatch.models import CrossTenantJudgmentParticipant
+
+    if not settings.SHARD_WRITE_CIVS:
+        return False
+    seats = CrossTenantJudgmentParticipant._base_manager.filter(judgment_id=judgment.pk, is_deleted=False)
+    return any(saga.in_flight(_sentence_subject(pk), _hall(hall_id))
+               for pk, hall_id in seats.values_list("pk", "participant_tenant_id")
+               if saga.crosses(_hall(hall_id), judgment.tenant))
+
+
+def _sentence_on_bench(payload):
+    from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, JudgmentStatus
+    from apps.dispatch.services import CrossTenantJudgmentService
+
+    bench = CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=payload["judgment_id"])
+    if bench.status not in (JudgmentStatus.PROPOSED, JudgmentStatus.ACTIVE):
+        raise Refused(f"the bench is {bench.status}")
+    CrossTenantJudgmentService.notify_sentence(bench, CrossTenantJudgmentParticipant._base_manager.get(
+        pk=payload["seat_id"]))
+
+
+def _sentence_refused(payload):
+    """On the seat's master: the bench closed before the sentence reached it -- the seat as it was, unless it was
+    filled again since (a later sentence has its own message)."""
+    from django.utils.dateparse import parse_datetime
+
+    from apps.dispatch.models import CrossTenantJudgmentParticipant
+
+    seat = CrossTenantJudgmentParticipant._base_manager.select_for_update(of=("self",)).filter(
+        pk=payload["seat_id"]).first()
+    if seat is None or seat.sentence_submitted_at != parse_datetime(payload["at"]):
+        return
+    for attname, value in payload["previous"].items():
+        field = next(f for f in seat._meta.concrete_fields if f.attname == attname)
+        setattr(seat, attname, field.to_python(value))
+    seat.save(update_fields=list(payload["previous"]))
+
+
+handler(SENTENCE, refused=_sentence_refused)(_sentence_on_bench)
+
+
+# ---- a plan stop executed or served in another civilization (VERIFY-stage4-r3 H-2) ---------------------------------
+
+STOP_DONE = "sentence_plan.stop_done"
+
+
+def plan_hall_elsewhere(disposition):
+    """The hall of the plan `disposition`'s stop belongs to, when the code's transaction does not hold its master (the
+    residence executes a stop of a home plan written on another database), else None."""
+    from django.conf import settings
+
+    from apps.sentence_plan.models import SentencePlan
+    from apps.sentence_plan.services import SentencePlanService
+
+    if not settings.SHARD_WRITE_CIVS:
+        return None
+    found = SentencePlanService.node_for_disposition(disposition)
+    if found is None:
+        return None
+    hall = _hall(SentencePlan.all_objects.filter(pk=found.plan_id).values_list("tenant_id", flat=True).get())
+    return None if saga.joins(hall) else hall
+
+
+def stop_done(locked, disposition, plan_hall, *, served):
+    """The residence's half of `on_disposition_executed` (`served=False`) / `on_term_served`: its own rows only -- the
+    disposition is written by the caller; the soul leaves the stop's realm here when the stop is over (no term left,
+    no open judgment holding it: the node the plan's master will mark COMPLETED). The node, the plan and what follows
+    (`advance`) are the plan's rows: the plan's master does them (`_stop_done`)."""
+    from apps.disposition.expiry import serving
+    from apps.disposition.services import DispositionService
+    from apps.judgment.models import open_judgments
+
+    if not disposition.is_eternal and not serving(disposition) and not open_judgments(locked).exists():
+        DispositionService._leave_served_realm(disposition, locked)
+    saga.send(STOP_DONE, locked.tenant, plan_hall, {
+        "soul_id": str(locked.pk), "disposition_id": str(disposition.pk), "residence_id": disposition.tenant_id,
+        "served": served},
+        subject=f"stop:{disposition.pk}")
+
+
+@handler(STOP_DONE)
+def _stop_done(payload):
+    """On the plan's master, as the plan's hall: the stop's node (ACTIVE -> ETERNAL / WAITING / COMPLETED, or still
+    serving), the plan, and `advance` -- which, the stop over, asks the residence to send the soul home (a
+    RETURN_REQUESTED: this transaction does not hold the residence's master) or dispatches it to the next stop."""
+    from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
+    from apps.disposition.models import Disposition
+    from apps.judgment.models import open_judgments
+    from apps.sentence_plan.models import SentenceNodeStatus
+    from apps.sentence_plan.services import SentencePlanService
+
+    soul = _soul_model().lock(payload["soul_id"])
+    disposition = Disposition.all_objects.using(saga.master_of(_hall(payload["residence_id"]))).get(
+        pk=payload["disposition_id"])  # the residence's row, where it is written
+    node = (SentencePlanService.on_term_served if payload["served"] else SentencePlanService.on_disposition_executed)(
+        soul, disposition)
+    if node is None:
+        return  # the node moved on meanwhile (the home hall cancelled, an appeal withdrew it)
+    if node.status == SentenceNodeStatus.WAITING and soul.is_residing:
+        open_ids = list(open_judgments(soul).values_list("pk", flat=True))
+        DispatchService.record_blocked_return(soul, ResidenceReturnBlockedError(open_ids), disposition)
+    SentencePlanService.advance(soul)
 
 
 # ---- a cross-civilization rebirth (迁籍) ----------------------------------------------------------------------

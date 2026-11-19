@@ -475,6 +475,15 @@ class ReincarnationService:
             from apps.soul_accounts.rebirth import approved_rebirth_target
 
             target_hall = approved_rebirth_target(soul)
+            if target_hall is not None:
+                # 迁籍是一条跨文明 saga(`transfer.migrate`):切写 / 反向同步期间与调拨一起冻结,423、什么都不写。
+                from apps.core.problems import Problem
+                from apps.dispatch.services import DispatchFrozenError, refuse_if_frozen
+
+                try:
+                    refuse_if_frozen()
+                except DispatchFrozenError as e:
+                    raise Problem(e.http_status, e.code, str(e)) from None
 
             # Monthly quota per path (2026-10-24). The hall row is locked first so two rebirths in one hall cannot
             # both take the last place; a full path refuses and the soul stays REINCARNATING, waiting.

@@ -1049,6 +1049,7 @@ class CrossTenantJudgmentService:
         from apps.workflow import segments
         from apps.workflow.models import ApprovalWorkflowStatus
 
+        refuse_if_frozen()  # a seat of another civilization is a saga (`transfer.seat`), as a new bench is
         workflow = segments.lock_workflow_of(judgment)
         running = workflow is not None and workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
         if judgment.status != JudgmentStatus.PROPOSED and not (running and judgment.status == JudgmentStatus.ACTIVE):
@@ -1196,10 +1197,16 @@ class CrossTenantJudgmentService:
         `is_eternal` / `memory_reset` 抄自 realm,与 `DispositionService.create_from_judgment` 同一抄法。
         """
         from apps.realms.models import realm_by_code
+        from apps.tenants import shard_saga
 
         # 锁序 联审 → 参与方,与 `conclude` 相同:结束与填写并发时,要么填写在校验之前落地,
         # 要么看到 CONCLUDED 被拒 —— 不会有「校验通过之后才改」的节点内容。
-        judgment = CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=participant.judgment_id)
+        # 联审行在另一个库(席位殿与发起殿分属两个已切写的文明,VERIFY-stage4-r3 H-1):这个事务锁不到它,只读;
+        # 席位写在自己的库,联审在它自己的库上、在 `conclude` 的那把锁下收这条刑(`transfer.sentence`)。
+        judgment = CrossTenantJudgment._base_manager.get(pk=participant.judgment_id)
+        away = not shard_saga.joins(judgment.tenant)
+        if not away:
+            judgment = CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
         locked = CrossTenantJudgmentParticipant.all_objects.select_for_update(of=("self",)).get(pk=participant.pk)
         if judgment.judgment_id is None:
             raise ValueError("This cross-tenant judgment is not attached to a judgment; it has no sentence nodes")
@@ -1212,6 +1219,9 @@ class CrossTenantJudgmentService:
         if realm is None or realm.civilization != civilization:
             raise ValueError(f"Realm {realm_code!r} is not a realm of {participant.participant_tenant.code}")
 
+        from apps.dispatch import transfer
+
+        previous = {f: getattr(locked, f) for f in transfer.SENTENCE_FIELDS}
         locked.sentence_realm_code = realm.realm_code
         locked.sentence_years = sentence_years
         locked.sentence_is_eternal = realm.is_eternal
@@ -1220,8 +1230,16 @@ class CrossTenantJudgmentService:
         locked.sentence_submitted_at = timezone.now()
         locked.sentence_submitted_by = user
         locked.save()
-        # 发起方的判官(§5.1 `cross_sentence_submitted`):只带灵魂名、文明代码、节点序号,
-        # 加计划所属文明(`plan_civ`,地府的正文仍说「受刑计划」,第十三批)。
+        if away:
+            transfer.sentence(locked, previous)  # the bench's master takes it, and tells the bench's judges
+        else:
+            CrossTenantJudgmentService.notify_sentence(judgment, locked)
+        return locked
+
+    @staticmethod
+    def notify_sentence(judgment, seat):
+        """发起方的判官(§5.1 `cross_sentence_submitted`):只带灵魂名、文明代码、节点序号,
+        加计划所属文明(`plan_civ`,地府的正文仍说「受刑计划」,第十三批)。提交后发。"""
         from apps.judgment.models import Judgment
         from apps.sentence_plan.services import notify_judges, soul_params
 
@@ -1230,11 +1248,10 @@ class CrossTenantJudgmentService:
         soul = source.soul if source else None
         notify_judges(
             {judgment.initiating_tenant_id}, "cross_sentence_submitted",
-            {**(soul_params(soul) if soul else {"soul": ""}), "order": locked.node_order,
-             "tenant": participant.participant_tenant.code},
+            {**(soul_params(soul) if soul else {"soul": ""}), "order": seat.node_order,
+             "tenant": seat.participant_tenant.code},
             judgment.pk, related_resource="CrossTenantJudgment",
         )
-        return locked
 
     @staticmethod
     def check_bench_sentences(judgment):
@@ -1372,6 +1389,10 @@ class CrossTenantJudgmentService:
                 append_cross_stops(judgment)
             except PlanChangeRefusedError as exc:
                 raise ValueError(str(exc)) from exc
+        from apps.dispatch import transfer
+
+        if transfer.sentence_in_flight(judgment):  # after every read of the seats (`transfer.sentence_in_flight`)
+            raise ValueError("A seat's sentence is still on its way to this bench; conclude once it has arrived")
 
         params = {"title": judgment.title}
         if conclusion_type == "FAIL":
