@@ -647,6 +647,18 @@ def pytest_runtest_setup(item):
         )
 
 
+def pytest_configure(config):
+    """Controller or serial run, when the gate names a durations file: record what each test took
+    (config/gate_progress.py; config/worksteal.py orders the next run by it)."""
+    import os
+
+    from config import gate_progress
+
+    path = os.environ.get(gate_progress.ENV_DURATIONS)
+    if path and not hasattr(config, "workerinput"):
+        config.pluginmanager.register(gate_progress.DurationRecorder(path), "soulledger-durations")
+
+
 @pytest.hookimpl(optionalhook=True)
 def pytest_xdist_make_scheduler(config, log):
     """xdist controller: worksteal that keeps plain tests before transactional ones on every worker
