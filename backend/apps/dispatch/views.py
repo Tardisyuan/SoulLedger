@@ -56,6 +56,7 @@ from apps.dispatch.serializers import (
 )
 from apps.dispatch.services import (
     CrossTenantJudgmentService,
+    DispatchFrozenError,
     DispatchNotCancellableError,
     DispatchService,
     OrderLockedError,
@@ -870,7 +871,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         as None. Reading the user's own tenant column is the same answer by a
         route that cannot be skipped.
         """
-        from apps.dispatch.services import DispatchFrozenError, refuse_if_frozen
+        from apps.dispatch.services import refuse_if_frozen
 
         try:
             refuse_if_frozen()
@@ -955,6 +956,8 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
         except OrderLockedError as e:
             return problem(status.HTTP_409_CONFLICT, e.code, str(e))
+        except DispatchFrozenError as e:
+            return _refused(e)  # 423 dispatch_frozen
         except ValueError as e:
             return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
 
