@@ -346,7 +346,7 @@ def test_assigned_to_me_is_empty_once_i_cannot_reply(cn_tenant):
     User.objects.filter(pk=held.pk).update(role="VIEWER")
     # 现成的角色里读与回是一起给的,只读靠单独授予:这里直接问查询,不经路由权限。
     rows = inbox.annotate_for(Conversation.objects.all(), User.objects.get(pk=held.pk))
-    assert not rows.filter(inbox.folder_q("assigned_to_me")).exists()  # 也没把没人经办的那封算成他的
+    assert not rows.filter(inbox.folder_q("assigned_to_me", rows)).exists()  # 也没把没人经办的那封算成他的
 
 
 # ── B4:注销时关会话 ─────────────────────────────────────────────────────
