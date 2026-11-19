@@ -96,6 +96,7 @@ def _upsert_primary(values, alias, **changes):
 
 def _retire(alias, soul_pk, tenant_id, home_id):
     """Step 3: the source row is no longer the soul's. Rewritten first (gap 4d), then kept or deleted (module doc)."""
+    from apps.audit.signals import explicit_audit_for
     from apps.core.shard_reads import CONTROL_ALIAS, control_mirror_writes
     from apps.core.shard_sync import copy_blanks
 
@@ -108,7 +109,12 @@ def _retire(alias, soul_pk, tenant_id, home_id):
     rows.update(tenant_id=tenant_id, home_tenant_id=home_id, **dict.fromkeys(copy_blanks(Soul)))
     residing_copy = alias == saga.master_of(_hall(home_id)) and tenant_id != home_id
     if not residing_copy:
-        rows.delete()
+        # Housekeeping of a copy, not a soul deleted: no generic DELETE audit row. The move is audited where it is
+        # made (the record's own rows, `audit_return`). That row also named the NEW hall (rewritten just above), so
+        # it was routed to the new hall's master while this step's transaction is on this one: on 115 the write was
+        # refused (WriteOutsideTransaction) and swallowed, and where both share a master it claimed a live soul deleted.
+        with explicit_audit_for(Soul(pk=soul_pk)):
+            rows.delete()
 
 
 def _actor(payload):

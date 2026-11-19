@@ -13,7 +13,7 @@ import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from django.db import transaction
+from django.db import router, transaction
 from django.db.models.signals import post_delete, post_migrate, post_save, pre_migrate, pre_save
 from django.dispatch import receiver
 
@@ -30,8 +30,9 @@ _explicitly_audited: ContextVar[frozenset] = ContextVar("explicitly_audited", de
 
 @contextmanager
 def explicit_audit_for(instance):
-    """Within the block, `instance`'s save writes no generic UPDATE row: the caller audits it itself."""
-    token = _explicitly_audited.set(_explicitly_audited.get() | {(instance._meta.label_lower, instance.pk)})
+    """Within the block, `instance`'s save or delete writes no generic UPDATE / DELETE row: the caller audits it
+    itself (a saga retiring the copy a soul left behind: `apps/dispatch/transfer.py` `_retire`)."""
+    token = _explicitly_audited.set(_explicitly_audited.get() | {(instance._meta.label_lower, str(instance.pk))})
     try:
         yield
     finally:
@@ -435,7 +436,7 @@ def _create_audit_log(action, instance, changes=None):
     # Skip during migrations to avoid schema-not-ready errors
     if _is_migration_context():
         return
-    if action == 'UPDATE' and (instance._meta.label_lower, instance.pk) in _explicitly_audited.get():
+    if action in ('UPDATE', 'DELETE') and (instance._meta.label_lower, str(instance.pk)) in _explicitly_audited.get():
         return
 
     from apps.audit.models import AuditLog
@@ -466,12 +467,18 @@ def _create_audit_log(action, instance, changes=None):
             trace_id=trace_id,
         )
 
+        # The database the row is written to: the master of the hall it names (sharding stage 4), which need not be
+        # the one the business transaction was on (a control row of another civilization's hall).
+        alias = router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id))
+
         def write():
             # Runs after commit, long after the `try` around it has returned — so it catches its own failure,
-            # or the error reaches whoever committed (refactor audit 2026-11-08).
+            # or the error reaches whoever committed (refactor audit 2026-11-08). Its own transaction on its own
+            # database: a bare `atomic()` opens the context's (`shard_reads._install_atomic`), and a row of another
+            # master inside it is refused (WriteOutsideTransaction, swallowed below: the row lost, 115 2026-11-19).
             try:
-                with transaction.atomic():
-                    AuditLog.objects.create(**row)
+                with transaction.atomic(using=alias):
+                    AuditLog.objects.using(alias).create(**row)
             except Exception as e:
                 _swallow_or_log(e, "Failed to create audit log")
 
