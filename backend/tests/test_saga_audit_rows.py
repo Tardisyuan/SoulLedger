@@ -10,7 +10,7 @@ Where home and residence share a master the row was written: an audit row saying
 
 Through the real services (propose, approve, execute, relay, end_residence, relay), for the source's write cut, the
 target's, both, and one world drawn per run (seed printed; `SAGA_SEED=<n>` replays it). `transaction=True`: the
-audit rows are on-commit writes, which a TestCase never runs.
+rows are read as committed, across every database.
 
     cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true DATABASE_URL=sqlite:///:memory: \\
       REDIS_URL=redis://127.0.0.1:6399/0 .venv/bin/python -m pytest --ds=config.settings_sharded -m sharded \\

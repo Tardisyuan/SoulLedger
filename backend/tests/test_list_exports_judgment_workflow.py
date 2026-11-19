@@ -180,7 +180,6 @@ def test_an_export_is_written_to_the_audit_log(world):
     assert logs[0].tenant_id == world["a"].pk
 
 
-@pytest.mark.allow_uncommitted_audit  # `record_export` writes the row directly, not on_commit
 def test_a_refused_export_writes_no_audit_row(world):
     world["viewer"].get(JUDGMENT)
     world["viewer"].get(WORKFLOW)
@@ -189,7 +188,6 @@ def test_a_refused_export_writes_no_audit_row(world):
     assert [log.resource for log in AuditLog.objects.filter(action=AuditAction.EXPORT)] == ["workflow"]
 
 
-@pytest.mark.allow_uncommitted_audit
 @pytest.mark.parametrize("url", [JUDGMENT, WORKFLOW])
 def test_over_the_row_cap_is_a_400_not_a_short_file(world, monkeypatch, url):
     monkeypatch.setattr("apps.core.exports.EXPORT_MAX_ROWS", 0)

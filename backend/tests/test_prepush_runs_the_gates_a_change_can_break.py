@@ -570,7 +570,7 @@ class TestSuiteAboutTheSuiteRunsOnlyWhenRelevant:
             ["backend/apps/social/tests/conftest.py"],
             ["backend/requirements.lock"],
             ["backend/config/settings.py"],
-            ["backend/apps/audit/oncommit_guard.py"],
+            ["backend/apps/audit/signals.py"],
             ["backend/apps/audit/models.py"],
             ["backend/apps/tenants/models.py"],
             ["backend/apps/core/lock_join_guard.py"],

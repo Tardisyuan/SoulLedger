@@ -510,7 +510,10 @@ def test_the_first_write_to_a_shard_without_its_range_is_refused():
     # into the range already (gate 2026-11-16). Put it back below the range, as a shard that never had it assigned.
     _set_next(GREEK, AuditLog, 1)
     with cut("GREEK"), _in_hall(halls["GREEK"]):
-        Soul.objects.create(name="a uuid pk needs no range", tenant=halls["GREEK"])
+        # A soul's uuid pk needs no range, but its CREATE audit row (an integer pk, on the shard) goes in with it
+        # since 2026-11-19: the create is refused too. Before, that row was an on-commit write, refused and swallowed.
+        with pytest.raises(ImproperlyConfigured, match="assign_shard_id_ranges"):
+            Soul.objects.create(name="a uuid pk needs no range", tenant=halls["GREEK"])
         with pytest.raises(ImproperlyConfigured, match="assign_shard_id_ranges"):
             AuditLog.objects.create(tenant=halls["GREEK"], action=AuditAction.READ, resource="soul", resource_id="no")
         _assign("GREEK")

@@ -136,6 +136,9 @@ def world():
     civ_admins = {civ: User.objects.create_user(username=f"admin-{civ}", password="x", role=UserRole.ADMIN,
                                                 tenant=None, civilization=civ)
                   for civ in ("CHINESE", "EGYPTIAN", "GREEK")}
+    # The setup's own generic rows (description "") are in the table since audit rows are written inside the
+    # transaction (2026-11-19); this file is about the rows it seeds.
+    AuditLog.objects.filter(description="").delete()
     assert not AuditLog.objects.filter(tenant__isnull=True).exists(), "fixture must start with no hall-less audit rows"
     return {
         "halls": halls,

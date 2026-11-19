@@ -597,7 +597,6 @@ def test_a_cancelled_plan_neither_advances_nor_takes_requests(cn, eg, eu, judges
     assert _cancel(plan.officer("cn_mod2", "ADMIN", cn), p).data["code"] == "plan_closed"
 
 
-@pytest.mark.allow_uncommitted_audit  # 撤销的 AuditLog 由服务直接写(不经 on_commit 信号),「不存在」不是空断言
 def test_cancel_refusals_write_nothing(cn, eg, eu, judges):
     soul, p = _two_stops(cn, eg, eu)
     before = _shape(p)
@@ -614,7 +613,6 @@ def test_cancel_refusals_write_nothing(cn, eg, eu, judges):
     assert not AuditLog.objects.filter(resource="sentence_plan").exists()
 
 
-@pytest.mark.allow_uncommitted_audit
 def test_an_open_case_blocks_the_cancel_like_it_blocks_completion(cn, eg, eu, judges):
     """与正常完成一致:未结案审判拦住回归与完成 → 撤销答 409 `open_judgment`,什么都不写。"""
     soul, p = _two_stops(cn, eg, eu)

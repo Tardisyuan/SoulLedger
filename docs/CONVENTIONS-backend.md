@@ -348,7 +348,7 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 | 门 | 值 | 位置 |
 |---|---|---|
 | 覆盖率 | `--cov=apps --cov-branch --cov-fail-under=80` | `pytest.ini:33`（注释 14-27 解释 40→80 的棘轮） |
-| 审计断言防空 | `-p apps.audit.oncommit_guard` | 在会回滚的事务里读 AuditLog 而表从未真写 → 测试结束报错 |
+| 审计行在业务事务里 | `apps/audit/signals.py::_write_row` | 审计行与业务同一事务写入,写失败业务回滚(2026-11-19;此前 on_commit 写、失败吞掉,`oncommit_guard` 插件防空断言,已删)。`tests/test_audit_inside_transactions.py` |
 | ruff | `select = ["E","F","W","I","N","UP","B","A","SIM"]`，line-length 120 | `backend/ruff.toml:1-20`。【实跑】`ruff check .` **exit 0** |
 
 **覆盖率门有两条关闭的路径：** `CLAUDE.md:132` 的 PG 命令和

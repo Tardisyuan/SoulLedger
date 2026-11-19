@@ -145,13 +145,14 @@ def test_record_export_itself_refuses_an_impersonation_token(target):
 
 def test_reads_work_as_the_target_and_distinct_pages_are_counted(admin_user, target):
     viewing, _ = _viewing(admin_user, target)
+    before = AuditLog.objects.count()
     for page in ("/souls", "/souls", "/judgments", "/souls"):
         response = viewing.get(PROFILE, HTTP_X_IMP_PAGE=page)
         assert response.status_code == 200
         assert response.data["username"] == "mengpo" and response.data["username"] != admin_user.username
     viewing.get(PROFILE)  # 没带页面的请求不计
     assert sorted(Impersonation.objects.get().pages) == ["/judgments", "/souls"]
-    assert AuditLog.objects.exclude(action__in=[AuditAction.IMPERSONATE_START]).count() == 0  # 浏览不另记审计
+    assert AuditLog.objects.count() == before  # 浏览不另记审计
 
 
 # ── 到点与结束 ─────────────────────────────────────────────────────────────
