@@ -808,6 +808,15 @@ def _claim_open_case(soul, fields, tenant, claimed):
         ) from None
 
 
+def _soul_master(soul):
+    """The database holding `soul`'s own row (its hall's master) while civilizations write to their shards; else None."""
+    if not settings.SHARD_WRITE_CIVS:
+        return None
+    from apps.core.shard_reads import write_alias_of
+
+    return write_alias_of(soul)
+
+
 @contextmanager
 def _released_on_failure(claimed):
     """A claim committed on control before a case write that then fails is given back (the write rolled back)."""
@@ -853,7 +862,10 @@ class JudgmentService:
             # (stage 4 part C, D6): the soul's row is not in this transaction and cannot be locked from it. Read it;
             # the open-case check below reads every master, and the control-side claim decides a race with the
             # residence (no lock spans the two databases). A REOPEN writes nothing on the soul.
-            soul = Soul.lock(soul.pk) if shard_saga.held(soul) else Soul.all_objects.get(pk=soul.pk)
+            # Held: locked on ITS master. The transaction may be open on more than the context's master (control plus
+            # a write-cut shard), and the context's master holds only a copy then -- control's lagging mirror, or the
+            # home copy of a soul residing abroad -- whose state is not the soul's.
+            soul = Soul.lock(soul.pk, using=_soul_master(soul)) if shard_saga.held(soul) else Soul.all_objects.get(pk=soul.pk)
             if in_tenant is not None and soul.tenant_id != in_tenant.pk:
                 raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
             if reach_of is not None:

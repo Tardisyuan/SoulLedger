@@ -466,14 +466,15 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     objects = SoulManager()
 
     @classmethod
-    def lock(cls, pk):
+    def lock(cls, pk, using=None):
         """Row-lock one soul inside the caller's transaction and return it.
 
         `all_objects`, so a soft-deleted row is locked too (the caller decides what a deleted soul
         means); `of=("self",)` so a later `select_related` never drags tenant rows into the lock
-        (`apps/core/lock_join_guard.py`).
+        (`apps/core/lock_join_guard.py`). `using`: the database to lock it on (sharding stage 4: the
+        soul's own master, where the context's master holds only a copy); None asks the router.
         """
-        return cls.all_objects.select_for_update(of=("self",)).get(pk=pk)
+        return cls.all_objects.db_manager(using).select_for_update(of=("self",)).get(pk=pk)
 
     @classmethod
     def lock_many(cls, pks):
