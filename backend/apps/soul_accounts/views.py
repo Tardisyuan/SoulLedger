@@ -19,7 +19,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
-from apps.core.shard_reads import CONTROL_ALIAS, with_fanout
+from apps.core.shard_reads import CONTROL_ALIAS, cut_over, with_fanout, write_cut
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.perm.filters import DataScopeFilter
@@ -216,9 +216,13 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
         # another civilization's, while the soul resides there.
         qs = with_fanout(InitialCredential.objects.filter(soul__is_deleted=False).select_related(
             "soul", "account__user", "revealed_by", "delivered_by"))
-        if changed or with_fanout(svc.credentials_awaiting_housekeeping()).exists():
-            # The sweeps write control; a cut-over shard has their result only after the next sync (stage 3). Until
-            # then the list reads the rows where they were written, not the shard's stale QUEUED / open ones.
+        lagging = set(cut_over()) - set(write_cut())
+        if lagging and (changed or with_fanout(svc.credentials_awaiting_housekeeping()).exists()):
+            # The sweeps write a row on its master: control for a civilization read from its shard but not yet
+            # written there (stage 3), whose shard has their result only after the next sync. Until then the list
+            # reads the rows where they were written, not the shard's stale QUEUED / open ones. Once every read-cut
+            # civilization writes to its shard the shards are the masters and the list reads them: control's copy
+            # is a mirror stage 5 deletes (PREP-stage5 M9).
             qs = qs.using(CONTROL_ALIAS)
         return DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
 

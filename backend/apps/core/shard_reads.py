@@ -102,8 +102,8 @@ _context = ContextVar("shard_read_context", default=None)
 #: Each reason names the lookups that make it one (tests/test_fanout_merge_edge_cases.py: each lookup reaches a
 #: CONTROL table and the app's code still says it); the set itself is pinned there.
 CONTROL_READS = {
-    "social.Post": "visibility filters on author__role / author__soul_account__soul__tenant (User, SoulAccount)",
-    "social.Comment": "the same author filters as Post (author__role / author__soul_account__soul__tenant)",
+    "social.Post": "visibility filters on author__role / author__soul_account__soul_id (User, SoulAccount)",
+    "social.Comment": "the same author filters as Post (author__role / author__soul_account__soul_id)",
     "social.Reaction": "lists through post__author (User)",
     "social.PostMedia": "media checks post__author__role (User)",
     "social.SocialMute": "moderation lists filter user__soul_account / user__display_name (User, SoulAccount)",
@@ -216,7 +216,7 @@ def context_for_user(user):
 
 
 #: Where a soul account's own reads go, and whether it has rows abroad: cached on the user object (one per request,
-#: authentication loads it).
+#: authentication loads it; `_soul_state`).
 _SOUL_CONTEXT_ATTR = "_shard_soul_read_context"
 #: The attribute a soul view sets -- to the reason -- when it shows the soul's rows in another civilization's shard
 #: (`soul_read_context`). tests/test_soul_reads_one_shard.py lists the views that set it.
@@ -224,23 +224,28 @@ READS_SOUL_ROWS_ABROAD = "reads_soul_rows_abroad"
 
 
 def soul_read_context(user):
-    """A soul account reads the shard of its soul's PRIMARY: SoulAccount -> soul -> hall -> civilization, read from
-    control (which holds every soul row: stage 3 writes there, stage 4 mirrors each shard back). Never "any shard
-    that has the soul": after a residence or a cross-civilization transfer another shard keeps a copy (D6), and
-    the copy is not where the soul's rows are written.
+    """A soul account reads the shard of its soul's PRIMARY: SoulAccount -> soul -> hall -> civilization, the soul read
+    from its master (`_primary_soul`). Never "any shard that has the soul": after a residence or a cross-civilization
+    transfer another shard keeps a copy (D6), and the copy is not where the soul's rows are written.
     Every leg (FANOUT), as before, for:
       * a soul with no hall, or a hall of no known civilization: nothing says where its rows are;
       * a soul with rows outside its primary's civilization (a residence court's judgments, a letter in another
         hall's inbox, a DIRECT conversation in the other soul's hall), on a view that shows such rows: the view says
         so with READS_SOUL_ROWS_ABROAD. The whole request, not one queryset: what the view reads next by the
         row's ids (the confessions of a residence judgment, its appeals) is in that row's shard too."""
-    primary, abroad = _soul_reads(user)
-    return FANOUT if abroad and _view_shows_rows_abroad() else primary
+    primary = soul_primary_alias(user)
+    if primary == FANOUT or not _view_shows_rows_abroad():
+        return primary
+    state = _soul_state(user)
+    if state["abroad"] is None:  # asked only where a view shows such rows: it reads every write-cut shard
+        state["abroad"] = _rows_abroad(state["soul"], state["civ"])
+    return FANOUT if state["abroad"] else primary
 
 
 def soul_primary_alias(user):
     """The alias of the soul's primary (FANOUT: no hall, no known civilization): `soul_read_context` without the view."""
-    return _soul_reads(user)[0]
+    state = _soul_state(user)
+    return FANOUT if state is None else state["primary"]
 
 
 def _view_shows_rows_abroad():
@@ -252,36 +257,68 @@ def _view_shows_rows_abroad():
     return bool(getattr(view, READS_SOUL_ROWS_ABROAD, None))
 
 
-def _soul_reads(user):
-    """(primary, rows abroad) of a soul account: two control queries, once per request."""
+def _soul_state(user):
+    """{soul, civ, primary, abroad} of a soul account, once per request (None while nothing is cut over: no query)."""
     if not settings.SHARD_READ_CIVS:
-        return FANOUT, True  # nothing is cut over: no query (the context is never asked then anyway)
+        return None
     cached = getattr(user, _SOUL_CONTEXT_ATTR, None)
-    if cached is not None:
-        return cached
-    from apps.souls.models import Civilization, Soul
+    if cached is None:
+        from apps.souls.models import Civilization
 
-    soul = (Soul._base_manager.using(CONTROL_ALIAS).filter(accounts__user_id=user.pk).select_related("tenant")
-            .order_by().first())
-    civ = soul.tenant.civilization if soul is not None and soul.tenant is not None else None
-    cached = (alias_for_reads(civ), _rows_abroad(soul, civ)) if civ in Civilization.values else (FANOUT, True)
-    setattr(user, _SOUL_CONTEXT_ATTR, cached)
+        soul = _primary_soul(user)
+        civ = soul.tenant.civilization if soul is not None and soul.tenant is not None else None
+        known = civ in Civilization.values
+        cached = {"soul": soul, "civ": civ, "primary": alias_for_reads(civ) if known else FANOUT,
+                  "abroad": None if known else True}
+        setattr(user, _SOUL_CONTEXT_ATTR, cached)
     return cached
+
+
+def _primary_soul(user):
+    """The soul row of `user`'s account where it is written: control (D2, a civilization not write-cut) or its
+    write-cut shard -- never control's mirror of a write-cut civilization's soul, which stage 5 deletes (PREP-stage5
+    M1). The account names the soul (control); each master is asked by pk, narrowed as `legs` narrows a FANOUT read
+    of souls (a shard's copies of souls living elsewhere, a soul in mid-move: the source's row), the master of the
+    hall the account was opened in first, so a soul that never moved costs one shard query.
+    ponytail: one pk lookup per master the soul is not on; a denormalized SoulAccount.soul_tenant_id kept by the
+    saga's step 3 makes it a control read, if a moved soul's extra lookups ever show."""
+    from apps.soul_accounts.models import SoulAccount
+    from apps.souls.models import Soul
+    from apps.tenants.models import Tenant
+
+    soul_id = (SoulAccount._base_manager.using(CONTROL_ALIAS).filter(user_id=user.pk)
+               .values_list("soul_id", flat=True).first())
+    if soul_id is None:
+        return None
+    first = CONTROL_ALIAS
+    if settings.SHARD_WRITE_CIVS and getattr(user, "tenant_id", None) is not None:
+        opened = Tenant._base_manager.using(CONTROL_ALIAS).filter(pk=user.tenant_id).first()
+        first = master_alias(opened.civilization) if opened is not None else CONTROL_ALIAS
+    with _over(write_cut()):
+        masters = legs(Soul)
+    for alias, narrow, _ in sorted(masters, key=lambda leg: leg[0] != first):
+        soul = narrow(Soul._base_manager.using(alias).filter(pk=soul_id)).select_related("tenant").first()
+        if soul is not None:
+            return soul
+    return None
 
 
 def _rows_abroad(soul, civ):
     """Does a row naming `soul` through a crossing key live outside `civ`'s halls (another civilization's shard, or
-    control: a row with no hall)? One EXISTS per crossing key to Soul, in one control query. The rows that hang off
-    such a row (a judgment's confessions) are in its hall; the rows that follow the soul (`soul__tenant`) are in
-    its primary's."""
+    control: a row with no hall)? One EXISTS per crossing key to Soul, in one query per master: control, and every
+    write-cut shard but the soul's own (its rows there are `civ`'s) -- not control alone, whose copy of a write-cut
+    civilization's rows is a mirror stage 5 deletes (PREP-stage5 M2). The rows that hang off such a row (a
+    judgment's confessions) are in its hall; the rows that follow the soul (`soul__tenant`) are in its primary's."""
     from apps.core.tenant import civilization_halls
-    from apps.souls.models import Soul
+    from apps.tenants.models import Tenant
 
     mine = civilization_halls(civ).values("pk")
-    found = [models.Exists(f.model._base_manager.filter(**{f.attname: models.OuterRef("pk")})
-                           .exclude(**{f"{tenant_path(f.model)}__in": mine})) for f in _keys_to_soul()]
-    return Soul._base_manager.using(CONTROL_ALIAS).filter(pk=soul.pk).filter(
-        functools.reduce(operator.or_, found)).exists()
+    found = functools.reduce(operator.or_, [
+        models.Exists(f.model._base_manager.filter(**{f.attname: soul.pk})
+                      .exclude(**{f"{tenant_path(f.model)}__in": mine})) for f in _keys_to_soul()])
+    masters = [CONTROL_ALIAS, *(alias_for_civilization(c) for c in write_cut() if c != civ)]
+    # The soul's hall is on every master (REFERENCE): one row to hang the EXISTS on.
+    return any(Tenant._base_manager.using(alias).filter(pk=soul.tenant_id).filter(found).exists() for alias in masters)
 
 
 @functools.cache
@@ -499,6 +536,53 @@ def _checked(alias):
     """Where the router sends a write. Not where it is checked: Django asks `db_for_write` on a mere assignment
     of a related row too (ForwardManyToOneDescriptor.__set__); the checks run at the write (`_before_shard_write`)."""
     return alias
+
+
+def soul_ids(**filters):
+    """Pks of the souls matching `filters`, read on every leg (each soul's master). For a row joined to its soul
+    through a crossing key on a shard -- the other row may be in another civilization's shard, and the fallback that
+    answers such a join from control (CROSSING_JOINS_ON_CONTROL) reads a mirror stage 5 deletes: filter
+    `soul_id__in=soul_ids(...)` instead of `soul__...`. Keep the filter narrow (deleted souls, a name searched for)."""
+    from apps.souls.models import Soul
+
+    return list(with_fanout(Soul._base_manager.filter(**filters)).values_list("pk", flat=True))
+
+
+def control_m2m(instance, name):
+    """`instance.<name>.all()` for a SHARD row's many-to-many to a CONTROL model through a SHARD table (CityGod.officers,
+    TudiGod.officers): the through rows read on the row's own database, the targets on control by id. Django's own
+    manager reads the targets' database and joins the through table there -- on control, its copy of a write-cut
+    civilization's through rows: a mirror stage 5 deletes (PREP-stage5, found by
+    tests/test_sharded_reads_survive_the_mirror_purge.py). A queryset of the targets, for filtering further."""
+    f = instance._meta.get_field(name)
+    through = f.remote_field.through
+    ids = (through._base_manager.using(instance._state.db or CONTROL_ALIAS)
+           .filter(**{f.m2m_field_name(): instance.pk}).values_list(f.m2m_reverse_field_name(), flat=True))
+    return f.related_model._default_manager.filter(pk__in=list(ids))
+
+
+def prefetch_control_m2m(instances, name):
+    """`control_m2m` for a page of rows at once -- one through query per database the rows came from, one query of
+    the targets -- left on each row as `control_m2m_cached(row, name)` reads it. Returns the rows as a list."""
+    rows = list(instances)
+    if not rows:
+        return rows
+    f = rows[0]._meta.get_field(name)
+    through, src, tgt = f.remote_field.through, f.m2m_field_name(), f.m2m_reverse_field_name()
+    pairs = []
+    for db in {r._state.db or CONTROL_ALIAS for r in rows}:
+        pks = [r.pk for r in rows if (r._state.db or CONTROL_ALIAS) == db]
+        pairs += list(through._base_manager.using(db).filter(**{f"{src}__in": pks}).values_list(src, tgt))
+    targets = f.related_model._default_manager.in_bulk({t for _, t in pairs})
+    for r in rows:
+        setattr(r, f"_control_m2m_{name}", [targets[t] for s, t in pairs if s == r.pk and t in targets])
+    return rows
+
+
+def control_m2m_cached(instance, name):
+    """The targets `prefetch_control_m2m` left on `instance`, else `control_m2m`'s query."""
+    cached = getattr(instance, f"_control_m2m_{name}", None)
+    return cached if cached is not None else control_m2m(instance, name)
 
 
 def fanout_reads(fn):

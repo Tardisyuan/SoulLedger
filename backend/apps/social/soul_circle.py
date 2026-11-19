@@ -104,11 +104,21 @@ def is_following(follower, target) -> bool:
     ).exists()
 
 
+def soul_ids_in(tenant):
+    """此刻在 `tenant` 的灵魂的 id,从灵魂的主份读(按路由)。账号、帖子、评论在控制库,灵魂在分库:不在控制库上
+    join `soul_account__soul` —— 那是写切文明灵魂的镜像,阶段 5 删掉它(PREP-stage5 M4)。
+    ponytail: 一殿的灵魂 id 全部读出来再 IN;一殿灵魂到数万时改成控制库 SoulAccount 上的冗余列 soul_tenant_id
+    (调拨 saga 第 3 步同事务更新)。"""
+    from apps.souls.models import Soul
+
+    return list(Soul._base_manager.filter(tenant=tenant).values_list("pk", flat=True))
+
+
 def souls_in(tenant, *, include_retired=False):
     """此刻在 `tenant` 的灵魂账号(User 查询集)。默认只要本世账号 —— 搜索、关注都只针对活人账号。"""
     from apps.authentication.models import User
 
-    qs = User.objects.filter(role=SOUL_ROLE, soul_account__soul__tenant=tenant)
+    qs = User.objects.filter(role=SOUL_ROLE, soul_account__soul_id__in=soul_ids_in(tenant))
     if not include_retired:
         qs = qs.filter(soul_account__retired_at__isnull=True, is_active=True)
     return qs
@@ -144,7 +154,7 @@ def visible_posts_for_soul(viewer, queryset=None):
     return qs.filter(
         tenant=tenant,
         author__role=SOUL_ROLE,
-        author__soul_account__soul__tenant=tenant,
+        author__soul_account__soul_id__in=soul_ids_in(tenant),
     ).filter(
         Q(moderation_status=ModerationStatus.PUBLISHED) | Q(author=viewer)
     ).filter(
@@ -163,7 +173,7 @@ def visible_comments_for_soul(viewer, queryset=None):
     return qs.filter(
         post__in=visible_posts_for_soul(viewer),
         author__role=SOUL_ROLE,
-        author__soul_account__soul__tenant=tenant,
+        author__soul_account__soul_id__in=soul_ids_in(tenant),
     ).filter(Q(moderation_status=ModerationStatus.PUBLISHED) | Q(author=viewer))
 
 

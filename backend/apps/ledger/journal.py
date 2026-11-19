@@ -24,6 +24,7 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from apps.core.shard_reads import soul_ids
 from apps.core.tenant import scope_to_tenant
 from apps.souls.record_models import RecordCategory, RecordType, SoulRecord
 
@@ -65,7 +66,7 @@ def _signed_sums(qs) -> tuple[int, int]:
 
 def soul_q(search: str) -> Q:
     """「灵魂姓名或 ID」:姓名包含,或整条 UUID 精确等于灵魂 id。不是 UUID 的词只按姓名。"""
-    q = Q(soul__name__icontains=search)
+    q = Q(soul_id__in=soul_ids(name__icontains=search))  # by id, not a join (PREP-stage5 M3)
     try:
         q |= Q(soul_id=uuid.UUID(search))
     except ValueError:
@@ -81,10 +82,8 @@ def journal_records(request, *, month: str, civilization: str = "", category: st
     start, end = month_bounds(month)
 
     qs = scope_to_tenant(
-        SoulRecord.objects.filter(
-            record_type__in=(RecordType.MERIT, RecordType.DEMERIT),
-            soul__is_deleted=False,
-        ),
+        SoulRecord.objects.filter(record_type__in=(RecordType.MERIT, RecordType.DEMERIT))
+        .exclude(soul_id__in=soul_ids(is_deleted=True)),  # by id, not a join (PREP-stage5 M3)
         request,
     )
     if civilization:

@@ -23,6 +23,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
+from apps.core.shard_reads import control_m2m
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodStatus, Judgment
 
@@ -100,7 +101,7 @@ def received(judgment, transferred_from=None, transferred_from_name="") -> None:
              if transferred_from else {})
     _event(judgment, "CITY_GOD_RECEIVED", **extra)
     god = judgment.city_god
-    officers = list(god.officers.filter(is_active=True).values_list("pk", flat=True))
+    officers = list(control_m2m(god, "officers").filter(is_active=True).values_list("pk", flat=True))
     _notify_after_commit(officers or _hall_admins(judgment.tenant_id), "CITY_GOD_CASE_RECEIVED", judgment,
                          city_god=god.name)
 
@@ -121,7 +122,7 @@ def may_act(user, judgment, execute="city_god.execute", manage="city_god.manage"
         return False
     if check_permission(user, manage):
         return True
-    return judgment.city_god.officers.filter(pk=user.pk).exists()
+    return control_m2m(judgment.city_god, "officers").filter(pk=user.pk).exists()
 
 
 def _lock(pk) -> Judgment:
