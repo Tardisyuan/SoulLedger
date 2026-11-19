@@ -4,6 +4,9 @@
 #   scripts/run-gates.sh [--full|--affected] [--base <ref>]   the gates for what changed
 #   scripts/run-gates.sh --real-pg [--full]                    backend pytest on real PostgreSQL
 #   scripts/run-gates.sh --e2e[=auto|all|<project>,...]        Playwright, on GATES_REMOTE only
+#   scripts/run-gates.sh [--real-pg] [--workers N] [--timeout 20m] --tests <pytest args…>
+#                                                              chosen pytest on GATES_REMOTE, not a gate (TESTS ON
+#                                                              THE GATE HOSTS, below)
 #
 # TWO SIDES, EACH WITH ITS OWN LEDGER (2026-11-15, user decision). backend = ruff, makemigrations, pytest;
 # JS = tsc and eslint of core / web / mobile / officer, then core vitest and the web, mobile and officer jest.
@@ -80,9 +83,17 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-2}"
 VITEST_WORKERS="${VITEST_WORKERS:-2}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PREPUSH=0; MODE=auto; BASE=""; REAL_PG=0; E2E=""
+PREPUSH=0; MODE=auto; BASE=""; REAL_PG=0; E2E=""; TESTS=0; TESTS_FROM=""; TEST_ARGS=(); TESTS_LIMIT=20m; TESTS_WORKERS=""
 while [ $# -gt 0 ]; do
     case "$1" in
+        --tests)    TESTS=1; shift
+                    # Everything after --tests is pytest's, except --real-pg (pytest has none): easy to put last.
+                    for a in "$@"; do if [ "$a" = --real-pg ]; then REAL_PG=1; else TEST_ARGS+=("$a"); fi; done
+                    break ;;
+        --tests-from) TESTS=1; TESTS_FROM="${2:?--tests-from needs a file}"; shift ;;  # the container's side
+        --workers)  TESTS_WORKERS="${2:?--workers needs a number}"; shift
+                    [[ "$TESTS_WORKERS" =~ ^[0-9]+$ ]] || { echo "run-gates: --workers takes a number (0 = serial)"; exit 2; } ;;
+        --timeout)  TESTS_LIMIT="${2:?--timeout needs a time limit}"; shift ;;
         --prepush)  PREPUSH=1 ;;
         --full)     MODE=full ;;
         --real-pg)  REAL_PG=1 ;;
@@ -416,7 +427,7 @@ DEPS_JS=$(deps_hash_js | shasum | cut -c1-16)
 DEPS_PY=$( { git ls-files -z -- backend/requirements.lock backend/requirements-dev.txt | xargs -0 cat; echo "$RIMG"; } | shasum | cut -c1-16)
 # Runs inside the container (no single quotes: it is spliced into a single-quoted bash -c).
 REMOTE_DEPS='
-          if [ "$(cat .sl-deps-js 2>/dev/null)" != "$SL_DEPS_JS" ]; then
+          if [ -n "$SL_DEPS_JS" ] && [ "$(cat .sl-deps-js 2>/dev/null)" != "$SL_DEPS_JS" ]; then  # empty: --tests, no JS
             echo "    (installing node_modules — the JS dependencies changed)"
             { npx -y npm@11 ci --no-audit --no-fund --loglevel=error && { npm rebuild @parcel/watcher unrs-resolver @sentry/cli >/dev/null 2>&1 || true; } \
               && git checkout -- package-lock.json; } >/tmp/deps-js.log 2>&1 \
@@ -432,6 +443,21 @@ REMOTE_DEPS='
               || { tail -20 /tmp/deps-py.log; echo "gates: could not sync backend/.venv"; exit 1; }
             echo "$SL_DEPS_PY" > .sl-deps-py
           fi'
+
+# remote_gate_run <container name> <time limit> <commands> — run <commands> in /app of the synced tree, in a gate
+# slot on $GATES_REMOTE (remote_slots), under the limit, after the dependencies (REMOTE_DEPS). The delegated gates
+# and --tests share it, so a --tests run queues behind a gate run and never runs beside one in its slot.
+remote_gate_run() {
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY ) 7>$RDIR/prune.lock; $(win_bg $1 ${GATES_REMOTE_CPUS:-$SLOT_CPUS})docker run --rm --init --name $1$RUN_EXTRA \
+        --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM} \
+        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\${S:-1} -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
+        -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS} \
+        -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
+        -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $2 bash -c '
+          find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
+          $REMOTE_DEPS
+          $3'; rc=\$?; $(win_bg_end)docker rm -f $1 >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/run.lock"
+}
 
 # ── --e2e: PLAYWRIGHT ON THE REMOTE MACHINE (2026-10-28, user decision) ─────────────────────────
 #
@@ -691,6 +717,101 @@ if [ -z "${SECRET_KEY:-}" ] && [ ! -f "$ROOT/backend/.env" ]; then
     echo "$P: no backend/.env here — using CI's SECRET_KEY/DEBUG for the backend gates"
     export SECRET_KEY="$CI_SECRET_KEY"
     export DEBUG="true"
+fi
+
+# ── TESTS ON THE GATE HOSTS: --tests (2026-11-19, user decision) ─────────────────────────────────
+# `scripts/run-gates.sh [--real-pg] [--workers N] [--timeout 20m] --tests <pytest args…>` runs those pytest
+# arguments in backend/ on GATES_REMOTE — or the Windows PC, by win_route's rule — instead of on this Mac:
+# subagents' targeted runs took 3–10 minutes each here at 2 workers. It is not a gate: it selects nothing,
+# records no ledger, and is never a push's evidence.
+#   - Same sync (remote_sync, uncommitted and untracked files included), same slot and lock, same container,
+#     same dependencies as a gate run (remote_gate_run), so it waits for a gate run and a gate run waits for it.
+#   - The arguments go over as a NUL-separated file (.sl-tests-<pid>), never through a shell: `-k "a and b"`
+#     arrives as one argument.
+#   - SQLite by default; --real-pg uses the host's sl-pg-test (GATES_PG_URL, as a delegated --real-pg run) with
+#     --create-db. Anything else — `--ds=config.settings_sharded -m sharded` — is pytest's and passes through.
+#   - The throwaway redis-server inside, the test SECRET_KEY, DEBUG=true. Workers: --workers (0 = serial),
+#     else the host's slot size. Limit 20 minutes (--timeout, GATES_TESTS_TIMEOUT).
+#   - Progress every 30 s (pytest_progress), then the FAILED / ERROR lines and pytest's summary line; the exit
+#     status is pytest's (124 / 137 when the limit stopped it).
+# No GATES_REMOTE (.prepush.env): refused — run pytest here yourself if that is what you mean.
+pytest_progress() {  # <label> <log> <name of the variable holding the failures already shown>
+    local pct bad new now=""
+    pct=$(grep -oE '\[ *[0-9]+%\]' "$2" | tail -1 | tr -d '[] ')
+    bad=$(grep -E '\[ *[0-9]+%\]' "$2" | grep -E ' (FAILED|ERROR)( |$)' | grep -oE '[^ []+::[^ ]+' | awk '!seen[$0]++')
+    [ -s "$2.status" ] && now=$("$PY" -I "$ROOT/backend/config/gate_progress.py" "$2.status" 2>/dev/null)
+    echo "    … $1 ${pct:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $(printf '%s' "$bad" | grep -c . || true)${now:+ · $now}"
+    new=$(printf '%s\n' "$bad" | grep -vxF -e "${!3}" | grep . || true)
+    [ -n "$new" ] && printf '%s\n' "$new" | sed 's/^/        FAILED /'
+    printf -v "$3" '%s' "$bad"
+}
+tests_here() {  # in the container: the arguments from $TESTS_FROM, pytest's exit status
+    local args=() a log st x=() pg=() shown="" every="${GATES_PROGRESS_EVERY:-30}"
+    while IFS= read -r -d '' a; do args+=("$a"); done <"$ROOT/$TESTS_FROM"
+    rm -f "$ROOT/$TESTS_FROM"
+    cd "$ROOT/backend" || exit 2
+    PY="$ROOT/backend/.venv/bin/python"
+    RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1])") \
+        && redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
+        || { echo "$P: could not start a throwaway redis-server"; exit 2; }
+    trap 'redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1' EXIT
+    export REDIS_URL="redis://127.0.0.1:$RPORT/0" CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1" CELERY_RESULT_BACKEND="redis://127.0.0.1:$RPORT/2"
+    if [ "$REAL_PG" = 1 ]; then
+        case "${GATES_PG_URL:-}" in
+            postgres://*|postgresql://*) export DATABASE_URL="$GATES_PG_URL"; pg=(--create-db) ;;
+            *) echo "$P: --real-pg: no PostgreSQL handed to this container (GATES_PG_URL)"; exit 2 ;;
+        esac
+    else
+        export DATABASE_URL="sqlite:///:memory:"
+    fi
+    [ "${PYTEST_WORKERS:-0}" = 0 ] || x=(-n "$PYTEST_WORKERS" --dist worksteal)
+    echo "  → pytest (${DATABASE_URL%%:*}, ${x[*]:-serial}):$(printf ' %q' "${args[@]}")"
+    log=$(mktemp "${TMPDIR:-/tmp}/tests-pytest.XXXXXX")
+    SECRET_KEY="$CI_SECRET_KEY" DEBUG=true SOULLEDGER_GATE_STATUS="$log.status" "$PY" -m pytest -v --no-header --no-cov -rfE \
+        -o faulthandler_timeout="${PYTEST_TEST_TIMEOUT:-600}" -o faulthandler_exit_on_timeout=true \
+        ${x[@]+"${x[@]}"} ${pg[@]+"${pg[@]}"} "${args[@]}" >"$log" 2>&1 &
+    local pid=$! T0; T0=$(date +%s); local next="$every"
+    while kill -0 "$pid" 2>/dev/null; do
+        sleep 1; EL=$(( $(date +%s) - T0 ))
+        [ "$EL" -ge "$next" ] && { next=$(( next + every )); pytest_progress pytest "$log" shown; }
+    done
+    wait "$pid"; st=$?
+    grep -E '^(FAILED|ERROR) ' "$log" | sed 's/^/    /'
+    tail -1 "$log"
+    rm -f "$log.status" "$log.status.tmp"
+    if [ "$st" = 0 ]; then rm -f "$log"; else echo "    full log: $log"; fi
+    echo "$P: pytest exit $st ($(( $(date +%s) - T0 ))s)"
+    exit "$st"
+}
+if [ "$TESTS" = 1 ] && [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
+    P=tests; tests_here
+elif [ "$TESTS" = 1 ]; then
+    P=tests
+    [ -n "${GATES_REMOTE:-}" ] || { echo "$P: no GATES_REMOTE in .prepush.env — --tests runs on the gate hosts only. Not running here."; exit 2; }
+    [ "${#TEST_ARGS[@]}" -gt 0 ] || { echo "$P: --tests needs pytest arguments (test paths, -k …); the whole suite is a gate run"; exit 2; }
+    TESTS_LIMIT="${GATES_TESTS_TIMEOUT:-$TESTS_LIMIT}"; remote_limit "$TESTS_LIMIT" "--timeout / GATES_TESTS_TIMEOUT"
+    win_route gate "$RIMG" || :
+    [ "$REAL_PG" = 0 ] || [ -n "${GATES_REMOTE_DB_URL:-}" ] || { echo "$P: --real-pg: no GATES_REMOTE_DB_URL (.prepush.env)"; exit 2; }
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1 && { mkdir -p $RWORK $RDIR/tmp/$RID && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
+        || { echo "$P: $GATES_REMOTE is unreachable, or has no $RIMG image. Not running here."; exit 2; }
+    T_SYNC=$(date +%s)
+    remote_sync || { echo "$P: could not rsync this tree to $GATES_REMOTE:$RWORK"; exit 2; }
+    printf '%s\0' "${TEST_ARGS[@]}" | ssh -o BatchMode=yes "$GATES_REMOTE" "cat > $RWORK/.sl-tests-$$" \
+        || { echo "$P: could not hand the arguments to $GATES_REMOTE"; exit 2; }
+    echo "$P: on $GATES_REMOTE ($RWORK, synced in $(( $(date +%s) - T_SYNC ))s), limit $TESTS_LIMIT — not a gate, nothing recorded"
+    RNAME="sl-gates-$RID-$$"
+    trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $RNAME" >/dev/null 2>&1' EXIT
+    trap 'exit 130' INT TERM
+    TFLAGS=""; [ "$REAL_PG" = 1 ] && TFLAGS="--real-pg "
+    [ -n "$TESTS_WORKERS" ] && GATES_REMOTE_PYTEST_WORKERS="$TESTS_WORKERS"  # after win_route, which sizes the PC's
+    DEPS_JS=""  # pytest only: no node_modules install on a fresh tree (REMOTE_DEPS); a gate run there installs it
+    remote_gate_run "$RNAME" "$TESTS_LIMIT" "exec bash scripts/run-gates.sh $TFLAGS--tests-from .sl-tests-$$"
+    RSTATUS=$?
+    trap - EXIT
+    remote_verdict "$RSTATUS" "$TESTS_LIMIT" "--timeout"
+    [ "$RSTATUS" = 0 ] || echo "$P: a log named /sl-tmp/… is $GATES_REMOTE:$RDIR/tmp/$RID/… (kept a day)"
+    echo "$P: exit $RSTATUS ($(( $(date +%s) - T_SYNC ))s with the sync and any wait for a slot)"
+    exit "$RSTATUS"
 fi
 
 # WHAT CHANGED: changed_since_base, defined above the E2E block (which uses it for --e2e=auto).
@@ -1270,16 +1391,8 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # Workers: 5 for pytest + 5 for the JS runners = the slot's 10 CPUs (6 + 6 = 12 with one slot), because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY ) 7>$RDIR/prune.lock; $(win_bg $RNAME ${GATES_REMOTE_CPUS:-$SLOT_CPUS})docker run --rm --init --name $RNAME$RUN_EXTRA \
-        --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM} \
-        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\${S:-1} -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
-        -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS} \
-        -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
-        -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $RLIMIT bash -c '
-          find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
-          $REMOTE_DEPS
-          export PREPUSH_CHANGED=\"\$(cat .sl-changed)\" PREPUSH_CHANGED_BACKEND=\"\$(cat .sl-changed-backend)\" PREPUSH_CHANGED_JS=\"\$(cat .sl-changed-js)\"
-          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; $(win_bg_end)docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/run.lock" | tee "$RLOG"
+    remote_gate_run "$RNAME" "$RLIMIT" "export PREPUSH_CHANGED=\"\$(cat .sl-changed)\" PREPUSH_CHANGED_BACKEND=\"\$(cat .sl-changed-backend)\" PREPUSH_CHANGED_JS=\"\$(cat .sl-changed-js)\"
+          exec bash scripts/run-gates.sh $RFLAGS" | tee "$RLOG"
     RSTATUS=${PIPESTATUS[0]}
     trap - EXIT
     remote_verdict "$RSTATUS" "$RLIMIT" "$RLIMIT_VAR"
@@ -1456,16 +1569,7 @@ fi
 # The percentage counts tests, not time, and the last few are minutes each (2026-11-19: 99% for 10–15 of ~35
 # minutes). So the line also says what each worker is running and for how long, and how much is left — the
 # scheduler's status file (<log>.status), read by backend/config/gate_progress.py; the estimate needs history.
-pytest_progress() {  # <label> <log> <name of the variable holding the failures already shown>
-    local pct bad new now=""
-    pct=$(grep -oE '\[ *[0-9]+%\]' "$2" | tail -1 | tr -d '[] ')
-    bad=$(grep -E '\[ *[0-9]+%\]' "$2" | grep -E ' (FAILED|ERROR)( |$)' | grep -oE '[^ []+::[^ ]+' | awk '!seen[$0]++')
-    [ -s "$2.status" ] && now=$("$PY" -I "$ROOT/backend/config/gate_progress.py" "$2.status" 2>/dev/null)
-    echo "    … $1 ${pct:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $(printf '%s' "$bad" | grep -c . || true)${now:+ · $now}"
-    new=$(printf '%s\n' "$bad" | grep -vxF -e "${!3}" | grep . || true)
-    [ -n "$new" ] && printf '%s\n' "$new" | sed 's/^/        FAILED /'
-    printf -v "$3" '%s' "$bad"
-}
+# pytest_progress: defined above TESTS ON THE GATE HOSTS, which uses it too.
 pytest_summary() {  # <log> <status>
     # The thirty slowest over 5 s, so a run that stalls says where (--durations=30 --durations-min=5 below).
     sed -n '/slowest [0-9]* *durations/,/^$/p' "$1" | sed 's/^/    /'
