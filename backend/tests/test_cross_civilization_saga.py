@@ -37,8 +37,10 @@ from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 _WRITE = re.compile(r'^\s*(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+"?(\w+)"?', re.I)
-#: Clocks differ between two runs that end in the same state.
-_CLOCK = re.compile(r"datetime\.(?:datetime|date)\([^)]*\)")
+#: Clocks differ between two runs that end in the same state: as objects, and as the text an audit row's `changes`
+#: holds (`'executed_at': [None, '2026-11-19 16:54:29.780663+00:00']`). The audit rows are written in the step's
+#: transaction since 2026-11-19, so a run that retried a step writes its row at a later instant than the dry run.
+_CLOCK = re.compile(r"datetime\.(?:datetime|date)\([^)]*\)|\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(?:\.\d+)?(?:[+-]\d\d:\d\d|Z)?")
 #: Ids, as UUID objects or as strings (an event's payload names the disposition it made). Only the ones a run drew
 #: fresh are masked (`_snapshot(known=...)`): a row naming an existing soul, record or case names it verbatim, so
 #: one pointing at the wrong one does not compare equal.

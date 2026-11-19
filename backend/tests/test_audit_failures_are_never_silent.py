@@ -56,14 +56,18 @@ def test_during_a_migration_no_row_is_attempted(cn_tenant, monkeypatch):
 
 
 def test_nothing_in_the_signals_swallows_an_audit_write():
-    """形状守卫:按措辞判断的清单、吞异常的 helper、on_commit 延后,都不许回来。
+    """形状守卫:按措辞判断的清单、吞异常的 helper 不许回来;on_commit 只许出现在 `_write_row` 里那一处
+    (另一个库上的审计行,挂在业务事务的提交上,见它的 docstring),而且整个模块里没有一个 `except` 包着写入。
 
     用 AST,不在源码里找字符串 —— docstring 里会逐字引用被删掉的代码(这个仓库栽在「扫描器读到了自己的
     文档」上不止一次)。"""
     tree = ast.parse(inspect.getsource(signals))
     assigned = {t.id for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
     defined = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
-    called = {n.func.attr for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
     assert "migration_related" not in assigned
     assert "_swallow_or_log" not in defined
-    assert "on_commit" not in called
+    hosts = {f.name for f in ast.walk(tree) if isinstance(f, ast.FunctionDef)
+             for n in ast.walk(f) if isinstance(n, ast.Call) and getattr(n.func, "attr", None) == "on_commit"}
+    assert hosts <= {"_write_row"}, hosts
+    write_row = next(f for f in ast.walk(tree) if isinstance(f, ast.FunctionDef) and f.name == "_write_row")
+    assert not [n for n in ast.walk(write_row) if isinstance(n, ast.Try)], "a try around the audit write swallows it"

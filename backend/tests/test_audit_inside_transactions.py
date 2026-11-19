@@ -232,3 +232,45 @@ def test_a_soul_on_a_civilization_shard_rolls_back_with_its_audit_row():
         assert AuditLog._base_manager.using(GREEK).filter(
             action=AuditAction.CREATE, resource="soul", resource_id=str(soul.pk)).count() == 1
         assert rows(action=AuditAction.CREATE, resource="soul", resource_id=str(soul.pk)) == 1
+
+
+@pytest.mark.sharded
+@pytest.mark.django_db(databases="__all__", transaction=True)
+def test_a_rolled_back_step_on_one_master_leaves_no_audit_row_on_another():
+    """The saga's shape (test_cross_civilization_saga, 2026-11-20): a step holds a transaction on ONE master (the
+    relay's `atomic(using=<target>)`) and writes an audit row that names no hall -- control's. Written in its own
+    transaction it outlived the step's rollback; it now waits for the step's commit. Rolled back: no row anywhere
+    and the soul unchanged. Committed: exactly one row, on control."""
+    from tests.test_shard_sync import HAS_SHARDS
+
+    if not HAS_SHARDS:
+        pytest.skip("needs the four civ_* aliases (--ds=config.settings_sharded)")
+    from apps.audit.signals import create_batch_audit_log
+    from apps.perm.models import Role
+    from tests.test_sharded_writes import GREEK, _assign, _halls, _in_hall, cut
+
+    halls = _halls()
+    _assign("GREEK")
+    role, _ = Role.objects.get_or_create(name="SAGA_ROLE", defaults={"display_name": "S"})
+    with cut("GREEK"):
+        with _in_hall(halls["GREEK"]):
+            soul = Soul.objects.create(name="步骤前", tenant=halls["GREEK"], current_state=SoulState.ALIVE)
+
+        def step(fail):
+            with transaction.atomic(using=GREEK):
+                s = Soul._base_manager.using(GREEK).get(pk=soul.pk)
+                s.name = "步骤后"
+                s.save(using=GREEK)
+                create_batch_audit_log(AuditAction.BATCH_UPDATE, [role])
+                if fail:
+                    raise RuntimeError("the step's next write failed")
+
+        with pytest.raises(RuntimeError):
+            step(fail=True)
+        assert Soul._base_manager.using(GREEK).get(pk=soul.pk).name == "步骤前"
+        assert rows(action=AuditAction.BATCH_UPDATE) == 0
+
+        step(fail=False)
+        assert Soul._base_manager.using(GREEK).get(pk=soul.pk).name == "步骤后"
+        assert rows(action=AuditAction.BATCH_UPDATE) == 1
+        assert AuditLog._base_manager.using("default").filter(action=AuditAction.BATCH_UPDATE).count() == 1

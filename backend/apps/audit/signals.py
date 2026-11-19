@@ -237,13 +237,38 @@ def _write_row(alias, **row):
       `update_user`), which in a context with no single civilization (SYSTEM_ADMIN) while one is write-cut is
       NoShardContext. As an on-commit write that error was swallowed and the row lost (a hall created by
       SYSTEM_ADMIN: test_sharded_writes). Callers pass `user_id` for the same reason.
+    - A row of a database the open business transaction does not hold (a saga step on one master whose audit row
+      names another: the relay's `atomic(using=<target>)`, a control row from a shard's step) cannot join it, and
+      written in its own transaction it would outlive the step's rollback (test_cross_civilization_saga, 2026-11-20).
+      It is written on that transaction's commit instead: a rolled-back step leaves no row, a committed one exactly
+      one. Its failure then reaches the committer after the business write committed -- loud, not atomic: only a
+      message (the saga outbox) could make a second database atomic with the first.
     """
     from apps.audit.models import AuditLog
+    from apps.core.shard_reads import CONTROL_ALIAS
 
     obj = AuditLog(**row)
     obj._state.db = alias
+    held = _transaction_aliases()
+    if held and alias not in held:
+        # On the business transaction's last commit: control's when it holds control (it commits after the shards).
+        host = CONTROL_ALIAS if CONTROL_ALIAS in held else held[-1]
+
+        def write():
+            with transaction.atomic(using=alias):
+                obj.save(force_insert=True, using=alias)
+
+        transaction.on_commit(write, using=host)
+        return
     with transaction.mark_for_rollback_on_error(using=alias), transaction.atomic(using=alias):
         obj.save(force_insert=True, using=alias)
+
+
+def _transaction_aliases():
+    """The databases on which the code holds a transaction (a test's own wrapping blocks are not the code's)."""
+    from django.db import connections
+
+    return [a for a in connections if any(not b._from_testcase for b in connections[a].atomic_blocks)]
 
 
 @receiver(pre_migrate)
