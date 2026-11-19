@@ -183,9 +183,10 @@ def shard_aliases():
     return [alias for alias in civilization_aliases() if alias in settings.DATABASES]
 
 
-def check_cut_over_settings(read, write, databases=None):
+def check_cut_over_settings(read, write, databases=None, purged=()):
     """SHARD_READ_CIVS / SHARD_WRITE_CIVS (D8) name civilizations that have a shard, each one's alias is
-    configured in DATABASES, and a civilization's writes are cut over only after its reads. Raised at
+    configured in DATABASES, a civilization's writes are cut over only after its reads, and its control rows are
+    purged (SHARD_PURGED_CIVS, stage 5) only after its writes. Raised at
     startup (`apps/souls/apps.py`), so a typo such as `CHINA` or a missing `civ_greek` database refuses
     to boot instead of surfacing at the first `fanout()`."""
     from django.core.exceptions import ImproperlyConfigured
@@ -200,6 +201,9 @@ def check_cut_over_settings(read, write, databases=None):
     early = sorted(set(write) - set(read))
     if early:
         raise ImproperlyConfigured(f"SHARD_WRITE_CIVS {early} are not in SHARD_READ_CIVS: cut reads over first")
+    unwritten = sorted(set(purged) - set(write))
+    if unwritten:
+        raise ImproperlyConfigured(f"SHARD_PURGED_CIVS {unwritten} are not in SHARD_WRITE_CIVS: cut writes over first")
     databases = settings.DATABASES if databases is None else databases
     # A shard alias (`civ_*`, from SHARD_DATABASE_URL_<CIV>) that names no civilization is a typo such as
     # SHARD_DATABASE_URL_CHINA: refuse it rather than migrate and sync a database nobody routes to.

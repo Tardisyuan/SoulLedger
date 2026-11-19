@@ -16,8 +16,10 @@ import time
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import connections, router
+from django.db import connections, router, transaction
+from django.test import override_settings
 
+from apps.core.sharding import alias_for_civilization
 from tests.test_shard_sync import CIVS, _sync, sharded
 from tests.test_sharded_writes import _assign, _halls, cut
 
@@ -158,9 +160,24 @@ def _manifest(tmp_path, *who, age=0):
         lines.append(f"{w} {name}")
     path = tmp_path / "soulledger_manifest_20261119.txt"
     path.write_text("\n".join(lines) + "\n")
-    if age:
-        os.utime(path, (time.time() - age, time.time() - age))
+    if age:  # negative: written a moment from now (a coarse file clock could otherwise date it before a stamp)
+        for p in [path, *(tmp_path / line.split()[1] for line in lines)]:
+            os.utime(p, (time.time() - age, time.time() - age))
     return str(path)
+
+
+def purged(*civs):
+    """Every civilization's reads and writes cut over (115's state), `civs` purged (SHARD_PURGED_CIVS)."""
+    return override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=list(CIVS), SHARD_PURGED_CIVS=list(civs))
+
+
+def _stop(tmp_path, civ="CHINESE"):
+    """PREP §4 steps 3 and 5 inside `purged(civ)`: the beat's sync runs with the switch (stamping the stop), then a
+    dump is taken: a manifest of control and the shard written after the stamp."""
+    from apps.tenants.tasks import sync_shards
+
+    sync_shards()
+    return _manifest(tmp_path, "control", alias_for_civilization(civ), age=-2)
 
 
 @sharded
@@ -169,8 +186,8 @@ def test_the_purge_dry_run_counts_keeps_d2_and_names_the_keys_that_would_strand_
     from apps.tenants.management.commands.purge_cut_over_tenant_rows import purge_plan
 
     halls, rows = _world()
-    manifest = _manifest(tmp_path, "control", CN)
-    with cut(*CIVS):
+    with purged("CHINESE"):
+        manifest = _stop(tmp_path)
         before = _state()
         out = io.StringIO()
         with pytest.raises(CommandError, match="failed: no blockers"):  # the only failing precondition
@@ -178,7 +195,8 @@ def test_the_purge_dry_run_counts_keeps_d2_and_names_the_keys_that_would_strand_
         out = out.getvalue()
         assert _state() == before
         assert "PASS writes cut over" in out and "PASS reconcile shard-to-control clean" in out
-        assert "PASS dump under 24 h" in out
+        assert "PASS sync stopped: since" in out and "PASS dump under 24 h, after the sync stopped" in out
+        assert "UNCHECKED restore drill" in out
         assert "purge judgment.Judgment 2" in out  # the two Chinese cases; the hall-less one stays (D2)
         assert "purge disposition.Disposition" not in out  # all three are hall-less
         assert "block disposition.Disposition.judgment 2 row(s)" in out
@@ -195,7 +213,7 @@ def test_the_purge_dry_run_counts_keeps_d2_and_names_the_keys_that_would_strand_
         assert "purge disposition.Disposition 1" in out.getvalue()
         assert rows["move"].pk in purge_plan("CHINESE")[Disposition].values_list("pk", flat=True)
 
-        with pytest.raises(CommandError, match="only --dry-run exists"):
+        with pytest.raises(CommandError, match="--dry-run --confirm is required"):
             _run("purge_cut_over_tenant_rows", "--civ", "CHINESE")
 
 
@@ -219,3 +237,194 @@ def test_the_dump_must_be_a_fresh_manifest_of_control_and_this_shard(tmp_path):
     path = _manifest(tmp_path, "control", CN)
     (tmp_path / f"soulledger_{CN}_20261119.sql.gz").write_bytes(b"")
     assert "missing or empty" in dump_problem(path, CN)
+
+
+def test_the_dump_must_be_newer_than_the_stop(tmp_path):
+    """G5: a manifest (or a listed dump) written before the sync stopped is refused; after it, accepted."""
+    from datetime import UTC, datetime, timedelta
+
+    from apps.tenants.management.commands.purge_cut_over_tenant_rows import dump_problem
+
+    path = _manifest(tmp_path, "control", CN, age=60)
+    stop = datetime.now(UTC) - timedelta(seconds=30)
+    assert "written before the sync stopped" in dump_problem(path, CN, since=stop)
+    assert dump_problem(path, CN, since=stop - timedelta(minutes=5)) is None
+    assert dump_problem(path, CN) is None  # no stamp given: only the 24 h rule
+
+
+def test_a_purged_civilization_must_be_write_cut():
+    from django.core.exceptions import ImproperlyConfigured
+
+    from apps.core.sharding import check_cut_over_settings
+
+    databases = {"default": {}, "civ_greek": {}}
+    check_cut_over_settings(["GREEK"], ["GREEK"], databases, purged=["GREEK"])
+    with pytest.raises(ImproperlyConfigured, match="SHARD_PURGED_CIVS \\['GREEK'\\] are not in SHARD_WRITE_CIVS"):
+        check_cut_over_settings(["GREEK"], [], databases, purged=["GREEK"])
+
+
+@sharded
+def test_a_purged_civilization_is_not_synced_back_but_its_reference_rows_still_go_out():
+    """G1 / M10: with CHINESE in SHARD_PURGED_CIVS the beat's sync leaves a changed control row of it alone (and
+    stamps the stop), keeps copying REFERENCE rows control-to-shard, and a shard write queues no sync. Taken back
+    off: the same sync rewrites control's row from the shard, the stamp is gone, the write queues a sync."""
+    from apps.core import shard_sync
+    from apps.core.shard_reads import control_mirror_writes
+    from apps.judgment.models import Judgment
+    from apps.social.models import Post
+    from apps.tenants.models import Tenant
+    from apps.tenants.tasks import sync_shards
+
+    halls, _rows = _world()
+    cn = halls["CHINESE"]
+    case = Judgment._base_manager.using(CN).filter(tenant=cn).first()
+
+    def stale_control():
+        with control_mirror_writes():
+            Judgment._base_manager.using("default").filter(pk=case.pk).update(is_final=False)
+
+    def queued():
+        with transaction.atomic(using=CN):
+            shard_sync._on_write(Judgment, using=CN)
+            return any(f is shard_sync._enqueue for _, f, _ in connections[CN].run_on_commit)
+
+    with purged("CHINESE"):
+        stale_control()
+        Tenant._base_manager.using("default").filter(pk=cn.pk).update(display_name="renamed")  # REFERENCE (D4)
+        sync_shards()
+        assert Judgment._base_manager.using("default").get(pk=case.pk).is_final is False  # not synced back
+        assert Tenant._base_manager.using(CN).get(pk=cn.pk).display_name == "renamed"  # still synced out
+        assert shard_sync._sides(Post, CN, "CHINESE", [cn.pk], shard_sync.CONTROL_TO_SHARD) is not None  # G3
+        assert shard_sync.sync_stopped_at("CHINESE") is not None
+        assert shard_sync.sync_stopped_at("GREEK") is None
+        assert not queued()
+        assert f"{CN}: 0 row(s) differ" in _run("reconcile_shards", "--civ", "CHINESE", "--direction",
+                                                "shard-to-control")
+
+    with cut(*CIVS):
+        sync_shards()
+        assert Judgment._base_manager.using("default").get(pk=case.pk).is_final is True
+        assert shard_sync.sync_stopped_at("CHINESE") is None
+        assert queued()
+
+
+@sharded
+def test_judgment_hall_gives_a_hall_less_judgment_its_souls_hall_and_its_disposition_follows():
+    """User decision 2026-11-19 (#9): `--judgment-hall <id>=<hall>` gives a hall-less judgment its soul's hall
+    (dry run MOVE, writes nothing; --apply puts it and then its disposition on the shard, audits once; a rerun does
+    nothing). Without the option the disposition stays; a hall that is not its soul's is refused."""
+    from apps.audit.models import AuditLog
+    from apps.disposition.models import Disposition
+    from apps.judgment.models import Judgment
+
+    halls, rows = _world()
+    cn, stay = halls["CHINESE"], rows["stay"].pk
+    case = Disposition._base_manager.using("default").get(pk=stay).judgment_id
+    with cut(*CIVS):
+        assert _line(_run("backfill_disposition_halls", "--dry-run"), stay).startswith("STAY")
+        out = _run("backfill_disposition_halls", "--dry-run", "--judgment-hall", f"{case}={halls['EGYPTIAN'].code}")
+        assert _line(out, f"judgment {case} soul").startswith("BLOCKED") and "neither its soul's hall" in out
+        assert _line(out, stay).startswith("STAY")
+        with pytest.raises(CommandError, match="expected <judgment id>=<hall code>"):
+            _run("backfill_disposition_halls", "--judgment-hall", f"{case}")
+
+        before = _state()
+        out = _run("backfill_disposition_halls", "--dry-run", "--judgment-hall", f"{case}={cn.code}")
+        assert _state() == before
+        assert _line(out, f"judgment {case} soul").startswith("MOVE")
+        move = _line(out, stay)
+        assert move.startswith("MOVE") and "JUDGMENT_HALL_GIVEN" in move and f"master {CN}" in move
+        assert Judgment._base_manager.using("default").get(pk=case).tenant_id is None
+        assert not Judgment._base_manager.using(CN).filter(pk=case).exists()
+
+        _run("backfill_disposition_halls", "--apply", "--judgment-hall", f"{case}={cn.code}")
+        connections[CN].check_constraints()  # the shard's keys hold (what its commit would check)
+        from apps.core.shard_sync import sync
+
+        sync([CN])  # the beat's shard-to-control sync: brings the audit rows to control, changes nothing else
+        for alias in ("default", CN):
+            assert Judgment._base_manager.using(alias).get(pk=case).tenant_id == cn.pk, alias
+            assert Disposition._base_manager.using(alias).get(pk=stay).tenant_id == cn.pk, alias
+        assert AuditLog._base_manager.using(CN).filter(resource="judgment", resource_id=str(case)).count() == 1
+        assert f"{CN}: 0 row(s) differ" in _run("reconcile_shards", "--civ", "CHINESE", "--direction",
+                                                "shard-to-control")
+
+        before = _state()
+        again = _run("backfill_disposition_halls", "--apply", "--judgment-hall", f"{case}={cn.code}")
+        assert f"judgment {case} soul" not in again and str(stay) not in again and "DONE" not in again
+        assert _state() == before
+        assert AuditLog._base_manager.using(CN).filter(resource="judgment", resource_id=str(case)).count() == 1
+
+
+@sharded
+def test_the_purge_deletes_controls_copy_only_and_a_rerun_deletes_nothing(tmp_path):
+    """G6 / G9 / G2: --confirm must repeat the civilization and needs every check; it deletes the civilization's
+    mirror rows on control and nothing else -- not the control-mastered Post, not a D2 row, not the hall, not another
+    civilization's rows, not the shard's -- in one transaction (an org deleted before the souls naming it: the keys
+    are deferred). `reconcile_shards --assert-control-empty` fails before, passes after; a rerun deletes 0."""
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.authentication.models import User
+    from apps.core.shard_sync import purge_plan
+    from apps.disposition.models import Disposition
+    from apps.judgment.models import Judgment
+    from apps.org.models import Organization
+    from apps.social.models import Post
+    from apps.souls.models import Soul
+    from apps.tenants.models import Tenant
+
+    halls, rows = _world()
+    cn = halls["CHINESE"]
+    post = Post.objects.create(author=User.objects.create_user(username="s5-post", password="x"), content="kept",
+                               tenant=cn)
+    d2 = AuditLog.objects.using("default").create(tenant=None, action=AuditAction.UPDATE, resource="s5",
+                                                  resource_id="1")
+    _sync()
+    case = Disposition._base_manager.using("default").get(pk=rows["stay"].pk).judgment_id
+    with cut(*CIVS):
+        _run("backfill_disposition_halls", "--apply", "--judgment-hall", f"{case}={cn.code}")
+    # The one blocker left is "blocked" (a Chinese judgment, an Egyptian realm): the user's to resolve; here, gone.
+    Disposition._base_manager.using("default").filter(pk=rows["blocked"].pk)._raw_delete("default")
+
+    def confirm(*extra, manifest):
+        return _run("purge_cut_over_tenant_rows", "--civ", "CHINESE", *extra, "--dump", manifest)
+
+    def counts():
+        return {m: qs.count() for m, qs in purge_plan("CHINESE").items()}
+
+    others = {c: Organization._base_manager.using("default").filter(tenant=halls[c]).count() for c in CIVS}
+    with cut(*CIVS):  # not purged yet: --confirm refuses on "sync stopped"
+        before = counts()
+        with pytest.raises(CommandError, match="failed: sync stopped"):
+            confirm("--confirm", "CHINESE", manifest=_manifest(tmp_path, "control", CN))
+        assert counts() == before
+
+    with purged("CHINESE"):
+        manifest = _stop(tmp_path)
+        assert before[Judgment] == 3 and before[Soul] == 3 and before[Organization] >= 1
+        for wrong in ("chinese", "GREEK"):
+            with pytest.raises(CommandError, match="does not repeat the civilization"):
+                confirm("--confirm", wrong, manifest=manifest)
+        assert counts() == before
+        with pytest.raises(CommandError, match="still holds"):
+            _run("reconcile_shards", "--civ", "CHINESE", "--assert-control-empty")
+        assert "dry run: nothing deleted" in confirm("--dry-run", manifest=manifest)
+        assert counts() == before
+
+        out = confirm("--confirm", "CHINESE", manifest=manifest)
+        assert f"deleted total {sum(before.values())} row(s)" in out and "deleted judgment.Judgment 3" in out
+        assert not any(counts().values())
+        connections["default"].check_constraints()  # no staying row names a deleted one (the deferred keys)
+        assert "control holds 0 purgeable row(s)" in _run("reconcile_shards", "--civ", "CHINESE",
+                                                          "--assert-control-empty")
+        # What a purge must not touch:
+        assert Post._base_manager.using("default").filter(pk=post.pk).exists()  # control-mastered
+        assert AuditLog._base_manager.using("default").filter(pk=d2.pk).exists()  # D2
+        assert Tenant._base_manager.using("default").filter(pk=cn.pk).exists()  # REFERENCE
+        assert not Disposition._base_manager.using("default").filter(pk=rows["move"].pk).exists()
+        assert Disposition._base_manager.using(CN).filter(pk=rows["move"].pk).exists()  # the master is untouched
+        assert Judgment._base_manager.using(CN).filter(tenant=cn).count() == 3
+        assert {c: Organization._base_manager.using("default").filter(tenant=halls[c]).count() for c in CIVS} == {
+            **others, "CHINESE": 0}
+        assert f"{CN}: 0 row(s) differ" in _run("reconcile_shards", "--civ", "CHINESE")  # REFERENCE and Post, out
+
+        assert "deleted total 0 row(s)" in confirm("--confirm", "CHINESE", manifest=manifest)

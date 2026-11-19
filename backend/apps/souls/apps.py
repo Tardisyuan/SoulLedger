@@ -40,7 +40,8 @@ class SoulsConfig(AppConfig):
         from apps.core.sharding import _by_label, check_cut_over_settings
 
         _by_label()
-        check_cut_over_settings(settings.SHARD_READ_CIVS, settings.SHARD_WRITE_CIVS)
+        check_cut_over_settings(settings.SHARD_READ_CIVS, settings.SHARD_WRITE_CIVS,
+                                purged=settings.SHARD_PURGED_CIVS)
         # Stage 1B: the foreign keys across the control / shard boundary are bare ids; their delete rules
         # (CASCADE / SET_NULL / PROTECT as before) are applied by apps.core.bare_ids on every alias.
         bare_ids.connect()

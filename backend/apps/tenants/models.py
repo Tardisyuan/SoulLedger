@@ -179,7 +179,10 @@ class GlobalCode(models.Model):
     the row is written; `manage.py check_global_codes` compares it with the rows on every alias.
 
     `tenant_id` is the claiming hall as a bare id with no foreign key, so the row has no path to a hall and stays
-    in control (apps.core.sharding: CONTROL). It records who claimed; it is not part of the key."""
+    in control (apps.core.sharding: CONTROL). It records who claimed; it is not part of the key.
+
+    One kind is not a code: `SHARD_SYNC_STOPPED` (apps/core/shard_sync.py), value = a civilization, claimed_at = when
+    SHARD_PURGED_CIVS first stopped its sync (stage 5: the purge wants a dump newer than that)."""
 
     kind = models.CharField(max_length=20)
     value = models.CharField(max_length=64)

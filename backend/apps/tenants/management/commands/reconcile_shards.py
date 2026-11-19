@@ -9,7 +9,10 @@ differs (model, pk, which side lacks or disagrees), exits 1 when any is left -- 
 still differing when it re-checks after the fix -- and on an integer-id range problem (apps/core/shard_ids.py: an
 id of another civilization's range on a shard, a write-cut shard's sequence outside its range, control's
 PostgreSQL sequences at or above 1e15). No shard alias configured: says so and exits 0.
-`--direction shard-to-control --fix` is refused for a civilization not in SHARD_WRITE_CIVS.
+`--direction shard-to-control --fix` is refused for a civilization not in SHARD_WRITE_CIVS. A civilization in
+SHARD_PURGED_CIVS (stage 5) compares no SHARD row shard-to-control (`shard_sync._sides`).
+`--assert-control-empty` (stage 5, after the purge) also exits 1 while control holds any row of the civilization's
+purge plan (`shard_sync.purge_plan`: its halls' SHARD rows, not D2, not the control-mastered models).
 """
 from django.core.management.base import BaseCommand, CommandError
 
@@ -28,8 +31,11 @@ class Command(BaseCommand):
         parser.add_argument("--fix", action="store_true", help="Repair the differences found")
         parser.add_argument("--direction", choices=[CONTROL_TO_SHARD, SHARD_TO_CONTROL], default=CONTROL_TO_SHARD,
                             help="Which side is the source of truth (default control-to-shard)")
+        parser.add_argument("--assert-control-empty", action="store_true",
+                            help="Stage 5: also fail while control holds any row of the civilization's purge plan "
+                                 "(its halls' SHARD rows; not D2, not the control-mastered models)")
 
-    def handle(self, *args, civ, retry_window, fix, direction, **options):
+    def handle(self, *args, civ, retry_window, fix, direction, assert_control_empty=False, **options):
         shards = shard_aliases()
         if not shards:
             self.stdout.write("no shard database is configured (no civ_* alias in DATABASES): nothing to compare")
@@ -73,6 +79,19 @@ class Command(BaseCommand):
         ranges = [p for alias in ["default", *shards] for p in problems(alias)]
         for p in ranges:
             self.stdout.write(f"  id range: {p}")
+        left_on_control = 0
+        if assert_control_empty:  # G2, PREP-stage5 §4 step 9: what a purge deletes is gone from control
+            from apps.core.shard_sync import civilization_of, purge_plan
+
+            for alias in shards:
+                for model, qs in sorted(purge_plan(civilization_of(alias)).items(), key=lambda kv: kv[0]._meta.label):
+                    n = qs.count()
+                    left_on_control += n
+                    if n:
+                        self.stdout.write(f"  control still holds {model._meta.label} {n} row(s) of {alias}")
+            self.stdout.write(f"control holds {left_on_control} purgeable row(s) of {', '.join(shards)}")
+        if left_on_control:
+            raise CommandError(f"control still holds {left_on_control} row(s) a purge deletes")
         if left:
             raise CommandError(f"{left} row(s) differ" + (" after the fix" if fix else ""))
         if ranges:
