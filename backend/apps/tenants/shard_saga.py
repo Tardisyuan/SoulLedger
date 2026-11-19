@@ -71,6 +71,9 @@ class SoulInTransit(Problem):
 
 
 _HANDLERS = {}
+#: kind -> `address(payload)`: the target hall found at delivery, for a message whose row may have moved since it was
+#: sent (`row.save`, M-A); without one the hall named at send time.
+_ADDRESS = {}
 #: Kinds that move a soul's primary row (payload["soul"]["id"]) to the target hall's master: until their step 3
 #: closes them, reads take the source row as the primary (`arriving`).
 _MOVES = set()
@@ -79,11 +82,14 @@ _MOVES = set()
 _delivering = ContextVar("shard_saga_delivering", default=None)
 
 
-def handler(kind, *, done=None, refused=None, moves=False):
+def handler(kind, *, done=None, refused=None, moves=False, address=None):
     """Register `apply(payload)` for messages of `kind`, run on the target hall's master; `done(payload)` and
-    `refused(payload)` run on the source hall's master after it. `moves`: the message moves a soul (`arriving`)."""
+    `refused(payload)` run on the source hall's master after it. `moves`: the message moves a soul (`arriving`).
+    `address(payload)`: the target hall, asked at each delivery (else the one the message was sent to)."""
     def register(apply):
         _HANDLERS[kind] = (apply, done, refused)
+        if address is not None:
+            _ADDRESS[kind] = address
         if moves:
             _MOVES.add(kind)
         return apply
@@ -139,16 +145,48 @@ def sent(subject, hall):
     return outbox._base_manager.using(master_of(hall)).filter(subject=subject).exists()
 
 
+def joins(hall):
+    """Whether a step on `hall`'s master is part of the code's open transaction: none is open (the step is its own),
+    or one is open on that master too."""
+    from django.db import connections
+
+    from apps.core.shard_reads import _code_transaction_open
+
+    if not _code_transaction_open():
+        return True
+    return any(not b._from_testcase for b in connections[master_of(hall)].atomic_blocks)
+
+
+def inside_another_hall(hall):
+    """The code's transaction is open, and it is not `hall`'s own -- its context acts on another master (another hall,
+    or MASTER: SYSTEM_ADMIN, a command). A step of `hall`'s then waits for that transaction's commit (a message)."""
+    from apps.core.shard_reads import _code_transaction_open, acting_alias
+
+    return bool(settings.SHARD_WRITE_CIVS) and _code_transaction_open() and acting_alias() != master_of(hall)
+
+
+class StepOutsideTransaction(Exception):  # noqa: N818 -- a programming error, like WriteOutsideTransaction
+    """`on_master(hall)` inside a transaction that is not open on `hall`'s master: the step would commit on its own,
+    before the caller's transaction and whatever becomes of it (VERIFY-stage4-r2 H-A). Send a message instead."""
+
+
 @contextmanager
 def on_master(hall):
     """A transaction on `hall`'s master, acting as that hall: its writes, its `atomic()` and its reads that may act
     are that master's, whatever request or task we are in (the request's own hall would otherwise decide). On a
     shard it is the hall's business transaction (`shard_reads._install_atomic`): the shard's and control's, so a
-    handler's control lock or write (a user, an account, a notification) is inside it and rolls back with it."""
+    handler's control lock or write (a user, an account, a notification) is inside it and rolls back with it.
+
+    Refused inside the code's transaction when that is not open on `hall`'s master (`joins`): the block would be a
+    top-level transaction there and commit at its exit, while the caller's may still roll back -- half a business
+    transaction (VERIFY-stage4-r2 H-A: a home hall's cancel committed the residence's return, then rolled back).
+    A step for another master inside a transaction is a message (`send`), delivered after the commit."""
     from apps.core import request_local
     from apps.tenants import managers
 
     alias = master_of(hall)
+    if settings.SHARD_WRITE_CIVS and not joins(hall):
+        raise StepOutsideTransaction(f"a saga step on {alias} inside a transaction that is not open there")
     user = request_local._user_var.set(request_local.get_current_user())  # the actor stays; the request's hall goes
     request = request_local._request_var.set(None)
     tenant = managers._tenant_var.set(hall)
@@ -298,7 +336,7 @@ def deliver(msg):
 def _deliver(msg):
     outbox, inbox, state = _models()
     apply, done, refused = _HANDLERS[msg.kind]
-    target = msg.target_tenant
+    target = _ADDRESS[msg.kind](msg.payload) if msg.kind in _ADDRESS else msg.target_tenant
     outcome = state.DONE
     try:
         with on_master(target) as alias:
@@ -357,16 +395,68 @@ def save_fields(instance, fields, *, source):
         subject=f"row:{instance._meta.label}:{instance.pk}")  # two saves of one row land in the order made
 
 
-@handler("row.save")
+def _row_primary(payload):
+    """`row.save`'s target: the hall of the row's primary NOW, not when the save was sent (VERIFY-stage4-r2 M-A). A
+    soul's save sent to its residence and relayed after it came home went to a master that no longer held it -- a
+    dead letter, the write lost, and the soul's later saves held behind it (same subject). Asked at every delivery,
+    so `relay_outbox --retry-failed` delivers a dead letter of that kind too. While a move of the soul is open it has
+    a primary-looking row on two masters: the save waits for the move to close (`SoulInTransit`, not counted)."""
+    from django.apps import apps
+
+    from apps.core.shard_reads import write_alias_of
+
+    model = apps.get_model(payload["model"])
+    moving = _moving([alias for alias, _ in masters()], [payload["pk"]])
+    if moving:
+        raise SoulInTransit(moving)
+    for alias, _ in masters():
+        row = model._base_manager.using(alias).filter(pk=payload["pk"]).first()
+        if row is not None and write_alias_of(row) == alias:  # a copy names a hall of another master
+            return hall_of(row)
+    raise model.DoesNotExist(f"{payload['model']} {payload['pk']}: no primary row on any master")
+
+
+@handler("row.save", address=_row_primary)
 def _row_save(payload):
     from django.apps import apps
 
+    from apps.tenants.managers import get_current_tenant
+
     model = apps.get_model(payload["model"])
-    obj = model._base_manager.select_for_update().get(pk=payload["pk"])
+    # On the master `_row_primary` found (the delivery's hall): not a read across masters, which may meet a copy.
+    obj = model._base_manager.using(master_of(get_current_tenant())).select_for_update().get(pk=payload["pk"])
     for name, value in payload["values"].items():
         field = model._meta.get_field(name)
         setattr(obj, field.attname, field.to_python(value))
     obj.save(update_fields=list(payload["values"]))
+
+
+def create_rows(model, rows, *, soul, source):
+    """D6, rows that hang off `soul` (a deed, a compensation: their hall is the soul's, derived on save) filed from a
+    transaction that does not hold the soul's master: one message that creates them on the soul's primary -- found
+    at delivery, as `row.save`'s is -- where their save also runs what it triggers there (the ledger). `rows` are
+    field values with their pk drawn by the caller, so a redelivery creates nothing twice."""
+    return send("row.create", source, hall_of(soul), {
+        "model": model._meta.label, "soul": str(soul.pk), "rows": json.loads(json.dumps(rows, cls=DjangoJSONEncoder))},
+        subject=f"row:souls.Soul:{soul.pk}")  # in order with the soul's saves
+
+
+def _soul_primary(payload):
+    return _row_primary({"model": "souls.Soul", "pk": payload["soul"]})
+
+
+@handler("row.create", address=_soul_primary)
+def _row_create(payload):
+    from django.apps import apps
+
+    from apps.tenants.managers import get_current_tenant
+
+    model = apps.get_model(payload["model"])
+    alias = master_of(get_current_tenant())
+    soul = apps.get_model("souls", "Soul")._base_manager.using(alias).get(pk=payload["soul"])
+    for values in payload["rows"]:
+        if not model._base_manager.using(alias).filter(pk=values["id"]).exists():
+            model.objects.create(soul=soul, **values)
 
 
 # ---- a soul in transit is read-only (module doc) ---------------------------------------------------------------

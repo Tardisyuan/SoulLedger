@@ -138,6 +138,14 @@ def reweigh_after_rejection(flow, because: str = "REJECTED") -> Judgment | None:
     if (soul.current_state not in (SoulState.DISPOSED, SoulState.LOST)
             or dispositions.filter(is_executed=True).exists()):
         return None
+    from apps.tenants import shard_saga
+
+    if soul.is_residing and not shard_saga.held(soul):
+        # Sharding stage 4, D6: the soul resides in another civilization (dispatched by hand while the flow ran) and
+        # its row is written on that master, which this home hall's transaction does not hold -- the soul cannot go
+        # back to JUDGING here. Before anything is written; the decision that refused the flow rolls back with it.
+        raise WeighingRefusedError(f"Soul {soul.pk} resides in another civilization; return it home before its case "
+                                   f"is heard again", "soul_residing", status=409)
     # The withdrawn conclusion's appeals go with it (2026-10-29): an appeal still open would otherwise amend a
     # verdict that no longer stands. Voided like a devoured soul's (`appeals.void_open_appeals`), same transaction.
     from apps.judgment import appeals

@@ -266,6 +266,8 @@ function ProposeDispatchForm() {
     setFieldErrors(mapped);
     if (Object.keys(mapped).length > 0) {
       queueMicrotask(() => focusFirstInvalid(formRef.current));
+    } else if (code === "dispatch_frozen") {
+      showToast(t("dispatch.frozen"), "error"); // 423 during a cut-over: nothing about this form is wrong
     } else {
       showToast(drfNonFieldError(err, t(fallbackKey)), "error");
     }

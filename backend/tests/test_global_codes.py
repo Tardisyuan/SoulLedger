@@ -144,6 +144,44 @@ def test_an_unused_claim_is_listed_and_does_not_fail_the_check(capsys):
     assert "'GC_GAP': claimed, no row holds it" in capsys.readouterr().out
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("writer", ["", "default:"])  # before tenants/0027; taken on SQLite
+def test_an_open_case_claim_of_unknown_writer_is_listed_and_cleared_only_when_its_case_is_not_open(
+        cn_tenant, capsys, writer):
+    """`claim_open_case` never takes over a claim whose writer cannot be known; nothing else cleared one, so a soul
+    whose case rolled back could never open another (VERIFY-stage4-r2 低). The check lists them; with
+    `--clear-unknown-claims` it drops those whose case is not open -- never one whose case is (asserted absent and
+    present). A claim whose writer is known (PostgreSQL, an xid) is not listed."""
+    import uuid
+
+    from apps.judgment.models import Judgment
+    from apps.souls.models import Soul
+    from apps.tenants.models import OpenCaseClaim
+
+    soul_open = Soul.objects.create(name="开着", tenant=cn_tenant, current_state="JUDGING")
+    case = Judgment.objects.create(soul=soul_open, civilization=soul_open.civilization, court="第一殿",
+                                   tenant=cn_tenant)
+    OpenCaseClaim.objects.filter(soul_id=soul_open.pk).delete()  # whatever opening it claimed: ours, below
+    claims = {
+        "open": OpenCaseClaim.objects.create(soul_id=soul_open.pk, judgment_id=case.pk, tenant_id=cn_tenant.pk,
+                                             case_txn=writer),
+        "missing": OpenCaseClaim.objects.create(soul_id=uuid.uuid4(), judgment_id=uuid.uuid4(),
+                                                tenant_id=cn_tenant.pk, case_txn=writer),
+        "known": OpenCaseClaim.objects.create(soul_id=uuid.uuid4(), judgment_id=uuid.uuid4(),
+                                              tenant_id=cn_tenant.pk, case_txn="default:12345"),
+    }
+    call_command("check_global_codes")
+    out = capsys.readouterr().out
+    assert f"judgment {case.pk}" in out and "writer unknown, case open" in out, out
+    assert f"judgment {claims['missing'].judgment_id}" in out and "case missing" in out, out
+    assert str(claims["known"].judgment_id) not in out, out
+    assert OpenCaseClaim.objects.count() == 3, "listing cleared a claim"
+    call_command("check_global_codes", "--clear-unknown-claims")
+    assert "case missing; cleared" in capsys.readouterr().out
+    left = set(OpenCaseClaim.objects.values_list("pk", flat=True))
+    assert left == {claims["open"].pk, claims["known"].pk}, left
+
+
 # ---- case-number prefixes (Judgment.case_number is PARTITIONED) ------------------------------------------
 
 @pytest.mark.django_db

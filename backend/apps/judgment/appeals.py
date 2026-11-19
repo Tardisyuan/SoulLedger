@@ -516,13 +516,16 @@ def _compensate(soul, judgment, appeal, executed):
     那一世),也不补记回已结束的那一世(`SoulRecord.save` 的约定:不往结束了的一世里记事)。"""
     if soul.life_index != judgment.cycle:
         return []
+    import uuid
+
     from apps.souls.record_models import EvidenceSource, RecordCategory, RecordType, SoulRecord
+    from apps.tenants import shard_saga
 
     rows = []
     for node, disposition in executed:
         where = f"第 {node.order} 站({node.tenant_code})" if node is not None else "原处置"
-        rows.append(SoulRecord.objects.create(
-            soul=soul, record_type=RecordType.MERIT, category=RecordCategory.COMPENSATION,
+        rows.append(dict(
+            id=uuid.uuid4(), record_type=RecordType.MERIT, category=RecordCategory.COMPENSATION,
             description=f"申诉改判补偿:{judgment.case_number} {where},原判 {appeal.original_verdict} → "
                         f"{judgment.verdict}",
             weight=compensation_weight(disposition), evidence_source=EvidenceSource.REGISTRY,
@@ -530,7 +533,12 @@ def _compensate(soul, judgment, appeal, executed):
                            "disposition_id": str(disposition.pk), "node_id": str(node.pk) if node else None,
                            "station_order": node.order if node else None},
         ))
-    return rows
+    if not rows or shard_saga.held(soul):
+        return [SoulRecord.objects.create(soul=soul, **values) for values in rows]
+    # Sharding stage 4, D6: the soul resides on a master this (home hall's) transaction does not hold; its deeds and
+    # the ledger they move are written there -- a message, delivered after the commit to wherever the soul then is.
+    shard_saga.create_rows(SoulRecord, rows, soul=soul, source=soul.home_tenant)
+    return [SoulRecord(soul_id=soul.pk, **values) for values in rows]  # their ids, for the decision's event
 
 
 def compensation_records(appeal):

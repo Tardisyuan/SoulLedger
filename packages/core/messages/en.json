@@ -3529,6 +3529,7 @@
     "soul_from_detail_error": "Could not load the soul carried from the detail page. Choose it again here.",
     "source_label": "Source",
     "target_tenant_closed": "This hall is not receiving transfers",
+    "frozen": "Dispatches and joint judgments are frozen for maintenance; try again once they resume",
     "soul_not_in_underworld": "This soul is not in the underworld (alive, awaiting rebirth, settled or lost); it cannot be dispatched",
     "soul_on_sentence_plan": "This soul has a placement plan in progress; its dispatches follow the plan",
     "discard": "Discard…",

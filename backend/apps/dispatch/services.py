@@ -64,6 +64,26 @@ class DispatchNotCancellableError(ValueError):
         super().__init__(f"Only a proposed dispatch can be cancelled by its sender; this one is {status}")
 
 
+class DispatchFrozenError(ValueError):
+    """`settings.DISPATCH_FROZEN`: dispatches and joint benches are frozen while an operator cuts writes over or back
+    (sharding PLAN 4.0 and the stage-4 rollback: no new cross-civilization saga may start during a reverse sync).
+    A ValueError like the other refusals, so the views answer it through `_refused` (423, `code`) and a sentence
+    plan's next stop is recorded as not started (`SentencePlanService._dispatch`), sent again by `retry-dispatch`."""
+
+    code = "dispatch_frozen"
+    http_status = 423
+
+    def __init__(self):
+        super().__init__("Dispatches and joint judgments are frozen for maintenance; try again once they are resumed")
+
+
+def refuse_if_frozen():
+    from django.conf import settings
+
+    if settings.DISPATCH_FROZEN:
+        raise DispatchFrozenError()
+
+
 class ResidenceReturnBlockedError(Exception):
     """灵魂还有未结案的审判,暂居不能结束(2026-09-18 用户决定)。
 
@@ -322,6 +342,7 @@ class DispatchService:
         """
         from apps.souls.models import Soul
 
+        refuse_if_frozen()
         with _on_source_master(source_tenant):
             # Inside the transaction (sharding): its reads are the masters', where the target's realm is. Before it,
             # a script's or task's read went to its context's read alias -- the source's shard, or the target's
@@ -456,6 +477,7 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
+        refuse_if_frozen()
         # 殿可以在提案挂着的时候关掉:批准是目标殿的「收下」,关着的殿不收(驳回仍可以)。
         DispatchService.check_target_accepts(dispatch_record.target_tenant)
         from apps.souls.models import Soul
@@ -562,6 +584,7 @@ class DispatchService:
         """
         from apps.souls.models import Soul
 
+        refuse_if_frozen()
         if not dispatch_record.can_transition_to(DispatchStatus.EXECUTED):
             raise ValueError(f"Cannot execute dispatch in status: {dispatch_record.status}")
         # 批准到执行之间殿也可能关掉;灵魂真正进殿是这一刻,再问一次。
@@ -795,7 +818,7 @@ class DispatchService:
         SentencePlanService.advance(locked)
 
     @staticmethod
-    def end_residence(soul, *, actor, trigger, reason=""):
+    def end_residence(soul, *, actor, trigger, reason="", then_advance=False):
         """暂居结束:`soul.tenant` 回到 `soul.home_tenant`,暂居记录 EXECUTED → RETURNED。
 
         调用方:`SentencePlanService.advance`(受刑计划这一站刑满)、`DispositionService.execute`
@@ -803,6 +826,9 @@ class DispatchService:
         灵魂行在锁下读;SoulEvent 与 AuditLog 在同一事务里写,回滚一起回滚。
 
         暂居记录可能不存在(数据修正过的灵魂);那样仍然回归,返回 None。
+
+        `then_advance`(只在跨库时有意义):灵魂到家后在原属库上接着推进计划 —— 单库时调用方在返回后自己推进,
+        跨库时回归要等中继走完,推进就挪到那时(`transfer._return_settled`)。
 
         Raises:
             ValueError: 灵魂没有在暂居。
@@ -815,7 +841,7 @@ class DispatchService:
             # 暂居地与原属地写在两个库(分库第 4 阶段):三步 saga,`apps/dispatch/transfer.py`。
             from apps.dispatch import transfer
 
-            return transfer.end_residence(soul, actor=actor, trigger=trigger, reason=reason)
+            return transfer.end_residence(soul, actor=actor, trigger=trigger, reason=reason, then_advance=then_advance)
 
         with transaction.atomic():
             locked = Soul.lock(soul.pk)
@@ -984,6 +1010,7 @@ class CrossTenantJudgmentService:
         Returns:
             CrossTenantJudgment: Created judgment
         """
+        refuse_if_frozen()
         judgment = CrossTenantJudgment.objects.create(
             title=title,
             description=description,

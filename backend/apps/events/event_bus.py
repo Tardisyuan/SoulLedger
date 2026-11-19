@@ -224,6 +224,14 @@ class EventBus:
         """
         if tenant is None:
             tenant = soul.tenant if soul.tenant_id else None
+            if tenant is not None and soul.home_tenant_id and soul.home_tenant_id != soul.tenant_id:
+                from apps.tenants import shard_saga
+
+                # Sharding stage 4, D6: the home hall's transaction acting on a soul that resides on another master
+                # cannot write the residence's row (it would commit outside the business transaction); the event is
+                # the home hall's then -- the other tenant `AuditHandler` accepts.
+                if not shard_saga.joins(tenant):
+                    tenant = soul.home_tenant
         self.publish(
             event_type=event_type,
             payload={"soul_id": str(soul.id), **payload},

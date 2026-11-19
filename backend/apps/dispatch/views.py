@@ -13,7 +13,7 @@ from apps.actors.models import Actor
 from apps.core.exports import export_csv
 from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission
-from apps.core.problems import problem
+from apps.core.problems import Problem, problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.shard_reads import with_fanout
 from apps.core.tenant import (
@@ -870,6 +870,12 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         as None. Reading the user's own tenant column is the same answer by a
         route that cannot be skipped.
         """
+        from apps.dispatch.services import DispatchFrozenError, refuse_if_frozen
+
+        try:
+            refuse_if_frozen()
+        except DispatchFrozenError as e:
+            raise Problem(e.http_status, e.code, str(e)) from None
         tenant = request_tenant(self.request)
         if tenant is None:
             raise serializers.ValidationError({

@@ -30,6 +30,7 @@ from apps.sentence_plan.models import (
     SentenceRequestStatus,
 )
 from apps.souls.models import Soul
+from apps.tenants import shard_saga
 
 logger = logging.getLogger(__name__)
 
@@ -236,13 +237,55 @@ def _leave_waiting_station(soul, node):
         DispositionService._leave_served_realm(disposition, soul)
 
 
+def rows_elsewhere(node):
+    """The stop's disposition and station are rows of a master the code's transaction does not hold (D6: the home
+    hall's transaction, the soul serving this stop in another civilization). They are not written here -- a write
+    there would commit outside the business transaction -- but by the return's step on that master
+    (`apps.dispatch.transfer._settle_plan_stops`), which reads the node's status this transaction leaves."""
+    from django.conf import settings
+
+    if node.is_home or not settings.SHARD_WRITE_CIVS:
+        return False
+    from apps.tenants.models import Tenant
+
+    hall = Tenant._base_manager.using("default").filter(code=node.tenant_code).first()
+    return hall is not None and not shard_saga.joins(hall)
+
+
+def stop_dispositions(nodes):
+    """{pk: Disposition} of `nodes`' dispositions, locked. Sharding stage 4: each is its stop's hall's row, read on
+    that hall's master -- a read in the home hall's context did not find a foreign stop's at all, so an appeal took
+    an executed stop abroad for one not yet executed (no compensation, its disposition voided). Locked where the code's
+    transaction holds that master; elsewhere only read (the return's step there settles it, `rows_elsewhere`)."""
+    from django.conf import settings
+
+    from apps.disposition.models import Disposition
+    from apps.tenants.models import Tenant
+
+    ids = [n.disposition_id for n in nodes if n.disposition_id]
+    if not settings.SHARD_WRITE_CIVS:
+        return {d.pk: d for d in Disposition.all_objects.select_for_update(of=("self",)).filter(pk__in=ids)}
+    by_code = {}
+    for n in nodes:
+        if n.disposition_id:
+            by_code.setdefault(n.tenant_code, []).append(n.disposition_id)
+    out = {}
+    for code, pks in by_code.items():
+        hall = Tenant._base_manager.using("default").filter(code=code).first()
+        rows = Disposition.all_objects.using(shard_saga.master_of(hall) if hall else "default").filter(pk__in=pks)
+        if hall is None or shard_saga.joins(hall):
+            rows = rows.select_for_update(of=("self",))
+        out.update({d.pk: d for d in rows})
+    return out
+
+
 def pardon_term(soul, node, now):
     """赦免这一站(撤销计划、手动结束暂居):节点刚记 ABORTED 之后调。受着的刑记期满(`expired_at`,
     `reincarnation._unserved_term` 才不再报 `term_not_served`),灵魂离开那一站的界域。永久刑期与没执行的处置
     不记期满(前者不靠期满,后者 `assert_may_be_reborn` 按 ABORTED 节点当作已赦免)。调用方持有灵魂、节点的锁。"""
     from apps.disposition.models import Disposition
 
-    if node.disposition_id is None:
+    if node.disposition_id is None or rows_elsewhere(node):
         return
     served = (Disposition.all_objects.select_for_update(of=("self",))
               .filter(pk=node.disposition_id, is_deleted=False).first())
@@ -650,11 +693,16 @@ class SentencePlanService:
             # ACTIVE 在执行、WAITING 在等、ETERNAL 永久:都等。PENDING 请求:灵魂留在 X 直到原属决定(§4.2)。
             if here.status != SentenceNodeStatus.COMPLETED or has_open or has_pending_request:
                 return False
+            # Across masters the soul is home only once the relay has run: the plan moves on there, then
+            # (`then_advance`), not in this loop -- the next look here would still find it residing.
+            away = shard_saga.crosses(locked.tenant, locked.home_tenant)
             DispatchService.end_residence(
                 locked, actor="system",
                 trigger=DispatchService.RETURN_ON_CASE_CLOSED if released else DispatchService.RETURN_ON_DISPOSITION,
-                reason=f"sentence plan {plan.pk} node {here.order} served",
+                reason=f"sentence plan {plan.pk} node {here.order} served", then_advance=away,
             )
+            if away:
+                return False
             soul.tenant_id = locked.home_tenant_id
             soul.owner_org_id = locked.owner_org_id  # 与 end_residence 同步回来的归属机构一致(B3b)
             return True
@@ -679,7 +727,9 @@ class SentencePlanService:
             _leave_waiting_station(locked, node)
         nxt = next((n for n in nodes if n.status == SentenceNodeStatus.PENDING), None)
         if nxt is None:
-            SentencePlanService._complete(locked, plan, nodes)
+            # A plan cancelled while its soul resided in another civilization completes here once the soul is home
+            # (`requests.cancel`): as the cancellation it was.
+            SentencePlanService._complete(locked, plan, nodes, pardoned=bool(plan.cancel_reason))
             return False
         if nxt.is_home:
             SentencePlanService._activate_home_node(locked, plan, nxt)

@@ -52,7 +52,10 @@ INDIRECT = {
     ("apps/dispatch/services.py", "here.select_for_update"): "SHARD",
     ("apps/death_sync/management/commands/rotate_encryption_key.py", "rows.select_for_update"): "ANY (a command: MASTER)",
     ("apps/tenants/shard_saga.py", "outbox._base_manager.using(alias).select_for_update"): "SHARD",
-    ("apps/tenants/shard_saga.py", "model._base_manager.select_for_update"): "SHARD",
+    ("apps/tenants/shard_saga.py", "model._base_manager.using(master_of(get_current_tenant())).select_for_update"):
+        "SHARD",
+    ("apps/dispatch/transfer.py", "here.select_for_update"): "SHARD",
+    ("apps/sentence_plan/services.py", "rows = rows.select_for_update"): "SHARD",
     ("apps/social/moderation.py", "queryset.select_for_update"): "SHARD",
     ("apps/social/moderation.py", "model.objects.select_for_update"): "SHARD",
     ("apps/souls/models.py", "cls.all_objects.select_for_update"): "SHARD",

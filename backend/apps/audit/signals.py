@@ -194,8 +194,11 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
 
             # A savepoint: on PostgreSQL a failed INSERT aborts the caller's transaction, and the `except`
             # below would swallow the error while every later statement failed (refactor audit 2026-11-08).
-            with transaction.atomic():
-                AuditLog.objects.create(
+            # On the row's own database (the master of the hall it names), as the post-commit rows below: a bare
+            # `atomic()` opens the context's, where a row of another master is refused (WriteOutsideTransaction).
+            alias = router.db_for_write(AuditLog, instance=AuditLog(tenant=tenant))
+            with transaction.atomic(using=alias):
+                AuditLog.objects.using(alias).create(
                     tenant=tenant,
                     user=user,
                     action=AuditAction.PERMISSION_CHANGE,
@@ -626,10 +629,12 @@ def create_batch_audit_log(action, instances, changes=None):
             combined_resource_ids = combined_resource_ids[:97] + "..."
 
         row_tenants = {_row_tenant_id(inst, tenant) for inst in instances}
-        # A savepoint, for the same reason as the permission-change row above.
-        with transaction.atomic():
-            AuditLog.objects.create(
-                tenant_id=row_tenants.pop() if len(row_tenants) == 1 else getattr(tenant, "pk", None),
+        # A savepoint on the row's own database, for the same reasons as the permission-change row above.
+        tenant_id = row_tenants.pop() if len(row_tenants) == 1 else getattr(tenant, "pk", None)
+        alias = router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id))
+        with transaction.atomic(using=alias):
+            AuditLog.objects.using(alias).create(
+                tenant_id=tenant_id,
                 user=user,
                 action=action,
                 resource=combined_resource,
