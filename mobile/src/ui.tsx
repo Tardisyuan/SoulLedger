@@ -485,6 +485,24 @@ export const GUTTER = GUTTER_PT;
 export const PULL_REFRESH_PT = 56;
 /** A drag this far down from a list at its top is a pull; this far up, or across, it is the list's. */
 const PULL_SLOP_PT = 10;
+
+/** The scroller's last offset, and whether the finger now down landed at the top (see usePullRefresh). */
+class PullStart {
+  private offset = 0;
+  private landed = true;
+  scrolled(y: number) {
+    this.offset = y;
+  }
+  atTop() {
+    return this.offset <= 0;
+  }
+  land() {
+    this.landed = this.atTop();
+  }
+  landedAtTop() {
+    return this.landed;
+  }
+}
 const PULL_EASING = EASE.enter;
 
 /** The OS screen reader (VoiceOver / TalkBack), live — `useReducedMotion`'s twin. */
@@ -601,6 +619,13 @@ export function usePullRefresh(
 
   // Built every render: the detector keeps the native handler (same tag) and swaps in the new
   // config and callbacks, so a re-render mid-drag does not drop the pull.
+  // `enabled` follows `atTop`, a state: it reaches the native handler a render (and a setImmediate) after the
+  // scroll event. A touch that lands in that window, mid-page, used to start a pull (2026-11-20, iOS: scrolled
+  // down, then a quick drag back). So the pull also asks the live offset, read off the last scroll event, when
+  // the finger lands: not at the top, the pull fails at once and the drag is the list's.
+  // Not refs: the gesture builder takes these callbacks during render, and the hooks lint reads a ref there as a
+  // read during render. Nothing here renders; the scroller writes it and the pan reads it.
+  const [live] = useState(() => new PullStart());
   const pan = Gesture.Pan()
     .withTestId("pull")
     .runOnJS(true)
@@ -608,11 +633,18 @@ export function usePullRefresh(
     .activeOffsetY(PULL_SLOP_PT)
     .failOffsetY(-PULL_SLOP_PT)
     .failOffsetX([-PULL_SLOP_PT, PULL_SLOP_PT])
+    .onTouchesDown((_e, manager) => {
+      if (!live.atTop()) manager.fail();
+    })
+    .onBegin(() => {
+      live.land();
+    })
     .onUpdate((e) => {
+      if (!live.landedAtTop()) return;
       const d = Math.min(Math.max(e.translationY, 0), PULL_REFRESH_PT);
       y.setValue(reduced ? (d >= PULL_REFRESH_PT ? PULL_REFRESH_PT : 0) : d);
     })
-    .onEnd((e, ok) => (ok && e.translationY >= PULL_REFRESH_PT ? trigger() : back()));
+    .onEnd((e, ok) => (ok && live.landedAtTop() && e.translationY >= PULL_REFRESH_PT ? trigger() : back()));
   const native = Gesture.Native().requireExternalGestureToFail(pan);
 
   if (!onRefresh) return { props: {}, frame: (scroller) => scroller };
@@ -620,7 +652,10 @@ export function usePullRefresh(
   return {
     props: reader
       ? { refreshControl: <RefreshControl refreshing={holding} onRefresh={trigger} tintColor={t.inkSubtle} /> }
-      : { bounces: false, overScrollMode: "never", scrollEventThrottle: 16, onScroll: (e) => setAtTop(e.nativeEvent.contentOffset.y <= 0) },
+      : { bounces: false, overScrollMode: "never", scrollEventThrottle: 16, onScroll: (e) => {
+          live.scrolled(e.nativeEvent.contentOffset.y);
+          setAtTop(live.atTop());
+        } },
     frame: (scroller) => (
       <GestureDetector gesture={pan}>
         <View style={styles.fill} collapsable={false}>
