@@ -445,9 +445,9 @@ def test_the_world_has_what_115_had(world):
 def test_a_disposition_with_no_hall_is_read_beside_its_judgment(world):
     """(e): the judgment desk's `flow_progress.waiting` reads a judgment's disposition; one with no hall lives in
     control only, beside a judgment read from its hall's shard. Every caller of the judgment's hall, the
-    civilization's ADMIN and SYSTEM_ADMIN get what the single database answers. The precedents' 「去向」 joins the
-    same row (`select_related("disposition__…")`); that query also joins `soul` (a crossing key), so it is answered
-    from control (CROSSING_JOINS_ON_CONTROL) and is held here so it stays that way."""
+    civilization's ADMIN and SYSTEM_ADMIN get what the single database answers. The precedents' 「去向」 reads the
+    same row by the judgments' ids from every leg (`precedents._attach_dispositions`): a `select_related` on the
+    judgment's shard would not see it."""
     from apps.disposition.models import Disposition
     from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 

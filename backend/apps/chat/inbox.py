@@ -7,7 +7,7 @@
 「谁最后说话」(`Conversation.last_from`)不是官员私有的:那是信本身的事实,由
 `services.py` 的三个写点维护(灵魂经后端发、官员回复、Synapse 回调)。
 
-**「待回复」只有一个定义:`AWAITING_REPLY`(查询)与 `awaiting_reply`(一行已取出的会话),** 文件夹、官员待办、
+**「待回复」只有一个定义:`awaiting_reply_q`(查询)与 `awaiting_reply`(一行已取出的会话),** 文件夹、官员待办、
 跨殿总览、经办人推送都用它们。灵魂已调走的那封不算:殿司回不了它。
 
 **经办人要看此刻还够不够格**(`live_assignee`):被停用、调走或失去 `soul_inbox.reply` 的官员,库里的
@@ -54,8 +54,20 @@ FOLDERS = ("all", "awaiting_reply", "replied", "drafts", "archived", "assigned_t
 #: 经办人要有的码名:能回复,才谈得上把回信交给他。
 ASSIGNEE_PERMISSION = "soul_inbox.reply"
 
-#: 「待回复」:最后一封是灵魂写的,且殿司此刻回得了(与 `hall_can_reply` + `last_from` 同一条规则)。
-AWAITING_REPLY = Q(last_from="soul", closed_at__isnull=True, soul_a__tenant_id=F("tenant_id"))
+def awaiting_reply_q(conversations) -> Q:
+    """「待回复」:最后一封是灵魂写的,且殿司此刻回得了(与 `hall_can_reply` + `last_from` 同一条规则):灵魂此刻
+    在这个殿。The conversations' (pk, soul, hall) first, then those souls' current hall by id from every leg -- not
+    `soul_a__tenant_id`, a join through a crossing key that a shard answers from control's copy of the soul, a
+    mirror stage 5 deletes (PREP-stage5 M3). `conversations`: the rows the condition will filter.
+    ponytail: reads the ids of every open conversation whose last letter is the soul's in `conversations`."""
+    from apps.core.shard_reads import with_fanout
+    from apps.souls.models import Soul
+
+    rows = list(conversations.filter(last_from="soul", closed_at__isnull=True).order_by()
+                .values_list("pk", "soul_a_id", "tenant_id"))
+    here = dict(with_fanout(Soul._base_manager.filter(pk__in={s for _, s, _ in rows if s is not None}))
+                .values_list("pk", "tenant_id"))
+    return Q(pk__in=[pk for pk, soul, hall in rows if soul is not None and here.get(soul) == hall])
 
 #: 草稿与回复正文同一上限(`OfficerReplySerializer.body`)。
 DRAFT_MAX_LENGTH = 4000
@@ -67,7 +79,7 @@ def hall_can_reply(conversation):
 
 
 def awaiting_reply(conversation):
-    """一行已取出的会话是不是在等回复。与 `AWAITING_REPLY` 同义(测试逐格对照)。"""
+    """一行已取出的会话是不是在等回复。与 `awaiting_reply_q` 同义(测试逐格对照)。"""
     return conversation.last_from == "soul" and hall_can_reply(conversation)
 
 
@@ -105,13 +117,13 @@ def annotate_for(qs, user):
     )
 
 
-def folder_q(folder):
-    """`folder` → 过滤条件。调用方先 `annotate_for`。"""
+def folder_q(folder, qs):
+    """`folder` → 过滤条件,给 `qs`(调用方先 `annotate_for`)用。"""
     if folder == "archived":
         return Q(archived=True)
     live = Q(archived=False)
     if folder == "awaiting_reply":
-        return live & AWAITING_REPLY
+        return live & awaiting_reply_q(qs)
     if folder == "replied":
         return live & Q(last_from="hall")
     if folder == "drafts":
@@ -124,8 +136,8 @@ def folder_q(folder):
 def counts(qs):
     """每个文件夹的总数,外加未读、往来中 / 已关闭、按殿 —— 与列表同一个 `folder_q`,
     所以计数与翻到底的条数是同一个数。`qs` 已按租户收窄并 `annotate_for`。"""
-    result = {folder: qs.filter(folder_q(folder)).count() for folder in FOLDERS}
-    live = qs.filter(folder_q("all"))
+    result = {folder: qs.filter(folder_q(folder, qs)).count() for folder in FOLDERS}
+    live = qs.filter(folder_q("all", qs))
     result["unread"] = live.filter(unread=True).count()
     result["open"] = live.filter(closed_at__isnull=True).count()
     result["closed"] = live.filter(closed_at__isnull=False).count()

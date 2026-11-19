@@ -99,12 +99,18 @@ def audit(action, conversation, description, *, actor=None, request=None):
     租户是会话的租户(收件殿司 / 建房时的文明),不是灵魂此刻的所在:审计要能按
     「这件事发生在哪个殿司」查到。
     """
+    from django.db import router
+
     from apps.audit.models import AuditLog
+    from apps.audit.signals import _write_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
+    # The audit signals' own write: on the master of the conversation's hall, the user by id (an instance assigned to
+    # the row asks the router, NoShardContext for SYSTEM_ADMIN while civilizations write to their shards).
+    _write_row(
+        router.db_for_write(AuditLog, instance=AuditLog(tenant_id=conversation.tenant_id)),
         tenant_id=conversation.tenant_id,
-        user=actor if getattr(actor, "is_authenticated", False) else None,
+        user_id=actor.pk if getattr(actor, "is_authenticated", False) else None,
         action=action,
         resource="chat_conversation",
         resource_id=str(conversation.id),
@@ -755,11 +761,16 @@ def decline_request(account, conversation_id, *, request=None):
 
 
 def _block_audit(action, account, block, description, request):
+    from django.db import router
+
     from apps.audit.models import AuditLog
+    from apps.audit.signals import _write_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
-        tenant_id=account.soul.tenant_id, user=account.user, action=action, resource="chat_block",
+    hall = account.soul.tenant_id
+    _write_row(  # as `audit` above
+        router.db_for_write(AuditLog, instance=AuditLog(tenant_id=hall)),
+        tenant_id=hall, user_id=account.user_id, action=action, resource="chat_block",
         resource_id=str(block.pk), description=description,
         ip_address=get_client_ip(request) if request is not None else None,
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:500] if request is not None else "",

@@ -16,7 +16,7 @@
 
 「余额」是结案时的快照 `Judgment.concluded_balance`(采信后的功 − 过);快照为 null 的
 旧案退回灵魂**现在**的 merit − demerit。本案自己已结案且有快照时也用快照,否则用现在的。
-整个排序是一条 SQL:没有逐行打分,也没有 N+1。
+整个排序是一条 SQL:没有逐行打分,也没有 N+1(旧案的现余额先按灵魂 id 读出来,`_current_balances`)。
 """
 from django.db.models import BooleanField, Case, Count, F, FloatField, IntegerField, Q, Value, When
 from django.db.models.functions import Abs, Cast, Coalesce, Floor
@@ -35,7 +35,13 @@ def precedents_for(judgment, limit: int = DEFAULT_LIMIT):
         if judgment.concluded_balance is not None
         else judgment.soul.merit_score - judgment.soul.demerit_score
     )
-    balance = Coalesce(F("concluded_balance"), F("soul__merit_score") - F("soul__demerit_score"))
+    candidates = Judgment.objects.filter(
+        tenant_id=judgment.tenant_id,
+        civilization=judgment.civilization,
+        verdict__isnull=False,
+        is_archived=False,
+    ).exclude(pk=judgment.pk).exclude(soul_id=judgment.soul_id)
+    balance = Coalesce(F("concluded_balance"), _current_balances(candidates))
     statute_ids = list(judgment.citations.values_list("statute_id", flat=True))
 
     same_court = (
@@ -48,16 +54,9 @@ def precedents_for(judgment, limit: int = DEFAULT_LIMIT):
         if statute_ids
         else Value(0, output_field=IntegerField())
     )
-    return list(
-        Judgment.objects.filter(
-            tenant_id=judgment.tenant_id,
-            civilization=judgment.civilization,
-            verdict__isnull=False,
-            is_archived=False,
-        )
-        .exclude(pk=judgment.pk)
-        .exclude(soul_id=judgment.soul_id)
-        .select_related("soul", "disposition__destination_realm")
+    rows = list(
+        candidates
+        .select_related("soul")
         .annotate(
             same_court=same_court,
             balance=balance,
@@ -72,3 +71,35 @@ def precedents_for(judgment, limit: int = DEFAULT_LIMIT):
         .order_by("-same_court", "balance_distance", "-shared_statutes", F("concluded_at").desc(nulls_last=True), "pk")
         [:limit]
     )
+    _attach_dispositions(rows)
+    return rows
+
+
+def _attach_dispositions(rows):
+    """Each precedent's disposition (its 「去向」), read by the judgments' ids from every leg and left in the reverse
+    one-to-one's cache: a hall-less disposition (D2) lives on control beside a judgment on its hall's shard, which a
+    `select_related("disposition__...")` on the shard cannot see."""
+    from apps.core.shard_reads import with_fanout
+    from apps.disposition.models import Disposition
+
+    found = {d.judgment_id: d for d in with_fanout(Disposition._base_manager.filter(
+        judgment_id__in=[r.pk for r in rows])).select_related("destination_realm")}
+    cache = Disposition._meta.get_field("judgment").remote_field.cache_name
+    for r in rows:
+        r._state.fields_cache[cache] = found.get(r.pk)
+
+
+def _current_balances(candidates):
+    """The souls' merit - demerit now, for the old cases with no snapshot: those cases' soul ids first, then the
+    souls by id from every leg, as a per-soul constant -- not `soul__merit_score`, a join through a crossing key that a
+    shard answers from control's copy of the soul, a mirror stage 5 deletes (PREP-stage5 M3).
+    ponytail: one WHEN per soul of a snapshot-less case (cases concluded before the snapshot column); none for new."""
+    from apps.core.shard_reads import with_fanout
+    from apps.souls.models import Soul
+
+    souls = set(candidates.filter(concluded_balance__isnull=True).values_list("soul_id", flat=True))
+    nets = (with_fanout(Soul._base_manager.filter(pk__in=souls)).annotate(net=F("merit_score") - F("demerit_score"))
+            .values_list("pk", "net")) if souls else []
+    whens = [When(soul_id=pk, then=Value(net)) for pk, net in nets]
+    return Case(*whens, default=Value(None), output_field=IntegerField()) if whens else Value(
+        None, output_field=IntegerField())

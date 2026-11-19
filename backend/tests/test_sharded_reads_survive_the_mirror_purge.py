@@ -36,25 +36,13 @@ from tests.test_sharded_writes_equal_single_db import _Savepoint, _Seeded
 
 SEED = reads.SEED
 
-_SOUL_JOIN = "M3: joins a crossing key to Soul, answered from control (CROSSING_JOINS_ON_CONTROL)"
 #: Cases the purge still changes, each with its reason: stage 5 must not run until this is empty (an xfail names the
-#: difference; a case off this list that differs fails). PREP-stage5 M3: each call site reads the other side by ids.
-PENDING = {
-    "disposition-list": f"{_SOUL_JOIN}: disposition/views.py Exists(Reincarnation soul=OuterRef('soul'))",
-    "disposition-detail": f"{_SOUL_JOIN}: disposition/views.py Exists(Reincarnation soul=OuterRef('soul'))",
-    "disposition-export": f"{_SOUL_JOIN}: disposition/views.py Exists(Reincarnation soul=OuterRef('soul'))",
-    "disposition-detail:patch": f"{_SOUL_JOIN}: disposition/views.py, the PATCH's read-back",
-    "dossier-desk": f"{_SOUL_JOIN}: judgment/sources.py soul__home_tenant",
-    "judgment-queue-counts": f"{_SOUL_JOIN}: judgment/sources.py soul__home_tenant",
-    "tenant-overview": f"{_SOUL_JOIN}: tenants/overview.py soul__ferry_passage, judgment/sources.py",
-    "judgment-annual": f"{_SOUL_JOIN}: judgment/annual.py soul__tenant__code",
-    "judgment-precedents": f"{_SOUL_JOIN}: judgment/precedents.py soul__merit_score",
-    # Not a mirror read: before the purge the list's sweep, in a request of a hall of no known civilization (context
-    # control), updates control's mirror rows of every write-cut civilization (expire_due_credentials is unscoped)
-    # and is refused (ControlMirrorWrite); after it there are none to refuse. Stage-4 debt; the answer after is right.
-    "soul-credential-list": "stage 4: the credential sweeps of a control-context request write control's mirror",
-    "soul-credential-detail": "stage 4: the credential sweeps of a control-context request write control's mirror",
-}
+#: difference; a case off this list that differs fails). The crossing-key sites read the other side by ids and a
+#: shard refuses such a join (CrossShardJoin, 2026-11-20); what is left is not a crossing join:
+_HALL_LESS = ("SYSTEM_ADMIN only: the world's hall-less disposition (_what_115_had (e)) after "
+              "backfill_disposition_halls --apply is listed before the purge and not after; the hall's own callers see it "
+              "on both sides. Not explained yet; that command's own --apply tests fail on main (test_stage5_prep)")
+PENDING = {"disposition-list": _HALL_LESS, "disposition-export": _HALL_LESS}
 
 
 def _held(case, mismatches, seed_line):
@@ -90,12 +78,26 @@ def purge_control_mirrors(world):
 @contextmanager
 def stage(world, purge):
     """One run: a savepoint on every database, all four civilizations read- and write-cut, and -- `purge` -- control's
-    mirror gone."""
+    mirror gone. Once per world, before the first run and outside its savepoint (so every run sees the same rows, the
+    backfill's audit rows and their times included): the hall-less dispositions given their judgment's hall
+    (`backfill_disposition_halls --apply`, step 0c -- before it a staying row names rows the purge deletes, G4)."""
+    import io
+
+    from django.core.management import call_command
+
     from apps.core.shard_ids import assign
     from apps.core.sharding import alias_for_civilization
 
-    with _Savepoint(), override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=list(CIVS)):
-        for civ in CIVS:
+    cut = override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=list(CIVS))
+    if "backfilled" not in world:
+        with cut:
+            for civ in CIVS:
+                assign(alias_for_civilization(civ))
+            call_command("backfill_disposition_halls", "--apply", stdout=io.StringIO())
+            _plan(world)  # read after the backfill (a moved disposition is its hall's now), before any purge
+        world["backfilled"] = True
+    with _Savepoint(), cut:
+        for civ in CIVS:  # again in each run: a run's rollback takes the sequences back with it
             assign(alias_for_civilization(civ))
         if purge:
             purge_control_mirrors(world)
@@ -107,12 +109,15 @@ def test_the_purge_empties_controls_mirror_and_leaves_the_shards_and_d2(world):
     from apps.audit.models import AuditLog
     from apps.core.sharding import alias_for_civilization
     from apps.souls.models import Soul
+    from apps.tenants.management.commands.purge_cut_over_tenant_rows import blockers, purge_plan
 
-    plan = _plan(world)
-    assert len(plan) >= 20, [m._meta.label for m, _ in plan]
-    souls = next(pks for m, pks in plan if m is Soul)
     on_shards = {civ: Soul._base_manager.using(alias_for_civilization(civ)).count() for civ in CIVS}
+    with stage(world, purge=False):  # after the backfill no staying row names a row the purge deletes (G4)
+        assert {civ: blockers(purge_plan(civ)) for civ in CIVS} == {civ: [] for civ in CIVS}
     with stage(world, purge=True):
+        plan = _plan(world)
+        assert len(plan) >= 20, [m._meta.label for m, _ in plan]
+        souls = next(pks for m, pks in plan if m is Soul)
         for model, pks in plan:
             assert not model._base_manager.using("default").filter(pk__in=pks[:500]).exists(), model._meta.label
         assert {civ: Soul._base_manager.using(alias_for_civilization(civ)).count() for civ in CIVS} == on_shards
@@ -138,6 +143,10 @@ def test_every_read_answers_after_the_purge_what_it_answered_before(world, case)
     mismatches = [f"{who} GET {url}: {shadow.diff(b, c)}"
                   for (who, _, url), b, c in zip(asks, before, after, strict=True) if b != c]
     _held(case, mismatches, f"SHARDED_READS_SEED={SEED}")
+    # Alike is not enough: a read that fails on both sides (a crossing join refused, a write with no context) is equal.
+    broken = [f"{who} GET {url}: {b}"[:300] for (who, _, url), b in zip(asks, before, strict=True)
+              if b[0] in ("raised", 500)]  # 503: a service off by design (Synapse, the PDF renderer)
+    assert not broken, f"SHARDED_READS_SEED={SEED}\n" + "\n".join(broken[:6])
     if not any(shadow.has_data(b) for b in before):
         pytest.skip(f"{case}: no caller had data here (both sides equal)")
 

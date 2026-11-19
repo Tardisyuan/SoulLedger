@@ -111,26 +111,11 @@ CONTROL_READS = {
 }
 
 
-_SOUL_GONE = ("a row outlives its soul's stay: a residence court's rows stay in that shard after the soul goes home "
-              "(D6), and a join through `soul` there would drop them")
-#: Crossing keys (SHARD -> SHARD bare ids) a query may still JOIN through: on a shard such a query is answered
-#: from control -- the rows of that leg's civilization, or the routed query's own filters -- because the row on
-#: the other end may be in another shard. Stage 3 debt with its reason; it ends when the call sites read the
-#: other side by ids, or when shards keep a copy of every soul their rows name (a change to D6 and to
-#: tests/test_shard_sync.py (b)). Any other crossing join on a shard raises CrossShardJoin.
-CROSSING_JOINS_ON_CONTROL = {
-    **{label: _SOUL_GONE for label in (
-        "souls.SoulRecord.soul", "judgment.Judgment.soul", "judgment.JudgmentAppeal.soul",
-        "disposition.Disposition.soul", "reincarnation.Reincarnation.soul", "workflow.ApprovalWorkflow.soul",
-        "realms.SoulPathEntry.soul", "events.SoulEvent.soul", "dispatch.DispatchRecord.soul",
-        "death_sync.DeathRegistrationRequest.soul", "chat.Conversation.soul_a", "chat.Conversation.soul_b",
-        "chat.Conversation.initiator", "sentence_plan.SentencePlan.soul")},
-    "workflow.WorkflowSegment.workflow": "a segment run by another civilization's realm lives in that shard, its "
-                                         "workflow in the home hall's",
-    "workflow.ApprovalNode.segment": "the stations of a foreign segment, joined to the segment in the other shard",
-    "dispatch.CrossTenantJudgmentParticipant.judgment": "a seat lives with its hall, the bench with the "
-                                                        "initiating hall",
-}
+#: A crossing key (SHARD -> SHARD bare id) is never JOINed on a shard: the row on the other end may be in another
+#: civilization's shard, and the join would drop the row (INNER) or blank it (LEFT) without a word. Such a read raises
+#: CrossShardJoin; the call site reads the other side by ids (`soul_ids`, or the rows' ids then the other rows by id).
+#: Until 2026-11-20 a listed key was answered from control instead -- control's copy of the write-cut civilizations'
+#: rows, the mirror stage 5 deletes (PREP-stage5 M3; tests/test_sharded_reads_survive_the_mirror_purge.py).
 
 
 def cut_over():
@@ -296,7 +281,7 @@ def _primary_soul(user):
         first = master_alias(opened.civilization) if opened is not None else CONTROL_ALIAS
     with _over(write_cut()):
         masters = legs(Soul)
-    for alias, narrow, _ in sorted(masters, key=lambda leg: leg[0] != first):
+    for alias, narrow in sorted(masters, key=lambda leg: leg[0] != first):
         soul = narrow(Soul._base_manager.using(alias).filter(pk=soul_id)).select_related("tenant").first()
         if soul is not None:
             return soul
@@ -541,7 +526,7 @@ def _checked(alias):
 def soul_ids(**filters):
     """Pks of the souls matching `filters`, read on every leg (each soul's master). For a row joined to its soul
     through a crossing key on a shard -- the other row may be in another civilization's shard, and the fallback that
-    answers such a join from control (CROSSING_JOINS_ON_CONTROL) reads a mirror stage 5 deletes: filter
+    answered such a join from control read a mirror stage 5 deletes, and a shard refuses it now: filter
     `soul_id__in=soul_ids(...)` instead of `soul__...`. Keep the filter narrow (deleted souls, a name searched for)."""
     from apps.souls.models import Soul
 
@@ -625,20 +610,19 @@ def _over(civs):
 
 
 def legs(model):
-    """[(alias, narrow, on_control)] covering every row of `model` exactly once: control without the cut-over
+    """[(alias, narrow)] covering every row of `model` exactly once: control without the cut-over
     civilizations' halls (hall-less rows stay, D2), then each cut-over shard (`_merging`: read-cut for FANOUT,
     write-cut for MASTER) -- for Soul only its own
-    civilization's souls, not the copies of souls residing elsewhere (D6). `on_control` reads the same rows of
-    that leg from control, for a query a shard cannot answer (CROSSING_JOINS_ON_CONTROL)."""
+    civilization's souls, not the copies of souls residing elsewhere (D6)."""
     from apps.souls.models import Soul
 
     path = tenant_path(model)
     cut = _merging.get()
     cut = cut_over() if cut is None else cut
-    out = [(CONTROL_ALIAS, lambda qs: qs.exclude(**{f"{path}__in": _halls(cut)}), None)]
+    out = [(CONTROL_ALIAS, lambda qs: qs.exclude(**{f"{path}__in": _halls(cut)}))]
     for civ in cut:
         narrow = functools.partial(_own_souls, civ=civ) if model._meta.concrete_model is Soul else (lambda qs: qs)
-        out.append((alias_for_civilization(civ), narrow, functools.partial(_civ_rows, path=path, civ=civ)))
+        out.append((alias_for_civilization(civ), narrow))
     if model._meta.concrete_model is Soul:
         out = _not_arriving(out)
     return out
@@ -655,25 +639,19 @@ def _not_arriving(out):
     if not rows:
         return out
     hidden = functools.reduce(operator.or_, (Q(pk=pk, tenant_id=hall) for pk, hall in rows))
-    return [(alias, lambda qs, narrow=narrow: narrow(qs).exclude(hidden), on_control)
-            for alias, narrow, on_control in out]
+    return [(alias, lambda qs, narrow=narrow: narrow(qs).exclude(hidden)) for alias, narrow in out]
 
 
 def _own_souls(qs, civ):
     return qs.filter(tenant__in=_halls([civ]))
 
 
-def _civ_rows(qs, path, civ):
-    return qs.using(CONTROL_ALIAS).filter(**{f"{path}__in": _halls([civ])})
-
-
-def _leg(qs, alias, narrow, high, on_control=None):
+def _leg(qs, alias, narrow, high):
     base = qs._chain()
     base.query.clear_limits()
     base._hints = {k: v for k, v in qs._hints.items() if k != FANOUT_HINT}
     leg = narrow(base.using(alias))
-    if guard(leg, alias) == CONTROL_ALIAS:
-        leg = on_control(base)
+    guard(leg, alias)
     if high is not None:
         leg.query.set_limits(0, high)
     return leg
@@ -695,28 +673,42 @@ def _unreachable(model):
     return frozenset(out)
 
 
-def _strip(model, tree):
+@functools.cache
+def _crossing_names(model):
+    """The forward crossing keys of `model` (SHARD -> SHARD bare ids): what control cannot join through either once
+    writes are cut over -- a row there (no hall, D2) may name a row its master shard holds, and control's copy of it
+    is a mirror stage 5 deletes."""
+    return frozenset(f.name for f in crossing_keys() if f.model._meta.concrete_model is model._meta.concrete_model)
+
+
+def _strip(model, tree, unreachable=_unreachable):
     keep = {}
     for name, sub in tree.items():
-        if name in _unreachable(model):
+        if name in unreachable(model):
             continue
         try:
             f = model._meta.get_field(name)
         except Exception:
             keep[name] = sub  # a reverse one-to-one: same database, left alone
             continue
-        keep[name] = _strip(f.related_model, sub) if f.is_relation and f.related_model else sub
+        keep[name] = _strip(f.related_model, sub, unreachable) if f.is_relation and f.related_model else sub
     return keep
 
 
 def strip_unreachable_joins(qs, alias):
-    """On a shard alias, drop select_related paths a shard cannot join (`_unreachable`)."""
-    if not alias.startswith("civ_") or not qs.query.select_related:
+    """Drop select_related paths the database cannot join: on a shard alias `_unreachable`; on control, once writes
+    are cut over, the crossing keys (`_crossing_names`: an INNER JOIN to a row only its shard has drops the row).
+    The accessor reads the other row where it is."""
+    if not qs.query.select_related:
+        return
+    on_shard = alias.startswith("civ_")
+    if not on_shard and not (alias == CONTROL_ALIAS and settings.SHARD_WRITE_CIVS):
         return
     if qs.query.select_related is True:
         qs.query.select_related = False
         return
-    qs.query.select_related = _strip(qs.model, qs.query.select_related)
+    qs.query.select_related = _strip(qs.model, qs.query.select_related,
+                                     _unreachable if on_shard else _crossing_names)
 
 
 class CrossShardJoin(Exception):  # noqa: N818
@@ -815,15 +807,12 @@ def _outer_ref(lookup, inner):
 
 
 def guard(qs, alias):
-    """Make a read on shard `alias` one a shard can answer: strip unreachable select_related; a join through a
-    crossing key is answered from control when the key is in CROSSING_JOINS_ON_CONTROL (returns CONTROL_ALIAS:
-    read it there instead), refused otherwise. None: read it where it is."""
+    """Make a read on shard `alias` one a shard can answer: strip unreachable select_related; refuse a join through
+    a crossing key (CrossShardJoin)."""
+    strip_unreachable_joins(qs, alias)
     if not alias.startswith("civ_"):
         return None
-    strip_unreachable_joins(qs, alias)
     key = _crossing_join(qs.query, alias)
-    if key in CROSSING_JOINS_ON_CONTROL:
-        return CONTROL_ALIAS
     if key:
         raise CrossShardJoin(f"{qs.model._meta.label} on {alias} joins through the crossing key {key}")
     return None
@@ -833,8 +822,7 @@ def _guard_routed(qs, aggregates=None):
     """A read the router sends to one shard (not a FANOUT merge, not an explicit `.using`). `aggregates`: the
     expressions an aggregate() is about to add (their filters may join too)."""
     if qs._db is None and not qs._for_write and placement(qs.model) == SHARD:
-        if guard(qs.alias(**aggregates) if aggregates else qs, qs.db) == CONTROL_ALIAS:
-            qs._db = CONTROL_ALIAS  # this queryset's own filters already say which rows; control has them all
+        guard(qs.alias(**aggregates) if aggregates else qs, qs.db)
 
 
 # ---- the merge ---------------------------------------------------------------------------------------------
@@ -966,8 +954,8 @@ def merged(qs):
     # (`_shard_k<i>`, the way the database adds them to a SELECT DISTINCT) and are dropped after the merge.
     extra = bool(order) and iterable is not ModelIterable and not grouped and not _selects_keys(qs, order)
     rows = []
-    for alias, narrow, on_control in legs(qs.model):
-        leg = _leg(qs, alias, narrow, None, on_control)
+    for alias, narrow in legs(qs.model):
+        leg = _leg(qs, alias, narrow, None)
         if grouped and _avgs(qs):
             leg = leg.annotate(**{f"_shard_{k}_{n}": fn(*a.source_expressions, filter=a.filter)
                                   for n, a in _avgs(qs).items() for k, fn in (("s", Sum), ("n", Count))})
@@ -976,8 +964,7 @@ def merged(qs):
                                   for i, (name, _, _) in enumerate(order)})
             if iterable is FlatValuesListIterable:
                 leg._iterable_class = ValuesListIterable  # keep the keys; flattened again below
-            if guard(leg, leg.db) == CONTROL_ALIAS:  # an order through a crossing key
-                leg = on_control(leg)
+            guard(leg, leg.db)  # an order through a crossing key
         if high is not None and not grouped:
             leg.query.set_limits(0, high)
         rows.extend(list(leg))
@@ -1149,7 +1136,7 @@ def count(qs):
         # The database counts these without their ORDER BY unless sliced (Query.get_aggregation), so an order
         # key -- Meta.ordering's too -- never joins what DISTINCT / GROUP BY is taken over.
         return len(merged(qs if q.is_sliced else qs.order_by()))
-    total = sum(_leg(qs, alias, narrow, None, on).count() for alias, narrow, on in legs(qs.model))
+    total = sum(_leg(qs, alias, narrow, None).count() for alias, narrow in legs(qs.model))
     total = max(0, total - q.low_mark)
     return min(total, q.high_mark - q.low_mark) if q.high_mark is not None else total
 
@@ -1157,7 +1144,7 @@ def count(qs):
 def exists(qs):
     if qs.query.low_mark:  # qs[n:].exists(): whether a row is left after the first n of the merge
         return count(qs) > 0
-    return any(_leg(qs, alias, narrow, qs.query.high_mark, on).exists() for alias, narrow, on in legs(qs.model))
+    return any(_leg(qs, alias, narrow, qs.query.high_mark).exists() for alias, narrow in legs(qs.model))
 
 
 def in_bulk(qs, id_list=None, *, field_name="pk"):
@@ -1203,12 +1190,11 @@ def aggregate(qs, args, kwargs):
         asked[name] = (how, expr)
         per_leg.update(exprs)
     parts, seen = [], {}
-    for alias, narrow, on in legs(qs.model):
-        leg = _leg(qs, alias, narrow, None, on)
+    for alias, narrow in legs(qs.model):
+        leg = _leg(qs, alias, narrow, None)
         probe = leg.alias(**per_leg, **{f"_shard_d_{n}": e.source_expressions[0] for n, (h, e) in asked.items()
                                         if h == "distinct"})
-        if guard(probe, leg.db) == CONTROL_ALIAS:  # an aggregate through a crossing key
-            leg = on(leg)
+        guard(probe, leg.db)  # an aggregate through a crossing key
         parts.append(leg.aggregate(**per_leg) if per_leg else {})
         for name, (how, expr) in asked.items():  # Count(distinct): the values themselves, unioned below
             if how == "distinct":
@@ -1373,12 +1359,11 @@ def _split(qs):
         return None
     out = []
     with _over(write_cut()):
-        for alias, narrow, _ in legs(qs.model):
+        for alias, narrow in legs(qs.model):
             leg = narrow(qs._chain().using(alias))
             if alias != CONTROL_ALIAS:
                 _checked(alias)
-                if guard(leg, alias) == CONTROL_ALIAS:
-                    raise CrossShardJoin(f"{qs.model._meta.label}: a write on {alias} filters through a crossing key")
+                guard(leg, alias)
             out.append(leg)
     return out
 
@@ -1398,10 +1383,10 @@ def _locate(qs):
     plain._for_write = False
     homes = []
     with _over(write_cut()):
-        for alias, narrow, _ in legs(qs.model):
+        for alias, narrow in legs(qs.model):
             leg = narrow(plain._chain().using(alias))
-            if alias != CONTROL_ALIAS and guard(leg, alias) == CONTROL_ALIAS:
-                raise CrossShardJoin(f"{qs.model._meta.label}: a read for a write on {alias} joins a crossing key")
+            if alias != CONTROL_ALIAS:
+                guard(leg, alias)
             if leg.exists():
                 homes.append(alias)
     if len(homes) > 1:

@@ -176,7 +176,7 @@ class JudgmentFilter(filters.FilterSet):
         return pending.filter(asked) if value else pending.exclude(asked)
 
     def filter_source(self, queryset, name, value):
-        return queryset.filter(sources.q(value))
+        return queryset.filter(sources.q(value, queryset))
 
     def filter_statute(self, queryset, name, value):
         return queryset.filter(pk__in=citing_judgments(value))

@@ -252,7 +252,7 @@ def test_the_query_and_the_row_answer_awaiting_the_same(cn_tenant, eu_tenant):
     Conversation.objects.filter(room_id="!已回:x").update(last_from="hall")
     Conversation.objects.filter(room_id="!空信:x").update(last_from="")
     Soul.objects.filter(pk=grid[3].soul_a_id).update(tenant=eu_tenant)
-    matched = set(Conversation.objects.filter(inbox.AWAITING_REPLY).values_list("room_id", flat=True))
+    matched = set(Conversation.objects.filter(inbox.awaiting_reply_q(Conversation.objects.all())).values_list("room_id", flat=True))
     assert matched == {"!在等:x"}
     for row in Conversation.objects.select_related("soul_a"):
         assert inbox.awaiting_reply(row) is (row.room_id in matched), row.room_id
