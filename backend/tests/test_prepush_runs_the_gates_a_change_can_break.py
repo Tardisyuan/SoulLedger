@@ -3477,3 +3477,114 @@ class TestTheServiceProbeReadsTheHostFromTheUrl:
         line = self._probe("postgres://sl:9secret@127.0.0.1/soulledger")[0]
         assert line.endswith("127.0.0.1:5432"), line
         assert "9secret" not in line
+
+
+class TestTestsOnTheGateHosts:
+    """`run-gates.sh --tests <pytest args…>` (2026-11-19, user decision): a subagent's chosen tests on the gate
+    hosts, in a gate slot, with pytest's exit status — not a gate, so no ledger.
+    Mutations, each red (2026-11-19): the arguments written unquoted (`printf '%s\\0' ${TEST_ARGS[@]}`) → the
+    pass-through test; `exit "$st"` → `exit 0` in tests_here → the container's exit-status test;
+    `exit "$RSTATUS"` → `exit 0` → this machine's exit-status test; `$(remote_slots sl-gates-); ` dropped from
+    remote_gate_run → the slot test (and the gates' own lock tests)."""
+
+    PG = "postgres://sl:x@sl-pg-test:5432/s"
+
+    def _bin(self, tmp_path: Path, status=0) -> Path:
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        (b / "ssh").write_text(
+            "#!/bin/bash\n"
+            'case "$*" in\n'
+            '  *"docker image inspect"*) exit 0 ;;\n'
+            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; echo "tests: pytest exit {status}"; exit {status} ;;\n'
+            '  *"docker rm -f"*) exit 0 ;;\n'
+            f'  *".sl-tests-"*) cat > "{tmp_path}/args"; exit 0 ;;\n'
+            "esac\nexit 0\n")
+        (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
+        for f in ("ssh", "rsync"):
+            (b / f).chmod(0o755)
+        return b
+
+    def _here(self, repo, tmp_path, *args, status=0, **kw):
+        env = _clean_env(**{"GATES_REMOTE": "fake-host", "GATES_REMOTE_DB_URL": self.PG,
+                            "GATES_STAMP_FILE": str(tmp_path / "passed"), "GATES_QOS": "none", **kw})
+        env["PATH"] = f"{self._bin(tmp_path, status)}:{env['PATH']}"
+        return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), *args], cwd=repo, env=env,
+                              capture_output=True, text=True, timeout=120)
+
+    def test_the_arguments_arrive_intact_and_real_pg_is_handed_over(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._here(main, tmp_path, "--tests", "tests/a.py", "-k", "a and b", "--real-pg", "-x")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert (tmp_path / "args").read_bytes().split(b"\0") == [b"tests/a.py", b"-k", b"a and b", b"-x", b""]
+        remote = (tmp_path / "remote-run").read_text()
+        assert re.search(r"exec bash scripts/run-gates\.sh --real-pg --tests-from \.sl-tests-\d+'", remote), remote
+        assert f"-e GATES_PG_URL='{self.PG}'" in remote and "GATES_IN_REMOTE=1" in remote, remote
+        assert "-e SL_DEPS_JS= " in remote, "a pytest-only run installed node_modules"
+
+    def test_it_takes_a_gate_slot_and_releases_it_with_the_container(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._here(main, tmp_path, "--tests", "tests/a.py")
+        remote = (tmp_path / "remote-run").read_text()
+        assert "sl-gates-all:1 timeout -k 60 20m bash -c" in remote, remote
+        pid = re.search(r"--tests-from (\.sl-tests-\d+)'", remote).group(1)
+        TestRemoteTimeLimits._locked_then_removed(remote, f"--tests-from {pid}'", "run.lock", "sl-gates-")
+
+    def test_workers_default_to_the_slot_and_the_option_wins(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._here(main, tmp_path, "--tests", "tests/a.py")
+        assert "-e PYTEST_WORKERS=5 " in (tmp_path / "remote-run").read_text()
+        # Set after win_route, which sizes the PC's workers: a real run on the PC once ignored --workers 0.
+        self._here(main, tmp_path, "--workers", "0", "--tests", "tests/a.py", GATES_REMOTE_PYTEST_WORKERS="9")
+        assert "-e PYTEST_WORKERS=0 " in (tmp_path / "remote-run").read_text()
+
+    def test_pytests_exit_status_is_this_runs(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._here(main, tmp_path, "--tests", "tests/a.py", status=3)
+        assert proc.returncode == 3, proc.stdout + proc.stderr
+
+    def test_nothing_is_recorded_and_nothing_runs_without_a_remote(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._here(main, tmp_path, "--tests", "tests/a.py")
+        assert proc.returncode == 0 and "nothing recorded" in proc.stdout, proc.stdout
+        assert not list(tmp_path.glob("passed*")), "a --tests run wrote a ledger"
+        proc = self._here(main, tmp_path, "--tests", "tests/a.py", GATES_REMOTE="")
+        assert proc.returncode == 2 and "Not running here" in proc.stdout, proc.stdout
+
+    def _there(self, repo, tmp_path, args, *flags, status=0):
+        """The container's side: run-gates.sh --tests-from, with a stand-in venv python and redis."""
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        for f in ("redis-server", "redis-cli"):
+            (b / f).write_text("#!/bin/bash\nexit 0\n")
+            (b / f).chmod(0o755)
+        py = repo / "backend" / ".venv" / "bin" / "python"
+        py.parent.mkdir(parents=True, exist_ok=True)
+        py.write_text("#!/bin/bash\n"
+                      '[ "$1" = -c ] && exec python3 "$@"\n'
+                      f'printf "%s\\0" "$@" > "{tmp_path}/argv"; printf "%s" "$DATABASE_URL" > "{tmp_path}/db"\n'
+                      'echo "FAILED tests/a.py::t - boom"; echo "==== 1 failed in 0.1s ===="\n'
+                      f"exit {status}\n")
+        py.chmod(0o755)
+        (repo / ".sl-tests-1").write_bytes(b"".join(a.encode() + b"\0" for a in args))
+        env = _clean_env(GATES_IN_REMOTE="1", GATES_QOS="none", GATES_PG_URL=self.PG, PYTEST_WORKERS="0")
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), *flags, "--tests-from", ".sl-tests-1"],
+                              cwd=repo, env=env, capture_output=True, text=True, timeout=120)
+
+    def test_the_container_runs_pytest_with_them_and_exits_with_its_status(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._there(main, tmp_path, ["tests/a.py", "-k", "a and b"], "--real-pg", status=5)
+        assert proc.returncode == 5, proc.stdout + proc.stderr
+        argv = (tmp_path / "argv").read_bytes().split(b"\0")
+        assert argv[-3:] == [b"-k", b"a and b", b""] and b"--create-db" in argv, argv
+        assert (tmp_path / "db").read_text() == self.PG
+        assert "FAILED tests/a.py::t - boom" in proc.stdout and "1 failed" in proc.stdout, proc.stdout
+        assert not (main / ".sl-tests-1").exists()
+
+    def test_the_container_uses_sqlite_by_default(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._there(main, tmp_path, ["tests/a.py"])
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert (tmp_path / "db").read_text() == "sqlite:///:memory:"
+        assert b"--create-db" not in (tmp_path / "argv").read_bytes()
