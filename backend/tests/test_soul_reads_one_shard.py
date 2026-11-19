@@ -107,6 +107,10 @@ def _souls(rng, w):
                 .select_related("tenant").order_by("pk"))
     for civ in CIVS:
         souls = [s for s in free if s.tenant.civilization == civ and not _abroad(s)]
+        if not souls:  # every soul of `civ` is named by a row abroad (the crossing keys pointed at all of them): a new one
+            hall = rng.choice([h for h in w["halls"] if h.civilization == civ])
+            souls = [Soul.objects.create(name=f"s-{hall.code}-home", tenant=hall, current_state=SoulState.JUDGING)]
+            print(f"soul of {civ}: none without a row abroad, made {souls[0].pk} in {hall.code}")
         judged = [s for s in souls if Judgment._base_manager.filter(soul=s).exists()]
         out[f"soul of {civ}"] = _give_account(rng.choice(judged or souls))
     crossed = [s for s in free if s.tenant.civilization in CIVS and _abroad(s)]
