@@ -16,7 +16,7 @@
   },
   "stamp": {
     "$type": "duration",
-    "$description": "落印 (Design batch 53 motion.seal): scale --stamp-scale -> 1, opacity 0 -> 1, no halo, for every seal moment. The same numbers as SEAL_MOTION in packages/core/src/config/motion.ts (sealMotionTokens.test.ts).",
+    "$description": "落印 (Design batch 53 motion.seal): scale --stamp-scale -> 1, opacity 0 -> 1, no halo, for every seal moment. 200 on all three surfaces: with breathe, the one named exception to the four tiers, also inside a choreography (batch 60 P3 / P5: not 240). The same numbers as SEAL_MOTION in packages/core/src/config/motion.ts (sealMotionTokens.test.ts).",
     "$value": {
       "value": 200,
       "unit": "ms"

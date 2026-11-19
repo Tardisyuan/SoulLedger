@@ -2,7 +2,7 @@
  * 案卷台就地判(用户 2026-11-14,fe-ia §3.5):右栏的判栏。按界面测 —— 1–4 只选中、⌘⏎ 落印、这一行滑出、选中到下一件、
  * 5 秒到点才发 `conclude/`、U 收回;未认领的先认领;要理由的裁决送去卷宗整页;393 宽不接键;选中后预取下一件;
  * 偏好「落印前先确认」打开时走回读层、当场发、没有撤回条。
- * 第四十六批第一节:判栏是最右一栏(栏头「判栏」),页头只有幽灵的「打开卷宗 ↗」、认领只在判栏;行滑出 440ms(减少动态 120ms);
+ * 第四十六批第一节:判栏是最右一栏(栏头「判栏」),页头只有幽灵的「打开卷宗 ↗」、认领只在判栏;行滑出 400ms(第六十批 P5,此前 440;减少动态 120ms);
  * 撤回条在判栏里、⌘Z 撤回;要写理由的判决在选项上说、选中后落印键换成「去卷宗整页写理由 →」;回读层焦点在「返回」、⌘⏎ 落印。
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -149,8 +149,8 @@ describe("案卷台就地判", () => {
     expect(screen.queryByTestId("desk-undo")).not.toBeInTheDocument();
   });
 
-  it("the row leaves in 440 ms (strike, slide, collapse), not the old 600", async () => {
-    expect(SEAL_LEAVE_MS).toBe(440);
+  it("the row leaves in 400 ms (strike 80, slide 160, collapse 160; batch 60 P5), not 440 or the old 600", async () => {
+    expect(SEAL_LEAVE_MS).toBe(400);
     await judging();
     await press({ key: "1" });
     await press({ key: "Enter", metaKey: true });

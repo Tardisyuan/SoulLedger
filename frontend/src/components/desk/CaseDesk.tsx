@@ -45,7 +45,7 @@ import s from "./desk.module.css";
  * 四组由服务端出自同一个快照、互斥,不再在前端去重。
  *
  * 就地判(用户 2026-11-14,fe-ia §3.5):右栏是判栏(`VerdictRail`,懒加载)。1–4 选、⌘⏎ 落印 —— 与快审同一个承诺:
- * 落印即这一行划线滑出(440ms,减少动态时 120ms 淡出)、选中到下一件,裁决在 5 秒撤回窗口(`useStagedCommit`)到点、落下一印、
+ * 落印即这一行划线滑出(400ms,减少动态时 120ms 淡出)、选中到下一件,裁决在 5 秒撤回窗口(`useStagedCommit`)到点、落下一印、
  * 或离开本页时才发 `conclude/`;⌘Z(U 照旧)或撤回条收回。撤回条在判栏底部,盖住落印区(第四十六批第 4 条)。偏好「落印前先确认」打开时改走回读层(`SealReadback.tsx`),当场发、不计时。
  * 选中一件约 150ms 后预取下一件的卷宗,J 落下时不等。
  */
@@ -64,10 +64,11 @@ const SHORTCUTS = [
 const VerdictRail = dynamic(() => import("./VerdictRail"), { ssr: false, loading: () => null });
 
 /**
- * 落印后这一行离开摞的时长(第四十六批第一节第 3 条):划线 80 → 左移 24px 并淡出 200(ease-out)→ 行高收起 160,共 440。
- * 印在判栏里落下的同一刻开始划线(第 5 条)。三段的时长写在 desk.module.css 的 `.row[data-leaving]`,改一处要改两处。
+ * 落印后这一行离开摞的时长(第四十六批第一节第 3 条;第六十批 P5 对齐四档):划线 80 → 左移 24px 并淡出 160(出曲线)
+ * → 行高收起 160,共 400。印在判栏里落下的同一刻开始划线(第 5 条)。三段的时长写在 desk.module.css 的
+ * `.row[data-leaving]`,改一处要改两处(motionBatch60.test.ts 核对)。
  */
-export const SEAL_LEAVE_MS = 440;
+export const SEAL_LEAVE_MS = 400;
 /** 减少动态时:不移动,划线后 120ms 淡出,行高立即收起。 */
 export const SEAL_LEAVE_REDUCED_MS = 120;
 /** 选中后多久预取下一件的卷宗(fe-ia §6 / fe-perf):按住 J 一路扫过时不为每一件都发。 */

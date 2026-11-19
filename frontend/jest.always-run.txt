@@ -66,6 +66,7 @@ src/__tests__/menuIconTable.test.ts backend
 src/__tests__/messageKeysAreReferenced.test.ts backend config frontend mobile-officer mobile packages
 src/__tests__/moduleCssTokenEscapes.test.ts frontend
 src/__tests__/motionBatch58.test.tsx frontend
+src/__tests__/motionBatch60.test.ts mobile packages
 src/__tests__/motionParity.test.ts mobile-officer mobile packages
 src/__tests__/motionTokens.test.ts packages
 src/__tests__/notificationTarget.test.tsx backend

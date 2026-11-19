@@ -74,7 +74,8 @@ describe("M8: a refresh with data already shown runs the top line once", () => {
 
 describe("loose durations folded into the four steps / named values", () => {
   it.each([
-    [".route-row .route-walked", /animation: route-draw var\(--transition-duration-slow\)[^;]*;\s*animation-delay: calc\(var\(--i, 0\) \* var\(--transition-duration-press\) \+ var\(--transition-duration-fast\)\);/],
+    // Batch 60 P3: the per-segment step is the 40 stagger, capped at the fifth segment (motionBatch60.test.ts).
+    [".route-row .route-walked", /animation: route-draw var\(--transition-duration-slow\)[^;]*;\s*animation-delay: calc\(min\(var\(--i, 0\), 4\) \* var\(--transition-duration-stagger\) \+ var\(--transition-duration-fast\)\);/],
     [".soul-head-emblem", /animation: soul-head-emblem-in var\(--transition-duration-count\) [^;]* var\(--transition-duration-fast\) backwards;/],
     [".kpi-fill", /animation: route-draw var\(--transition-duration-count\) [^;]* var\(--transition-duration-fast\) backwards;/],
   ])("%s", (sel, re) => {

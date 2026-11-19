@@ -1096,6 +1096,13 @@
         "value": 1200,
         "unit": "ms"
       }
+    },
+    "stagger": {
+      "$description": "Choreography (Design batch 60 P3, motion.choreography): the offset between the starts of two steps, not a step's length. Each step is one of 80 / 160 / 240 / 320 (seal 200 and breathe keep their own); a whole sequence, first start to last end, is at most motion.choreography-max: past it, drop steps, do not stretch them.",
+      "$value": {
+        "value": 40,
+        "unit": "ms"
+      }
     }
   },
   "motion": {
@@ -1163,8 +1170,45 @@
       }
     },
     "reduced": {
-      "$description": "Under reduce motion: the opacity-only fade kept for pages, dialogs, sheets, toasts, content after a skeleton and the system modals (Design batch 58 M3 / M4).",
+      "$description": "Under reduce motion: the opacity-only fade kept for pages, dialogs, sheets, toasts, content after a skeleton and the system modals (Design batch 58 M3 / M4). A bottom sheet does not slide: it fades in place over this, and its scrim fades over the same 80, starting and ending with it (batch 60 P4).",
       "$value": "{transition-duration.reduced}"
+    },
+    "choreography": {
+      "$description": "Choreography (Design batch 60 P3): the stagger between the starts of two steps. Each step is one of 80 / 160 / 240 / 320; the seal (200) and breathe keep their own values. See choreography-max.",
+      "$value": "{transition-duration.stagger}"
+    },
+    "choreography-max": {
+      "$description": "A whole choreography, first step's start to last step's end, is at most this (batch 60 P3). Past it, drop steps; do not stretch them. A cap, not a transition.",
+      "$value": {
+        "value": 480,
+        "unit": "ms"
+      }
+    },
+    "photo-close": {
+      "$description": "Closing the apps' photo viewer (batch 60 P6): it shrinks back to its thumbnail over this on the exit curve; a thumbnail off screen or gone, it fades in place over the same 160. Reduce motion: an 80 fade (motion.reduced).",
+      "$value": "{transition-duration.fast}"
+    },
+    "connection-chip": {
+      "$description": "The web's connection chip opening and closing (batch 60 P1).",
+      "$value": "{transition-duration.fast}"
+    },
+    "connection-grace": {
+      "$description": "A link back within this shows no connection chip at all (batch 60 P1). A wait, not a transition.",
+      "$value": {
+        "value": 1000,
+        "unit": "ms"
+      }
+    },
+    "connection-hold": {
+      "$description": "After reconnecting the chip says 「已连上」 for this, counted from the reconnect, then closes over connection-chip (batch 60 P1). A hold, not a transition.",
+      "$value": {
+        "value": 3000,
+        "unit": "ms"
+      }
+    },
+    "row-out": {
+      "$description": "A row leaving an app list: fade plus collapse, exit curve (batch 60 P5). The web's case-desk slide-out is strike 80 -> left 24px + fade 160 (exit) -> collapse 160, 400 in all (batch 46, batch 60: 200 -> 160).",
+      "$value": "{transition-duration.fast}"
     },
     "band-compact": {
       "$description": "The soul app's life band compacting (Design batch 59: 200 -> 160).",

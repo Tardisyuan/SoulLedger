@@ -894,6 +894,7 @@
     --readback-verdict: 600 24px/32px var(--font-title);
     --elevation-overlay: 0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px rgb(0 0 0 / 0.55);
     --elevation-raised: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+    --transition-duration-stagger: 40ms;
   }
   .light {
     --glowA: 0.22;
@@ -2468,12 +2469,14 @@ html.theme-switching *::after {
       `animation` 会顶掉它们自己的那条,它们本来就在动,直接出现。`.e-halo` 与它上面的 `.e-l` 同一条路径,一起画;
       自带虚线的 `.e-tk`(C 版地府的刻度带,主动效就是它的 dashoffset)与 `.e-flow` 不是这三类,不参与。
       JS 到了之后:`fx-wait` 先停着(开头不在视口里的卡,快进视口时去掉它,动画从头来),`fx-done` 画过了(之后换主题、
-      重挂都不再画)。 */
+      重挂都不再画)。
+   第六十批 P3(编排):两步 —— 描线 slow 320,刻度晚一个错开(40)淡入 base 240;起步 150 → fast 160。整段 320 ≤ 480
+   (此前描线 1 s、刻度 900 ms 起 450 ms,共 1.2 s)。 */
 .emblem-fx .emblem2 :is(.e-l, .e-l2, .e-halo):not([class*="em2-"]) {
-  animation: emblem-draw 1s cubic-bezier(0.4, 0, 0.2, 1) 150ms backwards;
+  animation: emblem-draw var(--transition-duration-slow) cubic-bezier(0.4, 0, 0.2, 1) var(--transition-duration-fast) backwards;
 }
 .emblem-fx .emblem2 .e-t:not([class*="em2-"]) {
-  animation: emblem-tick-in 450ms ease-out 900ms backwards;
+  animation: emblem-tick-in var(--transition-duration-base) ease-out calc(var(--transition-duration-fast) + var(--transition-duration-stagger)) backwards;
 }
 .emblem-fx .emblem2:is(.fx-wait, .fx-done) :is(.e-l, .e-l2, .e-halo, .e-t):not([class*="em2-"]) {
   animation-name: none;
@@ -2569,9 +2572,10 @@ html.theme-switching *::after {
 }
 .route-row .route-walked {
   transform-origin: left;
-  /* 第五十八批:时长只用四档 —— 450 → slow 320,逐段 60 → press 80,起步 150 → fast 160。 */
+  /* 第五十八批:时长只用四档 —— 450 → slow 320,起步 150 → fast 160。第六十批 P3:逐段错开 40(stagger,此前 press 80),
+     第五段起与第五段同时(min 4),整段 4 × 40 + 320 = 480。 */
   animation: route-draw var(--transition-duration-slow) cubic-bezier(0.4, 0, 0.2, 1) backwards;
-  animation-delay: calc(var(--i, 0) * var(--transition-duration-press) + var(--transition-duration-fast));
+  animation-delay: calc(min(var(--i, 0), 4) * var(--transition-duration-stagger) + var(--transition-duration-fast));
 }
 .route-done {
   box-shadow: 0 0 5px oklch(var(--color-glow) / 0.6);
@@ -2751,18 +2755,19 @@ li:last-child > .route-row {
 .goodbye-title {
   font-size: 2rem;
   line-height: 1.2;
-  animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.3s backwards;
+  /* 第六十批 P3:三行依次浮起,每行 base 240、错开 40,整段 320(此前每行 0.7 s、隔 0.3 s,共 1.3 s)。起步 slow 320 不算在内。 */
+  animation: goodbye-rise var(--transition-duration-base) var(--ease-enter) var(--transition-duration-slow) backwards;
 }
 /* 第四十六批第二节:告别页的字全是墨;徽记照旧(印属于四处之一)。倒计时细线也是墨:它不在四处里。 */
 .goodbye-line {
   font-size: 1rem;
   color: oklch(var(--color-ink));
-  animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.6s backwards;
+  animation: goodbye-rise var(--transition-duration-base) var(--ease-enter) calc(var(--transition-duration-slow) + var(--transition-duration-stagger)) backwards;
 }
 .goodbye-status {
   font-size: 0.8125rem;
   color: oklch(var(--color-ink-muted));
-  animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.9s backwards;
+  animation: goodbye-rise var(--transition-duration-base) var(--ease-enter) calc(var(--transition-duration-slow) + 2 * var(--transition-duration-stagger)) backwards;
 }
 .goodbye-timer {
   width: 160px;
@@ -2954,8 +2959,9 @@ li:last-child > .route-row {
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
-  animation: journey-draw 1.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
-  animation-delay: calc(var(--i, 0) * 0.12s);
+  /* 第六十批 P3:逐段 slow 320、错开 40,第五段起同时(min 4),整段 480(此前每段 1.4 s、隔 0.12 s)。 */
+  animation: journey-draw var(--transition-duration-slow) cubic-bezier(0.4, 0, 0.2, 1) backwards;
+  animation-delay: calc(min(var(--i, 0), 4) * var(--transition-duration-stagger));
 }
 .journey-ahead {
   fill: none;

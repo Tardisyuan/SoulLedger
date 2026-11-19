@@ -184,11 +184,11 @@
   background: color-mix(in oklch, oklch(var(--color-ink)) 7%, transparent);
   box-shadow: inset 3px 0 0 oklch(var(--color-ink));
 }
-/* 落了印的一行(第四十六批第一节第 3 条),与判栏里的印同一刻开始,三段共 440ms(CaseDesk 的 SEAL_LEAVE_MS,到点移出摞):
-     0–80     名字上划一道 1px 墨线(从左往右画出来)
-     80–280   左移 24px,同时淡到 0,ease-out
-     280–440  行高收起(li 的一行网格 1fr → 0fr),ease-in-out
-   改这里的时长要同改 SEAL_LEAVE_MS。 */
+/* 落了印的一行(第四十六批第一节第 3 条),与判栏里的印同一刻开始,三段共 400ms(CaseDesk 的 SEAL_LEAVE_MS,到点移出摞):
+     0–80     名字上划一道 1px 墨线(从左往右画出来),press 80
+     80–240   左移 24px,同时淡到 0,fast 160 出曲线(第六十批 P5:此前 200 ease-out,对齐四档)
+     240–400  行高收起(li 的一行网格 1fr → 0fr),fast 160,ease-in-out
+   改这里的时长要同改 SEAL_LEAVE_MS(motionBatch60.test.ts 逐段核对)。 */
 .rowName {
   position: relative;
   justify-self: start;
@@ -203,17 +203,17 @@
   height: 1px;
   background: oklch(var(--color-ink));
   transform-origin: left;
-  animation: desk-row-strike 80ms linear both;
+  animation: desk-row-strike var(--transition-duration-press) linear both;
 }
 .row[data-leaving] {
   overflow: hidden;
   animation:
-    desk-row-out 200ms ease-out 80ms both,
-    desk-row-collapse 160ms ease-in-out 280ms both;
+    desk-row-out var(--transition-duration-fast) var(--ease-exit) var(--transition-duration-press) both,
+    desk-row-collapse var(--transition-duration-fast) ease-in-out calc(var(--transition-duration-press) + var(--transition-duration-fast)) both;
 }
 .rows li:has(> .row[data-leaving]) {
   display: grid;
-  animation: desk-li-collapse 160ms ease-in-out 280ms both;
+  animation: desk-li-collapse var(--transition-duration-fast) ease-in-out calc(var(--transition-duration-press) + var(--transition-duration-fast)) both;
 }
 @keyframes desk-row-strike {
   from {
