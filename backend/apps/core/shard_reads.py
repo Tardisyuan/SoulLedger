@@ -533,6 +533,26 @@ def soul_ids(**filters):
     return list(with_fanout(Soul._base_manager.filter(**filters)).values_list("pk", flat=True))
 
 
+def related_of(instance, name):
+    """`instance.<name>` -- a forward key to a SHARD row -- read where that row is. A row with no hall (D2) lives on
+    control while the row it names may be a hall's, written on that hall's shard once writes are cut over: Django's
+    accessor reads the instance's own database, i.e. control's copy, a mirror stage 5 deletes (DoesNotExist after the
+    purge; tests/test_sharded_reads_survive_the_mirror_purge.py, verdict-document.pdf). For such a row the target is
+    read by id from every leg; any other row, and a target already loaded, as Django reads it. None for a null key or
+    a row that is nowhere."""
+    f = instance._meta.get_field(name)
+    cached = f.get_cached_value(instance, None)
+    if cached is not None or getattr(instance, f.attname) is None:
+        return cached
+    if (not settings.SHARD_WRITE_CIVS or (instance._state.db or CONTROL_ALIAS) != CONTROL_ALIAS
+            or placement(f.related_model) != SHARD or _hall_of(instance) is not None):
+        return getattr(instance, name)
+    found = with_fanout(f.related_model._base_manager.filter(pk=getattr(instance, f.attname))).first()
+    if found is not None:
+        f.set_cached_value(instance, found)
+    return found
+
+
 def control_m2m(instance, name):
     """`instance.<name>.all()` for a SHARD row's many-to-many to a CONTROL model through a SHARD table (CityGod.officers,
     TudiGod.officers): the through rows read on the row's own database, the targets on control by id. Django's own
