@@ -3415,7 +3415,7 @@ class TestPytestProgressNamesTheFailures:
             '        printf \'{"workers": 2, "left": 31, "known": true, "queued_s": 600, "running": '
             '[["gw2", "apps/realms/tests.py::test_realms_0015_round_trip", %s, 300]]}\' $((now - 190)) '
             '>"$SOULLEDGER_GATE_STATUS"; sleep 4\n'
-            '        echo "DURATIONS=$SOULLEDGER_TEST_DURATIONS"; exit 0; fi ;;\n'
+            '        echo "DURATIONS=$SOULLEDGER_TEST_DURATIONS RTCACHE=$SOULLEDGER_RT_START_CACHE"; exit 0; fi ;;\n'
             "esac\n"
             'exec python3 "$@"\n')
         py.chmod(0o755)
@@ -3428,6 +3428,8 @@ class TestPytestProgressNamesTheFailures:
         assert " · running: gw2 test_realms_0015_round_trip 3m1" in line, line
         assert line.endswith("~31 tests left, est. 6 min"), line  # (600 + 110) / 2 workers
         assert f"DURATIONS={main / '.git'}/soulledger-test-durations-sqlite.json" in proc.stdout, proc.stdout
+        # round-trip start states (tests/migration_roundtrip.py) live next to the durations
+        assert f"RTCACHE={main / '.git'}/soulledger-rt-start-cache" in proc.stdout, proc.stdout
         assert ".status" not in proc.stdout
 
     def test_pytest_runs_with_one_line_per_test(self, hook, checkouts, fake_backend):
