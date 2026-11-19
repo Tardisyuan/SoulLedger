@@ -302,10 +302,13 @@ def unfinished_flow(disposition, flow_status=_UNREAD) -> str | None:
     this rule, an early death, or not an original) is not held. `flow_status` is the flow's status when the caller
     already read it (the list's `judgment_flow_status` annotation; None = no flow).
     """
-    judgment = disposition.judgment
+    from apps.core.shard_reads import related_of
+
+    # Where they are: a disposition with no hall (D2) lives on control, its judgment and realm on their hall's shard.
+    judgment = related_of(disposition, "judgment")
     # A wavering scale sends the soul nowhere (02 §5.3): a disposition written before that rule, parked at
     # the Duat entry by an undecided Egyptian verdict, must not execute into SETTLED at no station.
-    realm = disposition.destination_realm
+    realm = related_of(disposition, "destination_realm")
     if (judgment is not None and judgment.civilization == "EGYPTIAN"
             and realm is not None and realm.realm_code == "EG_DUAT_ENTRY"):
         return "weighing_wavers"
