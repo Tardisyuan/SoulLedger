@@ -3601,11 +3601,25 @@ class TestTestsOnTheGateHosts:
 
     def test_workers_default_to_the_slot_and_the_option_wins(self, checkouts, tmp_path):
         main, _ = checkouts
-        self._here(main, tmp_path, "--tests", "tests/a.py")
+        self._here(main, tmp_path, "--tests", "tests/", "-k", "x.py", "--deselect", "tests/a.py::t")
+        assert "-e PYTEST_WORKERS=5 " in (tmp_path / "remote-run").read_text()
+        files = [f"tests/t{i}.py" for i in range(6)]
+        self._here(main, tmp_path, "--tests", *files)
         assert "-e PYTEST_WORKERS=5 " in (tmp_path / "remote-run").read_text()
         # Set after win_route, which sizes the PC's workers: a real run on the PC once ignored --workers 0.
         self._here(main, tmp_path, "--workers", "0", "--tests", "tests/a.py", GATES_REMOTE_PYTEST_WORKERS="9")
         assert "-e PYTEST_WORKERS=0 " in (tmp_path / "remote-run").read_text()
+
+    def test_a_few_named_files_get_few_workers_never_none(self, checkouts, tmp_path):
+        """Every worker sets up its own databases (five when sharded) before its first test."""
+        main, _ = checkouts
+        for args, want in ((["tests/a.py"], 1), (["tests/a.py::T::t", "--ds=config.settings_sharded", "tests/b.py"], 1),
+                           (["tests/a.py", "tests/b.py", "tests/c.py"], 3),
+                           ([f"tests/t{i}.py" for i in range(5)], 5)):
+            self._here(main, tmp_path, "--tests", *args, GATES_REMOTE_PYTEST_WORKERS="6")
+            assert f"-e PYTEST_WORKERS={want} " in (tmp_path / "remote-run").read_text(), args
+        self._here(main, tmp_path, "--workers", "4", "--tests", "tests/a.py")
+        assert "-e PYTEST_WORKERS=4 " in (tmp_path / "remote-run").read_text()
 
     def test_pytests_exit_status_is_this_runs(self, checkouts, tmp_path):
         main, _ = checkouts

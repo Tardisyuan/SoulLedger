@@ -366,3 +366,115 @@ def database_digests(cursor) -> dict:
 
 def objects_that_differ(a: dict, b: dict) -> list:
     return sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+
+
+# --- Several aliases migrate at once ------------------------------------------
+#
+# `setup_databases` migrates its aliases one after another. The sharded group (`--ds=config.settings_sharded`)
+# builds five templates -- default and four civilization shards, each its own input hash -- and every one
+# replays the ~600 migrations: on the Windows gate PC 111 + 103 + 104 + 104 + 104 = 526 s of the controller's
+# sessionstart, before any worker started (2026-11-19, measured; the workers' own clones took 5 s). The same
+# five again on every run that migrates for real (--full). So on Linux each alias migrates in a forked child
+# of its own, all at once: wall time is the slowest alias, not the sum. A child does exactly what
+# setup_databases does for that alias (create_test_db: same name, same migrate), so no template's contents
+# change. Elsewhere (macOS: fork after Django and libpq is unsafe), or for one alias, it stays serial here.
+# SOULLEDGER_TEMPLATE_BUILD_SERIAL=1 forces serial.
+
+#: A child still migrating after this many seconds is killed and the build fails (a serial migrate measured 111 s).
+BUILD_TIMEOUT = 1800
+
+
+def parallel_build_ok(env, platform: str) -> bool:
+    return platform.startswith("linux") and env.get("SOULLEDGER_TEMPLATE_BUILD_SERIAL") != "1"
+
+
+def build_test_databases(aliases, *, parallel=None) -> None:
+    """create_test_db (migrate) every alias in `aliases` into its TEST NAME, as setup_databases would; in
+    forked children at once when `parallel` (default: Linux and more than one alias). Raises if any failed."""
+    import sys
+
+    from django.db import connections
+
+    def build(alias):
+        connections[alias].creation.create_test_db(verbosity=0, autoclobber=True, serialize=False)
+
+    aliases = sorted(aliases)
+    if parallel is None:
+        parallel = parallel_build_ok(os.environ, sys.platform) and len(aliases) > 1
+    if not parallel:
+        for alias in aliases:
+            build(alias)
+        return
+    run_in_children(aliases, build)
+
+
+# --- Setting up the test databases is not the first test's time ---------------
+#
+# pytest's faulthandler_timeout (600 s in the gates) is armed around each test's whole protocol, so the
+# session fixtures that build test databases ran on the first test's clock: a cold sharded SQLite setup
+# (~860 s, five serial migrates) killed gw0 before its first test ran (2026-11-19, unRAID). The root
+# conftest pauses the clock when django_db_modify_db_settings starts and re-arms it, with the full limit,
+# when django_db_setup has finished. A build that hangs is still bounded: BUILD_TIMEOUT for the forked
+# builds, the gate's own time limit for everything.
+
+def pause_test_clock(config) -> bool:
+    """Cancel the faulthandler timer of the running test; True when there was one to re-arm."""
+    import faulthandler
+
+    try:  # -p no:faulthandler: no such ini, and no timer to pause
+        if not float(config.getini("faulthandler_timeout") or 0):
+            return False
+    except ValueError:
+        return False
+    faulthandler.cancel_dump_traceback_later()
+    return True
+
+
+def resume_test_clock(config) -> None:
+    """Re-arm it as pytest's faulthandler plugin does, from now."""
+    import faulthandler
+
+    from _pytest.faulthandler import fault_handler_stderr_fd_key
+
+    faulthandler.dump_traceback_later(float(config.getini("faulthandler_timeout")),
+                                      file=config.stash[fault_handler_stderr_fd_key],
+                                      exit=bool(config.getini("faulthandler_exit_on_timeout")))
+
+
+def run_in_children(aliases, build) -> None:
+    """`build(alias)` for every alias, each in a forked child, all at once (Linux). A child that raises, or
+    is still running BUILD_TIMEOUT seconds after the start (then killed), fails the call, naming its alias."""
+    import multiprocessing
+    import time
+    import traceback
+
+    from django.db import connections
+
+    connections.close_all()  # a child must not share the parent's sockets
+    ctx = multiprocessing.get_context("fork")
+
+    def child(alias):
+        status = 1
+        try:
+            build(alias)
+            status = 0
+        except BaseException:  # noqa: BLE001 -- reported by the exit status; the traceback goes to stderr
+            traceback.print_exc()
+        finally:
+            with contextlib.suppress(Exception):
+                connections.close_all()
+            os._exit(status)  # never the parent's pytest finalizers or atexit handlers in a child
+
+    procs = {alias: ctx.Process(target=child, args=(alias,), name=f"build-{alias}") for alias in sorted(aliases)}
+    for p in procs.values():
+        p.start()
+    deadline = time.monotonic() + BUILD_TIMEOUT
+    for p in procs.values():
+        p.join(max(deadline - time.monotonic(), 0))
+    for p in procs.values():
+        if p.is_alive():  # hung: kill it; its half-built database is dropped by the caller's cleanup
+            p.kill()
+            p.join(10)
+    failed = sorted(a for a, p in procs.items() if p.exitcode != 0)
+    if failed:
+        raise RuntimeError(f"building test databases failed for {failed} (tracebacks on stderr)")
