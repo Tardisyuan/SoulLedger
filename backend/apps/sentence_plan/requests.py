@@ -36,6 +36,7 @@ from apps.sentence_plan.services import (
     soul_params,
 )
 from apps.souls.models import Soul
+from apps.tenants import shard_saga
 
 LIVE_NODE_STATUSES = tuple(s for s in SentenceNodeStatus if s not in (SentenceNodeStatus.REMOVED,
                                                                          SentenceNodeStatus.CANCELLED))
@@ -175,7 +176,9 @@ def _create_request(plan, soul, *, from_tenant_code, kind, changes, reason, user
 
 def file_request(plan, tenant, *, kind, changes, reason, user):
     """情况 2.1 / 2.2:X 的判官直接提请求。灵魂此刻就在 X → 400(情况 1 要开审判,§4.2)。"""
-    with transaction.atomic():
+    # X is another hall than the plan's (often another civilization's): the plan, its requests and the soul at
+    # home are the home hall's rows, on its master -- not X's (`shard_saga.atomic_on_master`).
+    with shard_saga.atomic_on_master(plan.tenant):
         soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         if kind not in SentenceRequestKind.values:
@@ -288,7 +291,9 @@ def withdraw(plan, request_id, *, tenant, exempt, user):
     """请求方撤回(§4.2)。只有提出方租户(或 ADMIN)。
 
     `exempt`:True = SYSTEM_ADMIN;一组殿 code = 文明管理员,提出方是其中一殿时可撤;False = 按 `tenant` 判。"""
-    with transaction.atomic():
+    # X is another hall than the plan's (often another civilization's): the plan, its requests and the soul at
+    # home are the home hall's rows, on its master -- not X's (`shard_saga.atomic_on_master`).
+    with shard_saga.atomic_on_master(plan.tenant):
         soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         req = _locked_pending_request(plan, request_id)

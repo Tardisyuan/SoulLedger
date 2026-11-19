@@ -161,6 +161,20 @@ def on_master(hall):
         request_local._request_var.reset(request)
 
 
+def atomic_on_master(hall):
+    """The business transaction of a flow whose rows are all `hall`'s, run from whatever hall's request or task:
+    `on_master(hall)` when the context writes to another single master (another hall decides on `hall`'s rows: the
+    target hall approving the source's dispatch), else a plain `transaction.atomic()` -- the same master already, or
+    no single one (MASTER, no context), where the transaction holds every master and a lock finds its row (`_locate`).
+    Without it the transaction and `Soul.lock` ran on the context's master, which holds no row of the soul (a cut
+    target: Soul.DoesNotExist) or not the transaction its row is written in (a cut source: WriteOutsideTransaction)."""
+    from apps.core.shard_reads import MASTER, acting_alias
+
+    if settings.SHARD_WRITE_CIVS and acting_alias() not in (None, MASTER, master_of(hall)):
+        return on_master(hall)
+    return transaction.atomic()
+
+
 def send(kind, source, target, payload, *, subject=""):
     """Write the message on `source`'s master in the open transaction there (or its own one); delivered after commit."""
     outbox, _, _ = _models()

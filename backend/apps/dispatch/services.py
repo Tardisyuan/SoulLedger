@@ -171,6 +171,15 @@ def _after_commit(send):
     transaction.on_commit(send)
 
 
+def _on_source_master(source):
+    """A proposal and the decisions on it (approve / reject / cancel / withdraw) write only source-side rows: the soul
+    (still the source hall's: a residing soul is never proposed) and the record. On their master, whichever hall's
+    request makes it -- the target hall decides in its own context (`shard_saga.atomic_on_master`)."""
+    from apps.tenants import shard_saga
+
+    return shard_saga.atomic_on_master(source)
+
+
 def _log(soul, payload, actor, *, tenant=None):
     """调拨的领域事件(`STATE_CHANGED` + `action`)经事件总线写:SoulEvent 行、灵魂端推送、网页实时推送、
     租户 webhook 一处出(2026-10-30 收口,此前直接 `SoulEvent.objects.create`,后三者都收不到)。
@@ -313,9 +322,11 @@ class DispatchService:
         """
         from apps.souls.models import Soul
 
-        DispatchService.check_target_realm(target_tenant, target_realm)
-
-        with transaction.atomic():
+        with _on_source_master(source_tenant):
+            # Inside the transaction (sharding): its reads are the masters', where the target's realm is. Before it,
+            # a script's or task's read went to its context's read alias -- the source's shard, or the target's
+            # shadow lagging behind control -- and a real realm was refused "not a realm of ...".
+            DispatchService.check_target_realm(target_tenant, target_realm)
             # `dispatcher=None` 是系统(受刑计划 `_dispatch`)发起的:它就是计划本身,不受「计划进行中」那条拦。
             locked = Soul.lock(soul.pk)
             DispatchService._check_proposable(source_tenant, target_tenant, locked, manual=dispatcher is not None,
@@ -449,7 +460,7 @@ class DispatchService:
         DispatchService.check_target_accepts(dispatch_record.target_tenant)
         from apps.souls.models import Soul
 
-        with transaction.atomic():  # 状态与事件同进退(CLAUDE.md「事件日志是业务记录的一部分」)
+        with _on_source_master(dispatch_record.source_tenant):  # 状态与事件同进退(CLAUDE.md「事件日志是业务记录的一部分」)
             # 锁序 灵魂 → 调拨记录,同 reject / cancel_proposed。事件行的外键要灵魂行的 KEY SHARE 锁:
             # 先锁记录再写事件,与先锁灵魂再锁记录的取消互相等,真 PG 上死锁(test_concurrency 抓到)。
             Soul.lock(dispatch_record.soul_id)
@@ -481,7 +492,7 @@ class DispatchService:
         """
         from apps.souls.models import Soul
 
-        with transaction.atomic():
+        with _on_source_master(dispatch_record.source_tenant):
             # 锁序 灵魂 → 计划 → 节点 → 调拨记录(docs/ARCHITECTURE-sentence-plan.md §8)。
             soul = Soul.lock(dispatch_record.soul_id)
             if not dispatch_record.transition_to(
@@ -621,7 +632,7 @@ class DispatchService:
         """
         from apps.souls.models import Soul
 
-        with transaction.atomic():
+        with _on_source_master(dispatch_record.source_tenant):
             soul = Soul.lock(dispatch_record.soul_id)
             if not dispatch_record.transition_to(
                 DispatchStatus.CANCELLED, decided_at=timezone.now(), decided_by=_decider(canceller),
@@ -644,7 +655,7 @@ class DispatchService:
         """
         from apps.souls.models import Soul
 
-        with transaction.atomic():
+        with _on_source_master(dispatch_record.source_tenant):
             soul = Soul.lock(dispatch_record.soul_id)
             current = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=dispatch_record.pk)
             if current.status != DispatchStatus.PROPOSED:
@@ -670,7 +681,7 @@ class DispatchService:
         """
         from apps.souls.models import Soul
 
-        with transaction.atomic():
+        with _on_source_master(dispatch_record.source_tenant):
             soul = Soul.lock(dispatch_record.soul_id)
             current = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=dispatch_record.pk)
             if current.status != DispatchStatus.APPROVED or not dispatch_record.transition_to(
