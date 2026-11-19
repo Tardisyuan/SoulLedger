@@ -180,12 +180,13 @@ def test_a_batch_deactivate_whose_row_fails_deactivates_no_one(admin_user, cn_te
     from rest_framework.test import APIClient
 
     from apps.authentication.models import User
+    from tests.conftest import sign_in
 
     users = [User.objects.create_user(username=f"txn_batch_{i}", password="x", role="JUDGE", tenant=cn_tenant)
              for i in range(2)]
     ids = [str(u.pk) for u in users]
     client = APIClient()
-    client.force_authenticate(admin_user)
+    sign_in(client, admin_user)
 
     def run():
         return client.post("/api/v1/users/batch_deactivate/", {"user_ids": ids}, format="json")
@@ -237,40 +238,72 @@ def test_a_soul_on_a_civilization_shard_rolls_back_with_its_audit_row():
 @pytest.mark.sharded
 @pytest.mark.django_db(databases="__all__", transaction=True)
 def test_a_rolled_back_step_on_one_master_leaves_no_audit_row_on_another():
-    """The saga's shape (test_cross_civilization_saga, 2026-11-20): a step holds a transaction on ONE master (the
-    relay's `atomic(using=<target>)`) and writes an audit row that names no hall -- control's. Written in its own
-    transaction it outlived the step's rollback; it now waits for the step's commit. Rolled back: no row anywhere
-    and the soul unchanged. Committed: exactly one row, on control."""
+    """The saga's shape (2026-11-20): a step holds a transaction on ONE master (the relay's `atomic(using=<target>)`)
+    and saves a row there whose audit row belongs to another master -- here a soul's copy on civ_greek that names an
+    Egyptian hall (a residence's row, as `transfer._left_residence` rewrites it), its UPDATE row routed to the
+    Egyptian hall's master, control. Written in its own transaction that row outlived the step's rollback; it now
+    waits for the step's commit. Rolled back: no row anywhere, the copy unchanged. Committed: exactly one, on
+    control."""
     from tests.test_shard_sync import HAS_SHARDS
 
     if not HAS_SHARDS:
         pytest.skip("needs the four civ_* aliases (--ds=config.settings_sharded)")
-    from apps.audit.signals import create_batch_audit_log
-    from apps.perm.models import Role
     from tests.test_sharded_writes import GREEK, _assign, _halls, _in_hall, cut
 
     halls = _halls()
     _assign("GREEK")
-    role, _ = Role.objects.get_or_create(name="SAGA_ROLE", defaults={"display_name": "S"})
+    egypt = halls["EGYPTIAN"]
     with cut("GREEK"):
-        with _in_hall(halls["GREEK"]):
-            soul = Soul.objects.create(name="步骤前", tenant=halls["GREEK"], current_state=SoulState.ALIVE)
+        with _in_hall(egypt):  # control's: Egypt is not cut
+            soul = Soul.objects.create(name="步骤前", tenant=egypt, current_state=SoulState.ALIVE)
+        org = soul.owner_org  # the copy's keys must hold on the shard: Egypt's root unit goes with it
+        if not type(org)._base_manager.using(GREEK).filter(pk=org.pk).exists():
+            type(org)._base_manager.using(GREEK)._insert([org], fields=type(org)._meta.concrete_fields, raw=True,
+                                                         using=GREEK)
+        Soul._base_manager.using(GREEK)._insert([soul], fields=Soul._meta.concrete_fields, raw=True, using=GREEK)
 
         def step(fail):
-            with transaction.atomic(using=GREEK):
+            with _in_hall(halls["GREEK"]), transaction.atomic(using=GREEK):  # the relay delivers in the target's hall
                 s = Soul._base_manager.using(GREEK).get(pk=soul.pk)
                 s.name = "步骤后"
                 s.save(using=GREEK)
-                create_batch_audit_log(AuditAction.BATCH_UPDATE, [role])
                 if fail:
                     raise RuntimeError("the step's next write failed")
 
         with pytest.raises(RuntimeError):
             step(fail=True)
         assert Soul._base_manager.using(GREEK).get(pk=soul.pk).name == "步骤前"
-        assert rows(action=AuditAction.BATCH_UPDATE) == 0
+        assert rows(action=AuditAction.UPDATE, resource_id=str(soul.pk)) == 0
 
         step(fail=False)
         assert Soul._base_manager.using(GREEK).get(pk=soul.pk).name == "步骤后"
-        assert rows(action=AuditAction.BATCH_UPDATE) == 1
-        assert AuditLog._base_manager.using("default").filter(action=AuditAction.BATCH_UPDATE).count() == 1
+        assert rows(action=AuditAction.UPDATE, resource_id=str(soul.pk)) == 1
+        assert AuditLog._base_manager.using("default").filter(
+            action=AuditAction.UPDATE, resource_id=str(soul.pk)).count() == 1
+
+
+@pytest.mark.sharded
+@pytest.mark.django_db(databases="__all__", transaction=True)
+def test_a_row_written_beside_the_open_transaction_keeps_its_audit_row_when_that_transaction_rolls_back():
+    """The other side of the deferral: a step's transaction is on civ_greek, and it writes a control row (a role) --
+    on control, in autocommit, outside that transaction. The role stays when the step rolls back, so its audit row
+    must too: it goes in with the role (`written_on`), not on the step's commit. Exactly one row, on control."""
+    from tests.test_shard_sync import HAS_SHARDS
+
+    if not HAS_SHARDS:
+        pytest.skip("needs the four civ_* aliases (--ds=config.settings_sharded)")
+    from apps.perm.models import Role
+    from tests.test_sharded_writes import GREEK, _assign, _halls, cut
+
+    _halls()
+    _assign("GREEK")
+    made = []
+    # No hall of the context: the role's row names none, so it is control's (in a Greek hall's context it would
+    # name that hall and go to civ_greek, inside the step -- see `_write_row`'s docstring).
+    with cut("GREEK"), pytest.raises(RuntimeError), transaction.atomic(using=GREEK):
+        made.append(Role.objects.create(name="BESIDE", display_name="B"))
+        raise RuntimeError("the step fails after the control write")
+    role = made[0]
+    assert Role.objects.filter(pk=role.pk).exists()
+    assert rows(action=AuditAction.CREATE, resource="role", resource_id=str(role.pk)) == 1
+    assert AuditLog._base_manager.using("default").filter(resource="role", resource_id=str(role.pk)).count() == 1

@@ -4,7 +4,8 @@ The paths (section 1.3, "小结"): dispatch execution, return to the home hall (
 (cross-tenant) judgment, and judgment reopen. Today each is ONE transaction, so a failure at any write
 leaves the database as it was. After a split these become sagas across databases; this file is the spec
 the saga must keep: whichever write step fails, (1) every table is byte-for-byte what it was before,
-(2) "one soul belongs to one tenant at a time" holds, (3) no audit / notification side effect fires.
+(2) "one soul belongs to one tenant at a time" holds, (3) no notification side effect fires and no audit row
+remains (audit rows are written in the transaction since 2026-11-19, so they roll back with it).
 
 How steps are enumerated (not guessed). A dry run executes the path once under a SQL wrapper that records
 every INSERT / UPDATE / DELETE; that list IS the path's write steps (n of them). Then for k = 1..n the path
@@ -95,7 +96,7 @@ def _comparable(snapshot, ignore_table):
             if apps.get_model(label)._meta.db_table != ignore_table}
 
 
-def _run_every_step(soul_pk, action, expected_tables, capture):
+def _run_every_step(soul_pk, action, expected_tables, capture, *, has_on_commit=True):
     sid = transaction.savepoint()
     before = _snapshot()
     with capture(execute=True) as ok_callbacks:
@@ -103,7 +104,10 @@ def _run_every_step(soul_pk, action, expected_tables, capture):
     assert set(tables) == set(expected_tables), f"write steps changed: {sorted(set(tables) ^ set(expected_tables))}"
     done = _snapshot()
     assert done != before, "the path wrote nothing, so the checks below would be vacuous"
-    assert ok_callbacks, "the success path registers no on_commit side effect; nothing for rollback to withhold"
+    if has_on_commit:
+        assert ok_callbacks, "the success path registers no on_commit side effect; nothing for rollback to withhold"
+    else:  # pinned both ways: a side effect appearing here gets the withheld-on-rollback check back
+        assert not ok_callbacks, f"{action}: an on_commit side effect appeared; drop it from NO_ON_COMMIT"
     _one_tenant_at_a_time(soul_pk)
     transaction.savepoint_rollback(sid)
     anomalies = []
@@ -135,8 +139,13 @@ def _run_every_step(soul_pk, action, expected_tables, capture):
 KNOWN_PARTIAL = {}
 
 
+#: Paths with no on_commit side effect at all: convening a bench notifies nobody, and its audit row (its only
+#: deferred write until 2026-11-19) is now a write step inside the transaction -- covered by the injection loop.
+NO_ON_COMMIT = {"joint_activate"}
+
+
 def _guard(name, *args):
-    found = _run_every_step(*args)
+    found = _run_every_step(*args, has_on_commit=name not in NO_ON_COMMIT)
     assert found == KNOWN_PARTIAL.get(name, []), (
         f"{name}: swallowed event-bus failures that left a half-applied state: {found}")
 
@@ -217,25 +226,29 @@ def test_the_automatic_return_when_a_stop_is_served_is_all_or_nothing(cn, eg, dj
     _guard("return_auto", soul.pk, release, TABLES["return_auto"], django_capture_on_commit_callbacks)
 
 
-# Tables each path writes inside its transaction, measured by the dry run (audit rows and notifications come
-# later, on_commit, so they are not steps of the path). That includes the joint add/conclude notifications:
+# Tables each path writes inside its transaction, measured by the dry run (notifications come later, on_commit, so
+# they are not steps of the path; audit rows are, see below). That includes the joint add/conclude notifications:
 # they ran in the transaction until `tests/test_dispatch_notifications_after_commit.py`, and a failed
 # notification INSERT then rolled the participant / conclusion back silently (the guard read that as "clean").
-_EXEC = {"dispatch_dispatchrecord", "events_soulevent", "realms_soulpathentry", "souls_soul"}
+#: `audit_auditlog` is a write step of every path since 2026-11-19: the generic rows of the models a path saves go in
+#: with the business write (`apps/audit/signals.py::_write_row`), so the loop below injects a failure at them too and
+#: asserts the whole path rolled back. Before, they were on_commit callbacks -- never a write step here.
+_AUDIT = {"audit_auditlog"}
+_EXEC = {"dispatch_dispatchrecord", "events_soulevent", "realms_soulpathentry", "souls_soul"} | _AUDIT
 _PLAN = {"sentence_plan_sentencenode"}
 TABLES = {
     "execute": _EXEC,
     "execute_plan": _EXEC | _PLAN | {"disposition_disposition"},
-    "return_manual": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan"},
-    "return_auto": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan", "disposition_disposition"},
-    "joint_add": {"dispatch_crosstenantjudgmentparticipant"},
-    "joint_submit": {"dispatch_crosstenantjudgmentparticipant"},
-    "joint_activate": {"dispatch_crosstenantjudgment"},
-    "joint_conclude": {"dispatch_crosstenantjudgment"},
+    "return_manual": _EXEC | _PLAN | {"sentence_plan_sentenceplan"},
+    "return_auto": _EXEC | _PLAN | {"sentence_plan_sentenceplan", "disposition_disposition"},
+    "joint_add": {"dispatch_crosstenantjudgmentparticipant"} | _AUDIT,
+    "joint_submit": {"dispatch_crosstenantjudgmentparticipant"} | _AUDIT,
+    "joint_activate": {"dispatch_crosstenantjudgment"} | _AUDIT,
+    "joint_conclude": {"dispatch_crosstenantjudgment"} | _AUDIT,
     "reopen_decide": {"events_soulevent", "judgment_judgment", "judgment_judgmentcasecounter",
                       "sentence_plan_sentenceplan",
-                      "sentence_plan_sentenceplanrequest"},
-    "reopen_conclude": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan", "disposition_disposition",
+                      "sentence_plan_sentenceplanrequest"} | _AUDIT,
+    "reopen_conclude": _EXEC | _PLAN | {"sentence_plan_sentenceplan", "disposition_disposition",
                                          "judgment_judgment"},
 }
 

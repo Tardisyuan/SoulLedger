@@ -48,6 +48,12 @@ def _world():
     Judgment._base_manager.filter(pk=case_none.pk).update(tenant=None)
     Disposition._base_manager.filter(pk__in=[d.pk for d in rows.values()]).update(tenant=None)
     Disposition._base_manager.filter(pk=rows["blocked"].pk).update(destination_realm=realm["EGYPTIAN"])
+    # The setup's own generic CREATE rows (a disposition's names its hall as created, before the update above made
+    # it hall-less) are in the table since audit rows go in with the write (2026-11-19). They are this fixture's,
+    # not the command's: the tests below count the rows the command writes.
+    from apps.audit.models import AuditLog
+
+    AuditLog._base_manager.filter(description="").delete()
     _sync()
     _assign(*CIVS)
     return halls, rows
@@ -88,6 +94,41 @@ def test_the_dry_run_prints_the_plan_and_writes_nothing():
     blocked = _line(out, rows["blocked"].pk)
     assert blocked.startswith("BLOCKED") and halls["EGYPTIAN"].code in blocked
     assert "BLOCKED 1, MOVE 1, STAY 1 (dry run, nothing written" in out
+
+
+@sharded
+def test_apply_never_loses_the_row_it_moves_not_even_once_controls_mirror_is_purged():
+    """Step 0c's question (2026-11-20, a G7 run reported the hall-less disposition gone after --apply): after --apply the
+    disposition exists on its new master exactly once, with its soul, its judgment and its realm, and control's copy
+    is a mirror; with that mirror purged (stage 5, raw, as G6 does) it is still there, once, on its master; and the
+    shard-to-control sync brings the mirror back rather than deleting the master's row. Each of these is a moment a
+    lost row would show."""
+    from apps.core.shard_reads import control_mirror_writes
+    from apps.core.shard_sync import sync
+    from apps.disposition.models import Disposition
+
+    halls, rows = _world()
+    cn = halls["CHINESE"]
+    d = rows["move"]
+
+    def where():
+        return sorted(a for a in connections if Disposition._base_manager.using(a).filter(pk=d.pk).exists())
+
+    with cut(*CIVS):
+        _run("backfill_disposition_halls", "--apply")
+        assert where() == [CN, "default"]  # the master, and control's mirror until stage 5
+        row = Disposition._base_manager.using(CN).get(pk=d.pk)
+        assert (row.tenant_id, row.soul_id, row.judgment_id, row.destination_realm_id) == (
+            cn.pk, d.soul_id, d.judgment_id, d.destination_realm_id)
+        from apps.judgment.models import Judgment
+
+        assert Judgment._base_manager.using(CN).filter(pk=d.judgment_id).exists()  # the key holds on the master
+        with control_mirror_writes():
+            Disposition._base_manager.using("default").filter(pk=d.pk)._raw_delete("default")
+        assert where() == [CN]
+        sync([CN])
+        assert where() == [CN, "default"]
+        assert Disposition._base_manager.using("default").get(pk=d.pk).tenant_id == cn.pk
 
 
 @sharded

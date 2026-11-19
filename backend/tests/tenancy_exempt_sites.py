@@ -56,6 +56,9 @@ SITES = [
      "rebuild: re-syncs every hall's scheduled rows"),
     ("apps/social/moderation_views.py", 1, "SYSTEM_ONLY",
      "copy word list: copying between halls is cross-civilization configuration"),
+    ("apps/social/moderation_views.py", 1, "CIVILIZATION",
+     "SocialMuteViewSet.get_queryset: a civilization ADMIN takes the next branch, `scope_to_tenant` over the souls -- "
+     "its civilization's halls"),
     ("apps/soul_assist/admin_views.py", 1, "SYSTEM_ONLY",
      "IsAdminRole: the assistant's provider and keys are global (the per-hall switch is IsAnyAdmin + _own_hall_id)"),
     ("apps/souls/views.py", 1, "CIVILIZATION",

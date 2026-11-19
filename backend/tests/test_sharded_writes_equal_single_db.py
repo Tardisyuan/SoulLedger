@@ -24,6 +24,7 @@ import json
 import os
 import random
 import uuid
+from contextlib import ExitStack, contextmanager
 from datetime import date, datetime, time
 
 import pytest
@@ -235,6 +236,24 @@ def _payload(world, case):
     return urls[0], body
 
 
+@contextmanager
+def _audit_rows_of_the_commit():
+    """The audit rows the request's commit writes. This module never commits (savepoints in an outer block), and an
+    audit row routed to a database neither the request's transaction nor its business row is on waits for that
+    transaction's commit (`apps/audit/signals.py::_write_row`; a Greek reaction under `add_reaction`'s
+    `@transaction.atomic`, which holds control only). Those -- and only those, not notifications or relay kicks --
+    are run here, as the commit would."""
+    from django.test import TestCase
+
+    with ExitStack() as stack:
+        captured = [stack.enter_context(TestCase.captureOnCommitCallbacks(using=a)) for a in connections]
+        yield
+    for callbacks in captured:
+        for callback in callbacks:
+            if getattr(callback, "__module__", "") == "apps.audit.signals":
+                callback()
+
+
 def _run(world, case, payload, writes, monkeypatch):
     url, body = payload
     method = case.rsplit(":", 1)[1]
@@ -245,7 +264,7 @@ def _run(world, case, payload, writes, monkeypatch):
             from apps.core.shard_ids import assign
 
             assign(GREEK)
-        with _Seeded(monkeypatch, f"{SEED}:{case}"):
+        with _Seeded(monkeypatch, f"{SEED}:{case}"), _audit_rows_of_the_commit():
             res = getattr(world["client"], method)(url, body, format="json")
         if writes:
             from apps.core.shard_sync import SHARD_TO_CONTROL, reconcile
