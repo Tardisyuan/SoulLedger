@@ -143,6 +143,25 @@ def _writer_finished(case_txn):
     return status != "in progress"  # committed, aborted, or NULL: too old to be in progress
 
 
+def _claim_lock(soul_pk):
+    """Take the soul's claim lock on control without waiting: a transaction-scoped advisory lock, held until the
+    control transaction that takes it ends. False: another transaction is claiming this soul's case right now.
+
+    Inside a business transaction the claim row stays uncommitted until that transaction ends (control commits after
+    the shards, `shard_reads._install_atomic`), and PostgreSQL makes a second INSERT of the same soul WAIT on the
+    UNIQUE index until then -- across two databases, where a wait no deadlock detector sees can hang (it holds a
+    shard row lock the first may want next). So the second opener is refused at once instead; the first one's
+    rollback frees the lock and the row together. Not PostgreSQL (SQLite serializes writers): True."""
+    from django.db import connections
+
+    conn = connections[CONTROL_ALIAS]
+    if conn.vendor != "postgresql":
+        return True
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT pg_try_advisory_xact_lock(hashtextextended(%s, 0))", [f"open-case:{soul_pk}"])
+        return cursor.fetchone()[0]
+
+
 def claim_open_case(soul_pk, judgment_pk, tenant_id):
     """Claim the soul's one open case for `judgment_pk`, on control, before the case row is written (stage 4 part C).
     Control in autocommit (the case goes to a shard): committed at once, so a second opener on another database is
@@ -152,7 +171,9 @@ def claim_open_case(soul_pk, judgment_pk, tenant_id):
     A claim held by a case that is closed (a release missed: a bulk update closed it) is stale and taken over. So is
     one whose case is not on its database once the transaction that took it has ended (`case_txn`): that write rolled
     back -- including a caller's transaction failing after `open_case` returned. While that transaction is in progress,
-    or when it cannot be known (not PostgreSQL), the claim stands: OpenCaseTaken, never two open cases. No clock."""
+    or when it cannot be known (not PostgreSQL), the claim stands: OpenCaseTaken, never two open cases. No clock.
+    A claim another transaction is taking at this moment -- in autocommit, or uncommitted inside its business
+    transaction -- is refused at once, not waited for (`_claim_lock`)."""
     from django.db import connections
 
     from apps.core.shard_reads import write_alias_of
@@ -166,6 +187,8 @@ def claim_open_case(soul_pk, judgment_pk, tenant_id):
     for _ in range(2):
         try:
             with transaction.atomic(using=CONTROL_ALIAS):
+                if not _claim_lock(soul_pk):
+                    raise OpenCaseTaken([])
                 claims.create(soul_id=soul_pk, judgment_id=judgment_pk, tenant_id=tenant_id, case_txn=case_txn)
             return autocommit
         except IntegrityError:
