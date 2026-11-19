@@ -177,6 +177,19 @@ describe("M8: a refresh of what is on screen runs the top line once", () => {
   });
 });
 
+describe("M8: the run's end is not charged to the test that is slow", () => {
+  // The unRAID gate failure: the 1.2s run ended while a slow test was still going, outside any act, and the update was
+  // an act warning. Mutation: the act-environment switch in jest.setup.shared.js removed -> this goes red.
+  it("a run that ends between the test's awaits is not an act warning", async () => {
+    reduce(false);
+    renderSoul(<Topline />);
+    await act(async () => {});
+    act(() => runTopline());
+    expect(screen.getByTestId("topline-run")).toBeTruthy();
+    await new Promise((r) => setTimeout(r, motion.loadingLine + 400)); // not in act: a test that is slow to its next step
+  });
+});
+
 describe("M10: a busy button keeps its words and look; past 160 a line runs along its foot", () => {
   // Mutation: `useAfter(motion.busyDelay)` → `useAfter(0)` → the 'nothing at 100' assertion red; the Loader back in
   // the button → the 'no progressbar' assertion red.
