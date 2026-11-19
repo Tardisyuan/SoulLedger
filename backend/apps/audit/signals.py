@@ -193,6 +193,7 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
 
         _write_row(
             router.db_for_write(AuditLog, instance=AuditLog(tenant=tenant)),
+            written_on={instance._state.db},
             tenant=tenant,
             user_id=getattr(user, "pk", None),
             action=AuditAction.PERMISSION_CHANGE,
@@ -218,7 +219,7 @@ def _is_migration_context():
     return _in_migration
 
 
-def _write_row(alias, **row):
+def _write_row(alias, *, written_on=frozenset(), **row):
     """Write one audit row INSIDE the business transaction it describes (user decision 2026-11-19): it fails, the
     business write rolls back, as a `SoulEvent` does (CLAUDE.md, 事件日志是业务记录的一部分).
 
@@ -241,7 +242,13 @@ def _write_row(alias, **row):
       names another: the relay's `atomic(using=<target>)`, a control row from a shard's step) cannot join it, and
       written in its own transaction it would outlive the step's rollback (test_cross_civilization_saga, 2026-11-20).
       It is written on that transaction's commit instead: a rolled-back step leaves no row, a committed one exactly
-      one. Its failure then reaches the committer after the business write committed -- loud, not atomic: only a
+      one. Not when the row it describes was written on that same database (`written_on`, the instance's
+      `_state.db`): then the business row went in outside the open transaction too (autocommit there, e.g. under a
+      `@transaction.atomic` decorator, which holds `default` only), and the audit row goes in the same way, with
+      it -- deferred, it would wait for a commit that is not the business row's. Not covered: a row autocommitted
+      beside a transaction that IS on the audit row's database (a control row with no hall of its own, written in a
+      hall's context from a step that holds only that hall's shard): its audit row joins the step and rolls back
+      with it while the row stays. Only a second connection could write it there; no path is known to do this. Its failure then reaches the committer after the business write committed -- loud, not atomic: only a
       message (the saga outbox) could make a second database atomic with the first.
     """
     from apps.audit.models import AuditLog
@@ -250,9 +257,16 @@ def _write_row(alias, **row):
     obj = AuditLog(**row)
     obj._state.db = alias
     held = _transaction_aliases()
-    if held and alias not in held:
+    if held and alias not in held and alias not in written_on:
         # On the business transaction's last commit: control's when it holds control (it commits after the shards).
         host = CONTROL_ALIAS if CONTROL_ALIAS in held else held[-1]
+        # The row's own bookkeeping now: after the commit the request's user is gone, and `AuditUserFields.save`
+        # would leave create_user / update_user empty (the row is the request's, as an inline one is).
+        from apps.core.request_local import get_current_user
+
+        actor = get_current_user()
+        if getattr(actor, "is_authenticated", False):
+            obj.create_user_id = obj.update_user_id = actor.pk
 
         def write():
             with transaction.atomic(using=alias):
@@ -361,7 +375,8 @@ def _build_changes(instance, old_instance=None):
                     'create_user', 'update_user', 'tenant', '_state'}
 
     for field in instance._meta.fields:
-        if field.name in skip_fields or field.name.startswith('_'):
+        # An `auto_now` column is bookkeeping too: every save moves it, so it says nothing about what changed.
+        if field.name in skip_fields or field.name.startswith('_') or getattr(field, 'auto_now', False):
             continue
         old_val = getattr(old_instance, field.name, None)
         new_val = getattr(instance, field.name, None)
@@ -480,7 +495,8 @@ def _create_audit_log(action, instance, changes=None):
 
     # The database the row is written to: the master of the hall it names (sharding stage 4), which need not be
     # the one the business transaction was on (a control row of another civilization's hall).
-    _write_row(router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id)), **row)
+    _write_row(router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id)), written_on={instance._state.db},
+               **row)
 
 
 def _get_client_ip(request):
@@ -625,6 +641,7 @@ def create_batch_audit_log(action, instances, changes=None):
     alias = router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id))
     _write_row(
         alias,
+        written_on={inst._state.db for inst in instances},
         tenant_id=tenant_id,
         user_id=getattr(user, "pk", None),
         action=action,
