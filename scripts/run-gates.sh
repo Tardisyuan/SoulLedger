@@ -88,7 +88,17 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --tests)    TESTS=1; shift
                     # Everything after --tests is pytest's, except --real-pg (pytest has none): easy to put last.
-                    for a in "$@"; do if [ "$a" = --real-pg ]; then REAL_PG=1; else TEST_ARGS+=("$a"); fi; done
+                    # So are --workers N / --timeout T (2026-11-20: `--tests --workers 1 f.py` handed --workers to
+                    # pytest, which stopped with a usage error, exit 4, before any test).
+                    while [ $# -gt 0 ]; do
+                        case "$1" in
+                            --real-pg) REAL_PG=1 ;;
+                            --workers) TESTS_WORKERS="${2:?--workers needs a number}"; shift
+                                       [[ "$TESTS_WORKERS" =~ ^[0-9]+$ ]] || { echo "run-gates: --workers takes a number (0 = serial)"; exit 2; } ;;
+                            --timeout) TESTS_LIMIT="${2:?--timeout needs a time limit}"; shift ;;
+                            *) TEST_ARGS+=("$1") ;;
+                        esac; shift
+                    done
                     break ;;
         --tests-from) TESTS=1; TESTS_FROM="${2:?--tests-from needs a file}"; shift ;;  # the container's side
         --workers)  TESTS_WORKERS="${2:?--workers needs a number}"; shift
@@ -243,6 +253,7 @@ remote_flock() {
 # Why two: four agents' gates queued behind one lock for an hour (2026-11-16) while the box had 20 cores. Each
 # slot's container is capped lower (10 CPUs / 20 GB, 5 + 5 workers) so two fit beside Metro and the test PG.
 remote_slots() {
+    if [ "${WIN_BOTH:-0}" = 1 ]; then printf '%s; %s' "$(remote_flock 9 run.lock "$@")" "$(remote_flock 8 run.2.lock "$@")"; return; fi
     if [ "${GATES_REMOTE_SLOTS:-2}" = 1 ]; then remote_flock 9 run.lock "$@"; return; fi
     local filters="" n
     for n in "$@"; do filters="$filters --filter name=$n"; done
@@ -270,8 +281,10 @@ remote_verdict() {
 # its own sl-pg-test. A gate run goes there when unRAID's slot 1 is held right now (the order: win_route) and the
 # PC is idle: it answers, has the image, runs no other job of ours, and no game from GATES_REMOTE_WIN_GAMES runs
 # (--e2e: when unRAID's e2e.lock is held). Otherwise nothing changes: the run goes to GATES_REMOTE exactly as
-# before and takes a slot or waits there. The PC takes one job at a time,
-# gate or E2E: both take its run.lock.
+# before and takes a slot or waits there. A gate or an E2E run takes the whole PC: both its locks, run.lock and
+# run.2.lock. `--tests` runs take one lock each, so two run at once (2026-11-20, user decision), each at
+# GATES_REMOTE_WIN_TESTS_CPUS / _MEMORY (8 / 12g): a gate there is 16 CPUs and 24g, and WSL has 32 GB of which the
+# trees' tmpfs holds up to 14, so two gates would not fit; two small runs do.
 # The user's two conditions: (1) a game that starts during a run drops the run to nice 19 and
 # GATES_REMOTE_WIN_GAME_CPUS CPUs — never stops it — and restores it when the game exits (win_watch, beside
 # the container); a file `game-running` in GATES_REMOTE_WIN_DIR counts as a game, to prove that path.
@@ -279,7 +292,7 @@ remote_verdict() {
 # data on tmpfs, and the container's /root and /tmp are tmpfs too (npm / pip caches, Chromium's profile).
 WIN_DIR="${GATES_REMOTE_WIN_DIR:-/srv/sl-gates}"
 WIN_GAMES="${GATES_REMOTE_WIN_GAMES:-YuanShen.exe GenshinImpact.exe}"
-ELOCK=e2e.lock RUN_EXTRA="" WIN_WATCH=0
+ELOCK=e2e.lock RUN_EXTRA="" WIN_WATCH=0 WIN_BOTH=0
 # win_exe <program> <args…> — a Windows program from a shell sshd started, which has no WSL_INTEROP.
 win_exe() {
     local s; for s in ${WSL_INTEROP:-} /run/WSL/*_interop; do
@@ -293,11 +306,17 @@ win_game() {
     tl=$(win_exe "${WIN_TASKLIST:-/mnt/c/Windows/System32/tasklist.exe}" /FO CSV /NH) || { echo "cannot ask Windows"; return 0; }
     for g in "$@"; do grep -qi "^\"$g\"" <<<"$tl" && { echo "$g"; return 0; }; done; return 0
 }
-# win_probe <dir> <image> <game.exe>… — on the PC: "idle" (no game, no job of ours running), or why not.
+# win_probe <whole|one> <dir> <image> <game.exe>… — on the PC: "idle" (no game, and both locks free for a whole-PC
+# job, or one of them for a --tests run), or why not.
 win_probe() {
-    local d="$1" img="$2" g; shift 2
+    local want="$1" d="$2" img="$3" g; shift 3
     docker image inspect "$img" >/dev/null 2>&1 || { echo "no $img image"; return; }
-    mkdir -p "$d" && ( flock -n 9 ) 9>"$d/run.lock" || { echo "already running a job of ours"; return; }
+    mkdir -p "$d" || { echo "no $d"; return; }
+    if [ "$want" = one ]; then
+        { ( flock -n 9 ) 9>"$d/run.lock" || ( flock -n 9 ) 9>"$d/run.2.lock"; } || { echo "already running two jobs of ours"; return; }
+    else
+        { ( flock -n 9 ) 9>"$d/run.lock" && ( flock -n 9 ) 9>"$d/run.2.lock"; } || { echo "already running a job of ours"; return; }
+    fi
     g=$(win_game "$d" "$@"); [ -z "$g" ] || { echo "game: $g"; return; }
     echo idle
 }
@@ -326,7 +345,7 @@ win_bg() {
         "$1" "$WIN_DIR" "$2" "${GATES_REMOTE_WIN_GAME_CPUS:-4}" "$WIN_GAMES"
 }
 win_bg_end() { [ "$WIN_WATCH" = 1 ] && printf '%s' 'kill $W 2>/dev/null; '; return 0; }
-# win_route <gate|e2e> <image> — point GATES_REMOTE (and its dir, database, sizes) at the PC when the rule holds.
+# win_route <gate|tests|e2e> <image> — point GATES_REMOTE (and its dir, database, sizes) at the PC when the rule holds.
 # THE ORDER A GATE RUN TAKES (2026-11-17, user decision): unRAID slot 1 (run.lock) free → unRAID; else the PC if
 # idle → the PC; else unRAID, where remote_slots takes slot 2 or queues as before. A run the PC turned down (a game,
 # a job of ours there) goes to unRAID and stays there, even if the game ends. --e2e: the PC only when unRAID's
@@ -334,25 +353,30 @@ win_bg_end() { [ "$WIN_WATCH" = 1 ] && printf '%s' 'kill $W 2>/dev/null; '; retu
 win_route() {
     [ -n "${GATES_REMOTE_WIN:-}" ] && [ -n "${GATES_REMOTE:-}" ] || return 1
     local lock=e2e.lock what="e2e.lock" state why url where
-    [ "$1" = gate ] && lock=run.lock what="slot 1"
+    [ "$1" != e2e ] && lock=run.lock what="slot 1"
+    local want=whole; [ "$1" = tests ] && want=one
     state=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "flock -n $RDIR/$lock true && echo free || echo busy" 2>/dev/null)
     if [ "$state" != busy ] && [ "${GATES_REMOTE_WIN_FORCE:-}" != 1 ]; then  # FORCE: try the PC whatever unRAID has free
         echo "$P: slot: $GATES_REMOTE ($GATES_REMOTE $what ${state:-unknown})"; return 1
     fi
     why=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE_WIN" \
-        "$(declare -f win_exe win_game win_probe); win_probe $WIN_DIR $2 $WIN_GAMES" 2>/dev/null)
+        "$(declare -f win_exe win_game win_probe); win_probe $want $WIN_DIR $2 $WIN_GAMES" 2>/dev/null)
     if [ "$why" != idle ]; then
-        [ "$1" = gate ] && where="$GATES_REMOTE slot 2, or its queue" || where="$GATES_REMOTE, its e2e.lock queue"
+        [ "$1" != e2e ] && where="$GATES_REMOTE slot 2, or its queue" || where="$GATES_REMOTE, its e2e.lock queue"
         echo "$P: slot: $where ($GATES_REMOTE $what $state, $GATES_REMOTE_WIN not used: ${why:-unreachable})"; return 1
     fi
-    if [ "$1" = gate ]; then
+    if [ "$1" != e2e ]; then
         url="${GATES_REMOTE_WIN_DB_URL:-$(ssh -o BatchMode=yes "$GATES_REMOTE_WIN" cat /etc/sl-gates/pg.url 2>/dev/null)}"
         [ -n "$url" ] || { echo "$P: not using $GATES_REMOTE_WIN: no GATES_REMOTE_WIN_DB_URL and no /etc/sl-gates/pg.url there"; return 1; }
         GATES_REMOTE_DB_URL="$url"
     fi
     echo "$P: slot: $GATES_REMOTE_WIN ($GATES_REMOTE $what $state${GATES_REMOTE_WIN_FORCE:+, GATES_REMOTE_WIN_FORCE=1}, win idle)"
     GATES_REMOTE="$GATES_REMOTE_WIN" RDIR="$WIN_DIR" RWORK="$WIN_DIR/work/$RID" GATES_REMOTE_SLOTS=1 ELOCK=run.lock WIN_WATCH=1
-    SLOT_CPUS="${GATES_REMOTE_WIN_CPUS:-16}" SLOT_MEM="${GATES_REMOTE_WIN_MEMORY:-24g}" SLOT_WORKERS="${GATES_REMOTE_WIN_WORKERS:-6}"
+    SLOT_CPUS="${GATES_REMOTE_WIN_CPUS:-16}" SLOT_MEM="${GATES_REMOTE_WIN_MEMORY:-24g}" SLOT_WORKERS="${GATES_REMOTE_WIN_WORKERS:-6}" WIN_BOTH=1
+    if [ "$1" = tests ]; then
+        GATES_REMOTE_SLOTS=2 WIN_BOTH=0
+        SLOT_CPUS="${GATES_REMOTE_WIN_TESTS_CPUS:-8}" SLOT_MEM="${GATES_REMOTE_WIN_TESTS_MEMORY:-12g}" SLOT_WORKERS="${GATES_REMOTE_WIN_TESTS_WORKERS:-4}"
+    fi
     GATES_REMOTE_CPUS="$SLOT_CPUS" GATES_REMOTE_MEMORY="$SLOT_MEM" GATES_REMOTE_E2E_CPUS="$SLOT_CPUS" GATES_REMOTE_E2E_MEMORY="$SLOT_MEM"
     GATES_REMOTE_PYTEST_WORKERS="$SLOT_WORKERS" GATES_REMOTE_JS_WORKERS="$SLOT_WORKERS"
     RUN_EXTRA=" --tmpfs /root:rw,exec,size=4g --tmpfs /tmp:rw,exec,size=4g"
@@ -712,7 +736,7 @@ if [ -n "$E2E" ]; then
     # /tmp in memory, as in scripts/demo-remote.sh: Chromium's profile and cache on the shared btrfs image stalled
     # frames for 5–19 s under load (2026-11-08 trace evidence there).
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, above.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 $ELOCK sl-e2e- sl-demo-); $(win_bg $ENAME ${GATES_REMOTE_E2E_CPUS:-8})docker run --rm --init --name $ENAME$RUN_EXTRA \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 $ELOCK sl-e2e- sl-demo-); $([ "${WIN_BOTH:-0}" = 1 ] && remote_flock 8 run.2.lock sl-gates- sl-e2e-; [ "${WIN_BOTH:-0}" = 1 ] && printf '; ')$(win_bg $ENAME ${GATES_REMOTE_E2E_CPUS:-8})docker run --rm --init --name $ENAME$RUN_EXTRA \
         --tmpfs /tmp:rw,exec,size=8g --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
         -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
         -e PROJECTS='$E2E' $EIMG timeout -k 60 $ELIMIT bash -c '$REMOTE_DEPS
@@ -724,7 +748,7 @@ if [ -n "$E2E" ]; then
           echo \"  → \$PROJECTS in one run (\$(( \$(date +%s) - T ))s)\"
           python3 /app/scripts/e2e-report.py /sl-tmp/e2e.json \$(echo \$PROJECTS | tr , \" \") \
             || { tail -30 /sl-tmp/e2e.log; [ \$rc -eq 0 ] && rc=1; }
-          exit \$rc'; rc=\$?; $(win_bg_end)docker rm -f $ENAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/$ELOCK"
+          exit \$rc'; rc=\$?; $(win_bg_end)docker rm -f $ENAME >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/$ELOCK"
     ERC=$?
     trap - EXIT
     remote_verdict "$ERC" "$ELIMIT" GATES_REMOTE_E2E_TIMEOUT
@@ -832,7 +856,7 @@ elif [ "$TESTS" = 1 ]; then
     [ -n "${GATES_REMOTE:-}" ] || { echo "$P: no GATES_REMOTE in .prepush.env — --tests runs on the gate hosts only. Not running here."; exit 2; }
     [ "${#TEST_ARGS[@]}" -gt 0 ] || { echo "$P: --tests needs pytest arguments (test paths, -k …); the whole suite is a gate run"; exit 2; }
     TESTS_LIMIT="${GATES_TESTS_TIMEOUT:-$TESTS_LIMIT}"; remote_limit "$TESTS_LIMIT" "--timeout / GATES_TESTS_TIMEOUT"
-    win_route gate "$RIMG" || :
+    win_route tests "$RIMG" || :
     [ "$REAL_PG" = 0 ] || [ -n "${GATES_REMOTE_DB_URL:-}" ] || { echo "$P: --real-pg: no GATES_REMOTE_DB_URL (.prepush.env)"; exit 2; }
     ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1 && { mkdir -p $RWORK $RDIR/tmp/$RID && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
         || { echo "$P: $GATES_REMOTE is unreachable, or has no $RIMG image. Not running here."; exit 2; }
@@ -907,12 +931,17 @@ fi
 # record_side <backend|js> <that side's exit status>: after a run outside a push, on a clean checkout, a
 # green side is recorded in its own ledger whatever the other side did. --full covers `*` (any push of the
 # tree); a selective run, the files the side covered (COVERED_BE / COVERED_JS).
+# A green --real-pg run records its backend side in its own ledger, `$STAMP-realpg` (2026-11-20, user: before a
+# whole real-PG run, a hook asks whether it is needed — local-gates/test-scope-guard.py reads this ledger). It
+# never vouches for a push: the push ledgers are the SQLite side's.
 record_side() {
-    [ "$PREPUSH" = 0 ] && [ "$REAL_PG" = 0 ] && [ "$2" = 0 ] || return 0
+    [ "$PREPUSH" = 0 ] && [ "$2" = 0 ] || return 0
+    if [ "$REAL_PG" = 1 ]; then [ "$1" = backend ] && [ "$TESTS" = 0 ] || return 0; fi
     side_on "$1" || return 0  # GATES_SIDES left it out: nothing ran, nothing to vouch for
     cd "$ROOT" || return 0
     tree_is_clean || { echo "$P: not recording the $1 pass — $CLEAN_WHY"; return 0; }
     local tree file="$STAMP-$1" cov kind=selective
+    [ "$REAL_PG" = 1 ] && file="$STAMP-realpg"
     tree="$(git rev-parse HEAD^{tree})"
     [ "$tree" = "$START_TREE" ] || { echo "$P: not recording the $1 pass — HEAD moved during the run (tested ${START_TREE:0:10}, now ${tree:0:10})"; return 0; }
     if [ "$FULL_RUN" = 1 ]; then

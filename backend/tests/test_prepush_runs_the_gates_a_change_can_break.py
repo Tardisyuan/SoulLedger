@@ -2056,6 +2056,18 @@ class TestTheWholeRunOnAnotherMachine:
         assert (tmp_path / "passed-backend").read_text().rstrip().endswith("\tbackend/x.py")
         assert (tmp_path / "passed-js").read_text().rstrip().endswith("\tbackend/x.py")
 
+    def test_a_green_real_pg_run_is_recorded_in_its_own_ledger_only(self, checkouts, tmp_path):
+        """2026-11-20: a hook reads `-realpg` before a whole real-PG run (is it needed?). A real-PG pass must never
+        reach the push ledgers, which are the SQLite side's. Mutation: drop `file="$STAMP-realpg"` → red."""
+        main, _ = checkouts
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "x")
+        proc = self._run(main, tmp_path, "--real-pg", "--base", "HEAD~1", prepush=False)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert (tmp_path / "passed-realpg").read_text().rstrip().endswith("\tbackend/x.py"), proc.stdout
+        assert not (tmp_path / "passed-backend").exists() and not (tmp_path / "passed-js").exists(), proc.stdout
+
 
 class TestEndToEndOnAnotherMachine:
     """`run-gates.sh --e2e` (2026-10-28, user decision): Playwright runs on GATES_REMOTE, never here."""
@@ -2384,7 +2396,7 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
             f'echo "$*" >> "{tmp_path}/ssh.log"\n'
             f'case "$*" in *fake-win*) {down} ;; esac\n'
             'case "$*" in\n'
-            f'  *"win_probe /"*) echo "{win}"; exit 0 ;;\n'
+            f'  *"; win_probe "*) echo "$*" > "{tmp_path}/probe"; echo "{win}"; exit 0 ;;\n'
             '  *"cat /etc/sl-gates/pg.url"*) echo "postgres://sl:pcpw@sl-pg-test:5432/soulledger"; exit 0 ;;\n'
             f'  *"&& echo free || echo busy"*) echo "{slots}"; exit 0 ;;\n'
             '  *"docker image inspect"*) exit 0 ;;\n'
@@ -2446,7 +2458,7 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
         assert "slot: fake-host slot 2, or its queue (fake-host slot 1 busy, fake-win not used: game: YuanShen.exe)" \
             in proc.stdout, proc.stdout
         assert "{ flock -n 9 && S=1; } || { flock -n 8 && S=2; } ||" in remote and remote.rstrip().endswith("9>/srv/appdata/sl-gates/run.lock")
-        assert log.count("win_probe /") == 1, "the PC was asked again"
+        assert log.count("; win_probe ") == 1, "the PC was asked again"
 
     def test_a_gate_run_on_the_pc_gets_its_lock_watcher_ram_and_database(self, checkouts, tmp_path):
         main, _ = checkouts
@@ -2455,9 +2467,10 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
         assert "win_watch sl-gates-" in remote and " /srv/sl-gates 16 4 YuanShen.exe GenshinImpact.exe" in remote, remote
         assert "--tmpfs /root:rw,exec,size=4g --tmpfs /tmp:rw,exec,size=4g" in remote and "--memory 24g" in remote, remote
         assert "DATABASE_URL='postgres://sl:pcpw@sl-pg-test:5432/soulledger'" in remote, "the PC's own database"
-        # One job at a time on the PC: the single lock, run.lock, which E2E there takes too.
-        assert "flock -n 9 || { echo" in remote and "flock -n 8" not in remote, remote
-        assert remote.rstrip().endswith("9>/srv/sl-gates/run.lock"), remote
+        # A gate takes the whole PC: both its locks (2026-11-20: two --tests runs may share it, a gate may not).
+        assert "flock -n 9 || { echo" in remote and "flock -n 8 || { echo" in remote, remote
+        assert remote.rstrip().endswith("8>/srv/sl-gates/run.2.lock 9>/srv/sl-gates/run.lock"), remote
+        assert "; win_probe whole /srv/sl-gates " in (tmp_path / "probe").read_text()
         assert 'kill $W 2>/dev/null; docker rm -f' in remote, "the watcher outlives the run"
 
     def test_e2e_goes_to_the_pc_only_when_unraids_e2e_lock_is_held_and_shares_the_gate_lock_there(self, checkouts, tmp_path):
@@ -2467,7 +2480,18 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
         assert "flock -n /srv/appdata/sl-gates/e2e.lock true" in log, log
         assert "slot: fake-win (fake-host e2e.lock busy, win idle)" in proc.stdout, proc.stdout
         assert "win_watch sl-e2e-" in remote and "sl-gates-e2e:1" in remote, remote
-        assert remote.rstrip().endswith("9>/srv/sl-gates/run.lock"), "E2E on the PC must take the gate's lock"
+        assert remote.rstrip().endswith("8>/srv/sl-gates/run.2.lock 9>/srv/sl-gates/run.lock"), "E2E on the PC must take both gate locks"
+        assert "flock -n 8 || { echo" in remote, remote
+
+    def test_two_test_runs_share_the_pc_each_at_half_and_one_lock(self, checkouts, tmp_path):
+        """2026-11-20 (user decision): a --tests run on the PC asks for one free lock, takes either, and runs at
+        8 CPUs / 12g. Mutation: route --tests as `gate` → probe asks for `whole` and the run is 16 / 24g, red."""
+        main, _ = checkouts
+        proc, remote, log = self._run(main, tmp_path, "--tests", "tests/a.py")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "; win_probe one /srv/sl-gates " in (tmp_path / "probe").read_text()
+        assert "{ flock -n 9 && S=1; } || { flock -n 8 && S=2; } ||" in remote, remote
+        assert "--cpus 8 " in remote and "--memory 12g" in remote and "--memory 24g" not in remote, remote
 
     @staticmethod
     def _definitions(*names: str) -> str:
@@ -2523,19 +2547,28 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
         b = tmp_path / "bin"
         b.mkdir()
         (b / "docker").write_text("#!/bin/bash\nexit 0\n")
-        (b / "flock").write_text(f'#!/bin/bash\n[ -e "{tmp_path}/held" ] && exit 1; exit 0\n')
+        # Which lock: the file on fd 9 (each probe opens its lock there); `held` holds both, `held-run.lock` one.
+        (b / "flock").write_text(f'#!/bin/bash\n[ -e "{tmp_path}/held" ] && exit 1\n'
+                                 f'[ -e "{tmp_path}/held-$(basename "$(readlink /proc/$$/fd/9 2>/dev/null)")" ] && exit 1; exit 0\n')
         for f in b.iterdir():
             f.chmod(0o755)
-        script = self._definitions("win_exe", "win_game", "win_probe") + f"win_probe {tmp_path} img YuanShen.exe\n"
+        script = self._definitions("win_exe", "win_game", "win_probe") + f'win_probe "$WANT" {tmp_path} img YuanShen.exe\n'
         env = _clean_env()
         env["PATH"] = f"{b}:{env['PATH']}"
-        def probe():
-            return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60).stdout.strip()
+        def probe(want="whole"):
+            return subprocess.run(["bash", "-c", script], env={**env, "WANT": want}, capture_output=True, text=True,
+                                  timeout=60).stdout.strip()
         (tmp_path / "game-running").touch()
         assert probe() == "game: game-running flag"
         (tmp_path / "held").touch()
         assert probe() == "already running a job of ours"
+        assert probe("one") == "already running two jobs of ours"
         (tmp_path / "held").unlink()
+        if Path("/proc/self/fd").exists():  # the fake flock reads which lock from /proc (Linux, the gate hosts)
+            (tmp_path / "held-run.lock").touch()  # one --tests run there: a gate may not come, a second --tests may
+            assert probe() == "already running a job of ours"
+            assert probe("one") == "game: game-running flag"
+            (tmp_path / "held-run.lock").unlink()
         (tmp_path / "game-running").unlink()
         # No Windows to ask (this machine, or interop gone): never idle.
         assert probe() == "game: cannot ask Windows"
@@ -3620,6 +3653,11 @@ class TestTestsOnTheGateHosts:
             assert f"-e PYTEST_WORKERS={want} " in (tmp_path / "remote-run").read_text(), args
         self._here(main, tmp_path, "--workers", "4", "--tests", "tests/a.py")
         assert "-e PYTEST_WORKERS=4 " in (tmp_path / "remote-run").read_text()
+        # After --tests too (2026-11-20: it went to pytest, which stopped on the unknown option, exit 4).
+        self._here(main, tmp_path, "--tests", "--workers", "1", "tests/a.py", "tests/b.py", "tests/c.py", "--timeout", "9m")
+        remote = (tmp_path / "remote-run").read_text()
+        assert "-e PYTEST_WORKERS=1 " in remote and " 9m bash -c" in remote, remote
+        assert b"--workers" not in (tmp_path / "args").read_bytes(), "run-gates' own option reached pytest"
 
     def test_pytests_exit_status_is_this_runs(self, checkouts, tmp_path):
         main, _ = checkouts
