@@ -16,7 +16,14 @@
  */
 import { act, render, renderHook, screen, fireEvent } from "@testing-library/react";
 
-import { ConnectionBanner, ConnectionStatus, useConnectionBannerShown } from "@/src/components/connection-status";
+import {
+  CONNECTED_HOLD_MS,
+  ConnectionBanner,
+  ConnectionStatus,
+  DROP_GRACE_MS,
+  FADE_MS,
+  useConnectionBannerShown,
+} from "@/src/components/connection-status";
 
 const mockReconnect = jest.fn();
 let mockStatus = "connected";
@@ -115,10 +122,65 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
   afterEach(() => jest.useRealTimers());
 
   const classes = (el: Element) => el.className.split(/\s+/);
+  const advance = (ms: number) =>
+    act(() => {
+      jest.advanceTimersByTime(ms);
+    });
+  // 第六十批 P1: a drop shows only once it has lasted DROP_GRACE_MS. Most tests below start from one that has.
+  const renderPill = () => {
+    jest.useFakeTimers();
+    const view = render(<ConnectionBanner />);
+    advance(DROP_GRACE_MS);
+    return view;
+  };
+
+  describe("第六十批 P1: the timing", () => {
+    it("the numbers are the tokens: grace 1000, hold 3000, in / out 160", () => {
+      const { motionTokens } = require("../../../mobile/src/theme.generated") as { motionTokens: Record<string, number> };
+      expect([DROP_GRACE_MS, CONNECTED_HOLD_MS, FADE_MS]).toEqual([motionTokens.connectionGrace, motionTokens.connectionHold, motionTokens.connectionChip]);
+      expect([DROP_GRACE_MS, CONNECTED_HOLD_MS, FADE_MS]).toEqual([1000, 3000, 160]);
+    });
+
+    it("a drop of 1 s or less shows nothing — not the reason, not 「已连上」 after", () => {
+      jest.useFakeTimers();
+      mockStatus = "reconnecting";
+      const { rerender } = render(<ConnectionBanner />);
+      expect(screen.queryByTestId("connection-banner")).toBeNull();
+      advance(DROP_GRACE_MS - 1);
+      expect(screen.queryByTestId("connection-banner")).toBeNull();
+      mockStatus = "connected";
+      rerender(<ConnectionBanner />);
+      expect(screen.queryByTestId("connection-banner")).toBeNull();
+      advance(CONNECTED_HOLD_MS + FADE_MS);
+      expect(screen.queryByTestId("connection-banner")).toBeNull();
+    });
+
+    it("a longer drop opens with 「正在重连…」; 「已连上」 stands 3 s from the reconnect, however long the drop", () => {
+      jest.useFakeTimers();
+      mockStatus = "reconnecting";
+      const { rerender } = render(<ConnectionBanner />);
+      advance(DROP_GRACE_MS);
+      const pill = screen.getByTestId("connection-banner");
+      expect(pill).toHaveTextContent("connection.reconnecting");
+      expect(classes(pill)).toEqual(expect.arrayContaining(["animate-content-in", "duration-fast"]));
+      // The reconnecting line stays as long as the reconnect takes.
+      advance(10_000);
+      expect(screen.getByTestId("connection-banner")).toHaveTextContent("connection.reconnecting");
+      mockStatus = "connected";
+      rerender(<ConnectionBanner />);
+      expect(screen.getByTestId("connection-banner")).toHaveTextContent("connection.connected");
+      advance(CONNECTED_HOLD_MS - 1);
+      expect(classes(screen.getByTestId("connection-banner"))).toContain("opacity-100");
+      advance(1);
+      expect(classes(screen.getByTestId("connection-banner"))).toContain("opacity-0");
+      advance(FADE_MS);
+      expect(screen.queryByTestId("connection-banner")).toBeNull();
+    });
+  });
 
   it("is a pill in the toolbar's row on desktop — not a bar fixed across the top of the viewport", () => {
     mockStatus = "failed";
-    render(<ConnectionBanner />);
+    renderPill();
     const pill = screen.getByTestId("connection-banner");
     expect(pill).toHaveAttribute("role", "status");
     expect(pill).toHaveAttribute("aria-live", "polite");
@@ -131,7 +193,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
 
   it("draws the 2px rule absolutely, so the toolbar keeps its 52px and nothing below it moves", () => {
     mockStatus = "reconnecting";
-    render(<ConnectionBanner />);
+    renderPill();
     const rule = screen.getByTestId("connection-rule");
     expect(classes(rule)).toEqual(expect.arrayContaining(["absolute", "inset-x-0", "h-0.5", "max-[768px]:hidden", "bg-[oklch(var(--color-amber))]"]));
   });
@@ -142,7 +204,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
     ["disconnected", "neg", "--color-danger", true],
   ] as const)("%s: tone %s, dot and rule in %s, retry %s", (status, tone, token, retry) => {
     mockStatus = status;
-    render(<ConnectionBanner />);
+    renderPill();
     const pill = screen.getByTestId("connection-banner");
     expect(pill).toHaveAttribute("data-tone", tone);
     expect(pill).toHaveTextContent(`connection.${status}`);
@@ -157,7 +219,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
 
   it("the amber is a mark, never the words: the reason is ink", () => {
     mockStatus = "reconnecting";
-    render(<ConnectionBanner />);
+    renderPill();
     const pill = screen.getByTestId("connection-banner");
     expect(classes(pill)).toContain("text-[oklch(var(--color-ink))]");
     expect(pill.className).not.toMatch(/text-\[oklch\(var\(--color-(warn|warning)\)\)\]/);
@@ -165,7 +227,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
 
   it("fades in over 160 and fades out over 160 (batch 58 M13)", () => {
     mockStatus = "failed";
-    render(<ConnectionBanner />);
+    renderPill();
     for (const el of [screen.getByTestId("connection-banner"), screen.getByTestId("connection-rule")]) {
       expect(classes(el)).toEqual(expect.arrayContaining(["animate-content-in", "transition-opacity", "duration-fast", "ease-exit"]));
       expect(classes(el)).not.toContain("duration-base");
@@ -175,7 +237,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
   it("once connected: says 「已连接」 for 3 s, then fades out over 160 (batch 58 M13)", () => {
     jest.useFakeTimers();
     mockStatus = "failed";
-    const { rerender } = render(<ConnectionBanner />);
+    const { rerender } = renderPill();
     mockStatus = "connected";
     rerender(<ConnectionBanner />);
     const pill = screen.getByTestId("connection-banner");
@@ -205,7 +267,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
   it("drops again during the hold: back to the reason at once, not faded", () => {
     jest.useFakeTimers();
     mockStatus = "failed";
-    const { rerender } = render(<ConnectionBanner />);
+    const { rerender } = renderPill();
     mockStatus = "connected";
     rerender(<ConnectionBanner />);
     act(() => {
@@ -234,10 +296,11 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
     it("socket 连着也出胶囊:离线 · 当前内容可能不是最新版本,灰点,没有按钮", () => {
       jest.useFakeTimers();
       mockStatus = "connected";
-      render(<ConnectionBanner />);
+      renderPill();
       expect(screen.queryByTestId("connection-banner")).toBeNull();
 
       setOnline(false);
+      advance(DROP_GRACE_MS);
       const pill = screen.getByTestId("connection-banner");
       expect(pill).toHaveTextContent("connection.offline");
       // Absence: the socket reason is not what an offline pill says.

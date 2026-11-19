@@ -98,10 +98,12 @@ export function useConnectionBannerShown(): boolean {
   return offline || (!!user && status !== "connected" && status !== "connecting");
 }
 
-/** 第五十八批 M13:进出都是 160 = `--transition-duration-fast`(`duration-fast`)—— 淡出完再清空内容。 */
-const FADE_MS = 160;
-/** 第五十八批 M13:连上以后先停 3 秒(说「已连接」),再收起。 */
+/** 第五十八批 M13 / 第六十批 P1(`motion.connection-chip`):进出都是 160 = `--transition-duration-fast`(`duration-fast`)—— 淡出完再清空内容。 */
+export const FADE_MS = 160;
+/** 第六十批 P1(`motion.connection-hold`):连上以后先停 3 秒(说「已连上」,从连上那一刻算),再收起。 */
 export const CONNECTED_HOLD_MS = 3000;
+/** 第六十批 P1(`motion.connection-grace`):断开 1 秒以内就恢复的,什么都不出现。 */
+export const DROP_GRACE_MS = 1000;
 
 type Tone = "warn" | "neg" | "offline" | "ok";
 /** The dot and the 2px rule: amber while it retries, red when it gave up, grey offline. `--color-amber` is
@@ -129,8 +131,9 @@ const TONE_COLOUR: Record<Tone, string> = {
  *
  * Reconnecting: amber dot, pulsing. Failed (or disconnected — terminal too): red dot and 重连. Offline:
  * grey dot, no button — queries refetch on `online` by themselves, and if the socket gave up meanwhile
- * the pill turns red and offers 重连 then. On reconnect (batch 58 M13) it says 「已连接」 with a green dot for 3 s, then
- * fades out over 160ms (`duration-fast`); it fades in over the same 160.
+ * the pill turns red and offers 重连 then. A drop that is back within 1 s shows nothing (batch 60 P1, `DROP_GRACE_MS`).
+ * On reconnect (batch 58 M13 / 60 P1) it says 「已连上」 with a green dot for 3 s counted from the reconnect, then fades out
+ * over 160ms (`duration-fast`); it fades in over the same 160.
  */
 export function ConnectionBanner() {
   const { status, reconnect } = useWebSocket();
@@ -142,11 +145,23 @@ export function ConnectionBanner() {
   const tone: Tone | null = !shown ? null : offline ? "offline" : status === "reconnecting" ? "warn" : "neg";
   const reason = !tone ? null : offline ? t("connection.offline") : t(`connection.${status}`);
 
+  // 第六十批 P1: a drop shows only once it has lasted DROP_GRACE_MS; back within it, nothing at all (no 「已连上」 either).
+  // A pill already up (the 「已连上」 hold) is armed at once: the link dropping again says so without waiting.
+  const [armed, setArmed] = useState(false);
+  const down = !!tone;
   // The last state shown, kept for the hold and the fade after the link comes back (derived state, set during render).
   const [last, setLast] = useState<{ tone: Tone; reason: string } | null>(null);
   const [leaving, setLeaving] = useState(false);
-  if (tone && reason && (last?.tone !== tone || last?.reason !== reason)) setLast({ tone, reason });
-  if (tone && leaving) setLeaving(false);
+  if (down && !armed && last) setArmed(true);
+  if (!down && armed) setArmed(false);
+  const live = down && (armed || !!last);
+  if (live && tone && reason && (last?.tone !== tone || last?.reason !== reason)) setLast({ tone, reason });
+  if (live && leaving) setLeaving(false);
+  useEffect(() => {
+    if (!down || armed) return;
+    const wait = window.setTimeout(() => setArmed(true), DROP_GRACE_MS);
+    return () => window.clearTimeout(wait);
+  }, [down, armed]);
   const back = !tone && !!last;
   useEffect(() => {
     if (!back) return;
@@ -158,7 +173,7 @@ export function ConnectionBanner() {
     };
   }, [back]);
 
-  const view = tone && reason ? { tone, reason } : last ? { tone: "ok" as const, reason: t("connection.connected") } : null;
+  const view = live && tone && reason ? { tone, reason } : !down && last ? { tone: "ok" as const, reason: t("connection.connected") } : null;
   if (!view) return null;
   const canRetry = view.tone === "neg";
 
