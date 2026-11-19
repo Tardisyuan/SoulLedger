@@ -225,3 +225,38 @@ jest.mock("@gorhom/bottom-sheet", () => {
     useBottomSheetTimingConfigs: (config) => config,
   };
 });
+
+// An Animated run's completion callback fires from a real timer, when the animation's duration is up — wherever the
+// test happens to be then. On a fast machine that is inside an `await act`; on a slow one (the unRAID gate) the test
+// is still going and the callback's setState lands outside act: "An update to Topline … was not wrapped in act".
+// The callback is the product's and is right; nobody is "testing" the moment a timer fires. So a callback that the
+// timer (not `start` itself) fires runs with the act environment off — React's own advice for updates the test did
+// not cause — and the update is still scheduled and flushed by the test's next act or by RNTL's cleanup. Covers every
+// Animated run, not just `Topline` (civHead.tsx), which is the one that tripped.
+const { Animated } = require("react-native");
+for (const kind of ["timing", "delay", "spring", "decay"]) {
+  const make = Animated[kind];
+  Animated[kind] = (...args) => {
+    const anim = make(...args);
+    const start = anim.start.bind(anim);
+    anim.start = (done) => {
+      let starting = true; // finished while `start` is on the stack: already inside whatever act ran the effect
+      const out = start(
+        done &&
+          ((result) => {
+            if (starting) return done(result);
+            const was = globalThis.IS_REACT_ACT_ENVIRONMENT;
+            globalThis.IS_REACT_ACT_ENVIRONMENT = false;
+            try {
+              return done(result);
+            } finally {
+              globalThis.IS_REACT_ACT_ENVIRONMENT = was;
+            }
+          })
+      );
+      starting = false;
+      return out;
+    };
+    return anim;
+  };
+}
