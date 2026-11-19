@@ -1021,9 +1021,19 @@ describe("egy 词表规则", () => {
     // 「上诉」(第五十四批第二批,Design):灵魂把复核送进上级的申诉流程,与工作流的「上报」同一个 Seshem Er Hery。
     // 「超度」(第五十八批,Design):城隍把亡魂送上莲花台,「引领、送上去」,与「上诉」同一个 Seshem;
     //  第五十一批「超度回向」(阳间回向功德)用的是 Redi Nefer,两件事不混。
-    // 「转交上级」(第五十九批 N11,Design):审批页截止那行「到时转交上级 / 已转交上级」写 Seshem Er Hery,同「上报」。
-    //  编辑器里的超时动作 `workflow.editor.timeout.action.ESCALATE` 仍是 Hab Er It(选项名,不是这一行)。
-    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级|上诉|超度|转交上级/.test(ZH[k] ?? ""))).toEqual([]);
+    // 「转交上级」不在这里(第六十批 P7,Design 更正第五十九批 N11):审批页截止那行与编辑器里的超时动作
+    //  `workflow.editor.timeout.action.ESCALATE` 同写 Hab Er It;Seshem Er Hery 是申诉的「上报」,另一件事。
+    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级|上诉|超度/.test(ZH[k] ?? ""))).toEqual([]);
+  });
+
+  it("第六十批 P7 / P8:截止那行的动作与编辑器里的超时动作同名", () => {
+    const action = (a: string) => EGY[`workflow.editor.timeout.action.${a}`];
+    expect(action("ESCALATE")).toBe("Hab Er It");
+    expect(EGY["workflow.detail.deadline_line"]).toContain(`Er Khet: ${action("ESCALATE")}`);
+    expect(EGY["workflow.detail.deadline_line_auto_reject"]).toContain(`Er Khet: ${action("AUTO_REJECT")}`);
+    expect(EGY["workflow.detail.deadline_line_notify"]).toContain(`Er Khet: ${action("NOTIFY")}`);
+    // Absence: 第五十九批的 Seshem Er Hery 不再出现在截止那几行里。
+    expect(Object.keys(EGY).filter((k) => k.startsWith("workflow.detail.deadline") && /Seshem/.test(EGY[k]))).toEqual([]);
   });
 
   it("Sekhem 只表密码:中文不含「密码」的键不出现 Sekhem(白名单除外)", () => {

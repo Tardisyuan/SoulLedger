@@ -11,7 +11,7 @@ import {
   REJECTION_REASON_FOR_SOUL_MAX,
 } from "@soulledger/core/api";
 import { workflowKeys } from "@soulledger/core/query_keys";
-import { toIntlLocale, useI18n } from "@/src/contexts/I18nContext";
+import { useI18n } from "@/src/contexts/I18nContext";
 import { HandledBy } from "@/src/components/ui/HandledBy";
 import { useToast } from "@/src/contexts/ToastContext";
 import { workflowTitle } from "@/src/components/workflow/workflowTitle";
@@ -48,7 +48,7 @@ import { NextTodoBar } from "@/src/components/approval/NextTodoBar";
 import { rememberReason } from "@/src/lib/recentRejectReasons";
 import { AddCosignerDialog } from "@/src/components/workflow/detail/AddCosignerDialog";
 import { useApprovalRef } from "@/src/components/workflow/detail/useApprovalRef";
-import { deadlineDistance, decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
+import { deadlineDistance, deadlineKeys, decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
 import { tenantLabel } from "@/src/lib/domainNames";
 
 /**
@@ -326,7 +326,8 @@ export default function WorkflowDetailPage() {
   // Over decision steps only, as the officer App counts (通知 / 结束 are not steps).
   const step = decisionStepPosition(sortedNodes, currentNode?.id);
   const deadline = nodeDeadline(currentNode);
-  const distance = deadline ? deadlineDistance(deadline, Date.now(), toIntlLocale(locale)) : null;
+  const distance = deadline ? deadlineDistance(deadline, Date.now(), t) : null;
+  const deadlineLine = deadline ? deadlineKeys(currentNode?.timeout_action) : null;
   // 殿名:当前节点的殿(A1「酆都 · 第三殿」);已结束、没有当前节点就写规制司。
   const hall = useHall(courtLabel(t, currentNode?.court_code, locale) || t("plaque.office.rules"));
   usePlaque({
@@ -630,17 +631,21 @@ export default function WorkflowDetailPage() {
                     )}
                   </p>
                 </div>
-                {deadline && currentNode.timeout_action === "ESCALATE" ? (
-                  /* 第五十九批 N11: 「{time} 截止 · 还有 {left} · 到时转交上级」; once past it, 「已过截止 {late} · 已转交上级」 in warning ink.
-                     The two lines are Design's words for escalation only; the other actions keep the rule's own wording below. */
+                {deadline && deadlineLine ? (
+                  /* 第五十九批 N11 / 第六十批 P8: 「{time} 截止 · 还有 {left} · 到时<动作>」; once past it, 「已过截止 {late} · 已<动作>」
+                     in warning ink -- except a refusal that has already happened: its status tag says so, the line stays --sub. */
                   <span
                     data-testid="workflow-deadline"
                     data-overdue={distance?.overdue ? "" : undefined}
-                    className={`font-mono text-xs ${distance?.overdue ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"}`}
+                    className={`font-mono text-xs ${
+                      distance?.overdue && currentNode.timeout_action !== "AUTO_REJECT"
+                        ? "text-[oklch(var(--color-warning))]"
+                        : "text-[oklch(var(--color-ink-muted))]"
+                    }`}
                   >
                     {distance?.overdue
-                      ? t("workflow.detail.deadline_overdue", { late: distance.text })
-                      : t("workflow.detail.deadline_line", { time: formatDateTime(deadline), left: distance?.text ?? "" })}
+                      ? t(deadlineLine.overdue, { late: distance.text })
+                      : t(deadlineLine.line, { time: formatDateTime(deadline), left: distance?.text ?? "" })}
                   </span>
                 ) : currentNode.timeout_hours ? (
                   <span data-testid="workflow-deadline" className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">

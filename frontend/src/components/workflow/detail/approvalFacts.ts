@@ -32,11 +32,27 @@ const HOUR = 3_600_000;
 /**
  * 「还有 {left}」 / 「已过截止 {late}」 (第五十九批 N11): how far `deadline` is from `now`, in the largest unit that
  * still reads as a whole number -- minutes under an hour, hours under two days, else days -- rounded down
- * (「还有 23 小时」 at 23 h 40 min, never a promise of 24). `Intl` gives the unit words in the page's own locale.
+ * (「还有 23 小时」 at 23 h 40 min, never a promise of 24). The words are `common.duration.*` (第六十批 P9: 「24 小时」 /
+ * 「Unut 24」, egy's unit before its number); the sentence keys say 「还有」 / 「已过」, so the duration carries no 「后」.
  */
-export function deadlineDistance(deadline: string, now: number, intlLocale: string): { overdue: boolean; text: string } {
+export function deadlineDistance(
+  deadline: string,
+  now: number,
+  t: (key: string, vars?: Record<string, string>) => string
+): { overdue: boolean; text: string } {
   const ms = new Date(deadline).getTime() - now;
   const abs = Math.abs(ms);
-  const [n, unit] = abs < HOUR ? [Math.max(1, Math.floor(abs / 60_000)), "minute"] : abs < 48 * HOUR ? [Math.floor(abs / HOUR), "hour"] : [Math.floor(abs / (24 * HOUR)), "day"];
-  return { overdue: ms < 0, text: new Intl.NumberFormat(intlLocale, { style: "unit", unit, unitDisplay: "long" }).format(n) };
+  const [n, unit] =
+    abs < HOUR ? [Math.max(1, Math.floor(abs / 60_000)), "minutes"] : abs < 48 * HOUR ? [Math.floor(abs / HOUR), "hours"] : [Math.floor(abs / (24 * HOUR)), "days"];
+  return { overdue: ms < 0, text: t(`common.duration.${unit}`, { n: String(n) }) };
+}
+
+/** 第六十批 P8: the deadline line says what happens when it runs out -- one pair of keys per timeout action. */
+const DEADLINE_KEYS: Record<string, { line: string; overdue: string }> = {
+  ESCALATE: { line: "workflow.detail.deadline_line", overdue: "workflow.detail.deadline_overdue" },
+  AUTO_REJECT: { line: "workflow.detail.deadline_line_auto_reject", overdue: "workflow.detail.deadline_overdue_auto_reject" },
+  NOTIFY: { line: "workflow.detail.deadline_line_notify", overdue: "workflow.detail.deadline_overdue_notify" },
+};
+export function deadlineKeys(action: string | null | undefined): { line: string; overdue: string } | null {
+  return (action && DEADLINE_KEYS[action]) || null;
 }

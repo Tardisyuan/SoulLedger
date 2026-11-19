@@ -7,6 +7,7 @@
 import { screen, within } from "@testing-library/react";
 import WorkflowDetailPage from "@/app/workflow/[id]/page";
 import { deadlineDistance, decisionStepPosition, nodeDeadline } from "@/src/components/workflow/detail/approvalFacts";
+import egy from "@soulledger/core/messages/egy.json";
 import { tZh } from "./support/zhBundle";
 import { renderWithProviders } from "./support/render";
 
@@ -89,7 +90,8 @@ describe("the deadline", () => {
     officerAppApi.item.mockResolvedValue(facts({}));
     renderPage();
     const line = await screen.findByTestId("workflow-deadline");
-    expect(line).toHaveTextContent(tZh("workflow.detail.deadline_line", { time: "dt(2026-11-02T08:00:00.000Z)", left: "23小时" }));
+    // 第六十批 P9: the duration is `common.duration.hours` 「23 小时」, no 「后」.
+    expect(line).toHaveTextContent(tZh("workflow.detail.deadline_line", { time: "dt(2026-11-02T08:00:00.000Z)", left: "23 小时" }));
     expect(line).not.toHaveTextContent("小时后");
     expect(line).not.toHaveAttribute("data-overdue");
     expect(line.className).not.toContain("color-warning");
@@ -101,29 +103,58 @@ describe("the deadline", () => {
     officerAppApi.item.mockResolvedValue(facts({}));
     renderPage();
     const line = await screen.findByTestId("workflow-deadline");
-    expect(line).toHaveTextContent(new RegExp(`^${tZh("workflow.detail.deadline_overdue", { late: "3小时" })}$`));
+    expect(line).toHaveTextContent(new RegExp(`^${tZh("workflow.detail.deadline_overdue", { late: "3 小时" })}$`));
     expect(line).toHaveAttribute("data-overdue");
     expect(line.className).toContain("color-warning");
   });
 
-  it("an action other than escalation keeps the rule's own words", async () => {
-    workflowApi.get.mockResolvedValue(workflow({ ...CURRENT, timeout_action: "AUTO_REJECT" }));
+  // 第六十批 P8: each timeout action has its own pair; past the deadline warning ink, except a refusal already made (--sub).
+  it.each([
+    ["AUTO_REJECT", "workflow.detail.deadline_line_auto_reject", "workflow.detail.deadline_overdue_auto_reject", false],
+    ["NOTIFY", "workflow.detail.deadline_line_notify", "workflow.detail.deadline_overdue_notify", true],
+  ] as const)("%s: its own line before the deadline, its own after", async (action, lineKey, overdueKey, warns) => {
+    at("2026-11-01T08:20:00Z");
+    workflowApi.get.mockResolvedValue(workflow({ ...CURRENT, timeout_action: action }));
+    officerAppApi.item.mockResolvedValue(facts({}));
+    const first = renderPage();
+    const line = await screen.findByTestId("workflow-deadline");
+    expect(line.textContent).toBe(tZh(lineKey, { time: "dt(2026-11-02T08:00:00.000Z)", left: "23 小时" }));
+    // Absence: not the escalation wording, not the old 「24 小时后 · 动作」 rule line.
+    expect(line).not.toHaveTextContent(tZh("workflow.editor.timeout.action.ESCALATE"));
+    expect(line).not.toHaveTextContent("小时后");
+    expect(line.className).not.toContain("color-warning");
+    first.unmount();
+
+    at("2026-11-02T11:00:00Z");
+    renderPage();
+    const late = await screen.findByTestId("workflow-deadline");
+    expect(late.textContent).toBe(tZh(overdueKey, { late: "3 小时" }));
+    expect(late).toHaveAttribute("data-overdue");
+    expect(late.className.includes("color-warning")).toBe(warns);
+    if (!warns) expect(late.className).toContain("color-ink-muted");
+  });
+
+  it("an unknown action keeps the rule's own words", async () => {
+    workflowApi.get.mockResolvedValue(workflow({ ...CURRENT, timeout_action: "SOMETHING_ELSE" }));
     officerAppApi.item.mockResolvedValue(facts({}));
     renderPage();
     const line = await screen.findByTestId("workflow-deadline");
     expect(line).toHaveTextContent(tZh("workflow.detail.deadline", { time: "dt(2026-11-02T08:00:00.000Z)" }));
-    expect(line).toHaveTextContent(tZh("workflow.editor.timeout.summary", { hours: "24", action: tZh("workflow.editor.timeout.action.AUTO_REJECT") }));
-    expect(line).not.toHaveTextContent(tZh("workflow.editor.timeout.action.ESCALATE"));
   });
 
-  it("deadlineDistance rounds down, in minutes / hours / days", () => {
+  it("deadlineDistance rounds down, in minutes / hours / days, in common.duration.* (第六十批 P9)", () => {
     const now = new Date("2026-11-01T00:00:00Z").getTime();
     const later = (ms: number) => new Date(now + ms).toISOString();
-    expect(deadlineDistance(later(59 * 60_000 + 59_000), now, "zh-Hans")).toEqual({ overdue: false, text: "59分钟" });
-    expect(deadlineDistance(later(10_000), now, "zh-Hans").text).toBe("1分钟");
-    expect(deadlineDistance(later(47.9 * 3_600_000), now, "zh-Hans").text).toBe("47小时");
-    expect(deadlineDistance(later(49 * 3_600_000), now, "en").text).toBe("2 days");
-    expect(deadlineDistance(later(-2 * 3_600_000), now, "zh-Hans")).toEqual({ overdue: true, text: "2小时" });
+    expect(deadlineDistance(later(59 * 60_000 + 59_000), now, tZh)).toEqual({ overdue: false, text: "59 分钟" });
+    expect(deadlineDistance(later(10_000), now, tZh).text).toBe("1 分钟");
+    expect(deadlineDistance(later(47.9 * 3_600_000), now, tZh).text).toBe("47 小时");
+    expect(deadlineDistance(later(49 * 3_600_000), now, tZh).text).toBe("2 天");
+    expect(deadlineDistance(later(-2 * 3_600_000), now, tZh)).toEqual({ overdue: true, text: "2 小时" });
+    // egy: the unit before the number (「Unut 24」), not English h / d.
+    const units = egy.common.duration as Record<string, string>;
+    const tEgy = (k: string, v?: Record<string, string>) => units[k.split(".").pop()!].replace("{{n}}", v!.n);
+    expect(deadlineDistance(later(24 * 3_600_000), now, tEgy).text).toBe("Unut 24");
+    expect(deadlineDistance(later(72 * 3_600_000), now, tEgy).text).toBe("Hru 3");
   });
 
   it("without activated_at keeps only the rule", async () => {

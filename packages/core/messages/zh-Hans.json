@@ -1029,7 +1029,12 @@
     "export_scope": "按当前筛选导出，共 {{n}} 条",
     "export_too_many": "超过 1 万条，请缩小筛选",
     "handled_by": "{{name}} · {{time}} 处理",
-    "handled_by_hall": "{{hall}} · {{time}} 处理"
+    "handled_by_hall": "{{hall}} · {{time}} 处理",
+    "duration": {
+      "minutes": "{{n}} 分钟",
+      "hours": "{{n}} 小时",
+      "days": "{{n}} 天"
+    }
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
@@ -1725,7 +1730,11 @@
       "terminate_error": "结束流程失败",
       "deadline": "{{time}} 截止",
       "deadline_line": "{{time}} 截止 · 还有 {{left}} · 到时转交上级",
-      "deadline_overdue": "已过截止 {{late}} · 已转交上级"
+      "deadline_overdue": "已过截止 {{late}} · 已转交上级",
+      "deadline_line_auto_reject": "{{time}} 截止 · 还有 {{left}} · 到时自动驳回",
+      "deadline_overdue_auto_reject": "已过截止 {{late}} · 已自动驳回",
+      "deadline_line_notify": "{{time}} 截止 · 还有 {{left}} · 到时发提醒",
+      "deadline_overdue_notify": "已过截止 {{late}} · 已发提醒，仍待处理"
     },
     "verdicts": {
       "passed": "通过",

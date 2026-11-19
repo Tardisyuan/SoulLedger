@@ -1025,7 +1025,12 @@
     "name_en": "Ren · Medu Europa",
     "description_en": "Medu-N · Medu Europa",
     "handled_by": "Iri-N {{name}} · {{time}}",
-    "handled_by_hall": "Iri-N {{hall}} · {{time}}"
+    "handled_by_hall": "Iri-N {{hall}} · {{time}}",
+    "duration": {
+      "minutes": "At {{n}}",
+      "hours": "Unut {{n}}",
+      "days": "Hru {{n}}"
+    }
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} (Sesh {{count}})",
@@ -1717,9 +1722,13 @@
       "terminate_reason_label": "Khet Khetem",
       "terminate_reason_placeholder": "Sesh Khet: Khetem Wat Pen.",
       "terminate_success": "Wat Wedja Khetem-N",
-      "deadline_line": "Hru {{time}} · {{left}} Wenen · Er Khet: Seshem Er Hery",
-      "deadline_overdue": "Khet Hru {{late}} · Seshem Er Hery-N",
-      "deadline": "Hru {{time}}"
+      "deadline_line": "Hru {{time}} · {{left}} Wenen · Er Khet: Hab Er It",
+      "deadline_overdue": "Khet Hru {{late}} · Hab-N Er It",
+      "deadline": "Hru {{time}}",
+      "deadline_line_auto_reject": "Hru {{time}} · {{left}} Wenen · Er Khet: Khesef Djes-Ef",
+      "deadline_overdue_auto_reject": "Khet Hru {{late}} · Khesef-N Djes-Ef",
+      "deadline_line_notify": "Hru {{time}} · {{left}} Wenen · Er Khet: Sedjem Sab",
+      "deadline_overdue_notify": "Khet Hru {{late}} · Sedjem Sab-N · Nen Iri Djer"
     },
     "verdicts": {
       "passed": "Menkh",
