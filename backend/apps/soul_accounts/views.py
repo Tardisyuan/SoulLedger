@@ -51,6 +51,34 @@ from apps.soul_accounts.serializers import (
 )
 
 
+def scoped_accounts(request, *, pk=None, soul=None, data_scope=True):
+    """The soul accounts `request` may see -- of souls of its hall (their home), not in the recycle bin, inside its
+    data scope -- narrowed to account `pk` / soul `soul` when given. Not joined to the soul on control: control holds
+    a mirror of a write-cut civilization's souls that lags the shard by up to a sync (sharding stage 4), so a soul
+    created a minute ago is not there yet and the join answered 404. The souls are read where the router reads them
+    (their masters, or the hall's shard), the accounts on control by those souls' ids; `soul` is prefetched the same
+    way."""
+    from django.core.exceptions import ValidationError
+
+    from apps.souls.models import Soul
+
+    accounts = SoulAccount.objects.all()
+    try:
+        if pk is not None:
+            accounts = accounts.filter(pk=pk)
+        if soul:
+            accounts = accounts.filter(soul_id=soul)
+        # ponytail: an unnarrowed list reads every account's soul id (one IN list); page by soul if halls grow huge.
+        wanted = list(accounts.values_list("soul_id", flat=True))
+    except (ValidationError, ValueError):  # a malformed id names no account
+        wanted = []
+    souls = scope_to_tenant(Soul.all_objects.filter(pk__in=wanted, is_deleted=False), request, field="home_tenant")
+    if data_scope:
+        souls = DataScopeFilter.through_soul(request, souls, soul_path="")
+    return (SoulAccount.objects.filter(soul_id__in=list(souls.values_list("pk", flat=True)))
+            .select_related("user", "mfa").prefetch_related("soul").order_by("soul_id", "cycle"))
+
+
 def _error(exc):
     return problem(exc.status, exc.code, str(exc))
 
@@ -76,9 +104,7 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # 回收站里的灵魂不上官员列表(只隐藏,账号与凭据的状态不动;恢复后原样回来)。
-        qs = SoulAccount.objects.filter(soul__is_deleted=False).select_related(
-            "soul", "user", "mfa").order_by("soul", "cycle")
-        return DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
+        return scoped_accounts(self.request, pk=self.kwargs.get("pk"), soul=self.request.query_params.get("soul"))
 
     @extend_schema(request=ProvisionRequestSerializer,
                    responses={201: SoulAccountSerializer, 200: SoulAccountSerializer, 404: SoulErrorSerializer,
@@ -107,7 +133,7 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
                     soul, AccountOrigin.OFFICER, actor=request.user, request=request)
         except svc.SoulAccountError as exc:
             return _error(exc)
-        account = self.get_queryset().get(pk=account.pk)
+        account = scoped_accounts(request, pk=account.pk).get()
         return Response(SoulAccountSerializer(account).data, status=201 if created else 200)
 
     @extend_schema(request=ResetRequestSerializer,
@@ -144,8 +170,7 @@ class SoulAccountMfaResetView(APIView):
                               403: SoulErrorSerializer, 404: OpenApiResponse(description="账号不存在或不在本殿"),
                               409: SoulErrorSerializer})
     def post(self, request, pk):
-        accounts = scope_to_tenant(SoulAccount.objects.select_related("soul", "user", "mfa"), request,
-                                   field="soul__home_tenant")
+        accounts = scoped_accounts(request, pk=pk, data_scope=False)
         account = get_object_or_404(accounts, pk=pk)
         if request.user.tenant_id is None or request.user.tenant_id != account.soul.home_tenant_id:
             return problem(403, "not_home_hall", "只有本殿官员能关闭灵魂的两步验证。")

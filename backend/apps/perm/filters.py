@@ -44,13 +44,14 @@ class DataScopeFilter:
         if not user.is_authenticated:
             return queryset.none()
         entry = data_scope.REGISTRY["souls.Soul"]
-        q = data_scope.visible_q(user, entry.resource, f"{soul_path}__{entry.org_path}",
-                                 tuple(f"{soul_path}__{p}" for p in entry.user_paths),
+        at = f"{soul_path}__" if soul_path else ""  # "": the queryset is of souls
+        q = data_scope.visible_q(user, entry.resource, f"{at}{entry.org_path}",
+                                 tuple(f"{at}{p}" for p in entry.user_paths),
                                  cache=data_scope.request_cache(request))
         if q is None:
             return queryset
         tenant_id = getattr(user, "tenant_id", None)
         if tenant_id is not None:
-            home = f"{soul_path}__home_tenant"
+            home = f"{at}home_tenant"
             q |= Q(**{f"{home}__isnull": False}) & ~Q(**{home: tenant_id})
         return queryset.filter(q)

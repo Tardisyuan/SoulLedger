@@ -596,7 +596,7 @@ def _tell_previous_owner(previous_account_id, was_active, device, account):
     from apps.soul_accounts.models import SoulAccount
     from apps.soul_accounts.services import audit
 
-    previous = SoulAccount.objects.select_related("soul").filter(pk=previous_account_id).first()
+    previous = SoulAccount.objects.filter(pk=previous_account_id).first()  # no soul join: control's mirror of it lags the shard (soul_accounts.views.scoped_accounts)
     if previous is None:
         return
     audit(AuditAction.UPDATE, previous.soul, f"推送设备被另一个账号登记({previous.soul.soul_code} → {account.soul.soul_code})",

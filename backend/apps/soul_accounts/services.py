@@ -70,7 +70,7 @@ def soul_code_for_email(email):
 
     email = normalize_soul_code(email)
     account = (
-        SoulAccount.objects.select_related("user", "soul")
+        SoulAccount.objects.select_related("user")  # no soul join: control's mirror of it lags the shard (views.scoped_accounts)
         .filter(retired_at__isnull=True, user__is_active=True, user__email__iexact=email).first()
     )
     if account is None or not account.user.email_verified or not account.soul.soul_code:

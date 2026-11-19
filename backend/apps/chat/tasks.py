@@ -79,6 +79,6 @@ def deactivate_matrix_task(account_id, conversation_ids):
     from apps.chat import services
     from apps.soul_accounts.models import SoulAccount
 
-    account = SoulAccount.objects.filter(pk=account_id).select_related("soul").first()
+    account = SoulAccount.objects.filter(pk=account_id).first()  # no soul join: control's mirror of it lags the shard (soul_accounts.views.scoped_accounts)
     if account is not None:
         services.deactivate_matrix_side(account, conversation_ids)

@@ -81,14 +81,15 @@ def account_from_pending(raw) -> SoulAccount | None:
     except TokenError:
         return None
     account = (
-        SoulAccount.objects.select_related("user", "soul")
+        SoulAccount.objects.select_related("user")  # no soul join: control's mirror of it lags the shard (soul_accounts.views.scoped_accounts)
         .filter(pk=token.get("soul_account_id"), retired_at__isnull=True).first()
     )
     return account if account is not None and account.user.is_active else None
 
 
 def _lock(account) -> SoulAccount:
-    return SoulAccount.objects.select_for_update(of=("self",)).select_related("user", "soul").get(pk=account.pk)
+    # no soul join: control's mirror of it lags the shard (soul_accounts.views.scoped_accounts)
+    return SoulAccount.objects.select_for_update(of=("self",)).select_related("user").get(pk=account.pk)
 
 
 def get_mfa(account) -> SoulMfa | None:

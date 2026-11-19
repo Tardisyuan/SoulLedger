@@ -1674,7 +1674,7 @@ def set_new_password(request):
     from apps.soul_accounts.services import mark_login_email_verified, set_password_chosen_by_soul
 
     mark_login_email_verified(user, email)  # the code reached this address: it may now sign in with it
-    account = SoulAccount.objects.select_related("soul").filter(user=user).first()
+    account = SoulAccount.objects.filter(user=user).first()  # no soul join: control's mirror of it lags the shard (soul_accounts.views.scoped_accounts)
     if account is not None:
         account.user = user
         set_password_chosen_by_soul(account, new_password)

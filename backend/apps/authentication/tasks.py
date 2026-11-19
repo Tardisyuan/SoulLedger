@@ -228,7 +228,7 @@ def send_reset_code_mail(token):
         pack = MESSAGES[locale]["reset_code"]
         text, rows = fill(pack["text"], code=code), [(pack["code_label"], code)]
         # S2 (2026-11-15): the soul code rides along, so a soul that lost the number with the password gets both back.
-        account = SoulAccount.objects.select_related("soul").filter(user=user).first()
+        account = SoulAccount.objects.filter(user=user).first()  # no soul join: control's mirror of it lags the shard (soul_accounts.views.scoped_accounts)
         if account is not None:
             soul_code = account.soul.soul_code
             text += "\n" + fill(pack["soul_code_line"], soul_code=soul_code)

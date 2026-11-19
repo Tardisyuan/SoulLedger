@@ -23,7 +23,7 @@ def live_account(account_id):
 
     if account_id is None:
         return None
-    return (SoulAccount.objects.select_related("soul", "user")
+    return (SoulAccount.objects.select_related("user")  # no soul join: control's mirror lags the shard
             .filter(pk=account_id, retired_at__isnull=True, user__is_active=True).first())
 
 

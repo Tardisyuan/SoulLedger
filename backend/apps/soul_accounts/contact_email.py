@@ -146,7 +146,7 @@ def _enqueue(task, account_id):
 def _account(account_id):
     from apps.soul_accounts.models import SoulAccount
 
-    return SoulAccount.objects.select_related("soul").filter(pk=account_id).first()
+    return SoulAccount.objects.filter(pk=account_id).first()  # no soul join: control's mirror of it lags the shard (soul_accounts.views.scoped_accounts)
 
 
 def send_pending_code(account_id):
