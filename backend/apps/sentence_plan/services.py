@@ -643,7 +643,14 @@ class SentencePlanService:
 
         在灵魂行锁下(可重入)。回原属地之后再看一遍(循环,不递归),所以一次调用可能
         「送回原属」再「调往下一站」。
+
+        计划是原属殿的行。调用方在另一个库的殿里(暂居地撤案 / 结案,分库第 4 阶段两边都切写)时这里锁不到它,
+        改发一条消息,由计划所在的库推进(`transfer.advance_elsewhere`,VERIFY-stage4-r3 后续,与 H-2 同形)。
         """
+        from apps.dispatch import transfer
+
+        if transfer.advance_elsewhere(soul):
+            return
         with transaction.atomic():
             for _ in range(MAX_ADVANCE_STEPS):
                 if not SentencePlanService._step(soul):
