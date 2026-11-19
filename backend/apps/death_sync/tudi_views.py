@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import ProblemSerializer, problem
-from apps.core.shard_reads import control_m2m
+from apps.core.shard_reads import control_m2m, control_m2m_cached, prefetch_control_m2m
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.death_sync.models import DeathRegistrationRequest, TudiGod
@@ -55,7 +55,7 @@ class TudiGodSerializer(serializers.ModelSerializer):
     @extend_schema_field(TudiOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
         return [{"id": u.pk, "name": u.display_name or u.username}
-                for u in sorted(control_m2m(obj, "officers"), key=lambda u: u.username)]
+                for u in sorted(control_m2m_cached(obj, "officers"), key=lambda u: u.username)]
 
     def get_registration_count(self, obj) -> int:
         # The list annotates it (`TudiGodViewSet.queryset`, one query for the page, 2026-10-29); a row saved by
@@ -135,6 +135,11 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
     ).order_by(*TudiGod._meta.ordering)  # an aggregate drops Meta.ordering, and the list is paginated
     serializer_class = TudiGodSerializer
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_serializer(self, *args, **kwargs):
+        if kwargs.get("many") and args:  # a page: its officers in one go, read where they are (control_m2m)
+            args = (prefetch_control_m2m(args[0], "officers"), *args[1:])
+        return super().get_serializer(*args, **kwargs)
 
     def get_serializer_context(self):
         return {**super().get_serializer_context(),

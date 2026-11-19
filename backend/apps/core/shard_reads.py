@@ -561,6 +561,30 @@ def control_m2m(instance, name):
     return f.related_model._default_manager.filter(pk__in=list(ids))
 
 
+def prefetch_control_m2m(instances, name):
+    """`control_m2m` for a page of rows at once -- one through query per database the rows came from, one query of
+    the targets -- left on each row as `control_m2m_cached(row, name)` reads it. Returns the rows as a list."""
+    rows = list(instances)
+    if not rows:
+        return rows
+    f = rows[0]._meta.get_field(name)
+    through, src, tgt = f.remote_field.through, f.m2m_field_name(), f.m2m_reverse_field_name()
+    pairs = []
+    for db in {r._state.db or CONTROL_ALIAS for r in rows}:
+        pks = [r.pk for r in rows if (r._state.db or CONTROL_ALIAS) == db]
+        pairs += list(through._base_manager.using(db).filter(**{f"{src}__in": pks}).values_list(src, tgt))
+    targets = f.related_model._default_manager.in_bulk({t for _, t in pairs})
+    for r in rows:
+        setattr(r, f"_control_m2m_{name}", [targets[t] for s, t in pairs if s == r.pk and t in targets])
+    return rows
+
+
+def control_m2m_cached(instance, name):
+    """The targets `prefetch_control_m2m` left on `instance`, else `control_m2m`'s query."""
+    cached = getattr(instance, f"_control_m2m_{name}", None)
+    return cached if cached is not None else control_m2m(instance, name)
+
+
 def fanout_reads(fn):
     """A management command / global sweep with no request or hall: its reads visit every leg."""
     @functools.wraps(fn)

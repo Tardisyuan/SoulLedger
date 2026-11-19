@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
+from apps.core.shard_reads import prefetch_control_m2m
 from apps.core.tenant import request_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import city_gods
@@ -67,9 +68,10 @@ class CityGodSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(CityGodOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
-        from apps.core.shard_reads import control_m2m
+        from apps.core.shard_reads import control_m2m_cached
 
-        return [{"id": u.pk, "name": _name(u)} for u in sorted(control_m2m(obj, "officers"), key=lambda u: u.username)]
+        return [{"id": u.pk, "name": _name(u)}
+                for u in sorted(control_m2m_cached(obj, "officers"), key=lambda u: u.username)]
 
     def get_open_case_count(self, obj) -> int:
         # The list annotates it (`CityGodViewSet.queryset`, one query for the page, as the tudi list does);
@@ -143,6 +145,11 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
     ).order_by("name")  # Meta.ordering is dropped once a query aggregates; the list pages on it
     serializer_class = CityGodSerializer
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_serializer(self, *args, **kwargs):
+        if kwargs.get("many") and args:  # a page: its officers in one go, read where they are (control_m2m)
+            args = (prefetch_control_m2m(args[0], "officers"), *args[1:])
+        return super().get_serializer(*args, **kwargs)
 
     def get_serializer_context(self):
         return {**super().get_serializer_context(),
