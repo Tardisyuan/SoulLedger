@@ -54,7 +54,10 @@ def _souls(*querysets) -> dict:
 
 def _hears_again_q(souls) -> Q:
     """「再审一次」的裁决(`models.hears_again`),写成查询:RETRY,或欧洲、希腊以外的 PURGATORY。"""
-    final_purgatory = [pk for pk, (civ, _) in souls.items() if civ in ("EUROPEAN", "GREEK")]
+    # Whose PURGATORY is a place, not a rehearing, is the registry's rule (`models.hears_again`, cosmology `outcome`).
+    from apps.judgment.models import hears_again
+
+    final_purgatory = [pk for pk, (civ, _) in souls.items() if not hears_again(civ, "PURGATORY")]
     return Q(verdict="RETRY") | (Q(verdict="PURGATORY") & ~Q(soul_id__in=final_purgatory))
 
 
