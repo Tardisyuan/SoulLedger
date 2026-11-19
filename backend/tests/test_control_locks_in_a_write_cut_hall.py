@@ -448,8 +448,8 @@ def test_a_soul_not_yet_on_controls_mirror_can_be_reset_and_apply_for_rebirth(wo
 
     reset, rebirth = accounts
     old = SoulAccount.objects.select_related("user").get(pk=reset.pk).user.password
-    # As `SoulAccountViewSet.reset_credential` calls it, in the hall's context. Not over HTTP: the viewset's own
-    # queryset scopes accounts through `soul__home_tenant`, a join on control's mirror, and answers 404 until the sync.
+    # As `SoulAccountViewSet.reset_credential` calls it, in the hall's context. (The viewset's own lookup of a fresh
+    # soul's account over HTTP: tests/test_soul_account_reads_skip_controls_soul_mirror.py.)
     with _in_hall(hall), transaction.atomic():
         credential = reset_credential(SoulAccount.objects.get(pk=reset.pk), actor=admin)
     assert credential.soul_id == reset.soul_id, where
