@@ -56,6 +56,7 @@ INDIRECT = {
     ("apps/social/moderation.py", "queryset.select_for_update"): "SHARD",
     ("apps/social/moderation.py", "model.objects.select_for_update"): "SHARD",
     ("apps/souls/models.py", "cls.all_objects.select_for_update"): "SHARD",
+    ("apps/souls/models.py", "cls.all_objects.db_manager(using).select_for_update"): "SHARD",
     ("apps/workflow/segments.py", "segment.nodes.select_for_update"): "SHARD",
     ("apps/workflow/segments.py", "workflow.segments.select_for_update"): "SHARD",
 }
@@ -65,9 +66,9 @@ DRIVEN = {
     ("apps/authentication/views.py", "User.objects.select_for_update().get(pk=user.pk"): "deactivate",
     ("apps/authentication/views.py", "self._batch_targets(user_ids).select_for_update"): "batch_deactivate",
     ("apps/perm/members.py", "_users(request).select_for_update"): "role_members",
-    ("apps/soul_accounts/services.py", "SoulAccount.objects.select_for_update(of=(\"self\",)).select_related(\"soul__tenant\", \"user\")"): "reset_credential",
+    ("apps/soul_accounts/services.py", "locked = SoulAccount.objects.select_for_update"):
+        "reset_credential and rebirth_submit (`_locked_account`)",
     ("apps/soul_accounts/services.py", "SoulAccount.objects.select_for_update(of=(\"self\",)).select_related(\"user\")"): "annihilation",
-    ("apps/soul_accounts/rebirth.py", "SoulAccount.objects.select_for_update"): "rebirth_submit",
     ("apps/officer_app/push.py", "OfficerPushDevice.objects.select_for_update"): "officer push registration",
     ("apps/authentication/mfa.py", "type(mfa)._default_manager.select_for_update"): "officer two-step setup",
     ("apps/soul_assist/usage.py", "AssistConfig.objects.select_for_update().get(pk=1)"): "assistant monthly cap",
@@ -317,7 +318,7 @@ def test_changing_a_roles_members_locks_the_users_and_rolls_back_with_the_shard(
     assert "SCRIBE" in User.objects.get(pk=judge.pk).extra_roles
 
 
-def _soul_account(hall, name, **soul_fields):
+def _soul_account(hall, name, mirror=True, **soul_fields):
     from apps.soul_accounts.models import AccountOrigin
     from apps.soul_accounts.services import provision_account
     from apps.souls.models import Soul
@@ -325,14 +326,15 @@ def _soul_account(hall, name, **soul_fields):
     with _in_hall(hall):
         soul = Soul.objects.create(name=name, tenant=hall, current_state="JUDGING", **soul_fields)
         account, _ = provision_account(soul, AccountOrigin.OFFICER)
-    _mirror(soul)
+    if mirror:
+        _mirror(soul)
     return account
 
 
 def _mirror(soul):
-    """What the shard-to-control sync (every minute on 115) leaves: control's mirror of the soul, which the account
-    locks join on control (`select_related("soul__tenant")`). Only the soul's row: a whole sync here copies shard-range
-    ids into control and the next test's control sequences start in a shard's range."""
+    """What the shard-to-control sync (every minute on 115) leaves: control's mirror of the soul, which control-side
+    reads that join the soul see. Only the soul's row: a whole sync here copies shard-range ids into control and the
+    next test's control sequences start in a shard's range."""
     from apps.core.shard_reads import control_mirror_writes
     from apps.souls.models import Soul
     from apps.tenants.shard_saga import master_of
@@ -418,6 +420,53 @@ def test_a_soul_submitting_a_rebirth_application_locks_its_account(world, locks)
     r = soul_client(SoulAccount.objects.get(pk=account.pk)).post("/api/v1/me/rebirth-applications/", {}, format="json")
     assert r.status_code == 409, r.content
     _locked_inside(locks, "soul_accounts.SoulAccount")
+
+
+@sharded
+@pytest.mark.django_db(databases="__all__", transaction=True)
+def test_a_soul_not_yet_on_controls_mirror_can_be_reset_and_apply_for_rebirth(world, locks):
+    """A soul written on its shard minutes ago -- before the shard-to-control sync (every minute on 115) mirrors it.
+    The account is control's, the soul is its primary's: an account lock that joined the soul on control found no
+    row (DoesNotExist, a 500). Both locks must still be taken: the soul on its shard, the account on control."""
+    import random
+
+    from apps.soul_accounts.models import SoulAccount
+    from apps.soul_accounts.services import reset_credential
+    from apps.souls.models import Soul
+    from apps.tenants.shard_saga import master_of
+    from tests.soul_account_support import soul_client
+
+    seed = random.randrange(10**6)
+    civ = random.Random(seed).choice(CIVS)
+    hall, where = world[civ], f"seed {seed} ({civ})"
+    print(f"fresh-soul seed {seed}")
+    admin = _admin(hall, "lk_fresh_admin")
+    accounts = [_soul_account(hall, f"新魂{i}", mirror=False) for i in range(2)]
+    for account in accounts:
+        assert not Soul._base_manager.using("default").filter(pk=account.soul_id).exists(), f"{where}: mirrored"
+        assert Soul._base_manager.using(master_of(hall)).filter(pk=account.soul_id).exists(), where
+
+    reset, rebirth = accounts
+    old = SoulAccount.objects.select_related("user").get(pk=reset.pk).user.password
+    # As `SoulAccountViewSet.reset_credential` calls it, in the hall's context. Not over HTTP: the viewset's own
+    # queryset scopes accounts through `soul__home_tenant`, a join on control's mirror, and answers 404 until the sync.
+    with _in_hall(hall), transaction.atomic():
+        credential = reset_credential(SoulAccount.objects.get(pk=reset.pk), actor=admin)
+    assert credential.soul_id == reset.soul_id, where
+    assert SoulAccount.objects.select_related("user").get(pk=reset.pk).user.password != old, where
+    _locked_inside(locks, "soul_accounts.SoulAccount")
+    _locked_inside(locks, "souls.Soul", master_of(hall))
+
+    locks.clear()
+    SoulAccount.objects.filter(pk=rebirth.pk).update(must_change_password=False, initial_password_expires_at=None)
+    client = soul_client(SoulAccount.objects.get(pk=rebirth.pk))
+    client.raise_request_exception = False
+    r = client.post("/api/v1/me/rebirth-applications/", {}, format="json")
+    assert r.status_code == 409, f"{where}: {r.status_code} {r.content[:300]}"  # no sentence served: refused, not a 500
+    _locked_inside(locks, "soul_accounts.SoulAccount")
+    _locked_inside(locks, "souls.Soul", master_of(hall))
+    assert not Soul._base_manager.using("default").filter(pk__in=[a.soul_id for a in accounts]).exists(), \
+        f"{where}: the requests wrote control's mirror"
 
 
 @sharded

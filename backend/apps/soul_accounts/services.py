@@ -205,6 +205,21 @@ def provision_account(soul, origin, *, actor=None, request=None):
     return account, True
 
 
+def _locked_account(account, souls):
+    """The account row-locked on control, with its soul from `souls` (locked on the soul's own master by the caller).
+    Not joined to the soul on control: control holds a mirror of a write-cut civilization's souls that lags the
+    shard by up to a sync (sharding stage 4), so a soul created minutes ago is not there yet and the join finds no
+    account (DoesNotExist, a 500)."""
+    from apps.souls.models import Soul
+
+    locked = SoulAccount.objects.select_for_update(of=("self",)).select_related("user").get(pk=account.pk)
+    soul = next((s for s in souls if s.pk == locked.soul_id), None)
+    if soul is None:  # no row on any master: as the join did
+        raise Soul.DoesNotExist(f"soul {locked.soul_id} of account {locked.pk}")
+    locked.soul = soul
+    return locked
+
+
 def reset_credential(account, *, actor=None, request=None):
     """官员重置:新密码、新 72 小时,之前所有未完结的凭据作废。**从不重发旧密码** ——
     旧的明文在发出时就已抹掉,这里也拿不到。"""
@@ -212,8 +227,8 @@ def reset_credential(account, *, actor=None, request=None):
         # 锁序 灵魂 → 账号(见 rebirth._lock_account):下面插入的凭据行对灵魂取 KEY SHARE。
         from apps.souls.models import Soul
 
-        Soul.lock_many([account.soul_id])
-        account = SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
+        souls = Soul.lock_many([account.soul_id])
+        account = _locked_account(account, souls)
         if account.retired_at is not None:
             raise SoulAccountError("该账号已随转世停用,不能重置。", "account_retired")
         _void_open_credentials(account)

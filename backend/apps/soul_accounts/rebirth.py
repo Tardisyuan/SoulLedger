@@ -33,9 +33,8 @@ from apps.soul_accounts.models import (
     CooldownShorteningStatus,
     RebirthApplication,
     RebirthApplicationStatus,
-    SoulAccount,
 )
-from apps.soul_accounts.services import SoulAccountError
+from apps.soul_accounts.services import SoulAccountError, _locked_account
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING
 from apps.workflow.english import NAME_EN
 
@@ -199,8 +198,7 @@ def _lock_account(account):
     申诉、缩短冷却握着账号插入带灵魂外键的行,是同一个形状,所以锁放在这里,三个调用方一起。"""
     from apps.souls.models import Soul
 
-    Soul.lock_many([account.soul_id])
-    return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "soul__home_tenant", "user").get(pk=account.pk)
+    return _locked_account(account, Soul.lock_many([account.soul_id]))
 
 
 def submit(account, desired_form=None, statement=""):
