@@ -12,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.shard_reads import soul_ids
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.realms.filters import RealmFilter
@@ -124,7 +125,8 @@ class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSet
         tz = ZoneInfo(tenant.hall_timezone if tenant is not None else "UTC")
         day_start = datetime.combine(now.astimezone(tz).date(), time.min, tzinfo=tz)
         entries = scope_to_tenant(
-            SoulPathEntry.objects.filter(realm__isnull=False, soul__is_deleted=False),
+            # The soul's recycle-bin flag by id, not a join (PREP-stage5 M3: soul_ids).
+            SoulPathEntry.objects.filter(realm__isnull=False).exclude(soul_id__in=soul_ids(is_deleted=True)),
             request,
         )
         stay = ExpressionWrapper(Value(now, output_field=DateTimeField()) - F("entered_at"), output_field=DurationField())

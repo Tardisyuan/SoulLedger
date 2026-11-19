@@ -418,8 +418,15 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
         # A mute belongs to the soul's current hall, not to the hall that issued it: after a transfer the new
         # hall's officers see it and can lift it, the old hall's no longer can (F-SOC-11).
         # An officer has no soul account: an officer's mute stays with the hall that issued it.
-        souls = scope_to_tenant(self.queryset.filter(user__soul_account__isnull=False), self.request,
-                                field="user__soul_account__soul__tenant")
+        # The souls of the request's halls are read where they are, then matched by id: no join to control's copy
+        # of the soul, a mirror stage 5 deletes (PREP-stage5 M4).
+        from apps.core.tenant import is_tenant_exempt
+        from apps.souls.models import Soul
+
+        souls = self.queryset.filter(user__soul_account__isnull=False)
+        if not is_tenant_exempt(self.request.user):
+            here = scope_to_tenant(Soul._base_manager.all(), self.request).values_list("pk", flat=True)
+            souls = souls.filter(user__soul_account__soul_id__in=list(here))
         officers = scope_to_tenant(self.queryset.filter(user__soul_account__isnull=True), self.request)
         return (souls | officers).order_by("-created_at")
 

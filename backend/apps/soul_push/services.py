@@ -325,14 +325,19 @@ def sentence_wording(kind, payload, home_civilization):
 def record_for_event(event_type, payload, tenant_code):
     """写下该推的投递,返回新建的投递 id。已经记过的(同 dedupe_key、同设备)不再返回。"""
     from apps.soul_accounts.models import SoulAccount
+    from apps.souls.models import Soul
 
     soul_id = payload.get("soul_id")
     if not soul_id or event_type not in HANDLED_EVENTS:
         return []
-    tenant_filter = {"soul__tenant__code": tenant_code} if tenant_code else {"soul__tenant__isnull": True}
-    # 与 AuditHandler 同一条:事件自称的租户与灵魂的租户必须一致,否则不推。
-    account = SoulAccount.objects.filter(soul_id=soul_id, retired_at__isnull=True, **tenant_filter).first()
-    if account is None:
+    # 与 AuditHandler 同一条:事件自称的租户与灵魂的租户必须一致,否则不推。账号在控制库、灵魂在它的主份:
+    # 不在控制库上 join `soul`(那是写切文明的镜像,阶段 5 删掉它;PREP-stage5 M5),先取账号、再按路由读灵魂。
+    account = SoulAccount.objects.filter(soul_id=soul_id, retired_at__isnull=True).first()
+    try:
+        hall = account.soul.tenant if account is not None else None
+    except Soul.DoesNotExist:
+        return []
+    if account is None or getattr(hall, "code", None) != (tenant_code or None):
         return []
     rule = rule_for(event_type, payload, account)
     if rule is None:

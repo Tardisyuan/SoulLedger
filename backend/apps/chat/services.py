@@ -146,11 +146,15 @@ def find_by_soul_code(account, soul_code):
     登录名。候选集就是 `_reachable`(与 `open_direct` 同一个),所以不存在、官员、前世账号、
     自己**答同一个 404,同一句话**:响应里不留「这个编号存在但……」的区分。
     """
+    from apps.core.shard_reads import with_fanout
     from apps.soul_accounts.services import normalize_soul_code
+    from apps.souls.models import Soul
 
-    target = _reachable(account).filter(
-        soul_account__soul__soul_code=normalize_soul_code(soul_code)
-    ).select_related("soul_account").first()
+    # The soul first, from every leg (its master), then its account on control by the soul's id: never a join to
+    # control's copy of the soul, a mirror stage 5 deletes (PREP-stage5 M6).
+    souls = list(with_fanout(Soul._base_manager.filter(soul_code=normalize_soul_code(soul_code)))
+                 .values_list("pk", flat=True))
+    target = _reachable(account).filter(soul_account__soul_id__in=souls).select_related("soul_account").first()
     if target is None:
         raise ChatError("找不到这个灵魂。", "not_found", status=404)
     return target

@@ -75,7 +75,9 @@ def revoke_signed_out(account, *, sessions=None, keep_session=None) -> int:
 
 def turn_off(raw) -> bool:
     """这部手机自己关:持有凭据即可,不看是谁登录着。幂等:不认识 / 已吊销 → False,不报错。"""
-    row = SoulDeviceLogin.objects.select_related("account__soul", "account__user").filter(
+    # Not `account__soul`: on control that INNER JOINs control's copy of the soul, a mirror stage 5 deletes (PREP-stage5
+    # M7); `account.soul` reads it where it is.
+    row = SoulDeviceLogin.objects.select_related("account__user").filter(
         credential_hash=_hash_device(raw or ""), revoked_at__isnull=True).first()
     if row is None:
         return False

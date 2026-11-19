@@ -330,16 +330,21 @@ class MeSocialSearchView(SoulSocialView):
             return Response([])
         page = int(request.query_params["page"]) if request.query_params.get("page", "").isdigit() else 1
         page = max(page, 1)
+        from apps.souls.models import Soul
+
         tenant = circle.civilization_of(request.user)
+        # The code is the soul's (a SHARD row), read where it is, then matched by id (PREP-stage5 M4).
+        coded = list(Soul._base_manager.filter(tenant=tenant, soul_code__iexact=q.upper()).values_list("pk", flat=True))
         rows = (
             circle.souls_in(tenant)
             .exclude(pk=request.user.pk)
-            .filter(Q(display_name__icontains=q) | Q(soul_account__soul__soul_code__iexact=q.upper()))
+            .filter(Q(display_name__icontains=q) | Q(soul_account__soul_id__in=coded))
             .select_related("soul_account")
             .order_by("display_name", "pk")[(page - 1) * SEARCH_LIMIT:page * SEARCH_LIMIT]
         )
+        rows = list(rows)  # users are control's: their ids, not a subquery, go to the follow edges' shard
         following = set(
-            Follow.objects.filter(follower=request.user, tenant=tenant, following__in=rows).values_list(
+            Follow.objects.filter(follower=request.user, tenant=tenant, following__in=[r.pk for r in rows]).values_list(
                 "following_id", flat=True
             )
         )

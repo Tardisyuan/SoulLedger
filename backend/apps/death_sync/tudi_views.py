@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import ProblemSerializer, problem
+from apps.core.shard_reads import control_m2m
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.death_sync.models import DeathRegistrationRequest, TudiGod
@@ -53,9 +54,8 @@ class TudiGodSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(TudiOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
-        # Sorted here, not `.order_by()`: that is a new query per row and bypasses the viewset's prefetch.
         return [{"id": u.pk, "name": u.display_name or u.username}
-                for u in sorted(obj.officers.all(), key=lambda u: u.username)]
+                for u in sorted(control_m2m(obj, "officers"), key=lambda u: u.username)]
 
     def get_registration_count(self, obj) -> int:
         # The list annotates it (`TudiGodViewSet.queryset`, one query for the page, 2026-10-29); a row saved by
@@ -128,7 +128,7 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         **{a: ["tudi.manage"] for a in ("create", "update", "partial_update", "destroy")},
         "register_death": ["tudi.register"],
     }
-    queryset = TudiGod.objects.select_related("city_god").prefetch_related("officers").annotate(
+    queryset = TudiGod.objects.select_related("city_god").annotate(
         # Not one COUNT per row (the serializer's fallback): the same rows `DeathRegistrationRequest.objects` counts,
         # i.e. not soft-deleted ones.
         registration_total=Count("registrations", filter=Q(registrations__is_deleted=False), distinct=True),
@@ -177,7 +177,7 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         from apps.perm.checker import check_permission
 
         tudi = self.get_object()
-        if not (check_permission(request.user, "tudi.manage") or tudi.officers.filter(pk=request.user.pk).exists()):
+        if not (check_permission(request.user, "tudi.manage") or control_m2m(tudi, "officers").filter(pk=request.user.pk).exists()):
             return problem(status.HTTP_403_FORBIDDEN, "not_tudi_officer",
                            "Only officers assigned to this 土地公, or a hall administrator, can register.")
         body = TudiRegistrationRequestSerializer(data=request.data)

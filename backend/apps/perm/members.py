@@ -71,7 +71,9 @@ def _users(request):
     from apps.authentication.models import User
     from apps.core.tenant import scope_to_tenant
 
-    qs = User.objects.select_related("tenant", "organization", "mfa").exclude(role="SOUL")
+    # The organization is a SHARD row: prefetched where it is, not joined on control, whose copy of a write-cut
+    # civilization's organizations is a mirror stage 5 deletes (PREP-stage5 M8).
+    qs = User.objects.select_related("tenant", "mfa").prefetch_related("organization").exclude(role="SOUL")
     return scope_to_tenant(qs, request)
 
 

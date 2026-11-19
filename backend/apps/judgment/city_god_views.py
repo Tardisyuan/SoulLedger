@@ -67,8 +67,9 @@ class CityGodSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(CityGodOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
-        # Sorted here, not `.order_by()`: that is a new query per row and bypasses the viewset's prefetch.
-        return [{"id": u.pk, "name": _name(u)} for u in sorted(obj.officers.all(), key=lambda u: u.username)]
+        from apps.core.shard_reads import control_m2m
+
+        return [{"id": u.pk, "name": _name(u)} for u in sorted(control_m2m(obj, "officers"), key=lambda u: u.username)]
 
     def get_open_case_count(self, obj) -> int:
         # The list annotates it (`CityGodViewSet.queryset`, one query for the page, as the tudi list does);
@@ -135,7 +136,7 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
     permission_codename = "city_god"
     extra_permissions = {action: ["city_god.manage"]
                          for action in ("create", "update", "partial_update", "destroy", "officer_choices")}
-    queryset = CityGod.objects.prefetch_related("officers").annotate(
+    queryset = CityGod.objects.annotate(
         # The same rows `Judgment.objects` counts in the serializer's fallback, i.e. not soft-deleted ones.
         open_case_total=Count("judgments", filter=Q(judgments__city_god_status__in=AT_CITY_GOD,
                                                     judgments__is_deleted=False), distinct=True),
