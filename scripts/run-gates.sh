@@ -178,6 +178,10 @@ remote_sync() {
     # (2026-11-07, a subagent's push from .claude/worktrees/…). So a worktree sends a real .git instead: the
     # common dir (objects, refs, config; not the other worktrees) plus this worktree's own HEAD and index.
     local dotgit='.git\0' keepgit=()
+    # Room first (2026-11-19): a full work dir (the PC's 14 GB tmpfs) failed the rsync below, or `npm ci` after it.
+    # Only the space rule here (days 0): the least recently used unmounted trees go until it fits, never this one.
+    ssh -o BatchMode=yes "$GATES_REMOTE" "$(declare -f remote_prune); mkdir -p $RDIR; ( flock 7; remote_prune $RDIR $RWORK 0 ${PRUNE_DRY:-0} ${PRUNE_MIN_KB:-3145728} ) 7>$RDIR/prune.lock" \
+        || { echo "$P: $GATES_REMOTE has no room for this tree under $RDIR, and none to make (see above). Not syncing."; return 1; }
     [ -f "$ROOT/.git" ] && { dotgit=''; keepgit=(--filter='P .git/'); }
     { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf "$dotgit"; } \
         | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
@@ -256,6 +260,8 @@ remote_verdict() {
                   "removed with docker rm -f) and the lock released; nothing of it is still running." ;;
         137) echo "$P: killed on $GATES_REMOTE (exit 137): either the time limit's KILL, 60 s after it ran out ($2," \
                   "$3), or the container's memory limit. The container is removed and the lock released." ;;
+        75) echo "$P: REFUSED by $GATES_REMOTE: its work dir is too full and no unmounted tree could be deleted to make room" \
+                  "(see the prune line above; GATES_REMOTE_MIN_FREE_MB). Nothing ran." ;;
     esac
 }
 
@@ -370,39 +376,75 @@ win_route() {
 # its arguments. ponytail: between reading a mark and `rm -rf`, another checkout's first run in two weeks
 # could touch that mark and start syncing — a window of milliseconds once per idle tree; that run would go
 # red on a half-deleted tree and pass on retry. A per-tree lock taken by every sync would close it.
-remote_prune() {  # <RDIR> <this run's tree> <days> <dry: 1 = only report>
-    local rdir="$1" keep="$2" days="$3" dry="$4" ids used="" t real mark kept=0
-    [ "$days" -gt 0 ] 2>/dev/null || return 0
+remote_prune() {  # <RDIR> <this run's tree> <days> <dry: 1 = only report> [<free KB the host must have; default 3 GB>]
+    local rdir="$1" keep="$2" days="$3" dry="$4" want="${5:-3145728}" ids used="" t real mark kept=0 have own marks m
     case "$rdir" in /?*) ;; *) echo "    (prune: $rdir is not an absolute path — nothing deleted)"; return 0 ;; esac
-    ids=$(docker ps -aq) || { echo "    (prune: docker ps failed, so what is mounted is unknown — nothing deleted)"; return 0; }
-    if [ -n "$ids" ]; then
+    ids=$(docker ps -aq) || { echo "    (prune: docker ps failed, so what is mounted is unknown — nothing deleted)"; ids=-; }
+    if [ "$ids" != - ] && [ -n "$ids" ]; then
         # shellcheck disable=SC2086
         used=$(docker inspect -f '{{range .Mounts}}{{println .Source}}{{end}}' $ids) \
-            || { echo "    (prune: docker inspect failed, so what is mounted is unknown — nothing deleted)"; return 0; }
+            || { echo "    (prune: docker inspect failed, so what is mounted is unknown — nothing deleted)"; ids=-; }
     fi
-    for t in "$rdir"/work/* "$rdir"/android/work/*; do
-        [ -d "$t" ] && [ ! -L "$t" ] || continue
-        [ "$t" = "$keep" ] && continue
-        real=$(cd "$t" && pwd -P) || continue
-        if printf '%s\n' "$used" | grep -qxF -e "$t" -e "$real"; then
-            echo "    (prune: kept $t — a container mounts it)"; continue
-        fi
-        mark="$t/.sl-last-use"
-        if [ ! -e "$mark" ]; then
-            touch "$mark"; echo "    (prune: $t had no last-use mark — marked now; deleted after $days days without a run)"; continue
-        fi
-        if [ -z "$(find "$mark" -mmin +$((days * 1440)))" ]; then kept=$((kept + 1)); continue; fi
-        if [ "$dry" = 1 ]; then
-            echo "    (prune: would delete $t — no run for $days days; GATES_REMOTE_PRUNE_DRY=1, nothing deleted)"
-        else
-            rm -rf -- "$t" && echo "    (prune: deleted $t — no run for $days days)"
-        fi
+    if [ "$ids" != - ] && [ "$days" -gt 0 ] 2>/dev/null; then
+        for t in "$rdir"/work/* "$rdir"/android/work/*; do
+            [ -d "$t" ] && [ ! -L "$t" ] || continue
+            [ "$t" = "$keep" ] && continue
+            real=$(cd "$t" && pwd -P) || continue
+            if printf '%s\n' "$used" | grep -qxF -e "$t" -e "$real"; then
+                echo "    (prune: kept $t — a container mounts it)"; continue
+            fi
+            mark="$t/.sl-last-use"
+            if [ ! -e "$mark" ]; then
+                touch "$mark"; echo "    (prune: $t had no last-use mark — marked now; deleted after $days days without a run)"; continue
+            fi
+            if [ -z "$(find "$mark" -mmin +$((days * 1440)))" ]; then kept=$((kept + 1)); continue; fi
+            if [ "$dry" = 1 ]; then
+                echo "    (prune: would delete $t — no run for $days days; GATES_REMOTE_PRUNE_DRY=1, nothing deleted)"
+            else
+                rm -rf -- "$t" && echo "    (prune: deleted $t — no run for $days days)"
+            fi
+        done
+        echo "    (prune: $kept other synced trees used within $days days kept — GATES_REMOTE_PRUNE_DAYS)"
+    fi
+    # SPACE (2026-11-19): the Windows PC's work dir is a 14 GB tmpfs that about six trees fill, and a full disk
+    # fails mid-`npm ci` or kills pytest workers. Needed: $want KB, or this tree's size + 1 GB if that is more.
+    # Short of it, the least recently used trees no container mounts go first (the days rule above stays for
+    # unRAID's big disk), never this run's own, until it fits; if it cannot, the run is refused (return 1)
+    # before it starts. Under GATES_REMOTE_PRUNE_DRY=1 it only says what it would delete.
+    own=$(du -sk "$keep" 2>/dev/null | awk '{print $1}'); own=$(( ${own:-0} + 1048576 )); [ "$own" -gt "$want" ] && want="$own"
+    have=$(df -Pk "$rdir" 2>/dev/null | awk 'NR==2 {print $4}'); [ -n "$have" ] || return 0
+    [ "$have" -ge "$want" ] && return 0
+    if [ "$ids" = - ]; then
+        echo "    (prune: REFUSED — only $((have / 1024)) MB free under $rdir, $((want / 1024)) MB needed, and what is mounted is unknown)"; return 1
+    fi
+    marks=$(ls -1tr -- "$rdir"/work/*/.sl-last-use "$rdir"/android/work/*/.sl-last-use 2>/dev/null)
+    for t in "$rdir"/work/* "$rdir"/android/work/*; do  # unmarked trees count as the oldest
+        if [ -d "$t" ] && [ ! -e "$t/.sl-last-use" ]; then marks="$t/.sl-last-use
+$marks"; fi
     done
-    echo "    (prune: $kept other synced trees used within $days days kept — GATES_REMOTE_PRUNE_DAYS)"
+    while IFS= read -r m; do
+        [ -n "$m" ] || continue
+        t="${m%/.sl-last-use}"
+        { [ -d "$t" ] && [ ! -L "$t" ] && [ "$t" != "$keep" ]; } || continue
+        real=$(cd "$t" && pwd -P) || continue
+        if printf '%s\n' "$used" | grep -qxF -e "$t" -e "$real"; then continue; fi
+        if [ "$dry" = 1 ]; then
+            echo "    (prune: would delete $t — only $((have / 1024)) MB free, $((want / 1024)) MB needed; GATES_REMOTE_PRUNE_DRY=1, nothing deleted)"; continue
+        fi
+        rm -rf -- "$t" && echo "    (prune: deleted $t — only $((have / 1024)) MB free under $rdir, $((want / 1024)) MB needed)"
+        have=$(df -Pk "$rdir" 2>/dev/null | awk 'NR==2 {print $4}')
+        if [ -n "$have" ] && [ "$have" -ge "$want" ]; then return 0; fi
+    done <<EOF_MARKS
+$marks
+EOF_MARKS
+    [ "$dry" = 1 ] && return 0
+    echo "    (prune: REFUSED — $((have / 1024)) MB free under $rdir, $((want / 1024)) MB needed, and no unmounted tree but this run's own is left to delete; free space there, or lower GATES_REMOTE_MIN_FREE_MB)"
+    return 1
 }
 PRUNE_DAYS="${GATES_REMOTE_PRUNE_DAYS:-14}"
 [[ "$PRUNE_DAYS" =~ ^[0-9]+$ ]] || { echo "$P: GATES_REMOTE_PRUNE_DAYS=$PRUNE_DAYS is not a number of days (0 turns the pruning off)"; exit 2; }
 PRUNE_DRY=0; [ "${GATES_REMOTE_PRUNE_DRY:-}" = 1 ] && PRUNE_DRY=1
+PRUNE_MIN_KB=$(( ${GATES_REMOTE_MIN_FREE_MB:-3072} * 1024 ))  # free space the work dir must have (remote_prune)
 
 # Installed in the synced tree by whichever container runs first, and only when its inputs change — two
 # hashes, decided apart (2026-10-30): a version bump in one package.json used to reinstall node_modules AND
@@ -448,7 +490,7 @@ REMOTE_DEPS='
 # slot on $GATES_REMOTE (remote_slots), under the limit, after the dependencies (REMOTE_DEPS). The delegated gates
 # and --tests share it, so a --tests run queues behind a gate run and never runs beside one in its slot.
 remote_gate_run() {
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY ) 7>$RDIR/prune.lock; $(win_bg $1 ${GATES_REMOTE_CPUS:-$SLOT_CPUS})docker run --rm --init --name $1$RUN_EXTRA \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY $PRUNE_MIN_KB ) 7>$RDIR/prune.lock || exit 75; $(win_bg $1 ${GATES_REMOTE_CPUS:-$SLOT_CPUS})docker run --rm --init --name $1$RUN_EXTRA \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\${S:-1} -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS} \
