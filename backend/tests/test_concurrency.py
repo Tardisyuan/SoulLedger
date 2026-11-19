@@ -1398,6 +1398,9 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 2026-10-27 灵魂搜索的三元组索引(apps/souls/migrations/0047_soul_search_trigram.py):pg_trgm 与 GIN
         # 只在 PostgreSQL 上存在。同文件另两条(列清单、表达式)每个引擎都跑。
         "tests/test_soul_search_trigram.py::test_the_indexes_exist_on_postgresql",
+        # 2026-11-19 往返测试收尾:PG 上从 FILE_COPY 克隆还原最新结构，会话结束删掉克隆。CREATE DATABASE ... TEMPLATE
+        # 只有 PG 有;SQLite 的还原与「没还原就拒绝」同文件每个引擎都跑。
+        "tests/test_roundtrip_start_cache.py::test_postgresql_restores_the_latest_schema_from_a_clone_and_drops_it",
         # (2026-11-15 分库阶段 2:tests/test_control_boundary.py 的六条不再只在 PG 上 —— 它们改到
         # `--ds=config.settings_sharded -m sharded`,两个引擎都跑。)
         # 2026-10-31 加密 JSON 列(review A2):列的 PostgreSQL 类型与 jsonb_typeof 只在 PG 上有;

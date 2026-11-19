@@ -232,8 +232,21 @@ def eu_auth_headers(api_client, eu_admin_user):
     return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
 
 
+@pytest.fixture(scope="session")
+def _roundtrip_pg_latest(django_db_blocker):
+    """PostgreSQL: let `tests/migration_roundtrip.py` restore the latest schema from a clone of the worker
+    database instead of re-migrating, and drop that clone at session end. No-op on SQLite."""
+    from tests import migration_roundtrip
+
+    migration_roundtrip.PG_RESTORE = True
+    yield
+    migration_roundtrip.PG_RESTORE = False
+    with django_db_blocker.unblock():
+        migration_roundtrip.drop_pg_latest()
+
+
 @pytest.fixture
-def migration_round_trip(transactional_db):
+def migration_round_trip(transactional_db, _roundtrip_pg_latest):
     """Run a data migration forward, back, and forward again — see
     ``tests/migration_roundtrip.py`` for what it asserts and why.
 
