@@ -206,6 +206,25 @@ def claim_open_case(soul_pk, judgment_pk, tenant_id):
     raise OpenCaseTaken([])
 
 
+def unknown_claims(aliases):
+    """[(claim, "open" | "closed" | "missing")]: the open-case claims whose writer cannot be known (`case_txn` names
+    no transaction: taken on SQLite, or before tenants/0027 added it). `claim_open_case` never takes one over on a
+    guess, so one whose case rolled back keeps the soul from opening a case for good (VERIFY-stage4-r2 低). The
+    case is looked for on every alias in `aliases`; "open" on any of them wins."""
+    from apps.judgment.models import Judgment
+    from apps.tenants.models import OpenCaseClaim
+
+    out = []
+    for claim in OpenCaseClaim.objects.using(CONTROL_ALIAS).order_by("pk"):
+        if claim.case_txn.partition(":")[2]:
+            continue
+        found = [Judgment._base_manager.using(a).filter(pk=claim.judgment_id)
+                 .values_list("verdict", "is_final", "is_deleted").first() for a in aliases]
+        found = [f for f in found if f is not None]
+        out.append((claim, "open" if (None, False, False) in found else "closed" if found else "missing"))
+    return out
+
+
 def release_open_case(judgment_pk):
     """Give the soul's claim back: the case `judgment_pk` closed, or its write rolled back."""
     from apps.tenants.models import OpenCaseClaim
