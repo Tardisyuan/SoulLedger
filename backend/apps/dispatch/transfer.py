@@ -656,6 +656,44 @@ def _stop_done(payload):
     SentencePlanService.advance(soul)
 
 
+# ---- `advance` asked by another civilization's hall (VERIFY-stage4-r3 follow-up, the shape of H-2) ----------------
+
+PLAN_ADVANCE = "sentence_plan.advance"
+
+
+def advance_elsewhere(soul):
+    """`SentencePlanService.advance` asked in a hall whose master is not the plan's -- the residence closes or withdraws
+    its case on the soul (the stop's WAITING then releases), concludes an amendment: the plan, its nodes and what
+    `advance` writes are the home hall's rows, on another database. A message to the plan's hall instead, delivered
+    after the caller's commit (`advance` is a function of the plan's state: later is the same answer). True if sent.
+    No hall acting (MASTER, a command, no context: the transaction holds every master), or the plan's own master:
+    False, `advance` runs here."""
+    from django.conf import settings
+
+    if not settings.SHARD_WRITE_CIVS:
+        return False
+    from apps.core.request_local import get_current_request
+    from apps.sentence_plan.services import in_progress_plan
+    from apps.tenants.managers import get_current_tenant
+
+    acting = getattr(get_current_request(), "tenant", None) or get_current_tenant()
+    if acting is None:
+        return False
+    plan = in_progress_plan(soul)
+    if plan is None or not saga.crosses(acting, plan.tenant):
+        return False
+    saga.send(PLAN_ADVANCE, acting, plan.tenant, {"soul_id": str(soul.pk)}, subject=f"advance:{soul.pk}")
+    return True
+
+
+@handler(PLAN_ADVANCE)
+def _plan_advance(payload):
+    """On the plan's master, as the plan's hall."""
+    from apps.sentence_plan.services import SentencePlanService
+
+    SentencePlanService.advance(_soul_model().lock(payload["soul_id"]))
+
+
 # ---- a cross-civilization rebirth (迁籍) ----------------------------------------------------------------------
 
 def migrate(soul, target_hall):

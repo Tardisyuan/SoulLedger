@@ -282,8 +282,15 @@ def apply_fix(found, direction):
         return
     target = next(iter(found.values()))[1].db
     with transaction.atomic(using=target):
+        # Shard-to-control: a row "missing" from control's slice of this civilization may still be on control under
+        # its pk, filed under the civilization it left -- a soul come home (or moved on) is primary here now, and
+        # control's mirror still names its last hall until that civilization's own sync drops it, which runs later
+        # when it sorts after this one: the insert met the pk (IntegrityError on souls_soul.id; VERIFY-stage4-r3
+        # follow-up). The shard is the master of its own rows (`_sides`), so its row replaces whatever control holds
+        # under that pk. A soul copy (another hall's soul) is never a source row here (`owned(copies=False)`).
+        replaced = ("extra", "differs", "missing") if direction == SHARD_TO_CONTROL else ("extra", "differs")
         for _model, (_src, dst, diffs, _halls) in found.items():
-            gone = [pk for kind, pk in diffs if kind in ("extra", "differs")]
+            gone = [pk for kind, pk in diffs if kind in replaced]
             for chunk in _chunks(gone):
                 # _raw_delete: no collector, no pre_delete -- bare-id rules never fire from here.
                 dst.model._base_manager.using(target).filter(pk__in=chunk)._raw_delete(target)
