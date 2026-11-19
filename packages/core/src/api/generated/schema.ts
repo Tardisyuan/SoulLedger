@@ -19598,6 +19598,7 @@ export interface components {
          *     * `device_login_invalid` - device_login_invalid
          *     * `device_login_revoked` - device_login_revoked
          *     * `dims_mismatch` - dims_mismatch
+         *     * `dispatch_frozen` - dispatch_frozen
          *     * `dispatch_not_started` - dispatch_not_started
          *     * `display_name_length` - display_name_length
          *     * `display_name_sensitive` - display_name_sensitive
