@@ -1453,11 +1453,15 @@ fi
 # With SHARDED_PID / SHARDED_LOG set (`--real-pg --full`, SHARDED GROUP BESIDE THE SUITE below) it follows
 # both runs, a progress line each, and both exit codes decide.
 # GATES_PROGRESS_EVERY (seconds) is the test seam.
+# The percentage counts tests, not time, and the last few are minutes each (2026-11-19: 99% for 10–15 of ~35
+# minutes). So the line also says what each worker is running and for how long, and how much is left — the
+# scheduler's status file (<log>.status), read by backend/config/gate_progress.py; the estimate needs history.
 pytest_progress() {  # <label> <log> <name of the variable holding the failures already shown>
-    local pct bad new
+    local pct bad new now=""
     pct=$(grep -oE '\[ *[0-9]+%\]' "$2" | tail -1 | tr -d '[] ')
     bad=$(grep -E '\[ *[0-9]+%\]' "$2" | grep -E ' (FAILED|ERROR)( |$)' | grep -oE '[^ []+::[^ ]+' | awk '!seen[$0]++')
-    echo "    … $1 ${pct:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $(printf '%s' "$bad" | grep -c . || true)"
+    [ -s "$2.status" ] && now=$("$PY" -I "$ROOT/backend/config/gate_progress.py" "$2.status" 2>/dev/null)
+    echo "    … $1 ${pct:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $(printf '%s' "$bad" | grep -c . || true)${now:+ · $now}"
     new=$(printf '%s\n' "$bad" | grep -vxF -e "${!3}" | grep . || true)
     [ -n "$new" ] && printf '%s\n' "$new" | sed 's/^/        FAILED /'
     printf -v "$3" '%s' "$bad"
@@ -1469,6 +1473,7 @@ pytest_summary() {  # <log> <status>
     # (backend/config/sqlite_template.py, telemetry 2026-11-13). Named here: `tail -4` may not reach it.
     grep -m1 '^test template: ' "$1" | sed 's/^/    /'
     tail -4 "$1"
+    rm -f "$1.status" "$1.status.tmp"
     if [ "$2" -eq 0 ]; then rm -f "$1"; else echo "    full log: $1"; fi
 }
 pytest_finish() {
@@ -1749,6 +1754,17 @@ PROBE_PY
         fi
     fi
     PYTEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-pytest.XXXXXX")
+    # PER-TEST DURATIONS BETWEEN RUNS (2026-11-19). The controller records what each test took
+    # (backend/config/gate_progress.py); the scheduler (config/worksteal.py) orders the next run longest first and
+    # starts the migration round trips on dedicated workers, and the progress line estimates what is left. One file
+    # per database kind: on the remote boxes under the synced tree's node_modules/.cache (the sync keeps it, like
+    # the jest cache), here in the git common dir. GATES_TEST_DURATIONS overrides. A missing or corrupt file is
+    # an empty history: no estimate, plain worksteal order.
+    if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then DUR_DIR="$ROOT/node_modules/.cache"
+    else DUR_DIR="$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; fi
+    DUR_KIND=sqlite; { [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; } && DUR_KIND=pg
+    mkdir -p "${DUR_DIR:-.}" 2>/dev/null
+    export SOULLEDGER_TEST_DURATIONS="${GATES_TEST_DURATIONS:-${DUR_DIR:-.}/soulledger-test-durations-$DUR_KIND.json}"
     PYTEST_PATHS=""
     META_IGNORE=""
     if [ -n "$META_SKIP" ]; then
@@ -1840,7 +1856,7 @@ PROBE_PY
         echo "  → pytest: sharded group (--ds=config.settings_sharded -m sharded, ${SHARDED_XDIST:-serial}) beside the suite (${XDIST:-serial})"
         SHARDED_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-pytest-sharded.XXXXXX")
         # shellcheck disable=SC2086
-        SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -v --no-header --no-cov --durations=30 --durations-min=5 \
+        SECRET_KEY="$CI_SECRET_KEY" SOULLEDGER_GATE_STATUS="$SHARDED_LOG.status" "$PY" -m pytest -v --no-header --no-cov --durations=30 --durations-min=5 \
             $SHARDED_XDIST -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true \
             $REAL_PG_ARGS --ds=config.settings_sharded -m sharded >"$SHARDED_LOG" 2>&1 &
         SHARDED_PID=$!
@@ -1848,7 +1864,7 @@ PROBE_PY
     PYARGS=(-v --no-header --no-cov --durations=30 --durations-min=5 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
-    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
+    SECRET_KEY="$CI_SECRET_KEY" SOULLEDGER_GATE_STATUS="$PYTEST_LOG.status" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     pytest_finish
     fi  # PYTEST_SKIP = 0
