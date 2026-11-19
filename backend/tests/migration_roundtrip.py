@@ -80,38 +80,366 @@ Snapshot = Mapping[str, Any]
 _MISSING = object()
 
 
-#: SQLite only: this process's test database as it was at the latest migration, taken before the first
-#: `migrate_to` moved it (see `restore_latest_snapshot`).
+#: This process's test database as it was at the latest migration, taken before the first `migrate_to`
+#: moved it (see `restore_latest_snapshot`). SQLite: an in-memory copy. PostgreSQL: the name of a database
+#: cloned from the worker's (`_pg_snapshot`), only while `PG_RESTORE` is on (the `migration_round_trip`
+#: fixture's session fixture turns it on and drops the clone at session end).
 _LATEST = None
+#: `_schema_digest()` at that moment: `restore_latest_snapshot` checks every restore against it.
+_LATEST_SCHEMA = None
+PG_RESTORE = False
+
+
+def _schema_digest() -> str:
+    import hashlib
+
+    from config.testdb import _SCHEMA_QUERIES
+
+    queries = (
+        ("SELECT type || ':' || name, sql FROM sqlite_master WHERE name <> 'sqlite_sequence'",)
+        if connection.vendor == "sqlite" else _SCHEMA_QUERIES
+    )
+    rows = []
+    with connection.cursor() as cur:
+        for query in queries:
+            cur.execute(query)
+            rows += cur.fetchall()
+    return hashlib.sha256(repr(sorted(rows, key=repr)).encode()).hexdigest()
 
 
 def _snapshot_latest(executor) -> None:
-    global _LATEST
-    if _LATEST is not None or connection.vendor != "sqlite":
+    global _LATEST, _LATEST_SCHEMA
+    if _LATEST is not None or connection.vendor not in ("sqlite", "postgresql"):
+        return
+    if connection.vendor == "postgresql" and not PG_RESTORE:
         return
     if executor.migration_plan(executor.loader.graph.leaf_nodes()):
         return  # not at the latest schema: nothing worth keeping
-    import sqlite3
+    schema = _schema_digest()
+    if connection.vendor == "sqlite":
+        import sqlite3
 
-    connection.ensure_connection()
-    _LATEST = sqlite3.connect(":memory:", check_same_thread=False)
-    connection.connection.backup(_LATEST)
+        connection.ensure_connection()
+        _LATEST = sqlite3.connect(":memory:", check_same_thread=False)
+        connection.connection.backup(_LATEST)
+    else:
+        _LATEST = _pg_snapshot()
+    if _LATEST is not None:
+        _LATEST_SCHEMA = schema
+
+
+def _restore_latest_db() -> bool:
+    if _LATEST is None:
+        return False
+    if connection.vendor == "sqlite":
+        connection.ensure_connection()
+        _LATEST.backup(connection.connection)
+        return True
+    return _pg_restore(_LATEST)
 
 
 def restore_latest_snapshot() -> bool:
-    """SQLite: put back the database `_snapshot_latest` kept, in one `backup` call; False when there is none.
+    """Put back the database `_snapshot_latest` kept; False when there is none.
 
     Migrating back to the latest schema re-applies every migration the round trip unapplied (hundreds by
     2026-11: `executor.migrate` spends ~90% of it re-rendering model states, not in SQL), and asserts
     nothing: the round trip's own step 4 re-applies the migration under test, and the template build
     applies the whole graph forward. The rows come back too; the transactional teardown flushes them.
-    PostgreSQL still migrates for real.
+    SQLite: one `backup` call. PostgreSQL (2026-11-19): the worker database is replaced by a FILE_COPY
+    clone of the one `_pg_snapshot` took.
+
+    A restore that did not put the latest schema back is refused here rather than left for the next test
+    to trip over: the recorder must have nothing left to apply, and the schema must equal the snapshot's.
     """
-    if _LATEST is None or connection.vendor != "sqlite":
+    if not _restore_latest_db():
         return False
-    connection.ensure_connection()
-    _LATEST.backup(connection.connection)
+    executor = MigrationExecutor(connection)
+    left = executor.migration_plan(executor.loader.graph.leaf_nodes())
+    same = _schema_digest() == _LATEST_SCHEMA
+    if left or not same:
+        raise AssertionError(
+            f"the restored database is not at the latest migration ({len(left)} migration(s) unapplied, "
+            f"schema {'same as' if same else 'differs from'} the snapshot's): the latest-schema snapshot "
+            f"was not put back"
+        )
     return True
+
+
+# --- PostgreSQL: the latest schema as a database to clone from ---------------------------------------------
+# Re-migrating to latest after a round trip costs as much on PostgreSQL as it did on SQLite (state
+# rendering), and PostgreSQL has no `backup`. So the first round trip of a worker clones the worker
+# database (`<name>_rtl`, CREATE DATABASE ... TEMPLATE ... STRATEGY FILE_COPY), and every teardown builds
+# a fresh copy of that (`<name>_rtn`), drops the worker database and renames the copy into its place.
+# Building the copy first means a failure leaves the worker database as it was, and a plain migrate
+# follows. Names stay `test_soulledger_...` (config/testdb.py refuses anything else). The `_rtl` clone is
+# dropped at session end (tests/conftest.py `_roundtrip_pg_latest`); a crash leaves it matching
+# `test_soulledger%` like any other leftover.
+
+
+def _pg_names():
+    from config.testdb import is_disposable_test_db
+
+    name = connection.settings_dict["NAME"]
+    names = (name, f"{name}_rtl", f"{name}_rtn")
+    if not all(is_disposable_test_db(n) and len(n) <= 63 for n in names):
+        return None
+    return names
+
+
+def _pg_snapshot():
+    from config.testdb import close_connections
+
+    names = _pg_names()
+    if names is None or connection.in_atomic_block:
+        return None
+    name, latest, _ = names
+    close_connections()  # CREATE DATABASE ... TEMPLATE refuses while anyone is connected to the source
+    try:
+        with connection.creation._nodb_cursor() as cur:
+            cur.execute(f'DROP DATABASE IF EXISTS "{latest}"')
+            cur.execute(f'CREATE DATABASE "{latest}" TEMPLATE "{name}" STRATEGY FILE_COPY')
+    except Exception:  # noqa: BLE001 -- someone else is connected: no snapshot, teardown migrates for real
+        return None
+    return latest
+
+
+def _pg_restore(latest) -> bool:
+    from config.testdb import close_connections
+
+    name, _, fresh = _pg_names()
+    if connection.in_atomic_block:
+        return False
+    close_connections()
+    with connection.creation._nodb_cursor() as cur:
+        try:
+            cur.execute(f'DROP DATABASE IF EXISTS "{fresh}"')
+            cur.execute(f'CREATE DATABASE "{fresh}" TEMPLATE "{latest}" STRATEGY FILE_COPY')
+            cur.execute(f'DROP DATABASE "{name}" WITH (FORCE)')
+        except Exception:  # noqa: BLE001 -- the worker database is untouched: migrate for real
+            cur.execute(f'DROP DATABASE IF EXISTS "{fresh}"')
+            return False
+        cur.execute(f'ALTER DATABASE "{fresh}" RENAME TO "{name}"')
+    return True
+
+
+def drop_pg_latest():
+    """Drop this process's `_rtl` clone (session end). Its size in bytes, or None when there was none."""
+    global _LATEST, _LATEST_SCHEMA
+    if connection.vendor != "postgresql" or _LATEST is None:
+        return None
+    latest, _LATEST, _LATEST_SCHEMA = _LATEST, None, None
+    with connection.creation._nodb_cursor() as cur:
+        cur.execute("SELECT pg_database_size(%s)", [latest])
+        size = cur.fetchone()[0]
+        cur.execute(f'DROP DATABASE IF EXISTS "{latest}" WITH (FORCE)')
+    return size
+
+
+# --- SQLite: cache the database at a round trip's start state (SOULLEDGER_RT_START_CACHE) ------------------
+# Getting from the latest schema to a round trip's `before` unapplies a slice of the graph: 75-150 s each,
+# for 71 tests with 63 distinct start states (exp/roundtrip-start-cache, 2026-11-19). The result is a pure
+# function of
+#   * the database at latest: its contents, datetimes masked, sqlite_sequence left out (ids still to be
+#     handed out are not data). That also covers whatever post_migrate receivers seeded into the template;
+#   * the code that runs on the way: every migration in the graph (the reverses that run, and the earlier
+#     ones whose operations build the states they run against) and every project module those import,
+#     transitively (`import_closure`). executor.migrate sends no pre/post_migrate, and every model-signal
+#     receiver in apps/ is connected per live model, so a historical model fires none;
+#   * requirements.lock, the settings that steer migrate, the Python / Django / SQLite versions; the targets.
+# That is the key, and nothing else under apps/: a view, a serializer, a model no migration imports do not
+# miss. The migration under test is in it too: editing it misses, and the round trip runs for real. A hit
+# is checked before use (sqlite quick_check, and its django_migrations must be exactly the set `targets`
+# leaves applied); anything wrong with an entry is a miss, never an error.
+# Off unless SOULLEDGER_RT_START_CACHE names a directory (scripts/run-gates.sh sets it). Not on PostgreSQL.
+
+CACHE_ENV = "SOULLEDGER_RT_START_CACHE"
+#: Code generations kept in the cache directory. Locally every worktree shares it (the git common dir), so
+#: the newest other generation is kept besides the current one; older ones are deleted.
+KEEP_GENERATIONS = 2
+STATS = {"hit": 0, "miss": 0}
+_CODE_HASH = None
+_PRUNED = False
+
+
+def _module_file(root, name):
+    from pathlib import Path
+
+    base = Path(root).joinpath(*name.split("."))
+    for path in (base.with_suffix(".py"), base / "__init__.py"):
+        if path.is_file():
+            return path
+    return None
+
+
+def _imported_names(tree, module, is_package):
+    import ast
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            yield from (a.name for a in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            base = node.module or ""
+            if node.level:
+                parts = module.split(".") if is_package else module.split(".")[:-1]
+                parts = parts[: len(parts) - node.level + 1]
+                base = ".".join(parts + ([node.module] if node.module else []))
+            yield base
+            yield from (f"{base}.{a.name}" for a in node.names)  # `from pkg import submodule`
+        elif (
+            isinstance(node, ast.Call) and node.args and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+            and getattr(node.func, "attr", getattr(node.func, "id", None)) == "import_module"
+        ):
+            yield node.args[0].value
+
+
+def import_closure(root, modules) -> list:
+    """The files under `root` of `modules` and of every project module they import, transitively:
+    `import x`, `from x import y` (y may be a module), relative imports, `import_module("literal")`,
+    imports inside functions, and the parent packages' __init__.py. Modules not under `root` are skipped."""
+    import ast
+
+    seen, stack = {}, list(modules)
+    while stack:
+        parts = stack.pop().split(".")
+        for i in range(1, len(parts) + 1):
+            name = ".".join(parts[:i])
+            if not name or name in seen:
+                continue
+            seen[name] = path = _module_file(root, name)
+            if path is not None:
+                stack.extend(_imported_names(ast.parse(path.read_bytes()), name, path.name == "__init__.py"))
+    return sorted({p for p in seen.values() if p is not None})
+
+
+def code_hash(root, modules, extra) -> str:
+    import hashlib
+    from pathlib import Path
+
+    h = hashlib.sha256(repr(sorted(extra.items())).encode())
+    for path in import_closure(root, modules) + [Path(root) / "requirements.lock"]:
+        if path.is_file():
+            h.update(path.relative_to(root).as_posix().encode() + b"\0" + hashlib.sha256(path.read_bytes()).digest())
+    return h.hexdigest()[:16]
+
+
+def _backend_dir():
+    from pathlib import Path
+
+    return Path(__file__).resolve().parents[1]
+
+
+def _content_digest() -> str:
+    import hashlib
+    import sqlite3
+
+    from config.sqlite_template import _table_digests
+
+    plain = sqlite3.connect(":memory:")  # Django's own connection parses datetimes; the masking needs text
+    try:
+        connection.ensure_connection()
+        connection.connection.backup(plain)
+        digests = _table_digests(plain)
+    finally:
+        plain.close()
+    digests.pop("rows:sqlite_sequence", None)
+    return hashlib.sha256(repr(sorted(digests.items())).encode()).hexdigest()[:16]
+
+
+def _start_cache(executor, targets):
+    """(entry path, the migrations applied at `targets`) when this approach can be cached, else None."""
+    import hashlib
+    import os
+    from pathlib import Path
+
+    directory = os.environ.get(CACHE_ENV)
+    if not directory or connection.vendor != "sqlite":
+        return None
+    graph = executor.loader.graph
+    plan = executor.migration_plan(targets)
+    if not plan or executor.migration_plan(graph.leaf_nodes()):
+        return None  # nothing to do, or not starting at latest
+    global _CODE_HASH
+    if _CODE_HASH is None:
+        from django.conf import settings
+
+        from config.sqlite_template import settings_inputs
+
+        modules = sorted({type(m).__module__ for m in graph.nodes.values()})
+        _CODE_HASH = code_hash(_backend_dir(), modules, settings_inputs(settings, connection.alias))
+    applied = {k for k in executor.loader.applied_migrations if k in graph.nodes}
+    for migration, backwards in plan:
+        (applied.discard if backwards else applied.add)((migration.app_label, migration.name))
+    state = hashlib.sha256(repr((sorted(targets), _content_digest())).encode()).hexdigest()[:16]
+    return Path(directory) / f"{_CODE_HASH}-{state}.sqlite3", applied
+
+
+def _load_start(path, applied) -> bool:
+    import contextlib
+    import os
+    import sqlite3
+
+    mem = sqlite3.connect(":memory:")
+    try:
+        src = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        try:
+            src.backup(mem)
+        finally:
+            src.close()
+        if mem.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+            return False
+        nodes = MigrationExecutor(connection).loader.graph.nodes
+        if {r for r in mem.execute("SELECT app, name FROM django_migrations") if r in nodes} != applied:
+            return False
+        connection.ensure_connection()
+        mem.backup(connection.connection)
+    except (sqlite3.Error, OSError):
+        return False
+    finally:
+        mem.close()
+    with contextlib.suppress(OSError):
+        os.utime(path)  # pruning goes by the newest entry of a generation
+    return True
+
+
+def _save_start(path) -> None:
+    import contextlib
+    import os
+    import sqlite3
+
+    global _PRUNED
+    with contextlib.suppress(OSError, sqlite3.Error):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+        dst = sqlite3.connect(tmp)
+        try:
+            connection.connection.backup(dst)
+        finally:
+            dst.close()
+        os.replace(tmp, path)
+        if not _PRUNED:
+            _PRUNED = True
+            prune(path.parent, path.name.split("-")[0])
+
+
+def prune(directory, current: str, keep: int = KEEP_GENERATIONS) -> list:
+    """Delete the entries of every code generation except `current` and the newest `keep - 1` others."""
+    import contextlib
+
+    newest = {}
+    for path in directory.glob("*-*.sqlite3"):
+        with contextlib.suppress(OSError):
+            gen = path.name.split("-")[0]
+            newest[gen] = max(newest.get(gen, 0), path.stat().st_mtime)
+    others = sorted((g for g in newest if g != current), key=newest.get, reverse=True)
+    stale = set(others[max(keep - 1, 0):])
+    removed = []
+    for path in directory.glob("*-*.sqlite3"):
+        if path.name.split("-")[0] in stale:
+            with contextlib.suppress(OSError):
+                path.unlink()
+                removed.append(path.name)
+    return removed
 
 
 def migrate_to(targets: list[Target]):
@@ -122,7 +450,14 @@ def migrate_to(targets: list[Target]):
     """
     executor = MigrationExecutor(connection)
     _snapshot_latest(executor)
+    cache = _start_cache(executor, targets)
+    if cache is not None and _load_start(*cache):
+        STATS["hit"] += 1
+        return MigrationExecutor(connection)._create_project_state(with_applied_migrations=True).apps
     state = executor.migrate(targets)
+    if cache is not None:
+        STATS["miss"] += 1
+        _save_start(cache[0])
     return state.apps
 
 

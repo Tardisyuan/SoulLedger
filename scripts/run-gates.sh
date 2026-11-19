@@ -1765,6 +1765,8 @@ PROBE_PY
     DUR_KIND=sqlite; { [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; } && DUR_KIND=pg
     mkdir -p "${DUR_DIR:-.}" 2>/dev/null
     export SOULLEDGER_TEST_DURATIONS="${GATES_TEST_DURATIONS:-${DUR_DIR:-.}/soulledger-test-durations-$DUR_KIND.json}"
+    # Round-trip start states (tests/migration_roundtrip.py, SOULLEDGER_RT_START_CACHE): same place; SQLite only.
+    if [ -n "$DUR_DIR" ]; then export SOULLEDGER_RT_START_CACHE="${SOULLEDGER_RT_START_CACHE:-$DUR_DIR/soulledger-rt-start-cache}"; fi
     PYTEST_PATHS=""
     META_IGNORE=""
     if [ -n "$META_SKIP" ]; then
