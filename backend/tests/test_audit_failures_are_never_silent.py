@@ -38,8 +38,7 @@ def test_a_real_database_failure_reaches_the_caller(cn_tenant, message):
     from apps.audit.models import AuditLog
     from apps.souls.models import Soul
 
-    with mock.patch.object(AuditLog.objects, "using") as using, pytest.raises(DatabaseError) as raised:
-        using.return_value.create.side_effect = DatabaseError(message)
+    with mock.patch.object(AuditLog, "save", side_effect=DatabaseError(message)), pytest.raises(DatabaseError) as raised:
         Soul.objects.create(name="失败", tenant=cn_tenant)
     assert str(raised.value) == message
 
@@ -51,9 +50,9 @@ def test_during_a_migration_no_row_is_attempted(cn_tenant, monkeypatch):
     from apps.souls.models import Soul
 
     monkeypatch.setattr(signals, "_is_migration_context", lambda: True)
-    with mock.patch.object(AuditLog.objects, "using") as using:
+    with mock.patch.object(AuditLog, "save") as save:
         Soul.objects.create(name="迁移中", tenant=cn_tenant)
-    using.assert_not_called()
+    save.assert_not_called()
 
 
 def test_nothing_in_the_signals_swallows_an_audit_write():

@@ -232,14 +232,18 @@ def _write_row(alias, **row):
       the row's own transaction -- the business row is already committed then, and only the caller's error says so.
     - `mark_for_rollback_on_error`: the savepoint alone would let a caller that catches the error commit the
       business write without its row; this marks the enclosing transaction for rollback, as `Model.save` does.
-    - Callers pass `user_id`, not `user=`: assigning the object asks the router where a User is written, which in a
-      context with no single civilization (SYSTEM_ADMIN) while one is write-cut is NoShardContext. As an on-commit
-      write that error was swallowed and the row lost (a hall created by SYSTEM_ADMIN, test_sharded_writes).
+    - The row knows its database before any User is put on it: assigning a related object to an instance with no
+      `_state.db` asks the router where the User is written (`AuditUserFields.save` sets `create_user` /
+      `update_user`), which in a context with no single civilization (SYSTEM_ADMIN) while one is write-cut is
+      NoShardContext. As an on-commit write that error was swallowed and the row lost (a hall created by
+      SYSTEM_ADMIN: test_sharded_writes). Callers pass `user_id` for the same reason.
     """
     from apps.audit.models import AuditLog
 
+    obj = AuditLog(**row)
+    obj._state.db = alias
     with transaction.mark_for_rollback_on_error(using=alias), transaction.atomic(using=alias):
-        AuditLog.objects.using(alias).create(**row)
+        obj.save(force_insert=True, using=alias)
 
 
 @receiver(pre_migrate)
