@@ -163,6 +163,8 @@ export const motion = {
   // 第五十八批 M4: a system modal (a confirmation, a viewer) fades in 240 / out 160; 80 under reduce motion.
   dialogIn: m.dialogIn,
   dialogOut: m.dialogOut,
+  // 第六十批 P6: a photo viewer closing shrinks back onto its thumbnail (or fades in place) over 160, exit curve.
+  photoClose: m.photoClose,
   sectionIn: m.collapseIn,
   sectionOut: m.collapseOut,
   // v3 MotionSpec, App rows (round 7): a tab's content cross-fades; a ledger row's body

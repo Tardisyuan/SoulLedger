@@ -20,14 +20,14 @@ import type { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUpl
 import { Image, type ImageSource } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { fileField } from "../platform";
-import { AlertTxt, FadeModal, Txt, useLayout, useReducedMotion, useTheme, Press } from "../ui";
+import { AlertTxt, FadeModal, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "../ui";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
@@ -48,12 +48,30 @@ function useContentWidth(): number {
   return Math.max(0, width - 2 * gutter);
 }
 
-function Tile({ source, size, label, testID, fade, onPress }: { source: ImageSource; size: number; label: string; testID: string; fade: number; onPress?: () => void }) {
+function Tile({
+  source,
+  size,
+  label,
+  testID,
+  fade,
+  onPress,
+  thumb,
+}: {
+  source: ImageSource;
+  size: number;
+  label: string;
+  testID: string;
+  fade: number;
+  onPress?: () => void;
+  /** The key a viewer closes back onto (第六十批 P6, `thumbRef`). */
+  thumb?: string;
+}) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const [broken, setBroken] = useState(false);
   return (
     <Press
+      ref={thumb ? thumbRef(thumb) : undefined}
       dim
       testID={testID}
       accessibilityRole={onPress ? "imagebutton" : "image"}
@@ -93,6 +111,7 @@ export function MediaGrid({ media, onOpen, testID = "media-grid" }: { media: Pos
           fade={fade}
           label={tr("soul_app.circle.media.image", { i: String(i + 1) })}
           onPress={() => onOpen(i)}
+          thumb={`post:${m.id}`}
         />
       ))}
     </View>
@@ -101,20 +120,24 @@ export function MediaGrid({ media, onOpen, testID = "media-grid" }: { media: Pos
 
 /** 全屏查看:左右翻页,顶上是「图片 i / n」与关闭。 */
 export function MediaViewer({ media, index, onClose }: { media: PostMedia[]; index: number | null; onClose: () => void }) {
+  // 第六十批 P6: closing shrinks back onto the tile of the picture in front (`MediaGrid`'s `thumb`).
+  const { closeTo, setFront } = useFrontPhoto("post");
   return (
-    <FadeModal visible={index !== null} onRequestClose={onClose}>
+    <FadeModal visible={index !== null} onRequestClose={onClose} closeTo={closeTo}>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始,计数与页一致。 */}
-      {index !== null ? <ViewerPages key={index} media={media} start={index} onClose={onClose} /> : null}
+      {index !== null ? <ViewerPages key={index} media={media} start={index} onClose={onClose} onFront={setFront} /> : null}
     </FadeModal>
   );
 }
 
-function ViewerPages({ media, start, onClose }: { media: PostMedia[]; start: number; onClose: () => void }) {
+function ViewerPages({ media, start, onClose, onFront }: { media: PostMedia[]; start: number; onClose: () => void; onFront: (id: string | null) => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [current, setCurrent] = useState(start);
+  const frontId = media[current]?.id == null ? null : String(media[current].id);
+  useEffect(() => onFront(frontId), [onFront, frontId]);
   const fade = useReducedMotion() ? 0 : FADE_MS;
   return (
     <View testID="media-viewer" style={[styles.viewer, { backgroundColor: t.s0, paddingTop: insets.top }]}>

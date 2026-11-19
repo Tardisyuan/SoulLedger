@@ -179,7 +179,9 @@ jest.mock("@gorhom/bottom-sheet", () => {
   const Pass = ({ children }) => children;
   const selfClosers = new Set();
   global.__sheetSelfClose = () => selfClosers.forEach((close) => close());
-  const BottomSheetModal = React.forwardRef(function BottomSheetModal({ children, onDismiss }, ref) {
+  // The scrim (`backdropComponent`) and the container `style` are drawn too, as the real one does: a sheet's own
+  // scrim and a style on its container (第六十批 P4, the reduce-motion fade) are then visible to a test.
+  const BottomSheetModal = React.forwardRef(function BottomSheetModal({ children, onDismiss, backdropComponent: Backdrop, style }, ref) {
     const [open, setOpen] = React.useState(false);
     const was = React.useRef(false);
     const isOpen = React.useRef(false);
@@ -203,7 +205,12 @@ jest.mock("@gorhom/bottom-sheet", () => {
         setOpen(false);
       },
     }));
-    return open ? children : null;
+    if (!open) return null;
+    const { View } = require("react-native");
+    const body = style ? React.createElement(View, { testID: "bottom-sheet", style }, children) : children;
+    return Backdrop
+      ? React.createElement(React.Fragment, null, React.createElement(Backdrop, { style: null, animatedIndex: { value: 0 }, animatedPosition: { value: 0 } }), body)
+      : body;
   });
   return {
     __esModule: true,

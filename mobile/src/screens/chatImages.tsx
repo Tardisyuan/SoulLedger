@@ -25,7 +25,7 @@ import { bubbleStamp } from "../chatRules";
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { ON_PLAQUE } from "../theme";
-import { AlertTxt, FadeModal, Loader, OneLine, Txt, useTheme, Press } from "../ui";
+import { AlertTxt, FadeModal, Loader, OneLine, Txt, thumbRef, useFrontPhoto, useTheme, Press } from "../ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
 export const CHAT_IMAGE_MAX = 4;
@@ -100,7 +100,15 @@ function Picture({ image, width, onPress, testID }: { image: ChatImageRef; width
   const { source, failed, reload } = useChatImageSource(image.id);
   const frame = [styles.frame, { width, aspectRatio: ratio(image.width, image.height), borderColor: t.hair2, backgroundColor: t.s2 }];
   return (
-    <Press dim testID={testID} accessibilityRole="imagebutton" accessibilityLabel={tr("soul_app.circle.media.image", { i: "1" })} onPress={onPress} style={frame}>
+    <Press
+      ref={thumbRef(`chat:${image.id}`)}
+      dim
+      testID={testID}
+      accessibilityRole="imagebutton"
+      accessibilityLabel={tr("soul_app.circle.media.image", { i: "1" })}
+      onPress={onPress}
+      style={frame}
+    >
       {failed && !source ? (
         <Press testID={`${testID}-broken`} accessibilityRole="button" onPress={reload} style={styles.center}>
           <Txt variant="caption" tone="subtle" style={styles.centered}>
@@ -225,10 +233,12 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
  * 它本来就有带关闭键的顶栏与「图片 i / n」,这里没有动它。
  */
 export function ChatImageViewer({ images, index, onClose }: { images: ChatImageRef[]; index: number | null; onClose: () => void }) {
+  // 第六十批 P6: closing shrinks back onto the thumbnail of the picture in front (`thumbRef` in `Picture`).
+  const { closeTo, setFront } = useFrontPhoto("chat");
   return (
-    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent>
+    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent closeTo={closeTo}>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始。 */}
-      {index !== null ? <ViewerPages key={index} images={images} start={index} onClose={onClose} /> : null}
+      {index !== null ? <ViewerPages key={index} images={images} start={index} onClose={onClose} onFront={setFront} /> : null}
     </FadeModal>
   );
 }
@@ -251,11 +261,23 @@ function ViewerPage({ image, width, height, onClose }: { image: ChatImageRef; wi
   );
 }
 
-function ViewerPages({ images, start, onClose }: { images: ChatImageRef[]; start: number; onClose: () => void }) {
+function ViewerPages({
+  images,
+  start,
+  onClose,
+  onFront,
+}: {
+  images: ChatImageRef[];
+  start: number;
+  onClose: () => void;
+  onFront: (id: string | null) => void;
+}) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { t: tr } = useI18n();
   const [current, setCurrent] = useState(start);
+  const frontId = images[current]?.id ?? null;
+  useEffect(() => onFront(frontId), [onFront, frontId]);
   const pageHeight = height - insets.top - insets.bottom;
   const n = images.length;
   return (

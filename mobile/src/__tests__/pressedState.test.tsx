@@ -32,6 +32,8 @@ const PLAIN: Record<string, Why[]> = {
   "mobile/src/screens/circle.tsx": ["SCRIM"],
   "mobile/src/screens/circlePeople.tsx": ["SCRIM"],
   "mobile/src/screens/conversation.tsx": ["SCRIM", "SCRIM"],
+  // 底页在减少动态效果时自己的遮罩(第六十批 P4:与底页同一个 80 淡入淡出)。
+  "mobile/src/feedback.tsx": ["SCRIM"],
   // 欢迎层 / 冷启动:整屏点一下跳过。
   "mobile/src/welcome.tsx": ["FULL_SCREEN_SKIP"],
   "mobile/src/coldStartView.tsx": ["FULL_SCREEN_SKIP"],

@@ -32,6 +32,7 @@ import {
 import {
   AccessibilityInfo,
   Animated,
+  Dimensions,
   Easing,
   KeyboardAvoidingView,
   Modal,
@@ -234,30 +235,116 @@ export function useToplineRuns(): number {
  * appearing at once is harsher than an 80 fade). RN's own `animationType="fade"` has a fixed length and ignores
  * reduce motion, so this one is always `animationType="none"` and `transparent`, the content carrying its own ground.
  * It stays up through its fade-out.
+ *
+ * 第六十批 P6, a photo viewer (`closeTo`: the thumbnail key of the photo in front, see `thumbRef`): closing shrinks the
+ * layer back onto that thumbnail over `photoClose` (160, exit curve), fading as it goes; a thumbnail off screen or gone
+ * fades in place over the same 160; under reduce motion an 80 fade, as any modal.
  */
-export function FadeModal({ visible, children, ...rest }: Omit<ModalProps, "animationType" | "transparent"> & { visible: boolean }) {
+export function FadeModal({
+  visible,
+  closeTo,
+  children,
+  ...rest
+}: Omit<ModalProps, "animationType" | "transparent"> & { visible: boolean; closeTo?: () => string | null }) {
   const { dialogIn, dialogOut } = useReducedMotionDurations();
+  const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
   if (visible && !mounted) setMounted(true);
   const [opacity] = useState(() => new Animated.Value(0));
+  const [shrink] = useState(() => new Animated.Value(0));
+  const [onto, setOnto] = useState<PhotoShrink | null>(null);
+  // What it showed last while open: callers drop their content with `visible`, and a fade (or a shrink) of an empty
+  // layer would show nothing leaving.
+  const [held, setHeld] = useState<ReactNode>(children);
+  if (visible && held !== children) setHeld(children);
+  const closeToRef = useRef(closeTo);
+  useEffect(() => {
+    closeToRef.current = closeTo;
+  });
   useEffect(() => {
     if (!mounted) return;
-    const run = Animated.timing(opacity, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? dialogIn : dialogOut,
-      easing: visible ? EASE.enter : EASE.exit,
-      useNativeDriver: true,
+    let run: Animated.CompositeAnimation | null = null;
+    const play = (target: PhotoShrink | null, ms: number) => {
+      setOnto(target);
+      const out = { toValue: visible ? 1 : 0, duration: ms, easing: visible ? EASE.enter : EASE.exit, useNativeDriver: true };
+      run = Animated.parallel([
+        Animated.timing(opacity, out),
+        ...(target ? [Animated.timing(shrink, { toValue: 1, duration: ms, easing: EASE.exit, useNativeDriver: true })] : []),
+      ]);
+      run.start(({ finished }) => finished && !visible && setMounted(false));
+    };
+    if (visible) {
+      shrink.setValue(0);
+      play(null, dialogIn);
+      return () => run?.stop();
+    }
+    if (reduced || !closeToRef.current) {
+      play(null, dialogOut);
+      return () => run?.stop();
+    }
+    const key = closeToRef.current();
+    const node = key ? thumbNodes.get(key) : undefined;
+    // Fabric answers measureInWindow synchronously; a host that does not (a test double) gets the fade in place.
+    let thumb: Rect | null = null;
+    node?.measureInWindow((x, y, width, height) => {
+      thumb = { x, y, width, height };
     });
-    run.start(({ finished }) => finished && !visible && setMounted(false));
-    return () => run.stop();
-  }, [visible, mounted, opacity, dialogIn, dialogOut]);
+    play(thumb ? photoShrinkTo(thumb, Dimensions.get("window")) : null, motion.photoClose);
+    return () => run?.stop();
+  }, [visible, mounted, opacity, shrink, dialogIn, dialogOut, reduced]);
+  const transform = onto
+    ? [
+        { translateX: shrink.interpolate({ inputRange: [0, 1], outputRange: [0, onto.dx] }) },
+        { translateY: shrink.interpolate({ inputRange: [0, 1], outputRange: [0, onto.dy] }) },
+        { scale: shrink.interpolate({ inputRange: [0, 1], outputRange: [1, onto.scale] }) },
+      ]
+    : undefined;
   return (
     <Modal {...rest} visible={mounted} transparent animationType="none">
-      <Animated.View testID="fade-modal" style={[styles.fill, { opacity }]}>
-        {children}
+      <Animated.View testID="fade-modal" style={[styles.fill, { opacity, transform }]}>
+        {visible ? children : held}
       </Animated.View>
     </Modal>
   );
+}
+
+type Rect = { x: number; y: number; width: number; height: number };
+export type PhotoShrink = { dx: number; dy: number; scale: number };
+/**
+ * 第六十批 P6: the move that lays a full-window layer onto `thumb` (window coordinates), or null -- fade in place --
+ * when the thumbnail is not on screen at all (scrolled away) or has no size (gone).
+ */
+export function photoShrinkTo(thumb: Rect, window: { width: number; height: number }): PhotoShrink | null {
+  if (!(thumb.width > 0 && thumb.height > 0 && window.width > 0 && window.height > 0)) return null;
+  const off = thumb.x + thumb.width <= 0 || thumb.y + thumb.height <= 0 || thumb.x >= window.width || thumb.y >= window.height;
+  if (off) return null;
+  return {
+    dx: thumb.x + thumb.width / 2 - window.width / 2,
+    dy: thumb.y + thumb.height / 2 - window.height / 2,
+    scale: Math.max(thumb.width / window.width, thumb.height / window.height),
+  };
+}
+
+/** The photo in front of a viewer, as `FadeModal`'s `closeTo` reads it: the pages call `setFront(id)` as they turn. */
+export function useFrontPhoto(prefix: string): { closeTo: () => string | null; setFront: (id: string | null) => void } {
+  const front = useRef<string | null>(null);
+  const closeTo = useCallback(() => (front.current ? `${prefix}:${front.current}` : null), [prefix]);
+  const setFront = useCallback((id: string | null) => {
+    front.current = id;
+  }, []);
+  return { closeTo, setFront };
+}
+
+// ponytail: one module-level map, the last thumbnail mounted under a key wins; enough while a photo has one tile on screen.
+const thumbNodes = new Map<string, View>();
+/** A thumbnail a photo viewer closes back onto: `ref={thumbRef("chat:" + id)}`. Unmounted, it is gone from the map. */
+export function thumbRef(key: string): (node: View | null) => () => void {
+  return (node) => {
+    if (node) thumbNodes.set(key, node);
+    return () => {
+      if (node && thumbNodes.get(key) === node) thumbNodes.delete(key);
+    };
+  };
 }
 
 // ── type ───────────────────────────────────────────────────────────────

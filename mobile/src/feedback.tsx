@@ -17,13 +17,13 @@ import {
   useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { Animated, BackHandler, Dimensions, Keyboard, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
-import { Easing } from "react-native-reanimated";
+import { Animated, BackHandler, Dimensions, Keyboard, Pressable, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
+import Reanimated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
 import { useI18n } from "./i18n";
-import { curves, radius, touch } from "./theme";
+import { curves, motion, radius, touch } from "./theme";
 import { EASE, InSheetContext, SheetRevealContext, Txt, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./ui";
 
 /** 第五十八批 M2: the web's toast rise, in pt. */
@@ -155,6 +155,8 @@ const styles = StyleSheet.create({
  * caller holds one boolean, as it did with the `Modal` this replaces. Square, no
  * shadow, a 1px top edge in `edge` (补足 A2). Needs `BottomSheetModalProvider` above
  * (navigation.tsx); the sheet renders in that provider, so it sees only its contexts.
+ * Under reduce motion (第六十批 P4) it does not slide: it stands in place and fades in / out over `motion.reduced` (80),
+ * and the scrim fades on the same value, so the two start and end together.
  */
 /** 交互与动效 第 2 轮 原型 06: a release past 90pt, or faster than 0.6pt/ms downward, closes. */
 export const SHEET_CLOSE_DRAG_PT = 90;
@@ -201,7 +203,11 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
   const t = useTheme();
   const ref = useRef<BottomSheetModal>(null);
   const { sheetIn, sheetOut } = useReducedMotionDurations();
+  const reduced = useReducedMotion();
   const timing = useBottomSheetTimingConfigs({ duration: sheetIn, easing: EASE_ENTER });
+  // 第六十批 P4: one opacity for the sheet and its scrim under reduce motion.
+  const fade = useSharedValue(1);
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.get() }));
   // Dismiss only a sheet that is up. Calling `dismiss()` on one that never opened (the mount,
   // `open` false) or already closed itself (a drag, the scrim) left @gorhom's modal status stuck at
   // DISMISSING, and every later `present()` rendered an empty portal: the long-lamp confirm did
@@ -211,12 +217,23 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
   useEffect(() => {
     if (open && !up.current) {
       up.current = true;
+      if (reduced) {
+        fade.set(0);
+        fade.set(withTiming(1, { duration: motion.reduced, easing: EASE_ENTER }));
+      }
       ref.current?.present();
     } else if (!open && up.current) {
       up.current = false;
-      ref.current?.dismiss({ duration: sheetOut, easing: EASE_EXIT });
+      if (!reduced) {
+        ref.current?.dismiss({ duration: sheetOut, easing: EASE_EXIT });
+        return;
+      }
+      // Fade where it stands, then take it down without a slide.
+      fade.set(withTiming(0, { duration: motion.reduced, easing: EASE_EXIT }));
+      const gone = setTimeout(() => ref.current?.dismiss({ duration: 0 }), motion.reduced);
+      return () => clearTimeout(gone);
     }
-  }, [open, sheetOut]);
+  }, [open, sheetOut, reduced, fade]);
   const dismissed = useCallback(() => {
     up.current = false;
     onClose();
@@ -269,18 +286,23 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
     [keyboardHeight, scrollToField]
   );
   const backdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        opacity={1}
-        pressBehavior="close"
-        accessibilityLabel={closeLabel}
-        style={[props.style, { backgroundColor: t.scrim }]}
-      />
-    ),
-    [t.scrim, closeLabel]
+    (props: BottomSheetBackdropProps) =>
+      reduced ? (
+        <Reanimated.View testID="sheet-scrim" style={[props.style, { backgroundColor: t.scrim }, fadeStyle]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} style={StyleSheet.absoluteFill} />
+        </Reanimated.View>
+      ) : (
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+          opacity={1}
+          pressBehavior="close"
+          accessibilityLabel={closeLabel}
+          style={[props.style, { backgroundColor: t.scrim }]}
+        />
+      ),
+    [t.scrim, closeLabel, reduced, fadeStyle, onClose]
   );
   return (
     <BottomSheetModal
@@ -289,6 +311,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       animationConfigs={timing}
       gestureEventsHandlersHook={useSheetGestures}
       backdropComponent={backdrop}
+      style={reduced ? fadeStyle : undefined}
       backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, borderTopWidth: 1, borderTopColor: edge }}
       handleIndicatorStyle={{ backgroundColor: t.hair2 }}
       // The keyboard lifts the sheet with the focused field (its Inputs are BottomSheetTextInput, see

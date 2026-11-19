@@ -9,11 +9,11 @@
  * 取不到(过期、失去权限)就写「图片加载失败」,不留空白。
  */
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { FadeModal, Txt, space, useI18n, useOnline, useTheme, Press } from "../shared";
+import { FadeModal, Txt, space, thumbRef, useFrontPhoto, useI18n, useOnline, useTheme, Press } from "../shared";
 
 export interface LetterImageRef {
   id: string;
@@ -64,6 +64,7 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
   }
   return (
     <Press
+      ref={thumbRef(`letter:${image.id}`)}
       dim
       testID="letter-image"
       accessibilityRole="imagebutton"
@@ -78,22 +79,34 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
 
 /** 黑底、左右滑动、点一下关闭。`index` 为 null 时不显示。 */
 export function LetterImageViewer({ images, index, onClose }: { images: LetterImageRef[]; index: number | null; onClose: () => void }) {
+  // 第六十批 P6: closing shrinks back onto the thumbnail of the picture in front (`LetterImage`'s `thumbRef`).
+  const { closeTo, setFront } = useFrontPhoto("letter");
   return (
-    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent>
+    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent closeTo={closeTo}>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始。 */}
-      {index !== null ? <Pages key={index} images={images} start={index} onClose={onClose} /> : null}
+      {index !== null ? <Pages key={index} images={images} start={index} onClose={onClose} onFront={setFront} /> : null}
     </FadeModal>
   );
 }
 
-function Pages({ images, start, onClose }: { images: LetterImageRef[]; start: number; onClose: () => void }) {
+function Pages({ images, start, onClose, onFront }: { images: LetterImageRef[]; start: number; onClose: () => void; onFront: (id: string | null) => void }) {
   const { t } = useI18n();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const pageHeight = height - insets.top - insets.bottom;
+  const [current, setCurrent] = useState(start);
+  const frontId = images[current]?.id ?? null;
+  useEffect(() => onFront(frontId), [onFront, frontId]);
   return (
     <View testID="letter-image-viewer" style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView testID="letter-image-viewer-pages" horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: start * width, y: 0 }}>
+      <ScrollView
+        testID="letter-image-viewer-pages"
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        contentOffset={{ x: start * width, y: 0 }}
+        onMomentumScrollEnd={(e) => setCurrent(Math.min(images.length - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))))}
+      >
         {images.map((image) => (
           <Pressable
             key={image.id}

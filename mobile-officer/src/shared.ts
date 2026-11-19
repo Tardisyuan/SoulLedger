@@ -23,6 +23,8 @@ export {
   Button,
   EASE,
   FadeModal,
+  thumbRef,
+  useFrontPhoto,
   Grow,
   Skeleton,
   runTopline,
