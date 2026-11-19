@@ -366,3 +366,72 @@ def database_digests(cursor) -> dict:
 
 def objects_that_differ(a: dict, b: dict) -> list:
     return sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+
+
+# --- Several aliases migrate at once ------------------------------------------
+#
+# `setup_databases` migrates its aliases one after another. The sharded group (`--ds=config.settings_sharded`)
+# builds five templates -- default and four civilization shards, each its own input hash -- and every one
+# replays the ~600 migrations: on the Windows gate PC 111 + 103 + 104 + 104 + 104 = 526 s of the controller's
+# sessionstart, before any worker started (2026-11-19, measured; the workers' own clones took 5 s). The same
+# five again on every run that migrates for real (--full). So on Linux each alias migrates in a forked child
+# of its own, all at once: wall time is the slowest alias, not the sum. A child does exactly what
+# setup_databases does for that alias (create_test_db: same name, same migrate), so no template's contents
+# change. Elsewhere (macOS: fork after Django and libpq is unsafe), or for one alias, it stays serial here.
+# SOULLEDGER_TEMPLATE_BUILD_SERIAL=1 forces serial.
+
+#: A child still migrating after this many seconds is killed and the build fails (a serial migrate measured 111 s).
+BUILD_TIMEOUT = 1800
+
+
+def parallel_build_ok(env, platform: str) -> bool:
+    return platform.startswith("linux") and env.get("SOULLEDGER_TEMPLATE_BUILD_SERIAL") != "1"
+
+
+def build_test_databases(aliases, *, parallel=None) -> None:
+    """create_test_db (migrate) every alias in `aliases` into its TEST NAME, as setup_databases would; in
+    forked children at once when `parallel` (default: Linux and more than one alias). Raises if any failed."""
+    import sys
+
+    from django.db import connections
+
+    aliases = sorted(aliases)
+    if parallel is None:
+        parallel = parallel_build_ok(os.environ, sys.platform) and len(aliases) > 1
+    if not parallel:
+        for alias in aliases:
+            connections[alias].creation.create_test_db(verbosity=0, autoclobber=True, serialize=False)
+        return
+    import multiprocessing
+    import traceback
+
+    connections.close_all()  # a child must not share the parent's sockets
+    ctx = multiprocessing.get_context("fork")
+
+    def child(alias):
+        status = 1
+        try:
+            connections[alias].creation.create_test_db(verbosity=0, autoclobber=True, serialize=False)
+            status = 0
+        except BaseException:  # noqa: BLE001 -- reported by the exit status; the traceback goes to stderr
+            traceback.print_exc()
+        finally:
+            with contextlib.suppress(Exception):
+                connections.close_all()
+            os._exit(status)  # never the parent's pytest finalizers or atexit handlers in a child
+
+    procs = {alias: ctx.Process(target=child, args=(alias,), name=f"migrate-{alias}") for alias in aliases}
+    for p in procs.values():
+        p.start()
+    import time
+
+    deadline = time.monotonic() + BUILD_TIMEOUT
+    for p in procs.values():
+        p.join(max(deadline - time.monotonic(), 0))
+    for p in procs.values():
+        if p.is_alive():  # hung: kill it; its half-built database is dropped by the caller's cleanup
+            p.kill()
+            p.join(10)
+    failed = sorted(a for a, p in procs.items() if p.exitcode != 0)
+    if failed:
+        raise RuntimeError(f"building test databases failed for {failed} (tracebacks on stderr)")

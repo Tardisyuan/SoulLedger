@@ -1,9 +1,13 @@
 """Template-cloned worker databases (config/testdb.py, wired in the root conftest.py).
 No DB server needed; the real-PostgreSQL run is what proves the clone works."""
+import os
 import re
+import sys
+import time
 
 import pytest
 
+from config import testdb
 from config.testdb import (
     database_digests,
     gate_slot,
@@ -221,3 +225,75 @@ def test_a_template_in_use_is_not_dropped_and_a_failed_check_counts_as_in_use():
             super().execute(sql, params)
 
     assert in_use(Broken([]), busy) is True
+
+
+# --- Several aliases migrate at once (2026-11-19) ------------------------------
+
+linux_only = pytest.mark.skipif(not sys.platform.startswith("linux"), reason="the parallel build forks: Linux only")
+ALIASES = ("default", "civ_chinese", "civ_european", "civ_egyptian", "civ_greek")
+
+
+class _FakeConnections:
+    """connections[alias].creation.create_test_db writes `<alias>` = its pid into `out`, after `delay[alias]` s;
+    an alias in `fail` raises."""
+
+    def __init__(self, out, delay=None, fail=()):
+        self.out, self.delay, self.fail = out, delay or {}, set(fail)
+
+    def __getitem__(self, alias):
+        fake = self
+
+        class Creation:
+            def create_test_db(self, **kwargs):
+                assert kwargs == {"verbosity": 0, "autoclobber": True, "serialize": False}
+                time.sleep(fake.delay.get(alias, 0))
+                if alias in fake.fail:
+                    raise RuntimeError(f"migrate {alias} broke")
+                (fake.out / alias).write_text(str(os.getpid()))
+
+        return type("Conn", (), {"creation": Creation()})()
+
+    def close_all(self):
+        pass
+
+
+def test_the_build_is_parallel_on_linux_only_and_can_be_forced_serial():
+    assert testdb.parallel_build_ok({}, "linux")
+    assert not testdb.parallel_build_ok({}, "darwin")
+    assert not testdb.parallel_build_ok({"SOULLEDGER_TEMPLATE_BUILD_SERIAL": "1"}, "linux")
+
+
+@linux_only
+def test_five_aliases_build_at_once_each_in_its_own_process(tmp_path, monkeypatch):
+    monkeypatch.delenv("SOULLEDGER_TEMPLATE_BUILD_SERIAL", raising=False)
+    monkeypatch.setattr("django.db.connections", _FakeConnections(tmp_path, delay=dict.fromkeys(ALIASES, 1.5)))
+    started = time.monotonic()
+    testdb.build_test_databases(set(ALIASES))
+    took = time.monotonic() - started
+    pids = {(tmp_path / a).read_text() for a in ALIASES}
+    assert len(pids) == len(ALIASES) and str(os.getpid()) not in pids
+    assert took < 1.5 * len(ALIASES) / 2, f"{took:.1f}s for five 1.5 s builds: not concurrent"
+
+
+def test_serial_builds_every_alias_in_this_process(tmp_path, monkeypatch):
+    monkeypatch.setattr("django.db.connections", _FakeConnections(tmp_path))
+    testdb.build_test_databases(set(ALIASES), parallel=False)
+    assert {(tmp_path / a).read_text() for a in ALIASES} == {str(os.getpid())}
+
+
+@linux_only
+def test_a_failed_alias_fails_the_build_and_names_it(tmp_path, monkeypatch):
+    monkeypatch.setattr("django.db.connections", _FakeConnections(tmp_path, fail={"civ_greek"}))
+    with pytest.raises(RuntimeError, match=r"\['civ_greek'\]"):
+        testdb.build_test_databases(set(ALIASES), parallel=True)
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(set(ALIASES) - {"civ_greek"})
+
+
+@linux_only
+def test_a_hung_alias_is_killed_at_the_limit_and_fails_the_build(tmp_path, monkeypatch):
+    monkeypatch.setattr(testdb, "BUILD_TIMEOUT", 2)
+    monkeypatch.setattr("django.db.connections", _FakeConnections(tmp_path, delay={"civ_egyptian": 60}))
+    started = time.monotonic()
+    with pytest.raises(RuntimeError, match=r"\['civ_egyptian'\]"):
+        testdb.build_test_databases(set(ALIASES), parallel=True)
+    assert time.monotonic() - started < 20

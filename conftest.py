@@ -308,10 +308,9 @@ def pytest_sessionstart(session):
     import os
 
     from django.db import connections
-    from django.test.utils import setup_databases
     from pytest_django.plugin import blocking_manager_key
 
-    from config.testdb import keeps_templates
+    from config.testdb import build_test_databases, keeps_templates
 
     suffix = run_suffix()
     fresh = template_names(settings.DATABASES, suffix)
@@ -331,7 +330,7 @@ def pytest_sessionstart(session):
             from config import sqlite_template
 
             started = time.monotonic()
-            setup_databases(verbosity=0, interactive=False, aliases=set(fresh), serialized_aliases=set())
+            build_test_databases(fresh)  # all aliases at once on Linux (config/testdb.py)
             # a per-run template is always migrated: nothing is kept outside the remote gate box
             sqlite_template.record("cold", "per-run", time.monotonic() - started)
             # CREATE DATABASE ... TEMPLATE refuses while anyone is connected to the template.
@@ -353,10 +352,10 @@ def _kept_or_fresh_templates(config, fresh):
     import psycopg2
     from django.conf import settings
     from django.db import connections
-    from django.test.utils import setup_databases
 
     from config import sqlite_template
     from config.testdb import (
+        build_test_databases,
         database_digests,
         database_exists,
         gate_slot,
@@ -392,7 +391,7 @@ def _kept_or_fresh_templates(config, fresh):
         for alias, name in build.items():
             settings.DATABASES[alias].setdefault("TEST", {})["NAME"] = name
         config.stash[_drop_key] = dict(build)
-        setup_databases(verbosity=0, interactive=False, aliases=set(build), serialized_aliases=set())
+        build_test_databases(build)  # all aliases at once on Linux (config/testdb.py)
     connections.close_all()
 
     def digests(alias, name):
