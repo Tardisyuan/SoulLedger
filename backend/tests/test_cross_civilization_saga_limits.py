@@ -464,3 +464,87 @@ def test_a_broker_outage_loses_no_message_and_the_sweep_delivers_each_once(world
     assert _snapshot() == done, f"{where}: a redelivery applied again"
     assert inbox.filter(message_id__in=ids).count() == 2, where
     _ownership()
+
+
+@sharded
+@NEEDS_ROW_LOCKS
+@pytest.mark.django_db(databases="__all__", transaction=True)
+def test_two_relays_at_once_deliver_each_message_once_and_fail_none(monkeypatch):
+    """Real threads on real PostgreSQL: the on-commit kick's relay and the sweep's (`sharding.sync_shards` every
+    minute) over the same PENDING messages, meeting at each message (a rendezvous per message id) so both deliver it
+    at the same moment. Every message closes once, none is noted as a failure (115 once logged
+    WriteOutsideTransaction from a relay; this is the race it was suspected of), each dispatch is EXECUTED."""
+    from apps.core.shard_reads import CONTROL_ALIAS, read_context
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+    from apps.tenants import shard_saga
+    from apps.tenants.models import ShardInbox, ShardMessageState
+    from apps.tenants.shard_saga import master_of
+
+    seed = random.randrange(10**6)
+    rng = random.Random(seed)
+    w = _world(seed)
+    halls = _halls()
+    _assign(*CIVS)
+    where = f"seed {seed} {w['src']}->{w['tgt']} cut {w['cut']}"
+    print(f"two relays: {where}")
+    monkeypatch.setattr(shard_saga, "_kick", lambda: None)  # the relays below are the only ones
+    failures, errors = [], []
+    noted = shard_saga._note_failure
+
+    def note(alias, msg, error):
+        failures.append(f"{msg.kind}: {type(error).__name__}: {error}")
+        return noted(alias, msg, error)
+    monkeypatch.setattr(shard_saga, "_note_failure", note)
+    meet, lock = {}, threading.Lock()
+    deliver = shard_saga.deliver
+
+    def together(msg):
+        with lock:
+            barrier = meet.setdefault(msg.message_id, threading.Barrier(2, timeout=3))
+        try:
+            barrier.wait()
+        except threading.BrokenBarrierError:
+            pass  # the other relay held this one back or had closed it already: deliver alone
+        return deliver(msg)
+    monkeypatch.setattr(shard_saga, "deliver", together)
+
+    with cut(*w["cut"]), read_context(CONTROL_ALIAS):
+        src, tgt = halls[w["src"]], halls[w["tgt"]]
+        records = [_approved(w, halls)[1].pk]
+        with _in_hall(src):
+            for i in range(rng.randint(1, 3)):
+                other = _soul().objects.create(name=f"并发{seed}-{i}", tenant=src, current_state="DISPOSED")
+                records.append(DispatchRecord.objects.create(source_tenant=src, target_tenant=tgt, soul=other,
+                                                             tenant=src, status=DispatchStatus.APPROVED,
+                                                             reason="saga").pk)
+        for pk in records:
+            with transaction.atomic(using=master_of(src)):
+                _execute(pk)
+
+        def relay():
+            try:
+                with read_context(CONTROL_ALIAS):
+                    shard_saga.relay_until_quiet()
+            except Exception as e:  # noqa: BLE001 -- reported below
+                errors.append(repr(e))
+            finally:
+                connections.close_all()
+
+        threads = [threading.Thread(target=relay) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(120)
+        assert not any(t.is_alive() for t in threads), f"{where}: a relay hung"
+        assert errors == [] and failures == [], f"{where}: errors {errors}, failures {failures}"
+        messages = _messages()
+        assert messages and {m.state for _, m in messages.values()} == {ShardMessageState.DONE}, \
+            f"{where}: {sorted((m.kind, m.state, m.attempts) for _, m in messages.values())}"
+        assert all(m.attempts == 0 and not m.last_error for _, m in messages.values()), where
+        for message_id, (_, m) in messages.items():
+            got = ShardInbox._base_manager.using(master_of(m.target_tenant)).filter(message_id=message_id).count()
+            assert got == 1, f"{where}: {m.kind} {message_id} in the inbox {got} times"
+        assert all(DispatchRecord.all_objects.get(pk=pk).status == DispatchStatus.EXECUTED for pk in records), where
+        assert {_soul().all_objects.get(pk=DispatchRecord.all_objects.get(pk=pk).soul_id).tenant_id
+                for pk in records} == {tgt.pk}, where
+        _ownership()
