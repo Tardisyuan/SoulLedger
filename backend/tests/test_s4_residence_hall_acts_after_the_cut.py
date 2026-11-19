@@ -12,7 +12,7 @@ hall; these act from the other side, where one business flow's rows are on two m
   N-1  a home-side return (RETURN_REQUESTED) delivered after another return deleted the residence's row: a dead
        letter on soul:<pk>. Now it is "already left", and the caller's plan still moves on.
   N-3  DISPATCH_FROZEN refuses a seat on a bench and a cross-civilization rebirth.
-  MU6  a contact save delivered between a move's step 2 and step 3 waits (SoulInTransit) and lands on the primary.
+  MU6  a deed and a contact save delivered between a move's step 2 and step 3 wait (SoulInTransit) and land on the primary.
 
 Two pairs (home, residence) for each: the Chinese hall with the Greek, the Egyptian with the European.
 
@@ -364,7 +364,7 @@ def test_dispatch_frozen_refuses_a_seat_and_a_cross_civilization_rebirth_writing
         _quiet(where)
 
 
-# ---- MU6: a row.save delivered between a move's step 2 and step 3 -----------------------------------------------------
+# ---- MU6: a row.create / row.save delivered between a move's step 2 and step 3 -----------------------------------------------------
 
 #: (home, residence) with the residence's master sorting BEFORE the home's: a save that does not wait finds the
 #: residence's row first -- the one step 3 deletes.
@@ -373,7 +373,7 @@ MOVE_PAIRS = [("GREEK", "CHINESE"), ("EUROPEAN", "EGYPTIAN")]
 
 @sharded
 @pytest.mark.parametrize("pair", MOVE_PAIRS, ids=lambda p: f"{p[0]}-{p[1]}")
-def test_a_contact_save_between_a_returns_step_2_and_step_3_waits_and_lands_on_the_soul_at_home(pair, monkeypatch):
+def test_a_deed_and_a_contact_save_between_a_returns_step_2_and_step_3_wait_and_land_on_the_soul_at_home(pair, monkeypatch):
     from apps.core.shard_reads import CONTROL_ALIAS, read_context
     from apps.dispatch import transfer
     from apps.dispatch.services import DispatchService
@@ -406,18 +406,35 @@ def test_a_contact_save_between_a_returns_step_2_and_step_3_waits_and_lands_on_t
         shard_saga.relay()  # step 2: the soul's primary-looking row on the home's master; step 3 fails
         assert Soul._base_manager.using(_master(home)).get(pk=soul.pk).tenant_id == home.pk, where
         assert Soul._base_manager.using(_master(res)).get(pk=soul.pk).tenant_id == res.pk, where
+        # A deed filed for the soul (an appeal's compensation, `shard_saga.create_rows`), then a contact save: both
+        # addressed at delivery (`_row_primary`), one subject. The save alone would also be stopped by the soul's
+        # own pre-save transit guard on the residence's master; the deed is a SoulRecord, which nothing else stops
+        # -- without the wait it is created on the residence's row of the soul, which step 3 retires.
+        from apps.souls.record_models import EvidenceSource, RecordCategory, RecordType, SoulRecord
+
+        deed = __import__("uuid").uuid4()
         with _in_hall(home), transaction.atomic():
+            create = shard_saga.create_rows(SoulRecord, [dict(
+                id=deed, record_type=RecordType.MERIT, category=RecordCategory.COMPENSATION, description="mu6",
+                weight=1, evidence_source=EvidenceSource.REGISTRY, evidence_json={})],
+                soul=Soul._base_manager.using(_master(res)).get(pk=soul.pk), source=home)
             save = ShardOutbox._base_manager.using(_master(home)).create(
                 message_id=__import__("uuid").uuid4(), tenant=home, target_tenant=res, kind="row.save",
                 subject=f"row:souls.Soul:{soul.pk}",
                 payload={"model": "souls.Soul", "pk": str(soul.pk), "values": {"contact_email": "mu6@r3.test"}})
         shard_saga.relay()
-        waiting = ShardOutbox._base_manager.using(_master(home)).get(pk=save.pk)
-        assert (waiting.state, waiting.attempts) == (ShardMessageState.PENDING, 0), \
-            f"{where}: a save between step 2 and step 3 did not wait ({waiting.state}, {waiting.last_error})"
+        for msg in (create, save):
+            waiting = ShardOutbox._base_manager.using(_master(home)).get(pk=msg.pk)
+            assert (waiting.state, waiting.attempts) == (ShardMessageState.PENDING, 0), \
+                f"{where}: {msg.kind} between step 2 and step 3 did not wait ({waiting.state}, {waiting.last_error})"
+        assert not SoulRecord._base_manager.using(_master(res)).filter(pk=deed).exists(), \
+            f"{where}: the deed was filed on the residence's row of the soul, which step 3 retires"
         monkeypatch.setitem(shard_saga._HANDLERS, transfer.RETURN, (apply, done, refused))
         shard_saga.retry_failed()
         shard_saga.relay_until_quiet()
         primary = Soul._base_manager.using(_master(home)).get(pk=soul.pk)
         assert (primary.tenant_id, primary.contact_email) == (home.pk, "mu6@r3.test"), (where, primary.contact_email)
+        assert SoulRecord._base_manager.using(_master(home)).filter(pk=deed, soul_id=soul.pk).exists(), \
+            f"{where}: the deed is not on the soul at home"
+        assert not SoulRecord._base_manager.using(_master(res)).filter(pk=deed).exists(), where
         assert not shard_saga.failed(), where
