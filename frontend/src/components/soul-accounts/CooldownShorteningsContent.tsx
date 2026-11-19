@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
+import { runTopLine } from "@/lib/topLine";
 import { RefreshCw } from "lucide-react";
 import { PAGE_SIZE, soulAccountsApi, type OfficerCooldownShortening } from "@soulledger/core/api";
 import { soulAccountKeys } from "@soulledger/core/query_keys";
@@ -93,7 +94,7 @@ export function CooldownShorteningsContent({ tabs }: { tabs: ReactNode }) {
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() => void queryClient.invalidateQueries({ queryKey: soulAccountKeys.all })}
+          onClick={() => { runTopLine(); void queryClient.invalidateQueries({ queryKey: soulAccountKeys.all }); }}
           aria-busy={list.isFetching}
         >
           <RefreshCw aria-hidden="true" className="w-4 h-4 mr-1 inline" />

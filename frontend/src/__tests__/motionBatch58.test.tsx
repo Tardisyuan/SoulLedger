@@ -6,13 +6,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { act, fireEvent, render } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { runTopLine } from "@/lib/topLine";
 import { PageShell } from "@/src/components/ui/PageShell";
 
 const read = (p: string) => readFileSync(path.join(__dirname, "..", "..", p), "utf8");
 const CSS = read("app/globals.css");
 
-describe("M8: a refresh with data already shown runs the top line once", () => {
+describe("M8 / 第六十批 P2: the top line runs once for a refresh someone waits on, never for a poll or a push", () => {
   const topline = (c: HTMLElement) => c.querySelector(".page-head-topline") as HTMLElement;
   const setup = () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -29,30 +30,66 @@ describe("M8: a refresh with data already shown runs the top line once", () => {
     return { client, view, fetchAgain, finish: (v: number) => act(async () => finish(v)) };
   };
 
-  it("a refetch of a query with data sets data-refresh; animationend clears it", async () => {
-    const { client, view, fetchAgain, finish } = setup();
-    client.setQueryData(["x"], 1);
+  it("runTopLine (a manual refresh, a reconnect) sets data-refresh; animationend clears it", () => {
+    const { view } = setup();
     expect(topline(view.container)).not.toHaveAttribute("data-refresh");
-    fetchAgain();
+    act(() => runTopLine());
     expect(topline(view.container)).toHaveAttribute("data-refresh");
     expect(topline(view.container)).not.toHaveAttribute("data-loading");
-    await finish(2);
-    // The pass runs to its end even when the data is back sooner: one whole pass, then gone.
-    expect(topline(view.container)).toHaveAttribute("data-refresh");
+    // One whole pass, then gone.
     fireEvent.animationEnd(topline(view.container));
     expect(topline(view.container)).not.toHaveAttribute("data-refresh");
   });
 
-  it("a first load (no data yet) is not a refresh", async () => {
-    const { view, fetchAgain, finish } = setup();
+  it("a background refetch of data on screen (a poll, a push's invalidation) does not run it", async () => {
+    const { client, view, fetchAgain, finish } = setup();
+    client.setQueryData(["x"], 1);
     fetchAgain();
+    expect(client.isFetching()).toBe(1);
     expect(topline(view.container)).not.toHaveAttribute("data-refresh");
-    await finish(1);
+    await finish(2);
+    expect(topline(view.container)).not.toHaveAttribute("data-refresh");
+  });
+
+  it("a polled query (refetchInterval) ticking does not run it", async () => {
+    jest.useFakeTimers();
+    try {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      let calls = 0;
+      function Polled() {
+        useQuery({ queryKey: ["polled"], queryFn: async () => ++calls, refetchInterval: 1000 });
+        return null;
+      }
+      const view = render(
+        <QueryClientProvider client={client}>
+          <PageShell title="T">
+            <Polled />
+          </PageShell>
+        </QueryClientProvider>
+      );
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(3500);
+      });
+      expect(calls).toBeGreaterThan(2);
+      expect(topline(view.container)).not.toHaveAttribute("data-refresh");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("without a QueryClient nothing breaks and nothing runs", () => {
     const { container } = render(<PageShell title="T">body</PageShell>);
     expect(topline(container)).not.toHaveAttribute("data-refresh");
+  });
+
+  it.each([
+    "app/rebirth-applications/page.tsx",
+    "app/scheduler/page.tsx",
+    "app/soul-credentials/page.tsx",
+    "app/soul-inbox/page.tsx",
+    "src/components/soul-accounts/CooldownShorteningsContent.tsx",
+  ])("%s: the manual refresh button runs the line", (file) => {
+    expect(read(file)).toMatch(/onClick=\{\(\) => \{ runTopLine\(\); void queryClient\.invalidateQueries\(/);
   });
 
   it("CSS: the refresh pass is the loading line, one iteration", () => {

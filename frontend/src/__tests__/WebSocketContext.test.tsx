@@ -12,7 +12,8 @@
  * and teardown on logout/unmount.
  */
 import { useEffect } from "react";
-import { render, screen, act, fireEvent } from "@testing-library/react";
+import { render, renderHook, screen, act, fireEvent } from "@testing-library/react";
+import { useTopLineRuns } from "@/lib/topLine";
 import { QueryClient } from "@tanstack/react-query";
 import { WebSocketProvider, useWebSocket } from "@/src/contexts/WebSocketContext";
 import { flushEventInvalidations } from "@/lib/events/event_registry";
@@ -303,10 +304,14 @@ describe("WebSocketProvider catch-up after a reconnect", () => {
   ];
 
   it("the first connect invalidates nothing; a reconnect invalidates the missed families", () => {
+    // 第六十批 P2: the reconnect's refresh runs the page head's top line once; the first connect does not.
+    const runs = renderHook(() => useTopLineRuns());
+    const before = runs.result.current;
     renderProvider();
     act(() => lastSocket().open());
     act(() => lastSocket().receive({ type: "connected" }));
     expect(invalidatedKeys()).toEqual([]);
+    expect(runs.result.current).toBe(before);
 
     act(() => lastSocket().serverClose(1006));
     act(() => {
@@ -317,6 +322,7 @@ describe("WebSocketProvider catch-up after a reconnect", () => {
     act(() => lastSocket().open());
     act(() => lastSocket().receive({ type: "connected" }));
     expect(invalidatedKeys().sort()).toEqual([...MISSED].sort());
+    expect(runs.result.current).toBe(before + 1);
   });
 
   it("reaches a cached soul detail and the unread badge, and not a family no handler maintains", () => {

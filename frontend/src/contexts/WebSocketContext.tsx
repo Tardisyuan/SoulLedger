@@ -17,6 +17,7 @@ import { authApi } from "@soulledger/core/api/auth";
 import { useTenant } from "./TenantContext";
 import { useToast } from "./ToastContext";
 import { dispatchEvent, REALTIME_KEY_FAMILIES, type EventPayload } from "@/lib/events/event_registry";
+import { runTopLine } from "@/lib/topLine";
 
 /**
  * What a socket that was down may have missed: every family the realtime handlers keep fresh
@@ -137,6 +138,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       // A re-connect (not the first connect): refetch what a push may have changed while the link was down.
       onConnected: () => {
         if (connectedBefore) {
+          // 第六十批 P2: the refresh after a reconnect is one the page head's top line runs for (a poll or a push is not).
+          runTopLine();
           for (const queryKey of KEYS_MISSED_WHILE_DISCONNECTED) queryClient.invalidateQueries({ queryKey });
         }
         connectedBefore = true;

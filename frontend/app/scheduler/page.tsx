@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { runTopLine } from "@/lib/topLine";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import type { ScheduledJob } from "@soulledger/core/api";
 import { schedulerKeys } from "@soulledger/core/query_keys";
@@ -153,7 +154,7 @@ function SchedulerPageContent() {
         type="button"
         variant="secondary"
         size="sm"
-        onClick={() => void queryClient.invalidateQueries({ queryKey: schedulerKeys.all })}
+        onClick={() => { runTopLine(); void queryClient.invalidateQueries({ queryKey: schedulerKeys.all }); }}
         aria-busy={jobs.isFetching}
       >
         <RefreshCw aria-hidden="true" className="w-4 h-4 mr-1 inline" />

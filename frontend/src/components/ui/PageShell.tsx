@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { QueryClientContext } from "@tanstack/react-query";
 import { useSkeletonHold } from "@/components/ui/skeleton";
+import { useTopLineRuns } from "@/lib/topLine";
 import { cn } from "@/lib/utils";
 import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -379,19 +379,6 @@ export interface PageHeadProps {
 }
 
 /**
- * Some query that already has data on screen is fetching again — a refetch, a reconnect's or a version bump's
- * invalidation, a timed poll (M8). Loading more of an infinite list is not a refresh (M9 draws its own rows), and a first
- * load has no data yet (the skeleton says that). No QueryClient (a bare test render): never.
- */
-function useRefreshingShownData(): boolean {
-  const client = React.useContext(QueryClientContext);
-  const subscribe = React.useCallback((cb: () => void) => (client ? client.getQueryCache().subscribe(cb) : () => {}), [client]);
-  const read = () =>
-    !!client && client.isFetching({ predicate: (q) => q.state.data !== undefined && !q.state.fetchMeta?.fetchMore }) > 0;
-  return React.useSyncExternalStore(subscribe, read, () => false);
-}
-
-/**
  * 「顶线 + 卷宗头」(第三十批「卷宗」第 1 步)。PageShell 用它画页头;案卷台右侧摊开的那一份(第 2 步)直接用它。
  * 文明由 <html data-civ> 选(顶线 civT、光晕 glow × `--glowA`、纸纹、水印都随文明换);水印的中心物与记号读此刻所在的殿。
  * 不吸顶:卷宗的封面不跟着滚,滚动时还需要的只有筛选栏。
@@ -412,13 +399,14 @@ export function PageHead({
   const civ = (useHallCivilization() ?? null) as SealCiv | null;
   const headRef = React.useRef<HTMLElement>(null);
   useHeadMarkAvoidance(headRef);
-  // 第五十八批 M8:已有内容时的刷新(重取、重连、版本更新、定时)让顶线走一趟。开始时起一趟,播完(animationend)收。
-  const refreshing = useRefreshingShownData();
+  // 第五十八批 M8 / 第六十批 P2:手动刷新、重连或版本更新后的整页刷新让顶线走一趟(`runTopLine`);定时轮询与推送不走,
+  // 变了的行自己做「行变更」高亮。开始时起一趟,播完(animationend)收。
+  const runs = useTopLineRuns();
   const [refreshPass, setRefreshPass] = React.useState(false);
-  const [wasRefreshing, setWasRefreshing] = React.useState(refreshing);
-  if (refreshing !== wasRefreshing) {
-    setWasRefreshing(refreshing);
-    if (refreshing) setRefreshPass(true);
+  const [seenRuns, setSeenRuns] = React.useState(runs);
+  if (runs !== seenRuns) {
+    setSeenRuns(runs);
+    setRefreshPass(true);
   }
   const endRefreshPass = React.useCallback(() => setRefreshPass(false), []);
   const body = (

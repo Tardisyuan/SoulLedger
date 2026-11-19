@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
+import { runTopLine } from "@/lib/topLine";
 import { RefreshCw } from "lucide-react";
 import { PAGE_SIZE, type CredentialSlip, type InitialCredential } from "@soulledger/core/api";
 import { responseData, responseStatus } from "@soulledger/core/api/client";
@@ -190,7 +191,7 @@ function CredentialsPageContent() {
         type="button"
         variant="secondary"
         size="sm"
-        onClick={() => void queryClient.invalidateQueries({ queryKey: soulAccountKeys.all })}
+        onClick={() => { runTopLine(); void queryClient.invalidateQueries({ queryKey: soulAccountKeys.all }); }}
         aria-busy={list.isFetching}
       >
         <RefreshCw aria-hidden="true" className="w-4 h-4 mr-1 inline" />

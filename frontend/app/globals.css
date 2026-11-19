@@ -1112,7 +1112,7 @@
     background: oklch(var(--color-main-ink));
     animation: page-head-progress var(--transition-duration-loading-line) var(--ease-standard) infinite;
   }
-  /* 已有内容时刷新(第五十八批 M8:重取、重连、版本更新、定时):同一根线只走一趟,播完 PageHead 收到 animationend 撤掉。
+  /* 已有内容时刷新(第五十八批 M8;第六十批 P2 起只有手动刷新、重连或版本更新后的整页刷新,轮询与推送不走,`lib/topLine.ts`):同一根线只走一趟,播完 PageHead 收到 animationend 撤掉。
      减少动态效果:上面那条 1ms 照样触发 animationend,线等于不走。 */
   .page-head-topline[data-refresh]::after {
     animation-iteration-count: 1;

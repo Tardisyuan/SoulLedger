@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { useKeyLabel } from "@/src/lib/platformKeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { runTopLine } from "@/lib/topLine";
 import { RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { judgmentApi, type Statute } from "@soulledger/core/api";
@@ -741,7 +742,7 @@ function SoulInboxContent() {
       subtitle={t("soul_inbox.subtitle")}
       actions={
         <Button type="button" variant="secondary" size="sm"
-          onClick={() => void queryClient.invalidateQueries({ queryKey: soulInboxKeys.all })}>
+          onClick={() => { runTopLine(); void queryClient.invalidateQueries({ queryKey: soulInboxKeys.all }); }}>
           <RefreshCw aria-hidden="true" className="w-4 h-4 mr-1 inline" />
           {t("soul_inbox.refresh")}
         </Button>
