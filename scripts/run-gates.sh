@@ -845,6 +845,23 @@ elif [ "$TESTS" = 1 ]; then
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $RNAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
     TFLAGS=""; [ "$REAL_PG" = 1 ] && TFLAGS="--real-pg "
+    # A few named test files get few workers (2026-11-19, user decision): every xdist worker sets up its own
+    # databases (five under --ds=config.settings_sharded) before its first test, and a handful of files keeps a
+    # slot's 5-6 workers mostly idle. 1–2 files → 1 worker, 3–5 → one each, more (or a directory, or only -k)
+    # → the slot's size. Never 0: without xdist there is no shared PostgreSQL template and every alias
+    # migrates serially in the one process. --workers wins.
+    if [ -z "$TESTS_WORKERS" ]; then
+        NFILES=0; prev=""  # a test path, not an option's value (-k x.py, --deselect a.py::t, --ignore a.py)
+        for a in "${TEST_ARGS[@]}"; do
+            [[ "$a" != -* && "$a" =~ \.py(::.*)?$ && ! "$prev" =~ ^(-k|-m|-p|-o|-c|--deselect|--ignore|--ignore-glob|--rootdir)$ ]] && NFILES=$((NFILES + 1))
+            prev="$a"
+        done
+        SLOTW="${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS}"
+        if [ "$NFILES" -ge 1 ] && [ "$NFILES" -le 2 ]; then TESTS_WORKERS=1
+        elif [ "$NFILES" -ge 3 ] && [ "$NFILES" -le 5 ] && [[ "$SLOTW" =~ ^[0-9]+$ ]] && [ "$NFILES" -lt "$SLOTW" ]; then TESTS_WORKERS=$NFILES
+        fi
+        [ -n "$TESTS_WORKERS" ] && echo "$P: $NFILES test file(s) named: $TESTS_WORKERS pytest worker(s) (--workers N overrides)"
+    fi
     [ -n "$TESTS_WORKERS" ] && GATES_REMOTE_PYTEST_WORKERS="$TESTS_WORKERS"  # after win_route, which sizes the PC's
     DEPS_JS=""  # pytest only: no node_modules install on a fresh tree (REMOTE_DEPS); a gate run there installs it
     remote_gate_run "$RNAME" "$TESTS_LIMIT" "exec bash scripts/run-gates.sh $TFLAGS--tests-from .sl-tests-$$"
