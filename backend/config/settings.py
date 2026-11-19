@@ -256,6 +256,10 @@ _apply_statement_timeout(DATABASES, DB_STATEMENT_TIMEOUT_MS)
 # to their own alias. Empty = none; tests use override_settings (plan D8).
 SHARD_READ_CIVS = [c.strip() for c in os.getenv("SHARD_READ_CIVS", "").split(",") if c.strip()]
 SHARD_WRITE_CIVS = [c.strip() for c in os.getenv("SHARD_WRITE_CIVS", "").split(",") if c.strip()]
+# 冻结调拨(分库 PLAN 阶段 4.0 与回滚步骤「冻结调拨、联审先结」):开着时发起 / 批准 / 执行调拨与新建联审一律
+# 423 `dispatch_frozen`,不写任何东西;受刑计划的下一站记成「没发出去」(解冻后 `retry-dispatch` 重发)。
+# 反向同步(shard-to-control)期间不能有新的跨文明 saga 发出。`apps/dispatch/services.py::refuse_if_frozen`。
+DISPATCH_FROZEN = _env_bool("DISPATCH_FROZEN", "False")
 
 AUTH_USER_MODEL = "authentication.User"
 # 系统管理员(§7.5):控制库自带,authentication/0030 建出这个用户名(无可用密码);凭证由

@@ -6,6 +6,7 @@
   "auth.error_locked_body",
   "auth.error_locked_title",
   "dashboard.todo.reassign_requests",
+  "dispatch.frozen",
   "judgment.wangsi.filed_at",
   "judgment.wangsi.queue_hint",
   "officer_app.bio_login.button",

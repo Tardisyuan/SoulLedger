@@ -102,6 +102,7 @@ class ProblemCode(StrEnum):
     DEVICE_LOGIN_INVALID = "device_login_invalid"
     DEVICE_LOGIN_REVOKED = "device_login_revoked"
     DIMS_MISMATCH = "dims_mismatch"
+    DISPATCH_FROZEN = "dispatch_frozen"
     DISPATCH_NOT_STARTED = "dispatch_not_started"
     DISPLAY_NAME_LENGTH = "display_name_length"
     DISPLAY_NAME_SENSITIVE = "display_name_sensitive"

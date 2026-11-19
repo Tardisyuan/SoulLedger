@@ -28,6 +28,12 @@ import { PageSection } from "@/components/ui/page-section";
 import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 import { responseCode } from "@soulledger/core/api/client";
 
+/** Refusals of approve / execute the toast names in the reader's language (the server's `detail` is English). */
+const DISPATCH_REFUSAL_KEYS: Record<string, string> = {
+  target_dispatch_disabled: "dispatch.target_tenant_closed",
+  dispatch_frozen: "dispatch.frozen",
+};
+
 const STATUS_COLORS: Record<string, string> = {
   // 规范 v3:等待审批不是风险、被驳回不是错误 —— 两个都是墨色,字形(◐ / ✕)把它们分开。
   PROPOSED: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]",
@@ -138,7 +144,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     },
     onError: (err: unknown) => {
       setShowApproveModal(false);
-      showToast(t(responseCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.approve_error"), "error");
+      showToast(t(DISPATCH_REFUSAL_KEYS[responseCode(err) ?? ""] ?? "dispatch.approve_error"), "error");
     },
   });
 
@@ -166,7 +172,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     },
     onError: (err: unknown) => {
       setShowExecuteModal(false);
-      showToast(t(responseCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.execute_error"), "error");
+      showToast(t(DISPATCH_REFUSAL_KEYS[responseCode(err) ?? ""] ?? "dispatch.execute_error"), "error");
     },
   });
 

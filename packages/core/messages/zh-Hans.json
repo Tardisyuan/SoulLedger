@@ -3529,6 +3529,7 @@
     "soul_from_detail_error": "带入的灵魂加载失败，请在这里重新选择。",
     "source_label": "来源",
     "target_tenant_closed": "此殿暂不接收调拨",
+    "frozen": "调拨与联审暂时冻结(系统维护中),恢复后再试",
     "soul_not_in_underworld": "这个灵魂不在冥界（在世、轮回中、已终局或失踪），不能调拨",
     "soul_on_sentence_plan": "这个灵魂的去处计划正在进行，调拨按计划走",
     "discard": "放弃…",
