@@ -33,7 +33,9 @@ from apps.sentence_plan.services import (
     notify_judges,
     pardon_term,
     record_event,
+    rows_elsewhere,
     soul_params,
+    stop_dispositions,
 )
 from apps.souls.models import Soul
 from apps.tenants import shard_saga
@@ -536,18 +538,22 @@ def _end_serving(soul, plan, executed):
     now = timezone.now()
     for node, served in executed:
         if node.status == SentenceNodeStatus.ACTIVE:
-            served.expired_at = now
-            served.save(update_fields=["expired_at"])
+            elsewhere = rows_elsewhere(node)  # the return's step there records the term (`transfer._settle_plan_stops`)
+            if not elsewhere:
+                served.expired_at = now
+                served.save(update_fields=["expired_at"])
             node.status = SentenceNodeStatus.COMPLETED
             node.completed_at = now
             _save(node, "status", "completed_at")
             SentencePlanService._node_finished(soul, plan, node)
-            DispositionService._leave_served_realm(served, soul, node)
+            if not elsewhere:
+                DispositionService._leave_served_realm(served, soul, node)
 
 
 def _withdraw_stop(soul, node, reason, why):
     """撤下一站还没执行的刑:节点 REMOVED,它的处置(若已建)由系统作废,灵魂离开那一站的界域(处置建好时
     进的,`_activate_home_node`)。"""
+    from apps.core.bare_ids import primary_alias
     from apps.core.recycle_bin import system_void
     from apps.disposition.models import Disposition
     from apps.realms.path import SoulPathService
@@ -555,10 +561,11 @@ def _withdraw_stop(soul, node, reason, why):
     node.status = SentenceNodeStatus.REMOVED
     node.reason = reason
     _save(node, "status", "reason")
-    if node.disposition_id is None:
+    if node.disposition_id is None or rows_elsewhere(node):  # voided by the return's step there
         return
     disposition = Disposition.all_objects.select_related("destination_realm").filter(pk=node.disposition_id).first()
-    system_void(Disposition.all_objects.filter(pk=node.disposition_id), why)
+    if disposition is not None:  # on the row's own master: a queryset names no row the router could ask
+        system_void(Disposition.all_objects.using(primary_alias(disposition)).filter(pk=disposition.pk), why)
     if disposition is not None and disposition.destination_realm is not None:
         SoulPathService.leave(soul, realm=disposition.destination_realm)
 
@@ -578,13 +585,17 @@ def _return_from_withdrawn_stop(soul, plan):
     """撤下的是灵魂此刻所在的外地站:节点是 REMOVED,`advance` 不会把它送回(它只认 COMPLETED),这里送。"""
     from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
 
+    # Across masters the soul is home once the relay has run; the plan moves on there (`then_advance`).
+    away = shard_saga.crosses(soul.tenant, soul.home_tenant)
     try:
         DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_ON_CASE_CLOSED,
-                                      reason=f"appeal amended sentence plan {plan.pk}; foreign stop withdrawn")
+                                      reason=f"appeal amended sentence plan {plan.pk}; foreign stop withdrawn",
+                                      then_advance=away)
     except ResidenceReturnBlockedError as exc:
         raise PlanChangeRefusedError("The soul has an open judgment where it resides; it cannot be returned yet",
                                      "open_judgment", status=409, open_judgment_ids=exc.judgment_ids) from None
-    soul.refresh_from_db()
+    if not away:
+        soul.refresh_from_db()
 
 
 def _acquit_home_stops(soul, plan, nodes, judgment):
@@ -703,10 +714,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
 
     plan = _lock_plan(found)
     nodes = _lock_nodes(plan)
-    dispositions = {
-        d.pk: d for d in Disposition.all_objects.select_for_update(of=("self",))
-        .filter(pk__in=[n.disposition_id for n in nodes if n.disposition_id])
-    }
+    dispositions = stop_dispositions(nodes)
     executed = [(n, dispositions[n.disposition_id]) for n in nodes
                 if n.disposition_id in dispositions and dispositions[n.disposition_id].is_executed]
     if plan.status not in IN_PROGRESS_PLAN_STATUSES:
@@ -843,15 +851,23 @@ def cancel(plan, *, reason, user):
                 node.completed_at = now
                 _save(node, "status", "completed_at")
                 pardon_term(soul, node, now)  # 赦免 = 刑期就此止,否则转生报 term_not_served(审查 11-01 P1 #2)
+        # The soul resides in another civilization whose rows another database holds (sharding stage 4, D6): its
+        # return is a saga that completes after this transaction commits, so the plan completes then too -- at home,
+        # as the cancellation it is (`cancel_reason`; `_step` -> `_complete(pardoned=True)`, `then_advance`). The
+        # stops are closed here either way; the residence's rows of them follow with the return
+        # (`transfer._settle_plan_stops`). VERIFY-stage4-r2 H-A: this refused 409 (or, both civilizations cut,
+        # committed the return and rolled the cancellation back).
+        away = soul.is_residing and shard_saga.crosses(soul.tenant, soul.home_tenant)
         if soul.is_residing:
             DispatchService.end_residence(
                 soul, actor=user if getattr(user, "is_authenticated", False) else "system",
-                trigger=DispatchService.RETURN_ON_PLAN_CANCELLED, reason=reason,
+                trigger=DispatchService.RETURN_ON_PLAN_CANCELLED, reason=reason, then_advance=away,
             )
-            soul = Soul.lock(soul.pk)
+            if not away:
+                soul = Soul.lock(soul.pk)
         plan.cancel_reason = reason
         _save(plan, "cancel_reason")
-        if not SentencePlanService._complete(soul, plan, nodes, pardoned=True):
+        if not away and not SentencePlanService._complete(soul, plan, nodes, pardoned=True):
             raise PlanChangeRefusedError(
                 f"The soul is {soul.current_state}; the plan cannot be closed from there", "soul_state", status=409,
             )

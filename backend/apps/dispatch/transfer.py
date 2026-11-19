@@ -284,33 +284,112 @@ def _activate_node(payload):
 
 # ---- the end of a residence --------------------------------------------------------------------------------------
 
-def end_residence(soul, *, actor, trigger, reason=""):
-    """Step 1 of `DispatchService.end_residence` across masters: on the residence's master."""
+def end_residence(soul, *, actor, trigger, reason="", then_advance=False):
+    """Step 1 of `DispatchService.end_residence` across masters: on the residence's master -- now, in the caller's
+    transaction when that is open there (or none is), else after it commits.
+
+    The second case is another hall's transaction -- the home hall's own (its officer cancels the plan, an appeal
+    withdraws the stop the soul is serving abroad, D6), or SYSTEM_ADMIN's. Where it does not hold the residence's
+    master, step 1 run there would commit on its own, whatever became of the caller's (VERIFY-stage4-r2 H-A); where it
+    does, step 1 would open the move inside it and leave the soul read-only (`SoulInTransit`) for the rest of the
+    caller's transaction, which still writes it (an appeal's compensation moves the ledger). So the caller's
+    transaction writes a RETURN_REQUESTED message on the home's master instead, with its own rows; the relay runs
+    step 1 on the residence's master after the commit (`_return_requested`), the same step as below. `then_advance`: once the soul is home (RETURN_SETTLED) the
+    plan moves on there -- what the single-database caller does after `end_residence` returns."""
+    residence = _hall(soul.tenant_id)
+    payload = {"trigger": trigger, "reason": reason, "actor": str(actor) if actor is not None else None,
+               "actor_id": actor.pk if getattr(actor, "is_authenticated", False) else None,
+               "then_advance": then_advance}
+    if saga.inside_another_hall(residence):
+        home = _hall(soul.home_tenant_id)
+        subject = f"soul:{soul.pk}"
+        if saga.in_flight(subject, home):
+            raise ValueError("Soul is already on its way home")
+        saga.send(RETURN_REQUESTED, home, residence, {"soul_id": str(soul.pk), **payload}, subject=subject)
+        return None  # the caller's soul stays where it is: abroad until the relay brings it home
+    with saga.on_master(residence):
+        locked = _soul_model().lock(soul.pk, using=saga.master_of(residence))
+        record = _leave(locked, residence, payload)
+    soul.tenant_id = locked.home_tenant_id  # what the caller holds, as the single-database path leaves it
+    return record
+
+
+def _leave(locked, residence, payload):
+    """Step 1 proper, on the residence's master: the checks, the residence's rows, the RETURN message."""
     from apps.dispatch.services import DispatchService
     from apps.realms.path import SoulPathService
 
-    Soul = _soul_model()  # noqa: N806
-    residence = _hall(soul.tenant_id)
-    with saga.on_master(residence):
-        locked = Soul.lock(soul.pk)
-        DispatchService.check_returnable(locked)
-        subject = f"soul:{locked.pk}"
-        if saga.in_flight(subject, residence):
-            raise ValueError("Soul is already on its way home")
-        record = (DispatchRecord._base_manager
-                  .filter(soul_id=locked.pk, status=DispatchStatus.EXECUTED, target_tenant_id=locked.tenant_id,
-                          is_deleted=False)
-                  .order_by("-executed_at").first())
-        SoulPathService.leave(locked)
-        if trigger == DispatchService.RETURN_MANUAL:
-            DispatchService.void_residence_dispositions(locked, residence, record)
-        saga.send(RETURN, residence, locked.home_tenant, {
-            "soul": soul_values(locked), "dispatch_id": str(record.pk) if record else None, "trigger": trigger,
-            "reason": reason, "actor": str(actor) if actor is not None else None,
-            "actor_id": actor.pk if getattr(actor, "is_authenticated", False) else None,
-        }, subject=subject)
-    soul.tenant_id = locked.home_tenant_id  # what the caller holds, as the single-database path leaves it
+    DispatchService.check_returnable(locked)
+    subject = f"soul:{locked.pk}"
+    if saga.in_flight(subject, residence):
+        raise ValueError("Soul is already on its way home")
+    record = (DispatchRecord._base_manager
+              .filter(soul_id=locked.pk, status=DispatchStatus.EXECUTED, target_tenant_id=locked.tenant_id,
+                      is_deleted=False)
+              .order_by("-executed_at").first())
+    _settle_plan_stops(locked, residence)
+    SoulPathService.leave(locked)
+    if payload["trigger"] == DispatchService.RETURN_MANUAL:
+        DispatchService.void_residence_dispositions(locked, residence, record)
+    saga.send(RETURN, residence, locked.home_tenant, {
+        "soul": soul_values(locked), "dispatch_id": str(record.pk) if record else None, **payload,
+    }, subject=subject)
     return record
+
+
+def _settle_plan_stops(locked, residence):
+    """The residence's rows of the plan stops the home hall closed while the soul was here: a withdrawn stop's
+    disposition (REMOVED / CANCELLED, not executed) voided, an ended one's (ABORTED / COMPLETED) term pardoned -- the
+    writes `_withdraw_stop` / `pardon_term` / `_end_serving` make on one database, which the home hall's transaction
+    cannot hold here (`sentence_plan.services.rows_elsewhere`). Where it could, they are made already: a no-op."""
+    from apps.core.recycle_bin import system_void
+    from apps.disposition.models import Disposition
+    from apps.sentence_plan.models import SentenceNode, SentenceNodeStatus
+    from apps.sentence_plan.services import pardon_served
+
+    alias = saga.master_of(residence)
+    here = Disposition.all_objects.using(alias).filter(
+        soul_id=locked.pk, tenant_id=residence.pk, is_deleted=False, sentence_node_id__isnull=False)
+    nodes = dict(SentenceNode.all_objects.filter(pk__in=list(here.values_list("sentence_node_id", flat=True)))
+                 .values_list("pk", "status"))
+    now = timezone.now()
+    for served in here.select_for_update(of=("self",)):
+        status = nodes.get(served.sentence_node_id)
+        if status in (SentenceNodeStatus.REMOVED, SentenceNodeStatus.CANCELLED) and not served.is_executed:
+            system_void(Disposition.all_objects.using(alias).filter(pk=served.pk), f"plan_stop_withdrawn:{status}")
+        elif status in (SentenceNodeStatus.ABORTED, SentenceNodeStatus.COMPLETED):
+            pardon_served(locked, served, None, now)
+
+
+RETURN_REQUESTED = "dispatch.return_requested"
+
+
+def _return_requested(payload):
+    """Step 1 deferred from the home hall's transaction (`end_residence`): run on the residence's master. A soul no
+    longer residing there (it came home or moved on meanwhile) has nothing to end here. A residence that will not
+    let it go (an open judgment there) refuses: the home's rows stand (the plan's stops closed), the soul stays, and
+    the same action asked again sends it once the judgment is closed."""
+    from apps.dispatch.services import ResidenceReturnBlockedError
+    from apps.tenants.managers import get_current_tenant
+
+    residence = get_current_tenant()
+    locked = _soul_model().lock(payload["soul_id"], using=saga.master_of(residence))
+    if locked.tenant_id != residence.pk or not locked.is_residing or saga.in_flight(f"soul:{locked.pk}", residence):
+        return  # home already, moved on, or on its way home
+    try:
+        _leave(locked, residence, {k: payload[k] for k in ("trigger", "reason", "actor", "actor_id", "then_advance")})
+    except ResidenceReturnBlockedError as e:
+        raise Refused(str(e)) from None
+
+
+def _return_not_requested(payload):
+    import logging
+
+    logging.getLogger(__name__).warning("soul %s: residence refused the return (%s); it stays abroad",
+                                        payload["soul_id"], payload["trigger"])
+
+
+handler(RETURN_REQUESTED, refused=_return_not_requested)(_return_requested)
 
 
 def _come_home(payload):
@@ -348,7 +427,8 @@ def _left_residence(payload):
     if not saga.sent(subject, residence):  # once, however often this step is redelivered
         saga.send(RETURN_SETTLED, residence, home, {
             "soul_id": values["id"], "home_id": home.pk, "dispatch_id": payload["dispatch_id"],
-            "trigger": payload["trigger"], "at": timezone.now().isoformat()}, subject=subject)
+            "trigger": payload["trigger"], "then_advance": payload.get("then_advance", False),
+            "at": timezone.now().isoformat()}, subject=subject)
 
 
 handler(RETURN, done=_left_residence, moves=True)(_come_home)
@@ -369,10 +449,15 @@ def _return_settled(payload):
             saga.send(RECORD_RETURNED, home, record.tenant, returned)
         else:
             _record_returned(returned)
-    if payload["trigger"] == DispatchService.RETURN_MANUAL:
+    if payload["trigger"] == DispatchService.RETURN_MANUAL or payload.get("then_advance"):
+        from apps.sentence_plan.services import SentencePlanService
+
         Soul = _soul_model()  # noqa: N806
         soul = Soul._base_manager.using(saga.master_of(home)).get(pk=payload["soul_id"])
-        DispatchService.advance_plan_after_manual_return(soul, record)
+        if payload["trigger"] == DispatchService.RETURN_MANUAL:
+            DispatchService.advance_plan_after_manual_return(soul, record)
+        else:  # the rest of the caller's `advance` / cancel, now that the soul is home (`end_residence`)
+            SentencePlanService.advance(soul)
 
 
 RECORD_RETURNED = "dispatch.record_returned"
