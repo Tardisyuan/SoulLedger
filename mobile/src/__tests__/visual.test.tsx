@@ -688,6 +688,20 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; th
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
+  it("a drag that lands mid-page before `enabled` has caught up is not a pull (2026-11-20, iOS)", async () => {
+    const onRefresh = jest.fn();
+    await mount(onRefresh);
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 120 } } }));
+    // No `applied()`: the native handler still has the old config, enabled.
+    expect(pan().config.enabled).toBe(true);
+    pull(PULL_REFRESH_PT + 20);
+    expect(onRefresh).not.toHaveBeenCalled();
+    expect(shift()).toBe(0);
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 0 } } }));
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
   it("the caller's onScroll and the pull's both hear the scroller", async () => {
     const onScroll = jest.fn();
     wrap(
