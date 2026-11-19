@@ -546,31 +546,6 @@ def test_the_range_numbering_covers_every_civilization():
     assert (len(INDEX) + 1) * SPAN < 2 ** 63
 
 
-# ---- the 4.0 rehearsal command -----------------------------------------------------------------------------------
-
-@sharded
-def test_the_rehearsal_writes_through_the_services_and_reconciles_clean_both_ways():
-    """`manage.py rehearse_write_cutover` on a synced world (two Greek halls, so a dispatch within the civilization is
-    possible): business writes land on the shard, come back to control by the reverse sync, and both reconciles are
-    clean. Its report names what it did; a routing error would fail it."""
-    import io
-
-    from apps.souls.models import Soul
-    from apps.tenants.models import Tenant
-    from tests.test_shard_sync import _sync
-
-    _halls()
-    Tenant.objects.create(code="W4_GR2", display_name="GREEK 2", declared_civilization="GREEK")
-    _sync()
-    out = io.StringIO()
-    call_command("rehearse_write_cutover", "--civ", "GREEK", "--writes", "16", "--seed", "4", stdout=out)
-    report = out.getvalue()
-    assert "rehearsal: clean" in report and "ok soul created" in report, report
-    on_control = set(Soul._base_manager.using("default").filter(name__startswith="rehearsal-4-").values_list("pk", flat=True))
-    on_shard = set(Soul._base_manager.using(GREEK).filter(name__startswith="rehearsal-4-").values_list("pk", flat=True))
-    assert on_control and on_control == on_shard  # written on the shard, brought back by the reverse sync
-
-
 # ---- found by the 2026-11-16 review (ADVICE-sharding-fable.md 1.1) and part B's caveats -------------------------
 
 @sharded

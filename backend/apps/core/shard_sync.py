@@ -99,6 +99,21 @@ def owned(model, alias, civ, halls, *, copies=True):
     return qs.filter(q)
 
 
+def purged_models():
+    """SHARD models whose control rows of a write-cut civilization are a mirror: what a purge deletes. Not the
+    control-mastered ones (`shard_reads.control_mastered`: control is their master), not REFERENCE, not CONTROL."""
+    from apps.core.shard_reads import control_mastered
+
+    return [m for m in compared_models() if placement(m) == SHARD and not control_mastered(m)]
+
+
+def purge_plan(civ):
+    """{model: queryset on control of `civ`'s rows a purge deletes}: the rows of its halls (a soul is its hall's,
+    `tenant`, never its home's). D2 rows (no hall, a hall of UNKNOWN civilization) are in no civilization's plan."""
+    halls = halls_of(civ)
+    return {m: owned(m, "default", civ, halls, copies=False) for m in purged_models()}
+
+
 def _digest(row):
     return hashlib.sha256(json.dumps(row, default=str, sort_keys=True).encode()).hexdigest()
 
@@ -176,16 +191,25 @@ def _control_masters(model, civ):
     return placement(model) == REFERENCE or civ not in settings.SHARD_WRITE_CIVS or control_mastered(model)
 
 
-def _sides(model, shard, civ, halls, direction):
+def purged_civs():
+    """SHARD_PURGED_CIVS (stage 5): write-cut civilizations whose SHARD rows on control are no longer synced."""
+    return set(getattr(settings, "SHARD_PURGED_CIVS", ()))
+
+
+def _sides(model, shard, civ, halls, direction, purged=None):
     """(source queryset, target queryset) for one model and shard, or None when not compared that way: each
     direction only writes over the side that is not the master (a write-cut shard's own rows are never
-    overwritten from control, control's master rows never from a shard)."""
+    overwritten from control, control's master rows never from a shard). A purged civilization (`purged`, default
+    SHARD_PURGED_CIVS) has no shard-to-control side: control's copy of its rows is being deleted, and a sync would
+    copy them all back (G1). Its control-to-shard side (REFERENCE, the control-mastered models) stays (G3)."""
     if direction == CONTROL_TO_SHARD:
         if not _control_masters(model, civ):
             return None  # stage 4: the shard is this model's master (the sync runs shard-to-control)
         return owned(model, "default", civ, halls), owned(model, shard, civ, halls)
     if placement(model) == REFERENCE or (civ in settings.SHARD_WRITE_CIVS and _control_masters(model, civ)):
         return None  # control stays the master of reference tables (D4) and of the control-mastered models
+    if civ in (purged_civs() if purged is None else purged):
+        return None
     # The shard is the master of its own rows; its soul copies are not its rows.
     return owned(model, shard, civ, halls, copies=False), owned(model, "default", civ, halls, copies=False)
 
@@ -226,12 +250,13 @@ def _dangling(sources, halls):
     return out
 
 
-def compare(shard, direction=CONTROL_TO_SHARD, retry_window=0):
+def compare(shard, direction=CONTROL_TO_SHARD, retry_window=0, *, purged=None):
     """{model: (source qs, target qs, [(kind, pk)], halls)} between control and one shard. Differences still
-    there after `retry_window` seconds of re-checking (in-flight writes settle) are the ones returned."""
+    there after `retry_window` seconds of re-checking (in-flight writes settle) are the ones returned. `purged`
+    overrides SHARD_PURGED_CIVS (the purge compares a purged civilization's mirror with `purged=()`)."""
     civ = civilization_of(shard)
     halls = halls_of(civ)
-    sides = {m: s for m in compared_models() if (s := _sides(m, shard, civ, halls, direction)) is not None}
+    sides = {m: s for m in compared_models() if (s := _sides(m, shard, civ, halls, direction, purged)) is not None}
     sources = {m: (src, fingerprints(src, halls)) for m, (src, _) in sides.items()}
     dangling = _dangling(sources, halls) if direction == CONTROL_TO_SHARD else {}
     found = {}
@@ -291,8 +316,34 @@ def sync_direction(shard):
     return SHARD_TO_CONTROL if civilization_of(shard) in settings.SHARD_WRITE_CIVS else CONTROL_TO_SHARD
 
 
+#: GlobalCode kind of the stamp "SHARD_PURGED_CIVS stopped this civilization's shard-to-control sync" (value = the
+#: civilization, claimed_at = the first sync that ran stopped). The purge wants a dump newer than that (G5).
+SYNC_STOPPED = "SHARD_SYNC_STOPPED"
+
+
+def stamp_sync_stopped(shards):
+    """Record on control when the sync of each purged civilization of `shards` first ran stopped; drop the stamp of
+    one taken back off SHARD_PURGED_CIVS (purging it later then needs a dump newer than its next stop)."""
+    GlobalCode = apps.get_model("tenants", "GlobalCode")
+    civs = {civilization_of(a) for a in shards}
+    stopped = civs & purged_civs()
+    stamps = GlobalCode.objects.using("default").filter(kind=SYNC_STOPPED)
+    stamps.filter(value__in=civs - stopped).delete()
+    for civ in stopped:
+        stamps.get_or_create(kind=SYNC_STOPPED, value=civ)
+
+
+def sync_stopped_at(civ):
+    """When the sync of `civ` was first seen stopped (`stamp_sync_stopped`), or None."""
+    GlobalCode = apps.get_model("tenants", "GlobalCode")
+    row = GlobalCode.objects.using("default").filter(kind=SYNC_STOPPED, value=civ).first()
+    return row.claimed_at if row else None
+
+
 def sync(shards):
-    """The sync of each shard, each in its own direction (`sync_direction`): {alias: rows fixed}."""
+    """The sync of each shard, each in its own direction (`sync_direction`): {alias: rows fixed}. A purged
+    civilization's shard-to-control pass compares nothing (`_sides`); the run stamps when it first saw it so."""
+    stamp_sync_stopped(shards)
     out = {}
     for shard in shards:
         n = 0
@@ -331,10 +382,12 @@ def _enqueue():
 
 
 def _on_write(sender, using="default", **kwargs):
-    """A write to a master queues the sync: control, or (stage 4) a shard whose writes are cut over."""
+    """A write to a master queues the sync: control, or (stage 4) a shard whose writes are cut over and not purged
+    (stage 5: none of its rows go back to control)."""
     if not shard_aliases():
         return
-    if using != "default" and not (using in shard_aliases() and sync_direction(using) == SHARD_TO_CONTROL):
+    if using != "default" and not (using in shard_aliases() and sync_direction(using) == SHARD_TO_CONTROL
+                                   and civilization_of(using) not in purged_civs()):
         return
     conn = transaction.get_connection(using)
     if conn.in_atomic_block and any(func is _enqueue for _, func, _ in conn.run_on_commit):
