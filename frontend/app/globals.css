@@ -2470,13 +2470,13 @@ html.theme-switching *::after {
       自带虚线的 `.e-tk`(C 版地府的刻度带,主动效就是它的 dashoffset)与 `.e-flow` 不是这三类,不参与。
       JS 到了之后:`fx-wait` 先停着(开头不在视口里的卡,快进视口时去掉它,动画从头来),`fx-done` 画过了(之后换主题、
       重挂都不再画)。
-   第六十批 P3(编排):两步 —— 描线 slow 320,刻度晚一个错开(40)淡入 base 240;起步 150 → fast 160。整段 320 ≤ 480
-   (此前描线 1 s、刻度 900 ms 起 450 ms,共 1.2 s)。 */
+   第六十批 P3 曾把它收进编排(320);用户 2026-11-09 定、2026-11-19 重申:着陆页徽记画 1.2 s(描线 1 s 起 150 ms,刻度 450 ms 起 900 ms)。
+   它是编排上限(motion.choreography-max)的具名例外,与印(200)、breathe 同列;motionBatch60.test.ts 的 EXEMPT 写着。 */
 .emblem-fx .emblem2 :is(.e-l, .e-l2, .e-halo):not([class*="em2-"]) {
-  animation: emblem-draw var(--transition-duration-slow) cubic-bezier(0.4, 0, 0.2, 1) var(--transition-duration-fast) backwards;
+  animation: emblem-draw 1s cubic-bezier(0.4, 0, 0.2, 1) 150ms backwards;
 }
 .emblem-fx .emblem2 .e-t:not([class*="em2-"]) {
-  animation: emblem-tick-in var(--transition-duration-base) ease-out calc(var(--transition-duration-fast) + var(--transition-duration-stagger)) backwards;
+  animation: emblem-tick-in 450ms ease-out 900ms backwards;
 }
 .emblem-fx .emblem2:is(.fx-wait, .fx-done) :is(.e-l, .e-l2, .e-halo, .e-t):not([class*="em2-"]) {
   animation-name: none;

@@ -1098,7 +1098,7 @@
       }
     },
     "stagger": {
-      "$description": "Choreography (Design batch 60 P3, motion.choreography): the offset between the starts of two steps, not a step's length. Each step is one of 80 / 160 / 240 / 320 (seal 200 and breathe keep their own); a whole sequence, first start to last end, is at most motion.choreography-max: past it, drop steps, do not stretch them.",
+      "$description": "Choreography (Design batch 60 P3, motion.choreography): the offset between the starts of two steps, not a step's length. Each step is one of 80 / 160 / 240 / 320 (seal 200, breathe and the landing emblem keep their own); a whole sequence, first start to last end, is at most motion.choreography-max: past it, drop steps, do not stretch them.",
       "$value": {
         "value": 40,
         "unit": "ms"
@@ -1174,11 +1174,11 @@
       "$value": "{transition-duration.reduced}"
     },
     "choreography": {
-      "$description": "Choreography (Design batch 60 P3): the stagger between the starts of two steps. Each step is one of 80 / 160 / 240 / 320; the seal (200) and breathe keep their own values. See choreography-max.",
+      "$description": "Choreography (Design batch 60 P3): the stagger between the starts of two steps. Each step is one of 80 / 160 / 240 / 320; the seal (200), breathe and the landing page emblem (1.2 s: line 1 s from 150, ticks 450 ms from 900; user decision 2026-11-09, restated 2026-11-19) keep their own values and are named exceptions to choreography-max. See choreography-max.",
       "$value": "{transition-duration.stagger}"
     },
     "choreography-max": {
-      "$description": "A whole choreography, first step's start to last step's end, is at most this (batch 60 P3). Past it, drop steps; do not stretch them. A cap, not a transition.",
+      "$description": "A whole choreography, first step's start to last step's end, is at most this (batch 60 P3). Past it, drop steps; do not stretch them. Named exceptions: the seal (200), breathe, the landing emblem (1.2 s; user decision 2026-11-09 and 2026-11-19). A cap, not a transition.",
       "$value": {
         "value": 480,
         "unit": "ms"

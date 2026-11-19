@@ -24,6 +24,10 @@ const { motionTokens } = require(path.join(FRONTEND, "..", "mobile", "src", "the
 
 const TIERS = new Set([80, 160, 240, 320]);
 const SEAL = 200;
+// Named exceptions to the choreography cap (tiers, 40 stagger, <= choreography-max), beside the seal (200) and breathe.
+// The landing emblem: the user's decision of 2026-11-09, restated 2026-11-19 -- it draws in 1.2 s (line 1 s from 150,
+// ticks 450 ms from 900). Batch 60 P3 had squeezed it to 320; that is undone. Add a sequence here only on a user decision.
+const EXEMPT = new Set(["landing emblem: line, then ticks"]);
 
 const declared = (name: string) => {
   const m = new RegExp(`^\\s*${name}: (\\d+)ms;`, "m").exec(CSS);
@@ -109,7 +113,7 @@ describe("P3: choreography — four tiers, 40 apart, ≤ 480", () => {
     expect(motionTokens.choreographyMax).toBe(480);
   });
 
-  describe.each(Object.entries(CHOREOGRAPHIES))("%s", (_name, steps) => {
+  describe.each(Object.entries(CHOREOGRAPHIES).filter(([name]) => !EXEMPT.has(name)))("%s", (_name, steps) => {
     it("each step is 80 / 160 / 240 / 320 (or the seal's 200)", () => {
       expect(steps().filter((s) => !TIERS.has(s.dur) && s.dur !== SEAL)).toEqual([]);
     });
@@ -127,8 +131,12 @@ describe("P3: choreography — four tiers, 40 apart, ≤ 480", () => {
     });
   });
 
+  it("the exempt landing emblem keeps its own 1.2 s (line 1000 from 150, ticks 450 from 900)", () => {
+    expect(CHOREOGRAPHIES["landing emblem: line, then ticks"]()).toEqual([{ start: 150, dur: 1000 }, { start: 900, dur: 450 }]);
+  });
+
   it("every rule that staggers is in that list", () => {
-    const listed = new Set([".route-row .route-walked", ".journey-walked", ".emblem-fx .emblem2 .e-t:not([class*=\"em2-\"])", ".goodbye-line", ".goodbye-status"]);
+    const listed = new Set([".route-row .route-walked", ".journey-walked", ".goodbye-line", ".goodbye-status"]);
     const staggering = [...CSS.matchAll(/(^|\n)([^\n{}]+?) \{([^}]*)\}/g)]
       .filter((m) => /var\(--i\b|--transition-duration-stagger\)/.test(m[3]) && /animation/.test(m[3]))
       .map((m) => m[2].trim());
