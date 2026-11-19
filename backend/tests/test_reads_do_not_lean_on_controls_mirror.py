@@ -16,6 +16,7 @@ there and what must not.
     M8  the role members list names each officer's organization
     M9  the pending-credentials list after its sweeps changed a row
     M12 a city god's and a tudi god's officers (a many-to-many through a SHARD table)
+    S1  (stage 4) SYSTEM_ADMIN exports and leaves its audit row; S2 the credential sweeps write each row on its master
 
     cd backend && ... python -m pytest --ds=config.settings_sharded -m sharded \\
       tests/test_reads_do_not_lean_on_controls_mirror.py
@@ -293,3 +294,61 @@ def test_m12_a_gods_officers_are_read_where_their_through_rows_are(world, which)
         body = r.json()
         row = body if "officers" in body else next(g for g in body["results"] if g["id"] == str(god.pk))
         assert [o["id"] for o in row["officers"]] == [officer.pk], (path, row)
+
+
+# ---- S1 / S2: stage-4 writes the purge rehearsal found --------------------------------------------------------
+
+@sharded
+@pytest.mark.parametrize("url", ["/api/v1/souls/export/", "/api/v1/judgment/export/", "/api/v1/users/export_csv/"])
+def test_s1_system_admin_exports_under_write_cut_and_leaves_one_audit_row(world, url):
+    """record_export wrote `AuditLog.objects.create(user=...)`: the User assignment asked the router with no single
+    civilization (SYSTEM_ADMIN), NoShardContext, a 500. Now the audit signals' own write (`_write_row`)."""
+    from apps.audit.models import AuditLog
+    from apps.authentication.models import User
+
+    admin = User.objects.create_user(username=f"s1_{uuid.uuid4().hex[:6]}", password="x", role="SYSTEM_ADMIN")
+    exports = {a: AuditLog._base_manager.using(a).filter(action="EXPORT", user_id=admin.pk).count()
+               for a in ("default", *SHARDS)}
+    assert sum(exports.values()) == 0
+    r = _client(admin).get(url)
+    assert r.status_code == 200, r.content[:300]
+    after = {a: AuditLog._base_manager.using(a).filter(action="EXPORT", user_id=admin.pk).count()
+             for a in ("default", *SHARDS)}
+    assert after == {**exports, "default": 1}, after  # one row, hall-less: control's (D2), on no shard
+
+
+@sharded
+def test_s2_the_credential_sweeps_of_a_hall_of_no_known_civilization_write_each_row_on_its_master(world):
+    """A hall of UNKNOWN civilization reads and writes control. Its list's sweeps (`expire_due_credentials`) are not
+    scoped to it: in its context they updated control's mirror of a write-cut civilization's credential, and the
+    guard refused it (ControlMirrorWrite, a 500). Now the sweep is split per master: the due credential is voided on
+    its master, control's mirror is not written."""
+    from apps.core.shard_reads import control_mirror_writes
+    from apps.soul_accounts.models import CredentialStatus, InitialCredential
+    from apps.tenants.models import Tenant
+
+    hall = world["GREEK"]
+    due, _ = _ready(hall, "过期的希腊魂")
+    with _in_hall(hall):
+        InitialCredential.objects.filter(account=due).update(expires_at=timezone.now() - timedelta(minutes=1))
+        row = InitialCredential.objects.get(account=due)
+    from tests.test_control_locks_in_a_write_cut_hall import _mirror
+
+    _mirror(_soul_row(due))  # what the shard-to-control sync leaves before stage 5: the soul, then its credential
+    with control_mirror_writes():
+        InitialCredential._base_manager.using("default").bulk_create([row])
+    unknown = Tenant.objects.create(code=f"S2_{uuid.uuid4().hex[:4]}", display_name="?", declared_civilization="")
+    r = _client(_admin(unknown, f"s2_admin_{uuid.uuid4().hex[:6]}")).get("/api/v1/soul-accounts/credentials/")
+    assert r.status_code == 200, r.content[:300]
+    assert r.json()["results"] == [], r.json()  # another civilization's credential is not this hall's
+    master = _only_on_its_master_or_mirrored(InitialCredential, row.pk)
+    assert InitialCredential._base_manager.using(master).get(pk=row.pk).status == CredentialStatus.VOID
+    mirror = InitialCredential._base_manager.using("default").get(pk=row.pk)
+    assert mirror.status == row.status and mirror.secret == row.secret, "control's mirror was written"
+
+
+def _only_on_its_master_or_mirrored(model, pk):
+    from apps.core.shard_reads import write_alias_of
+
+    row = next(r for alias in SHARDS for r in model._base_manager.using(alias).filter(pk=pk))
+    return write_alias_of(row)

@@ -350,7 +350,7 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         params.is_valid(raise_exception=True)
         query = params.validated_data
         folder = query.get("folder", "all")
-        queryset = queryset.filter(inbox.folder_q(folder))
+        queryset = queryset.filter(inbox.folder_q(folder, queryset))
         if query.get("status") == "open":
             queryset = queryset.filter(closed_at__isnull=True)
         elif query.get("status") == "closed":

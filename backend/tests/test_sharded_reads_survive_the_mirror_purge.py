@@ -36,25 +36,16 @@ from tests.test_sharded_writes_equal_single_db import _Savepoint, _Seeded
 
 SEED = reads.SEED
 
-_SOUL_JOIN = "M3: joins a crossing key to Soul, answered from control (CROSSING_JOINS_ON_CONTROL)"
 #: Cases the purge still changes, each with its reason: stage 5 must not run until this is empty (an xfail names the
-#: difference; a case off this list that differs fails). PREP-stage5 M3: each call site reads the other side by ids.
-PENDING = {
-    "disposition-list": f"{_SOUL_JOIN}: disposition/views.py Exists(Reincarnation soul=OuterRef('soul'))",
-    "disposition-detail": f"{_SOUL_JOIN}: disposition/views.py Exists(Reincarnation soul=OuterRef('soul'))",
-    "disposition-export": f"{_SOUL_JOIN}: disposition/views.py Exists(Reincarnation soul=OuterRef('soul'))",
-    "disposition-detail:patch": f"{_SOUL_JOIN}: disposition/views.py, the PATCH's read-back",
-    "dossier-desk": f"{_SOUL_JOIN}: judgment/sources.py soul__home_tenant",
-    "judgment-queue-counts": f"{_SOUL_JOIN}: judgment/sources.py soul__home_tenant",
-    "tenant-overview": f"{_SOUL_JOIN}: tenants/overview.py soul__ferry_passage, judgment/sources.py",
-    "judgment-annual": f"{_SOUL_JOIN}: judgment/annual.py soul__tenant__code",
-    "judgment-precedents": f"{_SOUL_JOIN}: judgment/precedents.py soul__merit_score",
-    # Not a mirror read: before the purge the list's sweep, in a request of a hall of no known civilization (context
-    # control), updates control's mirror rows of every write-cut civilization (expire_due_credentials is unscoped)
-    # and is refused (ControlMirrorWrite); after it there are none to refuse. Stage-4 debt; the answer after is right.
-    "soul-credential-list": "stage 4: the credential sweeps of a control-context request write control's mirror",
-    "soul-credential-detail": "stage 4: the credential sweeps of a control-context request write control's mirror",
-}
+#: difference; a case off this list that differs fails). The crossing-key sites read the other side by ids and a
+#: shard refuses such a join (CrossShardJoin, 2026-11-20); what is left is not a crossing join:
+#: G4 (PREP-stage5 section 3): the world's hall-less disposition (`_what_115_had` (e)) stays on control and names a
+#: judgment and a realm of a Chinese hall, which the purge deletes there -- the purge's own dry run reports it as a
+#: blocker. Step 0c (`backfill_disposition_halls --apply`) is to move it first; that command's --apply tests are red
+#: on main (test_stage5_prep, 2026-11-20), so it is not run here. Cases that read that row:
+_G4 = "G4: a hall-less disposition naming a purged judgment / realm; needs step 0c (backfill_disposition_halls)"
+PENDING = {case: _G4 for case in ("disposition-list", "disposition-detail", "disposition-export",
+                                  "disposition-detail:patch", "judgment-precedents")}
 
 
 def _held(case, mismatches, seed_line):
@@ -97,6 +88,7 @@ def stage(world, purge):
     with _Savepoint(), override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=list(CIVS)):
         for civ in CIVS:
             assign(alias_for_civilization(civ))
+        _plan(world)  # before any purge
         if purge:
             purge_control_mirrors(world)
         yield
@@ -107,12 +99,16 @@ def test_the_purge_empties_controls_mirror_and_leaves_the_shards_and_d2(world):
     from apps.audit.models import AuditLog
     from apps.core.sharding import alias_for_civilization
     from apps.souls.models import Soul
+    from apps.tenants.management.commands.purge_cut_over_tenant_rows import blockers, purge_plan
 
-    plan = _plan(world)
-    assert len(plan) >= 20, [m._meta.label for m, _ in plan]
-    souls = next(pks for m, pks in plan if m is Soul)
     on_shards = {civ: Soul._base_manager.using(alias_for_civilization(civ)).count() for civ in CIVS}
+    with stage(world, purge=False):  # the only staying rows naming a row the purge deletes: G4's disposition
+        found = {key for civ in CIVS for key, _ in blockers(purge_plan(civ))}
+        assert found <= {"disposition.Disposition.judgment", "disposition.Disposition.destination_realm"}, found
     with stage(world, purge=True):
+        plan = _plan(world)
+        assert len(plan) >= 20, [m._meta.label for m, _ in plan]
+        souls = next(pks for m, pks in plan if m is Soul)
         for model, pks in plan:
             assert not model._base_manager.using("default").filter(pk__in=pks[:500]).exists(), model._meta.label
         assert {civ: Soul._base_manager.using(alias_for_civilization(civ)).count() for civ in CIVS} == on_shards
@@ -137,6 +133,10 @@ def test_every_read_answers_after_the_purge_what_it_answered_before(world, case)
     before, after = _answers(world, asks, keep, purge=False), _answers(world, asks, keep, purge=True)
     mismatches = [f"{who} GET {url}: {shadow.diff(b, c)}"
                   for (who, _, url), b, c in zip(asks, before, after, strict=True) if b != c]
+    # Alike is not enough, pending or not: a read that fails on both sides (a crossing join refused, a write with no context) is equal.
+    broken = [f"{who} GET {url}: {b}"[:300] for (who, _, url), b in zip(asks, before, strict=True)
+              if b[0] in ("raised", 500)]  # 503: a service off by design (Synapse, the PDF renderer)
+    assert not broken, f"SHARDED_READS_SEED={SEED}\n" + "\n".join(broken[:6])
     _held(case, mismatches, f"SHARDED_READS_SEED={SEED}")
     if not any(shadow.has_data(b) for b in before):
         pytest.skip(f"{case}: no caller had data here (both sides equal)")

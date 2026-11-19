@@ -132,7 +132,7 @@ def _letters(scope, unassigned=False):
 
     qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related("soul_a")
     qs = inbox.annotate_for(DataScopeFilter.through_soul(scope, scope_to_tenant(qs, scope), "soul_a"), scope.user)
-    qs = qs.filter(inbox.folder_q("awaiting_reply")).order_by(
+    qs = qs.filter(inbox.folder_q("awaiting_reply", qs)).order_by(
         F("last_soul_message_at").asc(nulls_last=True), "created_at")
     if unassigned:
         return [c for c in qs.select_related("assignee") if inbox.live_assignee(c) is None]

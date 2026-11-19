@@ -55,6 +55,12 @@ TAGS = {"LOCK", "PK", "FILTERED", "CODE", "GLOBAL", "FANOUT", "CROSS", "CLI"}
 ROUTES = {"CONTROL", "WRITE", "CONTEXT", "FANOUT", "USING"}
 
 SITES = [
+    ('apps/chat/inbox.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "awaiting_reply_q (stage 5 prep M3): the souls of the caller's scoped conversations, by those ids, from every leg (their current hall)"),
+    ('apps/judgment/annual.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "_souls (stage 5 prep M3): the souls the caller's scoped judgments name, by those ids, from every leg (their hall's civilization and name)"),
+    ('apps/judgment/precedents.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "_current_balances (stage 5 prep M3): the souls of the hall's own snapshot-less candidate cases, by those ids, from every leg"),
+    ('apps/judgment/precedents.py', 'Disposition._base_manager', 1, 'PK', 'FANOUT', "_attach_dispositions: the dispositions of the precedents already chosen in the judgment's own hall, by their judgment ids, from every leg (a hall-less one lives on control)"),
+    ('apps/judgment/sources.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "_away_q (stage 5 prep M3): the souls the caller's scoped judgments name, by those ids, from every leg (their home hall)"),
+    ('apps/tenants/overview.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "hall_row (stage 5 prep M3): the souls of this hall's open Greek originals, by those ids, from every leg (on Acheron's bank or not)"),
     ('apps/chat/services.py', 'Soul._base_manager', 1, 'CODE', 'FANOUT', "find_by_soul_code (stage 5 prep M6): the soul with this exact code, from every leg (a letter crosses civilizations); its account then has to be in _reachable"),
     ('apps/social/moderation_views.py', 'Soul._base_manager', 1, 'FILTERED', 'CONTEXT', "SocialMuteViewSet.get_queryset (stage 5 prep M4): wrapped in scope_to_tenant -- the request's halls' souls, by id"),
     ('apps/social/soul_circle.py', 'Soul._base_manager', 1, 'FILTERED', 'CONTEXT', "soul_ids_in (stage 5 prep M4): the souls whose current hall is the one given (the viewer's own)"),

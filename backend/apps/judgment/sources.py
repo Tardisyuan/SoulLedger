@@ -25,7 +25,7 @@
 
 转生申请是第七个来源(用户 2026-11-13 决定):它要人批,所以进「审」,而不是册 · 卷宗「轮回」分页的筛选。
 """
-from django.db.models import Case, CharField, Exists, F, OuterRef, Q, Value, When
+from django.db.models import Case, CharField, Exists, OuterRef, Q, Value, When
 
 QUEUE = "queue"
 CITY_GOD = "city_god"
@@ -49,9 +49,22 @@ def _open_cross_statuses():
     return (JudgmentStatus.PROPOSED, JudgmentStatus.ACTIVE)
 
 
-def _away_q() -> Q:
-    """灵魂不在原属的殿审:两列都非空且不相等(空的不算跨域)。"""
-    return Q(soul__home_tenant__isnull=False, tenant__isnull=False) & ~Q(soul__home_tenant=F("tenant"))
+def _away_q(queryset) -> Q:
+    """灵魂不在原属的殿审:两列都非空且不相等(空的不算跨域)。
+
+    The judgments' (pk, soul, hall) first, then those souls' home halls by id from every leg, then the judgments
+    whose soul's home is another hall, by pk: not `soul__home_tenant`, a join through a crossing key that a shard
+    answers from control's copy of the soul, a mirror stage 5 deletes (PREP-stage5 M3).
+    ponytail: reads the ids of every row `queryset` holds (an open queue of the caller's halls); a queue of hundreds
+    of thousands wants the home hall denormalized onto the judgment."""
+    from apps.core.shard_reads import with_fanout
+    from apps.souls.models import Soul
+
+    rows = list(queryset.order_by().values_list("pk", "soul_id", "tenant_id"))
+    homes = dict(with_fanout(Soul._base_manager.filter(pk__in={s for _, s, _ in rows}))
+                 .values_list("pk", "home_tenant_id"))
+    return Q(pk__in=[pk for pk, soul, here in rows
+                     if here is not None and homes.get(soul) is not None and homes[soul] != here])
 
 
 def annotate(queryset):
@@ -64,20 +77,21 @@ def annotate(queryset):
     open_cross = Exists(CrossTenantJudgment.objects.filter(judgment=OuterRef("pk"), status__in=_open_cross_statuses()))
     return queryset.annotate(queue_source=Case(
         When(city_god_status=CityGodStatus.SENT_ON, then=Value(CITY_GOD)),
-        When(Q(open_cross) | _away_q(), then=Value(CROSS)),
+        When(Q(open_cross) | _away_q(queryset), then=Value(CROSS)),
         default=Value(QUEUE),
         output_field=CharField(),
     ))
 
 
-def q(value) -> Q:
-    """`?source=value` 的 WHERE 条件:与 `annotate` 同一判定,但不进 SELECT —— 列表按它筛时不多一列逐行子查询。"""
+def q(value, queryset) -> Q:
+    """`?source=value` 的 WHERE 条件:与 `annotate` 同一判定,但不进 SELECT —— 列表按它筛时不多一列逐行子查询。
+    `queryset`: the rows it will filter (whose souls `_away_q` reads)."""
     from apps.dispatch.models import CrossTenantJudgment
     from apps.judgment.models import CityGodStatus
 
     city_god = Q(city_god_status=CityGodStatus.SENT_ON)
     cross = Q(Exists(CrossTenantJudgment.objects.filter(
-        judgment=OuterRef("pk"), status__in=_open_cross_statuses()))) | _away_q()
+        judgment=OuterRef("pk"), status__in=_open_cross_statuses()))) | _away_q(queryset)
     return {CITY_GOD: city_god, CROSS: ~city_god & cross, QUEUE: ~city_god & ~cross}[value]
 
 

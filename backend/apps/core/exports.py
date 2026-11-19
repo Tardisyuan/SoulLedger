@@ -84,17 +84,25 @@ def record_export(request, *, resource, rows):
     audit log, ledger stats and journal), so all of them write the same row. Tenant is the
     request's, else the caller's own (`force_authenticate` skips the middleware).
     """
+    from django.db import router
+
     from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.signals import _write_row
     from apps.authentication.impersonation import is_impersonation, refuse
     from apps.core.client_ip import get_client_ip
 
     # 代看(只读)期间不导出:导出会以被看者的名义写审计行,也把数据带出系统。认证层按路径已拦,这里是所有 CSV 导出共用的第二道。
     if is_impersonation(getattr(request, "auth", None)):
         raise refuse("impersonation_read_only", "查看中，不能导出。")
-    user =request.user if request.user.is_authenticated else None
-    AuditLog.objects.create(
-        tenant=request_tenant(request),
-        user=user,
+    user = request.user if request.user.is_authenticated else None
+    tenant_id = getattr(request_tenant(request), "pk", None)
+    # The audit signals' own write: the master of the hall the row names, asked with the hall id alone.
+    # `AuditLog.objects.create(user=...)` asked the router on the User assignment -- NoShardContext for SYSTEM_ADMIN
+    # while civilizations write to their shards, so an export was a 500.
+    _write_row(
+        router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id)),
+        tenant_id=tenant_id,
+        user_id=getattr(user, "pk", None),
         action=AuditAction.EXPORT,
         resource=resource,
         changes={"query": request.query_params.dict(), "rows": rows},

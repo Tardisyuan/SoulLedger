@@ -779,7 +779,13 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         if node.segment_id is None:
             return None
         order = WorkflowSegment.objects.filter(pk=node.segment_id).values_list("order", flat=True).first()
-        return (self.nodes.filter(status=NodeStatus.PENDING, segment__order__gt=order)
+        from apps.core.shard_reads import with_fanout
+
+        # The later segments by id from every leg (a foreign segment lives in its realm's shard), not
+        # `segment__order`: a join through a crossing key a shard refuses (PREP-stage5 M3).
+        later = list(with_fanout(WorkflowSegment.objects.filter(workflow_id=self.pk, order__gt=order))
+                     .values_list("pk", flat=True))
+        return (self.nodes.filter(status=NodeStatus.PENDING, segment_id__in=later)
                 .order_by("node_order").first())
 
     def _stop_at_gate(self, segment: "WorkflowSegment", now) -> None:

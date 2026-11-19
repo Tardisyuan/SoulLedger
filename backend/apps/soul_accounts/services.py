@@ -347,10 +347,21 @@ def credentials_awaiting_housekeeping():
     return InitialCredential.objects.filter(_due_to_expire(now) | _stalled(now))
 
 
+def _on_every_master(update):
+    """A sweep of every hall's rows, as on the single database: split per master (`shard_reads._split`), each row
+    written where it is. In the request's own context a hall of no known civilization (context control) updated
+    control's mirror of every write-cut civilization's rows -- refused (ControlMirrorWrite) -- and a hall's context
+    swept that hall's master only."""
+    from apps.core.shard_reads import MASTER, read_context
+
+    with read_context(MASTER):
+        return update()
+
+
 def expire_due_credentials():
     """把过期还带着明文的行作废。列表接口每次调用 —— 明文不因为没人来看就一直躺着。"""
-    return InitialCredential.objects.filter(_due_to_expire(timezone.now())).update(
-        status=CredentialStatus.VOID, secret="")
+    return _on_every_master(lambda: InitialCredential.objects.filter(_due_to_expire(timezone.now())).update(
+        status=CredentialStatus.VOID, secret=""))
 
 
 #: QUEUED 停这么久还没发出去,就当作入队丢了(F-ACCT-02):broker 收下而 worker 没在跑、或消息丢失时 `.delay` 不抛,
@@ -361,8 +372,8 @@ QUEUED_STALL_AFTER = timedelta(minutes=10)
 def release_stalled_credentials():
     """停住的 QUEUED → PENDING(进待交付,可查看 / 重试 / 打印),与 `expire_due_credentials` 一样由列表接口每次调用。
     worker 之后若照常取到这条,`send_credential` 对 PENDING 照发,只是同一个密码可能既被发出也被当面交付。"""
-    return InitialCredential.objects.filter(_stalled(timezone.now())).update(
-        status=CredentialStatus.PENDING, last_error="QueueStalled")
+    return _on_every_master(lambda: InitialCredential.objects.filter(_stalled(timezone.now())).update(
+        status=CredentialStatus.PENDING, last_error="QueueStalled"))
 
 
 def _void_open_credentials(account):

@@ -1,7 +1,7 @@
 """
 REST views for Disposition app.
 """
-from django.db.models import Count, Exists, OuterRef, Subquery
+from django.db.models import BooleanField, Case, Count, Max, OuterRef, Subquery, Value, When
 from django_filters import rest_framework as filters
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -24,6 +24,23 @@ from apps.disposition.services import DispositionService
 from apps.reincarnation.models import Reincarnation
 from apps.souls.models import Soul
 from apps.workflow.models import ApprovalWorkflow, judgment_deciding
+
+
+def reborn_flag(dispositions):
+    """Whether the soul was reborn after this disposition's life: a reincarnation of it with a larger `cycle_count`.
+    The dispositions' souls first, then each soul's latest reincarnation from every leg, as a per-soul constant -- not
+    `Exists(Reincarnation(soul=OuterRef("soul")))`, a match through a crossing key that a shard answers from control's
+    copy, a mirror stage 5 deletes (PREP-stage5 M3; a soul's reincarnation may be in another civilization's shard).
+    ponytail: reads the soul ids of every disposition the caller can see, one WHEN per reborn soul; a hall with
+    hundreds of thousands wants the latest cycle denormalized onto the soul's dispositions."""
+    from apps.core.shard_reads import with_fanout
+
+    souls = set(dispositions.order_by().values_list("soul_id", flat=True))
+    latest = (with_fanout(Reincarnation.objects.filter(soul_id__in=souls)).values("soul_id")
+              .annotate(top=Max("cycle_count")).order_by()) if souls else []
+    whens = [When(soul_id=row["soul_id"], cycle__lt=row["top"], then=Value(True)) for row in latest]
+    return Case(*whens, default=Value(False), output_field=BooleanField()) if whens else Value(
+        False, output_field=BooleanField())
 
 
 class DispositionFilter(filters.FilterSet):
@@ -109,10 +126,6 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     queryset = Disposition.objects.select_related(
         "soul", "soul__tenant", "destination_realm", "tenant", "judgment"
     ).annotate(
-        # 这一世之后是否已经转世 —— 一个子查询,不是每行一次(serializer 的 get_soul_reborn)。
-        soul_reborn_flag=Exists(
-            Reincarnation.objects.filter(soul=OuterRef("soul"), cycle_count__gt=OuterRef("cycle"))
-        ),
         # 原审的审批流程走到哪了(serializer 的 `flow_waiting`):一个子查询,不是每行一次。没有流程为 null。
         judgment_flow_status=Subquery(
             judgment_deciding(ApprovalWorkflow.objects.filter(judgment_id=OuterRef("judgment_id"))).values("status")[:1]
@@ -159,7 +172,8 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         # 详情与取消归档要找得到已归档的处置(链接打开时详情页显示横条)。
         if not show_archived and getattr(self, 'action', None) not in ('retrieve', 'unarchive'):
             qs = qs.filter(is_archived=False)
-        return qs
+        # 这一世之后是否已经转世(serializer 的 get_soul_reborn、`?soul_reborn=`),不是每行一次。
+        return qs.annotate(soul_reborn_flag=reborn_flag(qs))
 
     def create_tenant(self, serializer):
         """Filed in the soul's hall, not the request's (rbac-be1 M4; same as `JudgmentService.open_case`)."""

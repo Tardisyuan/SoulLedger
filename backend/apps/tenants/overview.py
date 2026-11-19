@@ -14,7 +14,7 @@ from django.utils import timezone
 
 
 def hall_row(tenant) -> dict:
-    from apps.chat.inbox import AWAITING_REPLY
+    from apps.chat.inbox import awaiting_reply_q
     from apps.chat.models import Conversation, ConversationKind
     from apps.dispatch.models import DispatchRecord, DispatchStatus
     from apps.judgment.models import (
@@ -39,8 +39,8 @@ def hall_row(tenant) -> dict:
         "cooldowns": sum(1 for c in CooldownShorteningRequest.objects.filter(
             soul__home_tenant=tenant, status=CooldownShorteningStatus.PENDING).select_related("application")
             if shortening_is_live(c)),
-        "letters_awaiting": Conversation.objects.filter(
-            AWAITING_REPLY, tenant=tenant, kind=ConversationKind.OFFICER_INBOX).count(),
+        "letters_awaiting": (lambda inbox: inbox.filter(awaiting_reply_q(inbox)).count())(
+            Conversation.objects.filter(tenant=tenant, kind=ConversationKind.OFFICER_INBOX)),
     }
     todo["total"] = sum(todo.values())
 
@@ -48,15 +48,22 @@ def hall_row(tenant) -> dict:
     at_god = Q(city_god_status__in=AT_CITY_GOD)
     # 候着的:枉死城、埃及木乃伊 70 天(都看 `held_until`),以及到不了殿的埃及案(无名、葬仪不当,永远候着),
     # 以及滞留阿刻戎岸边的希腊原审(未葬 / 无渡资,`claims._assert_not_held`)—— 未葬满百年的已得渡,不算。
+    from apps.core.shard_reads import with_fanout
     from apps.souls import acheron
+    from apps.souls.models import Soul
 
-    is_held = (Q(held_until__gt=today) | Q(duat_stage__in=DUAT_BARRED)
-               | (Q(civilization="GREEK", kind=JudgmentKind.ORIGINAL) & ~Q(soul__ferry_passage="")
-                  & ~acheron.crossed_q(today, prefix="soul__")))
+    open_cases = Judgment.objects.filter(tenant=tenant, verdict__isnull=True, is_final=False, is_archived=False)
+    greek_original = Q(civilization="GREEK", kind=JudgmentKind.ORIGINAL)
+    # The souls on Acheron's bank, by id: the open Greek originals' souls first, then those souls from every leg --
+    # not `soul__ferry_passage`, a join through a crossing key answered from control's mirror (PREP-stage5 M3).
+    waiting = list(with_fanout(Soul._base_manager.filter(
+        pk__in=list(open_cases.filter(greek_original).values_list("soul_id", flat=True))).exclude(ferry_passage="")
+        .exclude(acheron.crossed_q(today))).values_list("pk", flat=True))
+    is_held = (Q(held_until__gt=today) | Q(duat_stage__in=DUAT_BARRED) | (greek_original & Q(soul_id__in=waiting)))
     held = ~at_god & is_held
     claimed = ~at_god & ~is_held & Q(claimed_by__isnull=False)
     unclaimed = ~at_god & ~is_held & Q(claimed_by__isnull=True)
-    judgments = Judgment.objects.filter(tenant=tenant, verdict__isnull=True, is_final=False, is_archived=False).aggregate(
+    judgments = open_cases.aggregate(
         at_city_god=Count("pk", filter=at_god), held=Count("pk", filter=held),
         claimed=Count("pk", filter=claimed), unclaimed=Count("pk", filter=unclaimed),
     )

@@ -31,6 +31,8 @@ from django.db.models.functions import Cast, Coalesce, ExtractDay, ExtractMonth,
 from django.db.models.lookups import GreaterThanOrEqual
 from django.utils import timezone
 
+from apps.core.shard_reads import soul_ids
+
 logger = logging.getLogger(__name__)
 
 #: 粗筛读候选时 `.iterator()` 的分块大小。
@@ -240,7 +242,7 @@ def candidates(tenant_id, today: datetime.date):
             sentence_years__isnull=False,
         )
         .filter(Q(term_start_year__isnull=False) | Q(executed_at__isnull=False))
-        .exclude(soul__current_state=SoulState.LOST)
+        .exclude(soul_id__in=soul_ids(current_state=SoulState.LOST))  # by id, not a crossing join (PREP-stage5 M3)
         .alias(term_end_year=Coalesce(F("term_start_year"), ExtractYear("executed_at")) + F("sentence_years"))
         .filter(term_end_year__lte=today.year + 1)
         .order_by("pk")

@@ -29,14 +29,6 @@ from apps.judgment.hall_stats import average_days, span_seconds
 from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION, Civilization
 
 
-def _soul_civ_q(civ) -> Q:
-    """灵魂的文明是 `Soul.civilization` 这个属性(租户代码查种子表,否则读新殿登记的文明),不是列 ——
-    `soul__civilization` 查不了。与 `dispatch.capture._diyu_q` 同一个读法。"""
-    seeded = [code for code, c in TENANT_CIVILIZATION.items() if c == civ]
-    return Q(soul__tenant__code__in=seeded) | (Q(soul__tenant__declared_civilization=civ)
-                                               & ~Q(soul__tenant__code__in=list(TENANT_CIVILIZATION)))
-
-
 def _civ_of(code, declared) -> str:
     """`Tenant.civilization` 的同一读法,给 values() 出来的两列用。"""
     if code in TENANT_CIVILIZATION:
@@ -44,8 +36,28 @@ def _civ_of(code, declared) -> str:
     return declared if declared in Civilization.values else UNKNOWN_CIVILIZATION
 
 
-#: 「再审一次」的裁决(`models.hears_again`),写成查询:RETRY,或欧洲、希腊以外的 PURGATORY。
-HEARS_AGAIN_Q = Q(verdict="RETRY") | (Q(verdict="PURGATORY") & ~_soul_civ_q("EUROPEAN") & ~_soul_civ_q("GREEK"))
+def _souls(*querysets) -> dict:
+    """{soul pk: (civilization of its hall, name)} of the souls these judgments name: the judgments' soul ids first,
+    then the souls by id from every leg -- not a join to `soul`, which on a shard is a crossing key answered from
+    control's copy, a mirror stage 5 deletes (PREP-stage5 M3). `Soul.civilization` is a property (the hall's code in
+    the seed table, else the hall's declared civilization), so it is read here, not in SQL.
+    ponytail: one id list per report (a year's cases of the caller's halls); a hall with millions a year wants a
+    denormalized civilization column on the judgment."""
+    from apps.core.shard_reads import with_fanout
+    from apps.souls.models import Soul
+
+    ids = {pk for qs in querysets for pk in qs.order_by().values_list("soul_id", flat=True).distinct()}
+    rows = with_fanout(Soul._base_manager.filter(pk__in=ids)).values_list(
+        "pk", "tenant__code", "tenant__declared_civilization", "name")
+    return {pk: (_civ_of(code, declared), name) for pk, code, declared, name in rows}
+
+
+def _hears_again_q(souls) -> Q:
+    """「再审一次」的裁决(`models.hears_again`),写成查询:RETRY,或欧洲、希腊以外的 PURGATORY。"""
+    final_purgatory = [pk for pk, (civ, _) in souls.items() if civ in ("EUROPEAN", "GREEK")]
+    return Q(verdict="RETRY") | (Q(verdict="PURGATORY") & ~Q(soul_id__in=final_purgatory))
+
+
 CIV_ORDER = ("CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK")
 
 
@@ -95,18 +107,12 @@ def _most_cited(concluded, locale):
     }
 
 
-def _souls_per_hall(opened):
-    """Distinct souls per soul hall. Read across shards (stage 3) a soul's cases may be in two civilizations'
-    databases, so a per-database Count(distinct) cannot be added up: the distinct (hall, soul) pairs are."""
+def _souls_per_civ(opened, souls) -> dict:
+    """Distinct souls per civilization of the soul's hall, from the (soul) pairs: read across shards a soul's cases
+    may be in two civilizations' databases, so per-database counts cannot be added up."""
     from collections import Counter
 
-    from django.conf import settings
-
-    hall = ("soul__tenant__code", "soul__tenant__declared_civilization")
-    if not settings.SHARD_READ_CIVS:
-        return opened.values(*hall).annotate(n=Count("soul", distinct=True))
-    pairs = Counter((code, declared) for code, declared, _ in opened.values_list(*hall, "soul").distinct())
-    return [{hall[0]: code, hall[1]: declared, "n": n} for (code, declared), n in pairs.items()]
+    return Counter(souls[pk][0] for pk in set(opened.values_list("soul_id", flat=True)) if pk in souls)
 
 
 def report(queryset, tenant, year=None, locale="zh-Hans", now=None) -> dict:
@@ -118,18 +124,21 @@ def report(queryset, tenant, year=None, locale="zh-Hans", now=None) -> dict:
 
     # `.order_by()`:模型的默认排序会被 Django 带进 SELECT DISTINCT,按灵魂去重就不去重了。
     opened = queryset.filter(created_at__gte=start, created_at__lt=end).order_by()
-    received = opened.values("soul").distinct().count()
-    placed = opened.filter(is_final=True).exclude(HEARS_AGAIN_Q).values("soul").distinct().count()
-    by_civ: dict[str, int] = {}
-    # 一个灵魂只有一个租户,按租户分组的计数相加不会重复。
-    for row in _souls_per_hall(opened):
-        civ = _civ_of(row["soul__tenant__code"], row["soul__tenant__declared_civilization"])
-        by_civ[civ] = by_civ.get(civ, 0) + row["n"]
-
-    fields = ("concluded_at", "claimable_since", "created_at", "deferred_total", "verdict", "case_number", "soul__name")
     concluded = _concluded_in(queryset, start, end)
-    rows = list(concluded.values_list(*fields))
-    last_rows = list(_concluded_in(queryset, last_start, start).values_list(*fields))
+    last_concluded = _concluded_in(queryset, last_start, start)
+    souls = _souls(opened, concluded, last_concluded)
+    received = opened.values("soul").distinct().count()
+    placed = opened.filter(is_final=True).exclude(_hears_again_q(souls)).values("soul").distinct().count()
+    # 一个灵魂只有一个租户,按文明计数相加不会重复。
+    by_civ = _souls_per_civ(opened, souls)
+
+    fields = ("concluded_at", "claimable_since", "created_at", "deferred_total", "verdict", "case_number", "soul_id")
+
+    def named(rows):  # the soul's name in place of its id (read with the souls above)
+        return [(*row[:6], souls.get(row[6], (None, None))[1]) for row in rows]
+
+    rows = named(concluded.values_list(*fields))
+    last_rows = named(last_concluded.values_list(*fields))
     longest = max(rows, key=lambda row: span_seconds(*row[:4]), default=None)
 
     tenant_ids = set(queryset.order_by().values_list("tenant_id", flat=True).distinct())

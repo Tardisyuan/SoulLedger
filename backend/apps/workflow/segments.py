@@ -874,20 +874,27 @@ def _after_pick(workflow_id, resumed):
 def remind_due(tenant, now=None):
     """定时任务(每天):本殿发起、停在外域门口的流程 —— 每天提醒那个域一次;满 `OVERDUE_DAYS` 天告诉本殿管理员一次。
     条件写在 UPDATE 里,两次运行重叠也只发一次。返回 {reminded, overdue}。"""
+    from apps.core.shard_reads import with_fanout
+
     now = now or timezone.now()
     counts = {"reminded": 0, "overdue": 0}
-    rows = (WorkflowSegment.objects.filter(
-        workflow__tenant=tenant, workflow__status=ApprovalWorkflowStatus.IN_PROGRESS,
-        workflow__current_node__isnull=True, state=SegmentState.AWAITING_PICK, gate_reached_at__isnull=False,
-    ).select_related("workflow__soul", "tenant"))
+    # The hall's own workflows first, then their segments by id from every leg: a foreign segment lives in the shard
+    # of the civilization that runs it, not in this hall's -- not `workflow__...`, a join through a crossing key that
+    # a shard answers from control's copy, a mirror stage 5 deletes (PREP-stage5 M3).
+    flows = list(ApprovalWorkflow.objects.filter(
+        tenant=tenant, status=ApprovalWorkflowStatus.IN_PROGRESS, current_node__isnull=True).values_list("pk", flat=True))
+    rows = with_fanout(WorkflowSegment.objects.filter(
+        workflow_id__in=flows, state=SegmentState.AWAITING_PICK, gate_reached_at__isnull=False,
+    )).select_related("tenant")
     for segment in rows:
+        here = WorkflowSegment.objects.db_manager(hints={"instance": segment})  # the segment's own master
         if segment.last_reminded_at is None or now - segment.last_reminded_at >= DAILY_REMINDER:
-            if WorkflowSegment.objects.filter(pk=segment.pk, last_reminded_at=segment.last_reminded_at).update(
+            if here.filter(pk=segment.pk, last_reminded_at=segment.last_reminded_at).update(
                     last_reminded_at=now):
                 notify_segment(segment.workflow_id, segment.pk)
                 counts["reminded"] += 1
         if segment.overdue_notified_at is None and now - segment.gate_reached_at >= timedelta(days=OVERDUE_DAYS):
-            if WorkflowSegment.objects.filter(pk=segment.pk, overdue_notified_at__isnull=True).update(
+            if here.filter(pk=segment.pk, overdue_notified_at__isnull=True).update(
                     overdue_notified_at=now):
                 workflow = segment.workflow
                 _tell(hall_admins(workflow.tenant_id), "workflow_pick_overdue",
@@ -1059,15 +1066,20 @@ def pick_tasks(scope, now=None):
     tenant, user = getattr(scope, "tenant", None), scope.user
     if tenant is None or user.pk not in {u.pk for u in pick_recipients(tenant.pk)}:
         return []
+    from apps.core.shard_reads import with_fanout
+
     now = now or timezone.now()
-    rows = (WorkflowSegment.objects.filter(
-        tenant=tenant, state=SegmentState.AWAITING_PICK,
-        workflow__status__in=(ApprovalWorkflowStatus.PENDING, ApprovalWorkflowStatus.IN_PROGRESS),
-    ).select_related("workflow__soul", "workflow__tenant", "workflow__judgment").prefetch_related("nodes")
-        .order_by(F("gate_reached_at").asc(nulls_last=True), "created_at"))
+    segments = list(WorkflowSegment.objects.filter(tenant=tenant, state=SegmentState.AWAITING_PICK)
+                    .prefetch_related("nodes").order_by(F("gate_reached_at").asc(nulls_last=True), "created_at"))
+    # The segments' workflows by id from every leg (the home hall's shard), not `workflow__...`: a join through a
+    # crossing key a shard answers from control's mirror (PREP-stage5 M3).
+    flows = {w.pk: w for w in with_fanout(ApprovalWorkflow.objects.filter(
+        pk__in={s.workflow_id for s in segments},
+        status__in=(ApprovalWorkflowStatus.PENDING, ApprovalWorkflowStatus.IN_PROGRESS))).select_related("tenant")}
     out = []
-    for segment in rows:
-        workflow = segment.workflow
+    for segment in (s for s in segments if s.workflow_id in flows):
+        workflow = flows[segment.workflow_id]
+        segment._state.fields_cache["workflow"] = workflow
         gate = at_gate(segment, workflow)
         out.append({
             "segment": segment,
@@ -1076,6 +1088,7 @@ def pick_tasks(scope, now=None):
             "total": len(segment.nodes.all()),
             "gate_days": gate_days(segment, now) if gate else None,
             "stations_ahead": None if gate else workflow.nodes.filter(
-                status=NodeStatus.PENDING, segment__order__lt=segment.order).count(),
+                status=NodeStatus.PENDING, segment_id__in=list(with_fanout(WorkflowSegment.objects.filter(
+                    workflow_id=workflow.pk, order__lt=segment.order)).values_list("pk", flat=True))).count(),
         })
     return out

@@ -252,7 +252,7 @@ def test_the_query_and_the_row_answer_awaiting_the_same(cn_tenant, eu_tenant):
     Conversation.objects.filter(room_id="!已回:x").update(last_from="hall")
     Conversation.objects.filter(room_id="!空信:x").update(last_from="")
     Soul.objects.filter(pk=grid[3].soul_a_id).update(tenant=eu_tenant)
-    matched = set(Conversation.objects.filter(inbox.AWAITING_REPLY).values_list("room_id", flat=True))
+    matched = set(Conversation.objects.filter(inbox.awaiting_reply_q(Conversation.objects.all())).values_list("room_id", flat=True))
     assert matched == {"!在等:x"}
     for row in Conversation.objects.select_related("soul_a"):
         assert inbox.awaiting_reply(row) is (row.room_id in matched), row.room_id
@@ -346,7 +346,7 @@ def test_assigned_to_me_is_empty_once_i_cannot_reply(cn_tenant):
     User.objects.filter(pk=held.pk).update(role="VIEWER")
     # 现成的角色里读与回是一起给的,只读靠单独授予:这里直接问查询,不经路由权限。
     rows = inbox.annotate_for(Conversation.objects.all(), User.objects.get(pk=held.pk))
-    assert not rows.filter(inbox.folder_q("assigned_to_me")).exists()  # 也没把没人经办的那封算成他的
+    assert not rows.filter(inbox.folder_q("assigned_to_me", rows)).exists()  # 也没把没人经办的那封算成他的
 
 
 # ── B4:注销时关会话 ─────────────────────────────────────────────────────
