@@ -233,6 +233,9 @@ _STRIPPED = (
     "PREPUSH_RANGE", "PREPUSH_TO_MAIN", "GATES_FULL",
     # Exported by a full run to the pytest that runs these very tests.
     "SOULLEDGER_SQLITE_TEMPLATE",
+    # Exported by every gate run since 2026-11-19 (round-trip start states); an inherited value would win over
+    # the throwaway gate's own default, so the RTCACHE assertion read the outer run's path on the gate hosts.
+    "SOULLEDGER_RT_START_CACHE",
 )
 
 
@@ -3397,10 +3400,13 @@ class TestPytestProgressNamesTheFailures:
         assert out.count("        FAILED tests/test_a.py::test_two") == 1, "a failure is named once, not on every line"
         assert "FAILED tests/test_b.py::test_failed_name" not in out, "a PASSED test was named"
 
-    def test_the_line_says_what_each_worker_runs_and_what_is_left(self, hook, checkouts, tmp_path):
+    def test_the_line_says_what_each_worker_runs_and_what_is_left(self, hook, checkouts, tmp_path, monkeypatch):
         """2026-11-19: 99% for 10–15 minutes said nothing. The scheduler's status file (<log>.status) is read by
         backend/config/gate_progress.py into the same line; durations go to the git common dir here.
-        Mutation: drop `${now:+ · $now}` from the echo → red."""
+        Mutation: drop `${now:+ · $now}` from the echo → red.
+        The outer gate run exports SOULLEDGER_RT_START_CACHE to this very pytest (red in the 2026-11-19 full run
+        on the gate hosts): set it here too, so the strip in `_STRIPPED` is checked on every machine."""
+        monkeypatch.setenv("SOULLEDGER_RT_START_CACHE", "/the-outer-gate-run/rt-start-cache")
         main, _ = checkouts
         (main / "backend" / "config").mkdir()
         (main / "backend" / "config" / "gate_progress.py").write_text(
