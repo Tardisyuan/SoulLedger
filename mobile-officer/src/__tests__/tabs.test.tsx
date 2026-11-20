@@ -10,7 +10,7 @@ import { AccessibilityInfo, AppState, StyleSheet } from "react-native";
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
 import { RefreshFailed, Row, TAB_CODES, TabBar, doorOf, visibleTabs } from "../kit";
-import { themeFor, useI18n } from "../shared";
+import { ToastProvider, themeFor, useI18n } from "../shared";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, overviewParts } from "../screens/queue";
@@ -226,9 +226,10 @@ describe("the other tabs have the same four states", () => {
     renderOfficer(<QueueTab onOpen={() => {}} />, { user: { ...OFFICER, permissions: ["judgment.read"] } });
     await screen.findByText("王九");
     expect(screen.queryByTestId("queue-claim-j9")).toBeNull();
+    expect(screen.queryByTestId("desk-held-divider")).toBeNull(); // nothing held: no 「候着的 · 0」
   });
 
-  it("judgments: held in 枉死城 — 到期后可认领, 枉死 · 候至 and no 认领; past the date 认领 is back", async () => {
+  it("judgments: held in 枉死城 — 第六十一批 二: in 候着的 at the end of 待认领, ‖ and the day it opens, why on line two, no 认领; past the date 认领 is back", async () => {
     mockList.mockImplementation(
       byGroup({
         unclaimed: [
@@ -239,10 +240,14 @@ describe("the other tabs have the same four states", () => {
     );
     renderOfficer(<QueueTab onOpen={() => {}} />);
     const held = await screen.findByTestId("queue-row-j7");
-    expect(within(held).getByText("‖ 到期后可认领")).toBeTruthy();
-    expect(within(held).getByText(/ · 枉死 · 候至 2999年 · 11月3日$/)).toBeTruthy();
-    expect(within(held).queryByText(/2999-11-03/)).toBeNull();
+    expect(within(held).getByText("‖ 暂不能认领 · 2999年 · 11月3日 起可认领")).toBeTruthy();
+    expect(within(held).getByText(/ · 在枉死城候着$/)).toBeTruthy();
+    expect(within(held).queryByText(/候至/)).toBeNull();
     expect(screen.queryByTestId("queue-claim-j7")).toBeNull();
+    expect(within(screen.getByTestId("desk-held-divider")).getByText("候着的 · 1")).toBeTruthy();
+    // The held one comes after the divider, the claimable one before it.
+    const order = screen.getAllByTestId(/^(queue-row-j[78]|desk-held-divider)$/).map((el) => el.props.testID);
+    expect(order).toEqual(["queue-row-j8", "desk-held-divider", "queue-row-j7"]);
     expect(within(screen.getByTestId("queue-row-j8")).getByText(/ · 枉死$/)).toBeTruthy();
     expect(screen.getByTestId("queue-claim-j8")).toBeTruthy();
   });
@@ -274,6 +279,50 @@ describe("the other tabs have the same four states", () => {
     // Read: the ○ is decoration, so it is hidden from screen readers.
     expect((await screen.findByText("○", { includeHiddenElements: true })).props.accessibilityElementsHidden).toBe(true);
     await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1)); // the shell asks the server for the count again
+  });
+
+  it("第六十一批 E1: a mark that fails puts the row back to unread and says so, with 重试 that marks it again", async () => {
+    const { notificationsApi } = jest.requireMock("@soulledger/core/api/notifications") as { notificationsApi: Record<string, jest.Mock> };
+    notificationsApi.markRead.mockRejectedValueOnce(new Error("offline"));
+    mockNotices.mockResolvedValue({ data: { results: [{ id: 1, title: "新审批", message: "", is_read: false, created_at: "2026-10-09T01:00:00Z" }] } });
+    const onRead = jest.fn();
+    renderOfficer(
+      <ToastProvider>
+        <NoticesTab onRead={onRead} />
+      </ToastProvider>
+    );
+    fireEvent.press(await screen.findByTestId("notice-1"));
+    expect((await screen.findByTestId("toast")).props.children).toBe("标记已读失败");
+    // Back to unread: the ● is drawn again, not the ○.
+    expect(screen.getByText("●")).toBeTruthy();
+    expect(onRead).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId("toast-action"));
+    await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1));
+    expect(notificationsApi.markRead).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("●")).toBeNull();
+    expect(screen.queryByTestId("toast")).toBeNull();
+  });
+
+  it("第六十一批 E1: 全部已读 that fails puts every row back as it was", async () => {
+    const { notificationsApi } = jest.requireMock("@soulledger/core/api/notifications") as { notificationsApi: Record<string, jest.Mock> };
+    notificationsApi.markAllRead.mockRejectedValueOnce(new Error("offline"));
+    mockNotices.mockResolvedValue({
+      data: {
+        results: [
+          { id: 1, title: "一", message: "", is_read: false, created_at: "2026-10-09T01:00:00Z" },
+          { id: 2, title: "二", message: "", is_read: false, created_at: "2026-10-09T01:00:00Z" },
+        ],
+      },
+    });
+    renderOfficer(
+      <ToastProvider>
+        <NoticesTab />
+      </ToastProvider>
+    );
+    await screen.findByTestId("notice-1");
+    fireEvent.press(screen.getByTestId("notices-mark-all"));
+    expect((await screen.findByTestId("toast")).props.children).toBe("全部标记已读失败");
+    expect(screen.getAllByText("●")).toHaveLength(2);
   });
 
   it("notices: no big 「通知」 title under the top bar; 全部已读 stays", async () => {

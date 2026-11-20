@@ -6,7 +6,7 @@ import { dossiersApi, type DeskRow } from "@soulledger/core/api/dossiers";
 import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { formatHistoricalDate, formatListDate, type HistoricalDate } from "@soulledger/core/domain/dates";
+import { formatHistoricalDate, formatIsoDay, formatListDate, isDuatBarred, isHeldUntilFatedDate, type HistoricalDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
@@ -160,11 +160,23 @@ export function OpenCase({
             <JuanRow label={t("caseDesk.juan.confession")}>{full?.confession?.trim() || t("caseDesk.juan.confession_none")}</JuanRow>
             <JuanRow label={t("caseDesk.juan.deadline")}>{deadlineText(t, j)}</JuanRow>
             <JuanRow label={t("caseDesk.juan.handler")}>
-              {j.claimed_by_name
-                ? full?.claimed_at
-                  ? t("caseDesk.juan.claimed", { name: j.claimed_by_name, date: day(full.claimed_at) ?? "" })
-                  : j.claimed_by_name
-                : t("caseDesk.juan.unclaimed")}
+              {j.claimed_by_name ? (
+                full?.claimed_at ? (
+                  t("caseDesk.juan.claimed", { name: j.claimed_by_name, date: day(full.claimed_at) ?? "" })
+                ) : (
+                  j.claimed_by_name
+                )
+              ) : isDuatBarred(j) ? (
+                /* 第六十一批 二:谁都认领不了的不写「未认领」—— 到不了殿 ⊘,候至未到 ‖ 加起始日,次要字。
+                   候至已过的照常是「未认领」:阶段清不掉是后端的事,界面不跟着一直说「暂不能认领」。 */
+                <span data-testid="desk-handler-held" className="text-[oklch(var(--color-ink-muted))]">{`⊘ ${t("judgment.claim.duat_barred_short")}`}</span>
+              ) : isHeldUntilFatedDate(j) ? (
+                <span data-testid="desk-handler-held" className="text-[oklch(var(--color-ink-muted))]">
+                  {`‖ ${t("judgment.claim.held_from", { date: formatIsoDay(j.held_until, locale) })}`}
+                </span>
+              ) : (
+                t("caseDesk.juan.unclaimed")
+              )}
             </JuanRow>
           </dl>
 
