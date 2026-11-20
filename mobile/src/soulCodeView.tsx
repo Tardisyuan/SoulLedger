@@ -141,6 +141,9 @@ export function SoulCodeField({
               <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.groupRow}>
                 {groups.length === 0 ? (
                   <View testID="login-soul-code-placeholder" style={styles.groupRow}>
+                    {/* Empty: the caret stands where the first character will go, before the placeholder dots
+                        (2026-11-21, iOS: it sat after the dots, as if something had already been typed). */}
+                    {focused ? <View testID="login-soul-code-caret" style={[styles.caretStart, { backgroundColor: theme.ink }]} /> : null}
                     {["···", "····", "···"].map((dots, i) => (
                       <Txt key={i} style={[styles.digits, { color: theme.inkSubtle }]}>
                         {dots}
@@ -154,7 +157,9 @@ export function SoulCodeField({
                     </Txt>
                   ))
                 )}
-                {focused && value.length < SOUL_CODE_LENGTH ? <View style={[styles.caret, { backgroundColor: theme.ink }]} /> : null}
+                {focused && value.length > 0 && value.length < SOUL_CODE_LENGTH ? (
+                  <View testID="login-soul-code-caret" style={[styles.caret, { backgroundColor: theme.ink }]} />
+                ) : null}
               </View>
               <TextInput
                 ref={inputRef}
@@ -232,6 +237,7 @@ const styles = StyleSheet.create({
   digits: { fontFamily: family.mono[500], fontSize: 24, lineHeight: 32, letterSpacing: 1.8 },
   groups: { letterSpacing: 1 },
   caret: { width: 2, height: 26, marginLeft: -12 },
+  caretStart: { width: 2, height: 26, marginRight: -12 },
   // Transparent text, NOT opacity 0: iOS does not hit-test a view whose alpha is 0, so the box could not be
   // tapped into at all (iPhone 17 simulator, 2026-10-11; jest presses the node directly and cannot see it).
   // Android is the other way round: it does hit-test an alpha-0 view, and it drew the "transparent" text anyway,

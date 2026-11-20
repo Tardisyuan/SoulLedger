@@ -117,6 +117,18 @@ describe("D · the number box", () => {
     expect(screen.getByTestId("login-soul-code").props.value).toBe("QU33Q9FW");
   });
 
+  it("focused and empty, the caret stands before the dots (where the first character goes), not after them", async () => {
+    await renderApp();
+    fireEvent(screen.getByTestId("login-soul-code"), "focus");
+    const placeholder = screen.getByTestId("login-soul-code-placeholder", { includeHiddenElements: true });
+    const kids = (placeholder.children as { props: { testID?: string } }[]).map((c) => c.props.testID ?? "dots");
+    expect(kids[0]).toBe("login-soul-code-caret");
+    expect(screen.getAllByTestId("login-soul-code-caret", { includeHiddenElements: true })).toHaveLength(1);
+    typeCode("QU3");
+    expect(screen.queryByTestId("login-soul-code-placeholder", { includeHiddenElements: true })).toBeNull();
+    expect(screen.getAllByTestId("login-soul-code-caret", { includeHiddenElements: true })).toHaveLength(1);
+  });
+
   it("is read out character by character with a pause between groups, and asks the keyboard for the right thing", async () => {
     await renderApp();
     typeCode("QU33Q");
