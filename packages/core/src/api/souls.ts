@@ -458,9 +458,10 @@ export const soulsApi = {
     }),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post<Soul>(`/souls/${id}/transition/`, data),
-  /** 挪到十三站的某一站(只地府、不在世;409 `not_diyu` / `alive`)。 */
-  moveStation: (id: string, station: Schemas["DiyuStationEnum"]) =>
-    api.post<Soul>(`/souls/${id}/station/`, { station }),
+  /** 挪到十三站的某一站(只地府、不在世、未终局;409 `not_diyu` / `alive` / `soul_settled`)。
+      往回挪必须带 `reason`(≤500,否则 400 `reason_required`);往前挪不带这个字段。 */
+  moveStation: (id: string, station: Schemas["DiyuStationEnum"], reason?: string) =>
+    api.post<Soul>(`/souls/${id}/station/`, reason ? { station, reason } : { station }),
   /** ADMIN 更正:SETTLED → DISPOSED,必须带原因;不是状态流转,后端单独记 SETTLEMENT_CORRECTED 事件。
       400 的 `error` 是后端的那句话(没有原因 / 不是 SETTLED)。 */
   correctSettlement: (id: string, reason: string) =>

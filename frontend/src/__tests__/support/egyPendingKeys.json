@@ -34,5 +34,8 @@
   "soul_app.login.reset_filled",
   "soul_app.login.use_code",
   "soul_app.login.use_email",
+  "souls.diyu_station.error.reason_required",
+  "souls.diyu_station.error.soul_settled",
+  "souls.diyu_station.reason_label",
   "users.roles.SYSTEM_ADMIN"
 ]
