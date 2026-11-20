@@ -1,5 +1,5 @@
 /**
- * 全局搜索(规范 v3 A8,docs/design-handoff/v3-pages/A8-search.md)。
+ * 全局搜索(规范 v3 A8,docs/design-handoff/v3-pages/A8-search.md,在 archive/docs 分支)。
  *
  * - 四类顺序写死:案件 → 灵魂 → 律条 → 页面;
  * - 某类 403 整类不出现、也不提示;其它失败只这一类显示「! 加载失败 · 其余几类不受影响 · 重试」,别的照常;

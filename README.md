@@ -47,7 +47,7 @@ record in this repository, so you can check it without taking my word for it:
    [the design notes](docs/ARCHITECTURE-soul-app-and-domain-split.md)).
 2. **I did not trust "done".** On 2026-05-30 a report in this repository declared the code "Production
    Ready". On 2026-08-07 an audit of the same code found four critical tenant-isolation gaps. The report
-   is still here, marked superseded ([`PRODUCTION_READINESS_REPORT.md`](docs/PRODUCTION_READINESS_REPORT.md)).
+   is still here, marked superseded (`docs/PRODUCTION_READINESS_REPORT.md`, now on the `archive/docs` branch).
    I started that audit: instead of taking the report's word for it, I had the AI check every view, tenant
    by tenant.
 3. **I turned each lesson into a check that goes red.** Tenant scoping was consolidated behind one
@@ -201,7 +201,7 @@ promise. It is not a drop-in library either: the approval engine is tied to the 
 ([`workflow/models.py`](backend/apps/workflow/models.py)), and case types are an enum of the four
 mythologies. Reusing the engine for your own cases means replacing those two links with your own case
 model and rewriting the case-type enum. The production compose file, health checks and CI exist because doing them properly was part of
-the exercise. `git log` is the accurate history; [`docs/MILESTONES.md`](docs/MILESTONES.md) lags it.
+the exercise. `git log` is the accurate history; `docs/MILESTONES.md` (on the `archive/docs` branch) lags it.
 
 ## Contributing
 

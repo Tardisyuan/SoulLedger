@@ -73,7 +73,7 @@ copies fork on the first correction — the problem raised in
 | [03_七宗罪与地狱惩罚.md](03_七宗罪与地狱惩罚.md) | 七宗罪与但丁的圈层 |
 
 `EUROPEAN` 只有基督教一支。北欧神话没有审判环节(去向取决于死法而非裁决),
-`backend/apps/actors/management/commands/consolidate_eu_pantheon.py` 记录了把它移出系统的决定;
+`consolidate_eu_pantheon` 命令记录了把它移出系统的决定(一次性命令,2026-11-21 删除,见 git 历史);
 研究稿 `05_北欧死后世界.md` 已于 2026-10-24 删除(用户决定不做第五个文明)。
 *`EUROPEAN` is the Christian material only. Norse was removed from the system (no judgment step); its research
 draft was deleted on 2026-10-24.*
@@ -133,8 +133,6 @@ draft was deleted on 2026-10-24.*
 
 | 文件 | 状态 | 内容 |
 |---|---|---|
-| [MILESTONES.md](MILESTONES.md) | 已入库 | 里程碑历史与计划。落后于代码，以 `git log` 为准 |
-| [coverage-roadmap.md](coverage-roadmap.md) | 已入库 | 测试覆盖率工作计划 |
 | [claude-reference.md](claude-reference.md) | 已入库 | 本仓库的 Claude Code 参考（由 `../CLAUDE.md` 按需加载） |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 已入库 | 架构概览 |
 | [ARCHITECTURE-soul-app-and-domain-split.md](ARCHITECTURE-soul-app-and-domain-split.md) | 已入库 | 灵魂端 App 与按业务域拆分的设计稿（2026-09-13 起）;文首决策记录是拍板结果,正文「现状」一节是当时的快照 |
@@ -148,47 +146,18 @@ draft was deleted on 2026-10-24.*
 | [CONVENTIONS.md](CONVENTIONS.md) | 已入库 | ~~前后端编码规约~~ **已被上面两份取代**（2026-09-06），停在 2026-08-14，保留作历史 |
 | [API.md](API.md) | 已入库 | API 手写索引。**权威来源是运行中的 `/api/docs/`（drf-spectacular）** |
 | [TECHNICAL_DOCS.md](TECHNICAL_DOCS.md) | 已入库 | 权限系统与项目结构说明 |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | 已入库 | 生产栈:TLS 证书首签与续期、数据库备份与恢复 |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | 已入库 | 生产栈:上线清单(原 `DEPLOY.md`,2026-11-21 并入)、TLS 证书首签与续期、数据库备份与恢复 |
 
-**带日期的报告 / Dated reports** — 这些是某一天的快照，写下之后不再更新。当历史读，
-不要当现状读。*Snapshots of one day's state, never updated afterwards. Read them as
-history, not as a description of the code today.*
-
-2026-10-30 起，下面链接指向 `archive/` 的那些已从本目录顶层移入 [`archive/`](archive/),
-内容未改。*Since 2026-10-30 the ones linked under `archive/` live there, unchanged.*
-
-已入库 / *in repo*：
-[PRODUCTION_READINESS_REPORT.md](PRODUCTION_READINESS_REPORT.md)、
-[RC_READINESS_REPORT_FINAL.md](archive/RC_READINESS_REPORT_FINAL.md)、
-[M12_READY_REPORT.md](archive/M12_READY_REPORT.md)、
-[ENGINEERING_EXCELLENCE_REPORT.md](archive/ENGINEERING_EXCELLENCE_REPORT.md)、
-[SECURITY_CLOSURE_REPORT.md](SECURITY_CLOSURE_REPORT.md)、
-[tenant-contextvar-investigation.md](tenant-contextvar-investigation.md)、
-[tenant-manager-safety-validation.md](archive/tenant-manager-safety-validation.md)、
-[task-292-security-validation.md](archive/task-292-security-validation.md)、
-[task-292-implementation-report.md](archive/task-292-implementation-report.md)
-
-同样已入库（2026-08-14 起）/ *also in repo, since 2026-08-14*：
-[BACKEND_CODE_REVIEW_20260529.md](archive/BACKEND_CODE_REVIEW_20260529.md)、
-[FRONTEND_CODE_REVIEW_20260528.md](archive/FRONTEND_CODE_REVIEW_20260528.md)、
-[code-review-backend.md](archive/code-review-backend.md)、
-[code-review-frontend.md](archive/code-review-frontend.md)、
-[post-coverage-audit-report.md](post-coverage-audit-report.md)、
-[MILESTONE_M7.md](MILESTONE_M7.md)、[MILESTONE_M8.md](archive/MILESTONE_M8.md)、
-[MILESTONE_M15.md](MILESTONE_M15.md)、
-[M7_用户组织架构重构.md](M7_用户组织架构重构.md)、
-[v2-plan-analysis.md](archive/v2-plan-analysis.md)、
-[snowy-analysis.md](archive/snowy-analysis.md)（菜单/权限设计的参考来源）、
-[DEBATE_RESULTS.md](archive/DEBATE_RESULTS.md)、[REVIEW_RESULTS.md](archive/REVIEW_RESULTS.md)、
-[LESSONS_LEARNED.md](archive/LESSONS_LEARNED.md)
+**带日期的报告与里程碑 / Dated reports and milestones** — 2026-11-21 移出主树。
+里程碑文档(`MILESTONES.md`、`MILESTONE_M7.md`、`MILESTONE_M15.md`、`M7_用户组织架构重构.md`)、
+时点报告(`PRODUCTION_READINESS_REPORT.md`、`SECURITY_CLOSURE_REPORT.md`、`post-coverage-audit-report.md`、
+`coverage-roadmap.md`、`tenant-contextvar-investigation.md`)、整个 `archive/` 与仓库根的 `openspec/`,
+按原路径保存在 `archive/docs` 分支,例如 `git show archive/docs:docs/MILESTONE_M15.md`。
+它们是某一天的快照,当历史读,不要当现状读;现状以代码与 `git log` 为准。
+*Moved out of the main tree on 2026-11-21; kept at their original paths on the `archive/docs` branch.*
 
 **`MILESTONE_M15.md` 值得单独一提**：它列出三条被确认为**有意为之**的设计，其中
 「menu/perm 端点全局共享、不分租户」这一条正是本目录曾经不入库所付出的代价。
-
-[`archive/`](archive/) 下是已废弃或更早的记录，目前包括
-[`ROADMAP_V2.md`](archive/ROADMAP_V2.md)（V2 灵魂客户端 + 转生抢购规划，
-2026-08-14 标记 superseded——其前提与本项目「无用户、从未部署」的定位冲突；
-其中已交付的死亡同步 API 与 WebSocket 通知见文首说明）与 `memory/` 下的早期记录。
 
 `backend/docs/` 下是后端自己的文档（权限矩阵与审计报告），仍被全局 ignore 规则
 排除在版本库之外，只存在于工作副本里。
@@ -212,12 +181,11 @@ history, not as a description of the code today.*
 > *This package has been delivered and is referenced externally. Treat it as
 > frozen: do not reorganise, rename, or rewrite anything inside it.*
 
-同一目录下还有两个**不在冻结范围内**、仍在增长的子目录(2026-10 起的 v3 界面改版):
-
-- [`v3-prompts/`](design-handoff/v3-prompts/) — 逐批发给 Design 的提示词与 Design 的回复(第一批至第二十七批),
-  以及埃及文词条的审定记录。**egy 的用词以这里的回复为准**,代码侧的词表守卫在
-  `frontend/src/__tests__/egyLexiconRules.test.ts`。
-- [`v3-pages/`](design-handoff/v3-pages/) — 从 Design 项目取回的画稿(`.dc.html`)与按稿落地后的实际样张。
+同一目录下还有**不在冻结范围内**的 [`v4-prompts/`](design-handoff/v4-prompts/)(2026-11 起的 v4 改版)。
+2026-10 的 v3 改版那两个子目录 —— `v3-prompts/`(逐批提示词与 Design 的回复,含埃及文词条的审定记录)与
+`v3-pages/`(画稿与样张)—— 2026-11-21 移出主树,按原路径保存在 `archive/docs` 分支
+(`git show archive/docs:docs/design-handoff/v3-prompts/<文件>`)。egy 用词的审定记录在那里;
+代码侧的词表守卫是 `frontend/src/__tests__/egyLexiconRules.test.ts`。
 
 ---
 

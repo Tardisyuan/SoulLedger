@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > `frontend/package.json` 至今仍是 `0.1.0`，后端没有任何版本声明。既然没有可靠的
 > 版本信号，也从未发布过，下面就**按日期分段**，段标题写的是工作区间而不是版本号。
 > 每段对应一轮主题明确的工作，并在有对应里程碑时标出（M8–M15，见
-> [`docs/MILESTONES.md`](docs/MILESTONES.md)）。
+> `docs/MILESTONES.md`(2026-11-21 起在 `archive/docs` 分支)）。
 >
 > 条目按**主题聚合**，不是一条 commit 一行。`git log` 才是逐条的准确记录。
 >
@@ -452,7 +452,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 租户隔离：`TenantCreateMixin` 修复与视图层隔离；移除基于 contextvar 的
-  queryset 过滤（该路径被调查证伪，见 `docs/tenant-contextvar-investigation.md`）
+  queryset 过滤（该路径被调查证伪，见 `docs/tenant-contextvar-investigation.md`,在 `archive/docs` 分支）
 - postcss XSS 依赖漏洞（npm overrides）
 - 缺失的迁移补生成（events、menus、reincarnation、workflow）
 - CI：pytest-asyncio 与 `asyncio_mode=auto`；测试发现；E2E 选择器

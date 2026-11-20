@@ -24,15 +24,14 @@ Design notes
   civilization here: each table in ``apps.actors.mythology`` states its
   civilization explicitly.
   Keyword-sniffing an actor's name is what mis-tagged Ma'at, Pluto and Lethe as
-  CHINESE and spawned the duplicate rows ``fix_actor_civilization`` exists to
-  clean up.
+  CHINESE and spawned the duplicate rows the one-off ``fix_actor_civilization``
+  cleaned up (deleted 2026-11-21; in git history).
 
-* **Create-only by default.** Two sibling commands deliberately edit these
-  same rows after seeding — ``fix_actor_civilization`` (civilization repairs +
-  dedupe, Ma'at/Maat spelling merge) and ``consolidate_eu_pantheon``
-  (Pluto/Hades merge, opt-in Norse purge). If seeding overwrote existing rows
-  every run, the seeder and those commands would take turns undoing each
-  other. So the default is get_or_create semantics; pass ``--update`` when you
+* **Create-only by default.** Rows may have been edited after seeding — by an
+  operator, or by the one-off repairs ``fix_actor_civilization`` and
+  ``consolidate_eu_pantheon`` (both deleted 2026-11-21; in git history). If
+  seeding overwrote existing rows every run, it would undo those edits. So the
+  default is get_or_create semantics; pass ``--update`` when you
   explicitly want the seed values to win.
 
 * **Soft-deleted rows are left alone.** A row that was soft-deleted (e.g. Pluto,
@@ -105,8 +104,7 @@ class Command(MythologySeeder, BaseCommand):
             action="store_true",
             help=(
                 "Also refresh existing rows to the seed values. Off by default so "
-                "this command does not undo fix_actor_civilization / "
-                "consolidate_eu_pantheon."
+                "this command does not undo edits made after seeding."
             ),
         )
 

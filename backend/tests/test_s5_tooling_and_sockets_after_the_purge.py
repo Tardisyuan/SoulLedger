@@ -168,7 +168,6 @@ READ_ONLY = [
     ("count_open_case_overlaps", "--list", "5"),
     ("check_soul_dates",),
     ("backfill_disposition_halls", "--dry-run"),
-    ("backfill_soul_entry_path", "--dry-run"),
     ("backfill_soul_accounts", "--dry-run"),
     ("cleanup_orphan_post_media", "--dry-run"),
     ("rotate_encryption_key", "--dry-run"),

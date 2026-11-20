@@ -87,7 +87,7 @@ CI and the image install) and `frontend/package.json`; those files are the autho
 See [API.md](./API.md)
 
 ## Milestones
-See [MILESTONES.md](./MILESTONES.md)
+See `docs/MILESTONES.md` on the `archive/docs` branch
 
 ## Production Readiness
-See [PRODUCTION_READINESS_REPORT.md](./PRODUCTION_READINESS_REPORT.md)
+See `docs/PRODUCTION_READINESS_REPORT.md` on the `archive/docs` branch
