@@ -233,3 +233,29 @@ export function formatListDate(
   };
   return new Intl.DateTimeFormat(BCP47_FOR_LOCALE[isLocale(locale) ? locale : DEFAULT_LOCALE], options).format(date);
 }
+
+/**
+ * 「数据截至」后面的那段时间(规范 v3 A4):同一天只写时分,不是同一天写「月-日 时:分」,
+ * 跨年补年份。「同一天」「跨年」按用户所在时区的日历算(和 `formatDateTime` 一致);
+ * 时分由调用方的 `formatTime`(当前语言)排。接口没给时间、或给的不是时间,返回 null ——
+ * 调用方整句不写,不放占位。网页的 `dashboard.data_as_of` 与灵魂端的 `soul_app.stale.line`
+ * (Design v4 第六十一批 E6:「同一个格式化器」)都读这一个;此前它只在 frontend/src/lib/formatAsOf.ts。
+ */
+export function formatAsOf(
+  asOf: string | null | undefined,
+  now: Date,
+  formatTime: (value: Date, options?: Intl.DateTimeFormatOptions) => string,
+): string | null {
+  if (!asOf) return null;
+  const at = new Date(asOf);
+  if (Number.isNaN(at.getTime())) return null;
+
+  const time = formatTime(at, { hour: "2-digit", minute: "2-digit" });
+  if (at.getFullYear() !== now.getFullYear()) {
+    return `${at.getFullYear()}-${pad2(at.getMonth() + 1)}-${pad2(at.getDate())} ${time}`;
+  }
+  if (at.getMonth() !== now.getMonth() || at.getDate() !== now.getDate()) {
+    return `${pad2(at.getMonth() + 1)}-${pad2(at.getDate())} ${time}`;
+  }
+  return time;
+}

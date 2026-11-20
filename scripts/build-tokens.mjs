@@ -273,6 +273,11 @@ function buildApp() {
     FAINT_TEXT: { dark: appValue("color.faint-text", D), light: appValue("color.faint-text", L) },
     semantic: { dark: pick(SEMANTIC, D), light: pick(SEMANTIC, L) },
     seal: Object.fromEntries(CIVS.map((c) => [c, { dark: appValue(`color.civ.${c}.seal`, D), light: appValue(`color.civ.${c}.seal`, L) }])),
+    // Design v4 batch 61, section 1: the soul app's cold start, native splash and JS frame (app.json holds the same pair).
+    splash: {
+      dark: { ground: appValue("app.splash-ground", D), mark: appValue("app.splash-mark", D) },
+      light: { ground: appValue("app.splash-ground", L), mark: appValue("app.splash-mark", L) },
+    },
     radius: { sheet: appPx("radius-sheet") },
     alpha: { highlight: appNumber("highlight-alpha") },
     motionTokens: { ...group("motion", appMs), ease: group("ease", (p) => byPath.get(p).t.$value) },

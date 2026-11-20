@@ -31,7 +31,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import { radius } from "../theme";
-import { Button, Empty, FadeModal, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
+import { Button, Empty, FadeModal, Notice, Press, RadioMark, Screen, SectionLabel, shade, Skeleton, SmallButton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import { fetchSocialStatus, invalidateSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PostList } from "./circle";
@@ -168,6 +168,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
       />
       {/* Once the profile is here the page is one FlatList: the head is its header, the posts its rows. */}
       <Screen edges={["left", "right"]} testID="soul-profile" scroll={!p} refreshing={false} onRefresh={refresh}>
+        <StaleLine state={profile} onRetry={() => void profile.reload()} />
         {profile.error && !p ? (
           <View style={[styles.pad, { paddingHorizontal: gutter }]}>
             {/* Another civilization, an officer, nobody: one answer (the server's 404). */}
@@ -354,6 +355,7 @@ export function MyCircleScreen() {
   return (
     // Once my profile is here the page is one FlatList: the head is its header, my posts its rows.
     <Screen edges={["left", "right"]} testID="my-circle" scroll={!me.data}>
+      <StaleLine state={me} onRetry={() => void me.reload()} />
       {me.error && !me.data ? (
         <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           <Notice tone="neg" onRetry={() => void me.reload()}>

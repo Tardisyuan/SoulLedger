@@ -37,10 +37,10 @@
           "image": "./assets/splash-blank.png",
           "imageWidth": 112,
           "resizeMode": "contain",
-          "backgroundColor": "#10120F",
+          "backgroundColor": "#F8F8F6",
           "dark": {
             "image": "./assets/splash-blank.png",
-            "backgroundColor": "#10120F"
+            "backgroundColor": "#111113"
           }
         }
       ],

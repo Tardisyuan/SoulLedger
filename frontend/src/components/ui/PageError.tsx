@@ -6,6 +6,7 @@ import { Button } from "@/src/components/ui/Button";
 import { requestIdOf } from "@soulledger/core/api/requestStamp";
 import { responseStatus } from "@soulledger/core/api/client";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { useTenant } from "@/src/contexts/TenantContext";
 
 /**
  * `QueryError`(列表查询失败)仍是规范 v2 补足 C15 的那一段:冷玫红「✕ 标题」13 / 600、
@@ -50,8 +51,32 @@ export function PageError({ error, reset }: PageErrorProps) {
   );
 }
 
+/**
+ * 权限没读到(Design v4 第六十一批 E2):登录后加载本人权限失败。和真正的无权限页分得开 ——
+ * 字形 ↻、没有印、有「重新加载」(墨底主按钮),正文第一句就说「这不是没有权限」;无权限页是 ⊘ 加印、不放重新加载。
+ * 「重新加载」只重取权限(`refreshFromServer`),不刷整页。
+ */
+export function PermissionsLoadFailed() {
+  const { t } = useI18n();
+  const { refreshFromServer } = useTenant();
+  return (
+    <StatusCard
+      code="↻"
+      testId="permissions-load-failed"
+      title={t("errors.permissions_load.title")}
+      message={t("errors.permissions_load.body")}
+      action={
+        <Button type="button" variant="primary" size="sm" onClick={() => refreshFromServer?.(true)}>
+          {t("error.retry")}
+        </Button>
+      }
+    />
+  );
+}
+
 interface StatusCardProps {
-  code: "403" | "404" | "500";
+  /** 403 / 404 / 500,或「权限没读到」的 ↻(第六十一批 E2:不是一个 HTTP 码,也不是拒绝)。 */
+  code: "403" | "404" | "500" | "↻";
   title: ReactNode;
   message: ReactNode;
   /** 等宽的一行:500 的 trace digest、404 没找到的路径、403 缺的权限码。 */

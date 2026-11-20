@@ -46,28 +46,29 @@ import {
   EmblemDivider,
   Empty,
   EnumBadge,
+  enumText,
   EnumValue,
   FadeIn,
   GUTTER,
   Hairline,
   LandingWash,
   OneLine,
+  Press,
   Screen,
   Section,
-  SectionLabel,
   SectionError,
+  SectionLabel,
+  shade,
   Skeleton,
+  StaleLine,
   ThemeContext,
   Txt,
-  enumText,
-  shade,
+  useLayout,
   useReducedMotion,
   useReducedMotionDurations,
   useReloadOnRefocus,
   useRemote,
-  useLayout,
   useTheme,
-  Press,
 } from "../ui";
 import type { AppStackParams, LifeFocus, LifeParams } from "../navTypes";
 import { realmName, useResidence } from "../residence";
@@ -1108,6 +1109,7 @@ export function MyLifeScreen() {
         scrollRef={scroll.ref}
         onScroll={(y) => setCompact((c) => (c ? y > BAND_OPEN_AT : y > BAND_COMPACT_AT))}
       >
+        <StaleLine state={life} onRetry={() => void life.reload()} />
         <Homecoming me={me} />
         <ContactEmailNudge />
         {residence.residing ? <ResidenceNote me={me} landed={!!focus?.residence} /> : null}

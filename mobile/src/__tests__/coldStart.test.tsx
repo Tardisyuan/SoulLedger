@@ -14,11 +14,17 @@ import { Path } from "react-native-svg";
 import { SHAPE, STROKES, VIEWBOX, pathLength } from "../brandMark";
 import { ColdStart, coldStart } from "../coldStart";
 import type { SessionState } from "../session";
-import { brand, motion } from "../theme";
+import { brand, motion, splash as SPLASH } from "../theme";
 import { PROFILE } from "./stubApi";
 
 // Every other suite gets jest.setup's inert double; this one tests the real thing.
 jest.unmock("../coldStart");
+
+let mockScheme: "light" | "dark" | null = "light";
+jest.mock("react-native/Libraries/Utilities/useColorScheme", () => ({
+  __esModule: true,
+  default: () => mockScheme,
+}));
 
 /** The cold start is hidden from assistive tech; queries must ask for it. */
 const H = { includeHiddenElements: true };
@@ -34,6 +40,7 @@ describe("the cold start (补足 C18)", () => {
   beforeEach(() => {
     coldStart.played = false;
     reduced = false;
+    mockScheme = "light";
     hide.mockClear();
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockImplementation(async () => reduced);
     jest.useFakeTimers();
@@ -67,8 +74,13 @@ describe("the cold start (补足 C18)", () => {
   it("frame 0 is the native splash's picture: its ground, no mark yet — every stroke undrawn", async () => {
     const plugins = require("../../app.json").expo.plugins as unknown[];
     const [, splash] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, Record<string, never>];
-    // The ground alone, in both modes (the brand ground, v3's dark canvas; v4 leaves the mark alone): the mark is written by JS, so the native splash carries none.
-    expect(splash).toMatchObject({ image: "./assets/splash-blank.png", backgroundColor: brand.ground, dark: { image: "./assets/splash-blank.png", backgroundColor: brand.ground } });
+    // The ground alone, each scheme its own canvas (Design v4 第六十一批 一): the mark is written by JS, so the native
+    // splash carries none.
+    expect(splash).toMatchObject({
+      image: "./assets/splash-blank.png",
+      backgroundColor: SPLASH.light.ground,
+      dark: { image: "./assets/splash-blank.png", backgroundColor: SPLASH.dark.ground },
+    });
     const { data, info } = await sharp(join(__dirname, "../../assets/splash-blank.png")).raw().toBuffer({ resolveWithObject: true });
     expect(info.channels).toBe(4);
     expect(data.some((v, k) => k % 4 === 3 && v > 0)).toBe(false);
@@ -163,5 +175,34 @@ describe("the cold start (补足 C18)", () => {
     render(<ColdStart session={signedIn()} />);
     await act(async () => {});
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
+  });
+});
+
+describe("第六十一批 一: the cold start's ground and mark follow the scheme", () => {
+  beforeEach(() => {
+    coldStart.played = false;
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockImplementation(async () => false);
+  });
+  const strokeColours = () =>
+    new Set(screen.UNSAFE_getAllByType(Path).filter((el) => el.props.testID === "cold-start-stroke").map((el) => el.props.stroke));
+
+  it("the token values are Design's: light canvas + deeper gold, dark canvas + brand gold -- not the brand's dark ground", () => {
+    expect(SPLASH).toEqual({ light: { ground: "#F8F8F6", mark: "#8A6A24" }, dark: { ground: "#111113", mark: "#ECAA3D" } });
+    expect(SPLASH.light.ground).not.toBe(brand.ground);
+    expect(SPLASH.dark.ground).not.toBe(brand.ground);
+  });
+
+  it.each(["light", "dark"] as const)("%s: the JS frame paints app.json's ground for that scheme and its mark, never the other scheme's", async (scheme) => {
+    mockScheme = scheme;
+    const plugins = require("../../app.json").expo.plugins as unknown[];
+    const [, native] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, { backgroundColor: string; dark: { backgroundColor: string } }];
+    const nativeGround = scheme === "dark" ? native.dark.backgroundColor : native.backgroundColor;
+    render(<ColdStart session={{ status: "signedOut" }} />);
+    await act(async () => {});
+    expect(flat(screen.getByTestId("cold-start-skip", H)).backgroundColor).toBe(nativeGround);
+    expect(nativeGround).toBe(SPLASH[scheme].ground);
+    const other = scheme === "dark" ? "light" : "dark";
+    expect(strokeColours()).toEqual(new Set([SPLASH[scheme].mark]));
+    expect(strokeColours().has(SPLASH[other].mark)).toBe(false);
   });
 });

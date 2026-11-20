@@ -460,6 +460,38 @@ describe("CaseDesk", () => {
     expect(await screen.findAllByText("没有读名册的权限")).toHaveLength(2);
   });
 
+  /** One unclaimed case on the desk, the same row in its dossier (the open case reads the dossier's once it lands). */
+  const heldDesk = (j: Judgment) => {
+    mockDesk.mockResolvedValue({
+      data: { groups: [{ group: "unclaimed", total: 1, rows: [j] }], counts: { ...COUNTS, mine: 0, unclaimed: 1, others: 0 }, month_done_pct: null },
+    });
+    mockDossier.mockResolvedValue({
+      data: {
+        id: j.id, version: 1, phase: "UNCLAIMED", judgment: j, citations: [], soul: null, soul_redacted: true, whereabouts: null,
+        actions: { claim: false, release: false, conclude: false, refusals: {} },
+      },
+    });
+  };
+
+  it.each([
+    ["held in 枉死城 until a date", { untimely: true, held_until: "2999-03-02" }, /^‖ 暂不能认领 · .*2999.* 起可认领$/],
+    ["barred from the hall", { civilization: "EGYPTIAN", duat_stage: "NAMELESS" as const }, /^⊘ 到不了殿，不能认领$/],
+  ])("第六十一批 二: the open case's 办理人 for a case nobody can claim -- %s -- is not 「还没有人认领」", async (_label, over, text) => {
+    heldDesk(row("9", { soul_name: "陈某", ...over }));
+    renderWithProviders(<CaseDesk />);
+    await waitFor(() => expect(mockDossier).toHaveBeenCalled());
+    const handler = await screen.findByTestId("desk-handler-held");
+    expect(handler.textContent).toMatch(text);
+    expect(screen.queryByText("还没有人认领")).toBeNull();
+  });
+
+  it("第六十一批 二: a held_until already past is claimable again -- 办理人 says 还没有人认领, whatever the phase says", async () => {
+    heldDesk(row("9", { soul_name: "陈某", civilization: "EGYPTIAN", duat_stage: "EMBALMING", held_until: "2000-01-01" }));
+    renderWithProviders(<CaseDesk />);
+    await screen.findByText("还没有人认领");
+    expect(screen.queryByTestId("desk-handler-held")).toBeNull();
+  });
+
   describe("switching cases animates the dossier", () => {
     const realAnimate = (Element.prototype as { animate?: unknown }).animate;
     const realMatchMedia = window.matchMedia;

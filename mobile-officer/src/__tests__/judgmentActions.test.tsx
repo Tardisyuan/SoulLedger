@@ -126,7 +126,7 @@ describe("JudgmentActionBar", () => {
   it("unclaimed but held in 枉死城: no 认领, a line saying when it can be claimed (第五十一批)", () => {
     bar({ untimely: true, held_until: "2999-11-03" });
     expect(screen.queryByTestId("judgment-claim")).toBeNull();
-    expect(screen.getByTestId("judgment-claim-held")).toHaveTextContent("候至 2999年 · 11月3日 · 到期后可认领");
+    expect(screen.getByTestId("judgment-claim-held")).toHaveTextContent("‖ 暂不能认领 · 2999年 · 11月3日 起可认领");
     expect(screen.getByTestId("judgment-claim-held")).not.toHaveTextContent("2999-11-03"); // 日期写成字,不是 ISO 原值
     screen.unmount();
     bar({ untimely: true, held_until: "2000-01-01" });
@@ -136,7 +136,7 @@ describe("JudgmentActionBar", () => {
   it("unclaimed but the soul cannot reach the hall (埃及,review P2-9): no 认领, the stage instead", () => {
     bar({ duat_stage: "IMPROPER_BURIAL", held_until: null });
     expect(screen.queryByTestId("judgment-claim")).toBeNull();
-    expect(screen.getByTestId("judgment-claim-held")).toHaveTextContent("葬仪不当 · 旅程未竟 · 到不了殿，不能认领");
+    expect(screen.getByTestId("judgment-claim-held")).toHaveTextContent("⊘ 葬仪不当 · 旅程未竟 · 到不了殿，不能认领");
   });
 
   it("without judgment.execute: no 认领 / 恢复 / ⋯ (they would 403); 写评议 or 在电脑上继续 stands in", () => {

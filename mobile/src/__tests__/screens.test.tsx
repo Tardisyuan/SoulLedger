@@ -296,6 +296,49 @@ describe("application detail", () => {
     expect(within(screen.getByTestId("step-first-decision")).getByText("2026-08-19 16:40")).toBeTruthy();
   });
 
+  it("第六十一批 四: 已终止 says it cannot be appealed and, with a cooldown, until when; no appeal box", async () => {
+    stubApi({
+      "/me/rebirth-applications/a1/": {
+        status: 200,
+        data: application({
+          status: "TERMINATED",
+          decided_at: "2026-11-20T00:00:00Z",
+          current_step: null,
+          cooldown_until: new Date(2027, 1, 19, 15, 0).toISOString(),
+        }),
+      },
+    });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    const note = await screen.findByTestId("state-note");
+    expect(note.props.children).toBe("殿里终止了这份申请：不再审理，也不能申诉。冷却期到 2027-02-19，之后可以重新申请。");
+    expect(screen.getByTestId("status-badge-glyph").props.children).toBe("⊘");
+    expect(screen.queryByTestId("appeal")).toBeNull();
+    expect(screen.queryByText("已驳回")).toBeNull();
+  });
+
+  it("第六十一批 四: 暂停审理 says the soul need do nothing, and names the current point", async () => {
+    stubApi({ "/me/rebirth-applications/a1/": { status: 200, data: application({ status: "EXCEPTION" }) } });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    expect((await screen.findByTestId("state-note")).props.children).toBe(
+      "审理时遇到一个要人工处理的问题，申请先停在这一步。不需要你做什么；处理好后接着审，到时会通知你。"
+    );
+    expect(within(screen.getByTestId("step-current")).getByText("暂停审理")).toBeTruthy();
+  });
+
+  it("第六十一批 四: 复议中 says it is not the soul's appeal, under ≡", async () => {
+    stubApi({ "/me/rebirth-applications/a1/": { status: 200, data: application({ status: "RECONSIDERING" }) } });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    expect((await screen.findByTestId("state-note")).props.children).toContain("这不是你提起的申诉");
+    expect(screen.getByTestId("status-badge-glyph").props.children).toBe("≡");
+  });
+
+  it("第六十一批 四: 审批中 has no such sentence", async () => {
+    stubApi({ "/me/rebirth-applications/a1/": { status: 200, data: application({ status: "UNDER_REVIEW" }) } });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    await screen.findByTestId("status-badge");
+    expect(screen.queryByTestId("state-note")).toBeNull();
+  });
+
   it("appealed before those columns existed: both say 未记录, nothing is borrowed from another field", async () => {
     stubApi({
       "/me/rebirth-applications/a1/": {

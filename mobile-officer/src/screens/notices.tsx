@@ -9,7 +9,7 @@ import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote, useOnBump } from "../readCache";
 import { isDenied, landingGoneKey, noticeIsDeskOnly, noticeLanding, type Landing } from "../rules";
 import { useSession } from "../session";
-import { Screen, SmallButton, space, useI18n } from "../shared";
+import { Screen, SmallButton, space, useI18n, useToast } from "../shared";
 
 /**
  * `onRead`: a mark reached the server, or the list was pulled -- the shell asks for the unread count again (the tab bar's ●).
@@ -24,23 +24,44 @@ export function NoticesTab({ onRead, onLand, gone, version }: { onRead?: () => v
   useOnBump(version, reload); // the shell's bump: reloaded in place
   const fetchPage = useCallback((page: number) => notificationsApi.list({ page: String(page) }).then((r) => r.data), []);
   const { rows: data, more, moreState } = useMoreRows(firstPage, fetchPage);
-  // Marking is local first (the row turns ○ at once); a failure puts it back on the next reload.
+  // Marking is local first (the row turns ○ at once). A failure puts the row(s) back as they were and says so, with
+  // 重试 (Design v4 第六十一批 E1) -- only telling would leave the screen wrong.
   const [read, setRead] = useState<ReadonlySet<number>>(new Set());
+  const toast = useToast();
   const view = viewStateOf({ data, error }, (rows) => rows.length === 0, isDenied);
   const isUnread = (n: Notification) => !n.is_read && !read.has(n.id);
 
+  const markOne = (n: Notification) => {
+    setRead((prev) => new Set(prev).add(n.id));
+    notificationsApi.markRead(n.id).then(
+      () => onRead?.(),
+      () => {
+        setRead((prev) => {
+          const next = new Set(prev);
+          next.delete(n.id);
+          return next;
+        });
+        toast(t("notifications.mark_read_error"), "info", "notice-read", { label: t("common.retry"), onPress: () => markOne(n) });
+      }
+    );
+  };
   const open = (n: Notification) => {
-    if (isUnread(n)) {
-      setRead((prev) => new Set(prev).add(n.id));
-      notificationsApi.markRead(n.id).then(() => onRead?.(), () => void reload());
-    }
+    if (isUnread(n)) markOne(n);
     // Read or not, a row that names an item opens it -- the same landing as a tapped push.
     const landing = noticeLanding(n);
     if (landing) onLand?.(landing);
   };
   const markAll = () => {
+    const before = read;
     setRead(new Set((data ?? []).map((n) => n.id)));
-    notificationsApi.markAllRead().then(() => onRead?.(), () => void reload());
+    notificationsApi.markAllRead().then(
+      () => onRead?.(),
+      () => {
+        // Every row back to what it was before the local mark.
+        setRead(before);
+        toast(t("notifications.mark_all_error"), "info", "notice-read", { label: t("common.retry"), onPress: markAll });
+      }
+    );
   };
 
   return (

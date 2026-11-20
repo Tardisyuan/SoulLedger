@@ -6,7 +6,7 @@
 import type { MeRebirthApplication } from "@soulledger/core/api/soul";
 
 import { daysLeft, termFraction } from "@soulledger/core/domain/term";
-import { pad2 } from "@soulledger/core/domain/dates";
+import { localDateString, pad2 } from "@soulledger/core/domain/dates";
 import { civKeyOf, type CivKey } from "./theme";
 import type { BadgeSpec } from "./layout";
 
@@ -37,6 +37,12 @@ export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
   APPEALING: { glyph: "↺", border: "solid", pending: true, tone: "warn" },
   APPEAL_REJECTED: { glyph: "⊘", border: "dashed" },
   APPROVED: { glyph: "✓", border: "solid", tone: "pos" },
+  // Design v4 第六十一批 四. 暂停审理: warn, the flow stopped for a person, not the soul's fault and not the end.
+  EXCEPTION: { glyph: "‖", border: "solid", pending: true, tone: "warn" },
+  // 复议中: a stretch of the review, dashed; neutral. ◇ is 审批中's, so ≡ (Design: never ↺ / ↻, they read as 申诉).
+  RECONSIDERING: { glyph: "≡", border: "dashed", pending: true },
+  // 已终止: not a refusal on the merits, so not neg. Design draws it faint; the 淡染 tags have four colours, so neutral.
+  TERMINATED: { glyph: "⊘", border: "solid" },
 };
 
 /**
@@ -323,6 +329,25 @@ export interface FlowStep {
 
 const APPEALED = new Set(["APPEALING", "APPEAL_REJECTED"]);
 
+/** The two open states that name the current point themselves (written out, so the copy harvest sees them). */
+const HELD_NAME: Partial<Record<string, string>> = {
+  EXCEPTION: "soul_app.status.EXCEPTION",
+  RECONSIDERING: "soul_app.status.RECONSIDERING",
+};
+
+/**
+ * The application detail's one sentence under the badge (Design v4 第六十一批 四): why it stopped and that the soul need
+ * do nothing (暂停审理 / 复议中), or that the hall ended it -- with the cooldown's last day when the server says one runs.
+ * Null for the other states, which say themselves.
+ */
+export function stateNote(a: Pick<MeRebirthApplication, "status" | "cooldown_until">): { key: string; params?: Record<string, string> } | null {
+  if (a.status === "EXCEPTION") return { key: "soul_app.applications.state_note.EXCEPTION" };
+  if (a.status === "RECONSIDERING") return { key: "soul_app.applications.state_note.RECONSIDERING" };
+  if (a.status !== "TERMINATED") return null;
+  if (!a.cooldown_until) return { key: "soul_app.applications.state_note.TERMINATED" };
+  return { key: "soul_app.applications.state_note.TERMINATED_COOLDOWN", params: { date: localDateString(new Date(a.cooldown_until)) } };
+}
+
 /**
  * Whether this application has been appealed — i.e. whether a FIRST rejection
  * exists apart from the latest decision. APPROVED after an appeal counts too.
@@ -357,6 +382,10 @@ export function buildFlow(a: MeRebirthApplication): FlowStep[] {
     });
     if (!a.current_step) steps.push({ key: "appealed", state: "done", name: { key: "soul_app.timeline.appealed" } });
   }
+  // 第六十一批 四: a 复议 that is over leaves one line, 「复议 · {date}」, not a step of its own.
+  if (a.reconsidered_at && a.status !== "RECONSIDERING") {
+    steps.push({ key: "reconsidered", state: "done", name: { key: "soul_app.timeline.reconsidered" }, at: a.reconsidered_at });
+  }
   if (a.decided_at) {
     steps.push({
       key: "decided",
@@ -369,12 +398,14 @@ export function buildFlow(a: MeRebirthApplication): FlowStep[] {
     }
     return steps;
   }
-  if (a.current_step) {
+  // 暂停审理 / 复议中 take the current point under their own name (第六十一批 四), even with no node to name.
+  const held = HELD_NAME[a.status];
+  if (a.current_step || held) {
     steps.push({
       key: "current",
       state: "now",
-      name: { key: a.current_step.is_appeal ? "soul_app.timeline.appeal_review" : "soul_app.timeline.under_review" },
-      role: a.current_step.approver_role,
+      name: { key: held ?? (a.current_step?.is_appeal ? "soul_app.timeline.appeal_review" : "soul_app.timeline.under_review") },
+      ...(a.current_step ? { role: a.current_step.approver_role } : {}),
       note: "soul_app.timeline.no_time",
       dashedAfter: true,
     });

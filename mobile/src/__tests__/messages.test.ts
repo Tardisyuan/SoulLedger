@@ -11,7 +11,7 @@ import fs from "fs";
 import path from "path";
 
 import { BUNDLES, translate } from "../i18n";
-import { SOUL_STATE_BADGES, lexiconKey, type LexiconWord } from "../rules";
+import { APPLICATION_BADGES, SOUL_STATE_BADGES, lexiconKey, type LexiconWord } from "../rules";
 
 const LEXICON_WORDS: LexiconWord[] = [
   "merit",
@@ -86,7 +86,8 @@ describe("soul_app copy", () => {
 
   it.each(locales)("enum namespaces the screens use are covered in %s", (locale) => {
     const needed = [
-      ...["UNDER_REVIEW", "REJECTED", "APPEALING", "APPEAL_REJECTED", "APPROVED"].map((s) => `soul_app.status.${s}`),
+      // Every application state the badge table names (第六十一批 四 added three).
+      ...Object.keys(APPLICATION_BADGES).map((s) => `soul_app.status.${s}`),
       ...DESIRED_REBIRTH_FORMS.map((f) => `reincarnation.forms.${f}`),
       // The radio cards read these through a template key the harvest above cannot see.
       ...DESIRED_REBIRTH_FORMS.map((f) => `soul_app.form_notes.${f}`),

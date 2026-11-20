@@ -38,6 +38,7 @@ function shortening(over: Record<string, unknown> = {}) {
     desired_remaining_days: null, status: "PENDING", approved_days: null, decision_note: "", decided_by: null, decided_by_username: null,
     decided_at: null, cooldown_until: "2026-11-07T00:00:00Z", remaining_days: 30, cooldown_end: "2026-11-07T00:00:00Z",
     cooldown_original_until: "2026-11-07T00:00:00Z", cooldown_total_days: 30, cooldown_past_days: 0,
+    can_reject: (over.status ?? "PENDING") === "PENDING",
     created_at: "2026-10-08T00:00:00Z", updated_at: "2026-10-08T00:00:00Z", ...over,
   };
 }

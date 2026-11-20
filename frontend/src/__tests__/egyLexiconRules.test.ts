@@ -210,7 +210,14 @@ const hasHemsu = (v: string) => /\bHemsu\b/.test(prose(v));
  */
 // 第三十五批(第三十四批积压的演示导览):「服务端」「接口」也是服务器义,写 Per Hemsu。
 // 第四十六批:「服务目标」(SLO)的服务也是系统义,写 Hep Hemsu。
-const isSystemZh = (zh: string) => /系统|服务器|服务端|服务目标|后端|接口|队列|连接/.test(zh);
+// 「服务那边」(第六十一批 E4 soul_app.data_export.failed_server):给灵魂看的「服务器」,同一义项。
+/**
+ * Tehi 的例外(Design 第六十一批,原文照抄):中文写成「出了问题 / 要人工处理的问题」,不含「错误」等字,
+ * 义项仍是系统出错(流程异常、服务端 5xx)。
+ */
+const TEHI_ALLOWED = new Set(["soul_app.applications.state_note.EXCEPTION", "soul_app.data_export.failed_server"]);
+
+const isSystemZh = (zh: string) => /系统|服务器|服务端|服务目标|服务那边|后端|接口|队列|连接/.test(zh);
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
@@ -1001,9 +1008,10 @@ describe("egy 词表规则", () => {
 
   it("Tehi 只表技术错误:中文不含「错误 / 出错 / 故障 / 异常」的键不出现 Tehi(第三十五批 Sethet → Tehi)", () => {
     // 第六节把它曾担的通过 / 活动 / 审计 / 证据 / 条文 / 时戳 / 顺序 / 资源……五十处散回各自的词,
-    // settings 的冗余 Sethet 直接删。目前没有例外,所以不设白名单;真出现一个再加,并照 Sekhem 那条补陈旧检查。
-    expect(offenders(KEYS, (v, k) => /\bTehi\b/.test(prose(v)) && !/错误|出错|故障|异常/.test(ZH[k] ?? ""))).toEqual([]);
+    // settings 的冗余 Sethet 直接删。第六十一批起有两条例外(TEHI_ALLOWED),照 Sekhem 那条带陈旧检查。
+    expect(offenders(KEYS, (v, k) => /\bTehi\b/.test(prose(v)) && !/错误|出错|故障|异常/.test(ZH[k] ?? "") && !TEHI_ALLOWED.has(k))).toEqual([]);
     expect(KEYS.some((k) => /\bTehi\b/.test(EGY[k]))).toBe(true);
+    expect([...TEHI_ALLOWED].filter((k) => !/\bTehi\b/.test(EGY[k] ?? ""))).toEqual([]);
   });
 
   it("Hetep 只在 Em Hetep(再会)与 Ta Hetep(福地);Pet 不作「类别」(Pet Sep → Iru Sep)(第三十五批)", () => {

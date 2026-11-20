@@ -20,7 +20,7 @@ import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
-import { Button, Input, Notice, Screen, SectionError, SectionLabel, Skeleton, Txt, useAnnounceOnMount, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Input, Notice, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useAnnounceOnMount, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
@@ -179,6 +179,10 @@ export function DataExportScreen() {
   const [asking, setAsking] = useState(false);
   const [working, setWorking] = useState(false);
   const [sharing, setSharing] = useState(false);
+  // 第六十一批 E4: the face was recognised but the request did not get through (no network / a 5xx). Not a face that
+  // failed: no password sheet, a line above the button, and 重试 resends with the same credential.
+  const [sendFailed, setSendFailed] = useState<"network" | "server" | null>(null);
+  const credential = useRef<string | null>(null);
   const exp = remote.data?.export ?? null;
   const preparing = exp?.status === "QUEUED" || exp?.status === "RUNNING";
 
@@ -212,27 +216,51 @@ export function DataExportScreen() {
     }, [preparing, reload])
   );
 
-  /** The face first when it is on; a face that does not answer falls back to the password sheet. */
+  /**
+   * The face first when it is on; a face that does not answer falls back to the password sheet. Once the face answered,
+   * only the request can fail: offline or a 5xx is a line and 重试 (E4); any other refusal (the credential no longer
+   * good) starts over from the face, which may then fall back to the password.
+   */
+  const send = useCallback(
+    async (value: string): Promise<"done" | "retry_face"> => {
+      try {
+        await soulApi.requestDataExport({ credential: value });
+      } catch (e) {
+        const status = soulErrorStatus(e);
+        if (status === 409) {
+          void reload();
+          return "done";
+        }
+        if (status === null || status >= 500) {
+          credential.current = value;
+          setSendFailed(status === null ? "network" : "server");
+          return "done";
+        }
+        credential.current = null;
+        setSendFailed(null);
+        return "retry_face";
+      }
+      credential.current = null;
+      setSendFailed(null);
+      void reload();
+      return "done";
+    },
+    [reload]
+  );
   const request = useCallback(async () => {
     if (working) return;
     if (!bioEnabled()) return setAsking(true);
     setWorking(true);
     try {
+      // 重试: the same credential again, no second face.
+      if (credential.current && (await send(credential.current)) === "done") return;
       const read = await readCredential(exportPrompt());
-      if (read.status === "ok") {
-        try {
-          await soulApi.requestDataExport({ credential: read.credential });
-          void reload();
-          return;
-        } catch (e) {
-          if (soulErrorStatus(e) === 409) return void reload();
-        }
-      }
+      if (read.status === "ok" && (await send(read.credential)) === "done") return;
       setAsking(true);
     } finally {
       setWorking(false);
     }
-  }, [working, reload]);
+  }, [working, send]);
 
   const share = async () => {
     if (sharing) return;
@@ -249,6 +277,7 @@ export function DataExportScreen() {
 
   return (
     <Screen testID="data-export" refreshing={remote.loading && !!remote.data} onRefresh={remote.reload}>
+      <StaleLine state={remote} onRetry={() => void remote.reload()} />
       {!remote.data ? (
         remote.error ? (
           <SectionError testID="export-error" onRetry={remote.reload} />
@@ -284,9 +313,20 @@ export function DataExportScreen() {
               <Txt variant="caption" tone="muted">
                 {t("soul_app.export.timing")}
               </Txt>
+              {sendFailed ? (
+                <Txt testID="export-send-failed" variant="caption">
+                  {t(sendFailed === "network" ? "soul_app.data_export.failed_network" : "soul_app.data_export.failed_server")}
+                </Txt>
+              ) : null}
               <Button
                 testID="export-request"
-                title={bioEnabled() ? t("soul_app.export.request_face", { bio: bio.word }) : t(exp ? "soul_app.export.request_again" : "soul_app.export.request")}
+                title={
+                  sendFailed
+                    ? t("soul_app.common.retry")
+                    : bioEnabled()
+                      ? t("soul_app.export.request_face", { bio: bio.word })
+                      : t(exp ? "soul_app.export.request_again" : "soul_app.export.request")
+                }
                 onPress={() => void request()}
                 busy={working}
               />

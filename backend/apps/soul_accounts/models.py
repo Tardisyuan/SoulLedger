@@ -131,9 +131,21 @@ class RebirthApplicationStatus(models.TextChoices):
     APPEALING = "APPEALING", "申诉中"
     APPEAL_REJECTED = "APPEAL_REJECTED", "申诉被驳回"
     APPROVED = "APPROVED", "已批准"
+    # Design v4 第六十一批 四(用户 2026-11-21):审批流的三种状态不再落成「审批中」/「已驳回」。
+    #: 工作流在「异常处理」(EXCEPTION):停住、等人处理;仍算进行中。
+    EXCEPTION = "EXCEPTION", "异常处理中"
+    #: 工作流在 APPEAL 段:流程里有人对一步提出异议、这一步重议。**不是**灵魂的申诉(APPEALING),所以另起一个名字。
+    RECONSIDERING = "RECONSIDERING", "复议中"
+    #: 管理员终止(工作流 CANCELLED,`ApprovalWorkflow.terminate`):不是按实质驳回,不可申诉;冷却照算(`rebirth.COOLDOWN_STATUSES`)。
+    TERMINATED = "TERMINATED", "已终止"
 
 
-OPEN_APPLICATION_STATUSES = (RebirthApplicationStatus.UNDER_REVIEW, RebirthApplicationStatus.APPEALING)
+OPEN_APPLICATION_STATUSES = (
+    RebirthApplicationStatus.UNDER_REVIEW,
+    RebirthApplicationStatus.APPEALING,
+    RebirthApplicationStatus.EXCEPTION,
+    RebirthApplicationStatus.RECONSIDERING,
+)
 
 
 class RebirthApplication(models.Model):
@@ -176,6 +188,8 @@ class RebirthApplication(models.Model):
     decided_at = models.DateTimeField(null=True, blank=True)
     first_rejection_reason = models.TextField(blank=True, default="")
     first_decided_at = models.DateTimeField(null=True, blank=True)
+    # 最近一次复议(RECONSIDERING)结束的时刻:灵魂端时间线上留一行「复议 · 日期」(第六十一批 四)。
+    reconsidered_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

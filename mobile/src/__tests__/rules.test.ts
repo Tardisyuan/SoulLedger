@@ -13,6 +13,7 @@ import {
   lexiconKey,
   residenceOf,
   stacksLabel,
+  stateNote,
 } from "../rules";
 import { application } from "./stubApi";
 
@@ -245,5 +246,65 @@ describe("buildFlow (handoff 2e)", () => {
 
   it("an unknown status with no step and no decision draws only what exists", () => {
     expect(shape(app({ created_at: CREATED, status: "ON_HOLD", current_step: null }))).toEqual([`submitted:done@${CREATED}`]);
+  });
+});
+
+describe("第六十一批 四: the three new application states", () => {
+  const CREATED = "2026-09-02T06:20:00Z";
+  const DECIDED = "2026-09-09T08:40:00Z";
+  const shape = (a: MeRebirthApplication) =>
+    buildFlow(a).map((s) => `${s.key}:${s.state}${s.at ? `@${s.at}` : ""}`);
+
+  it("badges per Design: 暂停审理 ‖ warn, 复议中 ≡ dashed neutral (◇ is 审批中's), 已终止 ⊘ neutral -- never neg", () => {
+    expect(APPLICATION_BADGES.EXCEPTION).toEqual({ glyph: "‖", border: "solid", pending: true, tone: "warn" });
+    expect(APPLICATION_BADGES.RECONSIDERING).toEqual({ glyph: "≡", border: "dashed", pending: true });
+    expect(APPLICATION_BADGES.TERMINATED).toEqual({ glyph: "⊘", border: "solid" });
+    expect(APPLICATION_BADGES.UNDER_REVIEW.glyph).toBe("◇");
+    // Not the appeal's arrows: 复议 is not the soul's 申诉.
+    expect(["↺", "↻"]).not.toContain(APPLICATION_BADGES.RECONSIDERING.glyph);
+  });
+
+  it("暂停审理 and 复议中 take the current point under their own names; 审批中 keeps its own", () => {
+    const step = (status: string) => buildFlow(app({ created_at: CREATED, status })).find((s) => s.key === "current")!;
+    expect(step("EXCEPTION").name).toEqual({ key: "soul_app.status.EXCEPTION" });
+    expect(step("RECONSIDERING").name).toEqual({ key: "soul_app.status.RECONSIDERING" });
+    expect(step("UNDER_REVIEW").name).toEqual({ key: "soul_app.timeline.under_review" });
+    // With no node to name (a paused flow may have none), the point is still drawn -- without a role.
+    const bare = buildFlow(app({ created_at: CREATED, status: "EXCEPTION", current_step: null })).find((s) => s.key === "current")!;
+    expect(bare.name).toEqual({ key: "soul_app.status.EXCEPTION" });
+    expect(bare.role).toBeUndefined();
+  });
+
+  it("a 复议 that is over leaves one dated line, before the current point; none while it is still going", () => {
+    const AT = "2026-09-04T00:00:00Z";
+    expect(shape(app({ created_at: CREATED, reconsidered_at: AT }))).toEqual([
+      `submitted:done@${CREATED}`,
+      `reconsidered:done@${AT}`,
+      "current:now",
+      "decision:todo",
+    ]);
+    expect(shape(app({ created_at: CREATED, status: "RECONSIDERING", reconsidered_at: AT }))).not.toContain(`reconsidered:done@${AT}`);
+    expect(shape(app({ created_at: CREATED }))).not.toContain("reconsidered:done");
+  });
+
+  it("已终止 is a decision with its time; no appeal is offered after it", () => {
+    expect(shape(app({ created_at: CREATED, status: "TERMINATED", decided_at: DECIDED, current_step: null }))).toEqual([
+      `submitted:done@${CREATED}`,
+      `decided:done@${DECIDED}`,
+    ]);
+  });
+
+  it("stateNote: one sentence per new state; 已终止 with the cooldown's day when the server sends one", () => {
+    expect(stateNote({ status: "EXCEPTION", cooldown_until: null })).toEqual({ key: "soul_app.applications.state_note.EXCEPTION" });
+    expect(stateNote({ status: "RECONSIDERING", cooldown_until: null })).toEqual({ key: "soul_app.applications.state_note.RECONSIDERING" });
+    expect(stateNote({ status: "TERMINATED", cooldown_until: null })).toEqual({ key: "soul_app.applications.state_note.TERMINATED" });
+    const until = new Date(2027, 1, 19, 15, 0).toISOString();
+    expect(stateNote({ status: "TERMINATED", cooldown_until: until })).toEqual({
+      key: "soul_app.applications.state_note.TERMINATED_COOLDOWN",
+      params: { date: "2027-02-19" },
+    });
+    for (const status of ["UNDER_REVIEW", "REJECTED", "APPEALING", "APPEAL_REJECTED", "APPROVED"] as const) {
+      expect(stateNote({ status, cooldown_until: until })).toBeNull();
+    }
   });
 });

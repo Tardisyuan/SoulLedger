@@ -14,7 +14,17 @@ export type SoulAccountOrigin = "DEATH_SYNC" | "OFFICER" | "BACKFILL";
 
 export type InitialCredentialStatus = "QUEUED" | "SENT" | "PENDING" | "REVEALED" | "DELIVERED" | "VOID";
 
-export type RebirthApplicationStatus = "UNDER_REVIEW" | "REJECTED" | "APPEALING" | "APPEAL_REJECTED" | "APPROVED";
+/** Design v4 第六十一批 四: EXCEPTION / RECONSIDERING (the flow's APPEAL stage, not the soul's appeal) are open;
+ *  TERMINATED is an administrator's termination -- not a refusal, not appealable, its cooldown still runs. */
+export type RebirthApplicationStatus =
+  | "UNDER_REVIEW"
+  | "REJECTED"
+  | "APPEALING"
+  | "APPEAL_REJECTED"
+  | "APPROVED"
+  | "EXCEPTION"
+  | "RECONSIDERING"
+  | "TERMINATED";
 
 export type RebirthApplicationForm = "DIVINE" | "HUMAN" | "ASURA" | "ANIMAL" | "HUNGRY_GHOST" | "HELL_BEING" | "OTHER";
 
@@ -172,6 +182,8 @@ export interface OfficerCooldownShortening {
   /** Length of the cooldown up to `cooldown_end`, and how many of those days have passed. */
   cooldown_total_days: number;
   cooldown_past_days: number;
+  /** Still PENDING: 驳回 stays open after the cooldown ended (user decision #17); 批准 does not. */
+  can_reject: boolean;
   created_at: string;
   updated_at: string;
 }

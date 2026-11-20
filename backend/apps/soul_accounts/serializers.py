@@ -17,6 +17,7 @@ from apps.sentence_plan.soul_view import PLAN_STATES as SOUL_PLAN_STATES
 from apps.sentence_plan.soul_view import STATION_STATUSES as SOUL_STATION_STATUSES
 from apps.soul_accounts.models import (
     CooldownShorteningRequest,
+    CooldownShorteningStatus,
     DataExportStatus,
     InitialCredential,
     RebirthApplication,
@@ -459,6 +460,7 @@ class TargetHallSerializer(serializers.Serializer):
 class MeRebirthApplicationSerializer(serializers.ModelSerializer):
     current_step = serializers.SerializerMethodField()
     can_appeal = serializers.SerializerMethodField()
+    cooldown_until = serializers.SerializerMethodField()
     target_hall = serializers.SerializerMethodField()
 
     class Meta:
@@ -466,8 +468,15 @@ class MeRebirthApplicationSerializer(serializers.ModelSerializer):
         fields = [
             "id", "cycle", "desired_form", "statement", "appeal_statement", "status",
             "cross_civilization", "target_hall", "rejection_reason", "decided_at", "first_rejection_reason",
-            "first_decided_at", "current_step", "can_appeal", "created_at", "updated_at",
+            "first_decided_at", "reconsidered_at", "current_step", "can_appeal", "cooldown_until", "created_at", "updated_at",
         ]
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_cooldown_until(self, obj):
+        """已终止(或被驳回)的申请起的冷却截止;不在冷却中为 null。灵魂端「冷却期到 {date}」读它(第六十一批 四)。"""
+        from apps.soul_accounts.rebirth import cooldown_until
+
+        return cooldown_until(obj)
 
     @extend_schema_field(MeCurrentStepSerializer(allow_null=True))
     def get_current_step(self, obj):
@@ -779,14 +788,20 @@ class OfficerCooldownShorteningSerializer(serializers.ModelSerializer):
     cooldown_original_until = serializers.SerializerMethodField()
     cooldown_total_days = serializers.SerializerMethodField()
     cooldown_past_days = serializers.SerializerMethodField()
+    #: 用户决定 #17(2026-11-21):冷却已结束的待决申请批不了(`cooldown_over`),但驳回照样可以、把这一行收掉。
+    #: 网页按它放「驳回」,不再按 `cooldown_until` 自己推。权限(`workflow.approve`)仍由调用方看。
+    can_reject = serializers.SerializerMethodField()
 
     class Meta:
         model = CooldownShorteningRequest
         fields = ["id", "soul", "soul_code", "soul_name", "account", "application", "cycle", "reason", "desired_remaining_days",
                   "status", "approved_days", "decision_note", "decided_by", "decided_by_username", "decided_at",
                   "cooldown_until", "remaining_days", "cooldown_end", "cooldown_original_until",
-                  "cooldown_total_days", "cooldown_past_days", "created_at", "updated_at"]
+                  "cooldown_total_days", "cooldown_past_days", "can_reject", "created_at", "updated_at"]
         read_only_fields = fields
+
+    def get_can_reject(self, obj) -> bool:
+        return obj.status == CooldownShorteningStatus.PENDING
 
     @staticmethod
     def _span(obj):

@@ -60,6 +60,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { notify } from "@soulledger/core/platform";
+import { formatAsOf, hhmm } from "@soulledger/core/domain/dates";
 
 import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
 import { family, quoteFamily } from "./fonts";
@@ -1927,6 +1928,8 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
+  /** When the data on screen arrived (ms): the stale line's 「显示的是 {time} 的内容」 (第六十一批 E6). */
+  const [at, setAt] = useState<number | null>(null);
   const seq = useRef(0);
   const current = useRef(fetcher);
   const shown = useRef<T | null>(null);
@@ -1957,6 +1960,7 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
         settle(() => {
           setData(value);
           setError(null);
+          setAt(Date.now());
         }),
       (e: unknown) => settle(() => setError(e))
     );
@@ -1966,6 +1970,7 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
       current.current = fetcher;
       setData(null);
       setError(null);
+      setAt(null);
       setLoading(true);
     }
     void run();
@@ -1974,7 +1979,34 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
     setLoading(true);
     return run();
   }, [run]);
-  return { data, error, loading, reload };
+  return { data, error, loading, reload, at };
+}
+
+/**
+ * Design v4 第六十一批 E6, the one stale line of the whole app: data on screen, a refresh that failed. Under the page
+ * head, above the content, a 12 secondary line -- ↻, 「显示的是 {time} 的内容 · 刷新没成功」, a 重试 text button. The time
+ * is the dashboard's `as of` rule (`formatAsOf`: HH:mm today, the date across days). Never while the offline bar shows
+ * (`connection.offline` already says why); gone once a refresh answers.
+ */
+export function StaleLine({ state, onRetry }: { state: { data: unknown; error: unknown; at: number | null }; onRetry: () => void }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const { offline } = useOnline();
+  const { gutter } = useLayout();
+  if (offline || state.data === null || !state.error || state.at === null) return null;
+  const time = formatAsOf(new Date(state.at).toISOString(), new Date(), (d) => hhmm(d)) ?? "";
+  return (
+    <View testID="stale-line" accessibilityRole="alert" style={[styles.staleLine, { paddingHorizontal: gutter }]}>
+      <Txt variant="caption" tone="muted" style={styles.shrink}>
+        {`↻ ${tr("soul_app.stale.line", { time })}`}
+      </Txt>
+      <Press testID="stale-retry" accessibilityRole="button" onPress={onRetry} hitSlop={8}>
+        <Txt variant="caption" style={{ color: t.ink, textDecorationLine: "underline" }}>
+          {tr("soul_app.common.retry")}
+        </Txt>
+      </Press>
+    </View>
+  );
 }
 
 /**
@@ -2060,6 +2092,7 @@ export function useReloadOnReconnect(reload: () => unknown, state?: RemoteState)
 }
 
 export const styles = StyleSheet.create({
+  staleLine: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, paddingVertical: 8 },
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   grow: { flexGrow: 1 },

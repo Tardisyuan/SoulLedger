@@ -2433,7 +2433,8 @@
         "mine": "我认领",
         "unclaimed": "待认领",
         "others": "他人认领",
-        "deferred": "待定"
+        "deferred": "待定",
+        "held": "候着的 · {{n}}"
       },
       "hints": {
         "unclaimed": "等待最久在上",
@@ -2532,7 +2533,11 @@
       "unferried": "这桩审判不能认领：亡魂未葬或没有渡资，滞留在阿刻戎岸边。",
       "not_yours_readonly": "此案由{{name}}认领，只有认领人能改；你可以查看。",
       "override_recorded": "你不是认领人（此案由{{name}}认领），此操作会留痕。",
-      "release_for_hint": "放回后回到「待认领」，{{name}}会收到这条理由。"
+      "release_for_hint": "放回后回到「待认领」，{{name}}会收到这条理由。",
+      "held_from": "暂不能认领 · {{date}} 起可认领",
+      "held_reason": {
+        "wangsi": "在枉死城候着"
+      }
     },
     "admission": {
       "title": "证据 · 采信",
@@ -4317,7 +4322,10 @@
       "REJECTED": "已驳回",
       "APPEALING": "申诉中",
       "APPEAL_REJECTED": "申诉被驳回",
-      "APPROVED": "已批准"
+      "APPROVED": "已批准",
+      "EXCEPTION": "异常处理中",
+      "RECONSIDERING": "复议中",
+      "TERMINATED": "已终止"
     },
     "origin": {
       "DEATH_SYNC": "死亡同步自动开通",
@@ -5381,6 +5389,12 @@
         "DISPOSED": "处置已执行，但你还没进入轮回。殿司把你转入轮回之后，才能申请转生。",
         "LOST": "你的记录处于「失踪」状态，暂不能申请。请写信给殿司。",
         "SETTLED": "本世已结算，不再受理新的转生申请。"
+      },
+      "state_note": {
+        "EXCEPTION": "审理时遇到一个要人工处理的问题，申请先停在这一步。不需要你做什么；处理好后接着审，到时会通知你。",
+        "RECONSIDERING": "审理中有人对其中一步提出异议，这一步正在重议。这不是你提起的申诉，不需要你做什么。",
+        "TERMINATED": "殿里终止了这份申请：不再审理，也不能申诉。可以重新申请。",
+        "TERMINATED_COOLDOWN": "殿里终止了这份申请：不再审理，也不能申诉。冷却期到 {{date}}，之后可以重新申请。"
       }
     },
     "status": {
@@ -5388,7 +5402,10 @@
       "REJECTED": "已驳回",
       "APPEALING": "申诉中",
       "APPEAL_REJECTED": "申诉被驳回",
-      "APPROVED": "已批准"
+      "APPROVED": "已批准",
+      "EXCEPTION": "暂停审理",
+      "RECONSIDERING": "复议中",
+      "TERMINATED": "已终止"
     },
     "detail": {
       "title": "申请详情",
@@ -5503,7 +5520,8 @@
       "appeal_review": "申诉复核中",
       "no_time": "无时间戳",
       "decision": "决定",
-      "pending": "未判"
+      "pending": "未判",
+      "reconsidered": "复议"
     },
     "soul_states": {
       "ALIVE": "在世",
@@ -5580,7 +5598,8 @@
       "push_warning": "殿司警告",
       "locked": "不能关",
       "email_nudge_title": "添加联系邮箱",
-      "email_nudge_body": "忘记密码时，验证码发到联系邮箱。没有它，就只能到本殿窗口重设密码。"
+      "email_nudge_body": "忘记密码时，验证码发到联系邮箱。没有它，就只能到本殿窗口重设密码。",
+      "push_unregistered": "没登记上 · 收不到通知"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -5596,7 +5615,8 @@
       "yes": "好，通知我",
       "no": "暂不",
       "live_hint_title": "锁屏上看不到进度",
-      "live_hint_body": "灵魂簿的通知关着。要在锁屏上看到这一程走到了哪一站，请在系统设置里打开通知。"
+      "live_hint_body": "灵魂簿的通知关着。要在锁屏上看到这一程走到了哪一站，请在系统设置里打开通知。",
+      "register_failed": "手机已允许通知，但没登记上，暂时还收不到。"
     },
     "original": {
       "tag": "原文",
@@ -6530,6 +6550,13 @@
       "forget_body": "只是这台手机不再记住这个编号，账号本身不受影响。这个编号的{{bio}}登录也会关掉。",
       "forgotten": "已忘掉 {{id}}",
       "bio_here": "这个编号开了{{bio}}登录"
+    },
+    "data_export": {
+      "failed_network": "没连上服务器，资料还没导出。脸已认出，不用改输密码。",
+      "failed_server": "服务那边出了问题，资料还没导出。脸已认出，不用改输密码。"
+    },
+    "stale": {
+      "line": "显示的是 {{time}} 的内容 · 刷新没成功"
     }
   },
   "soul_push": {
@@ -7091,6 +7118,18 @@
     "officer_handover_received": {
       "title": "官员交接",
       "body": "{{by}} 把 {{from}} 手上的事交给了你：审判 {{judgments}} 件、申诉 {{appeals}} 件、城隍 {{city_gods}} 位、书信 {{letters}} 封。"
+    },
+    "rebirth_status_exception": {
+      "title": "转生申请状态更新",
+      "body": "你的转生申请状态：暂停审理。"
+    },
+    "rebirth_status_reconsidering": {
+      "title": "转生申请状态更新",
+      "body": "你的转生申请状态：复议中。"
+    },
+    "rebirth_status_terminated": {
+      "title": "转生申请状态更新",
+      "body": "你的转生申请状态：已终止。"
     }
   },
   "social_moderation": {
@@ -7387,7 +7426,8 @@
         "app": "App 出了问题",
         "other": "其他"
       }
-    }
+    },
+    "draft_load_failed": "原草稿没取到。取到之前先不能编辑，免得盖掉它。"
   },
   "sentence_plan": {
     "panel_title": "去处计划",
@@ -10595,6 +10635,10 @@
     }
   },
   "errors": {
-    "cross_civilization": "没有保存：所选的对象属于另一个文明，不能关联。请重新选择，或刷新后再试。"
+    "cross_civilization": "没有保存：所选的对象属于另一个文明，不能关联。请重新选择，或刷新后再试。",
+    "permissions_load": {
+      "title": "权限没读到",
+      "body": "这不是没有权限：这一次没从服务器读到。重新加载试试；还不行，请稍后再来。"
+    }
   }
 }
