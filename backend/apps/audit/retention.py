@@ -40,13 +40,19 @@ def retention_days(name: str) -> int:
 
 
 def purge_in_batches(queryset, batch_size: int) -> int:
+    """Batches on each master in turn (`per_master`): a global job's `queryset.db` has no single answer once
+    writes are cut over (NoShardContext)."""
+    from apps.core.shard_reads import per_master
+
     deleted = 0
-    while True:
-        pks = list(queryset.order_by("pk").values_list("pk", flat=True)[:batch_size])
-        if not pks:
-            return deleted
-        # Each batch is its own statement/transaction: no long lock on a large backlog.
-        deleted += queryset.filter(pk__in=pks)._raw_delete(queryset.db)
+    for part in per_master(queryset):
+        while True:
+            pks = list(part.order_by("pk").values_list("pk", flat=True)[:batch_size])
+            if not pks:
+                break
+            # Each batch is its own statement/transaction: no long lock on a large backlog.
+            deleted += part.filter(pk__in=pks)._raw_delete(part.db)
+    return deleted
 
 
 def prune_logs(tenant=None, *, now=None, batch_size: int = BATCH_SIZE) -> dict:
