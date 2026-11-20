@@ -14916,7 +14916,9 @@ paths:
   /api/v1/notifications/mark_all_read/:
     post:
       operationId: v1_notifications_mark_all_read_create
-      description: Mark all of the user's notifications as read.
+      description: |-
+        Mark all of the user's notifications as read. `marked_read` counts rows that were still unread, as
+        `batch-read` does (state-machine audit 2026-11-20 #20); read -> unread through PATCH stays allowed.
       tags:
       - v1
       requestBody:
@@ -21818,8 +21820,8 @@ paths:
     post:
       operationId: v1_souls_station_create
       description: |-
-        挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世的灵魂;
-        可以往回挪。拒绝:`not_diyu` / `alive`(409)。
+        挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世、未终局的灵魂;
+        可以往回挪,要带 `reason`。拒绝:`not_diyu` / `alive` / `soul_settled`(409)、`reason_required`(400)。
       parameters:
       - in: path
         name: id
@@ -21850,6 +21852,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Soul'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
           description: ''
         '409':
           content:
@@ -43538,6 +43546,7 @@ components:
       - soul_or_judgment
       - soul_recycled
       - soul_residing
+      - soul_settled
       - soul_state
       - soup_already_taken
       - soup_not_taken
@@ -44051,6 +44060,7 @@ components:
         * `soul_or_judgment` - soul_or_judgment
         * `soul_recycled` - soul_recycled
         * `soul_residing` - soul_residing
+        * `soul_settled` - soul_settled
         * `soul_state` - soul_state
         * `soup_already_taken` - soup_already_taken
         * `soup_not_taken` - soup_not_taken
@@ -49180,6 +49190,10 @@ components:
       properties:
         station:
           $ref: '#/components/schemas/DiyuStationEnum'
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
       required:
       - station
     SoulTokenPair:

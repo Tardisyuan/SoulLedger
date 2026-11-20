@@ -65,10 +65,44 @@ def test_automatic_moves_only_go_forward_and_officer_moves_go_anywhere(cn_tenant
     # 进殿(酆都城,第十站)在十八层地狱(第十一站)之后到来:不往回拉。
     assert not stations.arrive(soul, Soul.DiyuStation.FENGDU_CITY, via="court")
     assert Soul.objects.get(pk=soul.pk).diyu_station == "EIGHTEEN_HELLS"
-    stations.move(soul, "WANGXIANG_TERRACE", lead)
+    stations.move(soul, "WANGXIANG_TERRACE", lead, reason="记错了站")
     assert Soul.objects.get(pk=soul.pk).diyu_station == "WANGXIANG_TERRACE"
     assert _events(soul, "DIYU_STATION_CHANGED")[-1].payload == {
-        "from": "EIGHTEEN_HELLS", "to": "WANGXIANG_TERRACE", "via": "officer", "soul_id": str(soul.id)}
+        "from": "EIGHTEEN_HELLS", "to": "WANGXIANG_TERRACE", "via": "officer", "reason": "记错了站",
+        "soul_id": str(soul.id)}
+
+
+def test_a_backward_move_needs_a_reason_and_a_settled_soul_does_not_move(cn_tenant):
+    """2026-11-21 (state-machine audit #11): an officer may move a soul back to an earlier station only with a
+    written reason, which the DIYU_STATION_CHANGED event keeps; a soul in a terminal state (no exit in the state
+    machine: SETTLED) is not moved at all, either way."""
+    lead = sp.officer("st_back", "ADMIN", cn_tenant)
+    client = officer_client(lead)
+    soul = Soul.objects.create(name="庚", tenant=cn_tenant)
+    soul.die()
+    url = f"/api/v1/souls/{soul.pk}/station/"
+    assert client.post(url, {"station": "EIGHTEEN_HELLS"}, format="json").status_code == 200  # forward: no reason
+    before = len(_events(soul, "DIYU_STATION_CHANGED"))
+
+    for body in ({"station": "WANGXIANG_TERRACE"}, {"station": "WANGXIANG_TERRACE", "reason": "   "}):
+        res = client.post(url, body, format="json")
+        assert (res.status_code, res.data["code"]) == (400, "reason_required"), res.data
+    assert Soul.objects.get(pk=soul.pk).diyu_station == "EIGHTEEN_HELLS"
+    assert len(_events(soul, "DIYU_STATION_CHANGED")) == before
+
+    res = client.post(url, {"station": "WANGXIANG_TERRACE", "reason": "记错了站"}, format="json")
+    assert res.status_code == 200 and res.data["diyu_station"] == "WANGXIANG_TERRACE", res.data
+    assert _events(soul, "DIYU_STATION_CHANGED")[-1].payload == {
+        "from": "EIGHTEEN_HELLS", "to": "WANGXIANG_TERRACE", "via": "officer", "reason": "记错了站",
+        "soul_id": str(soul.id)}
+
+    Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.SETTLED)
+    count = len(_events(soul, "DIYU_STATION_CHANGED"))
+    for body in ({"station": "EIGHTEEN_HELLS"}, {"station": "TUDI_TEMPLE", "reason": "记错了站"}):
+        res = client.post(url, body, format="json")
+        assert (res.status_code, res.data["code"]) == (409, "soul_settled"), res.data
+    assert Soul.objects.get(pk=soul.pk).diyu_station == "WANGXIANG_TERRACE"
+    assert len(_events(soul, "DIYU_STATION_CHANGED")) == count
 
 
 def test_the_station_endpoint_refuses_the_living_and_other_civilizations(cn_tenant, eu_tenant):

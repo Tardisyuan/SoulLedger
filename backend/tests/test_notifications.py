@@ -217,6 +217,20 @@ class TestNotificationAPI:
         unread = UserNotification.objects.filter(user=admin_user, is_read=False).count()
         assert unread == 0
 
+    def test_mark_all_read_counts_only_rows_that_were_unread(self, auth_client, admin_user):
+        """`marked_read` used to count every row, already-read ones too (state-machine audit 2026-11-20 #20;
+        user decision 2026-11-21). Read -> unread stays allowed, and such a row counts again on the next pass."""
+        from apps.notifications.models import NotificationType, UserNotification
+
+        rows = [UserNotification.objects.create(user=admin_user, title=f"n{i}", message="m", is_read=i < 2,
+                                                notification_type=NotificationType.SYSTEM) for i in range(5)]
+
+        assert auth_client.post("/api/v1/notifications/mark_all_read/").data["marked_read"] == 3
+        assert auth_client.post("/api/v1/notifications/mark_all_read/").data["marked_read"] == 0
+        res = auth_client.patch(f"/api/v1/notifications/{rows[0].id}/", {"is_read": False}, format="json")
+        assert res.status_code == 200 and res.data["is_read"] is False, res.data
+        assert auth_client.post("/api/v1/notifications/mark_all_read/").data["marked_read"] == 1
+
     def test_notification_types(self, auth_client, admin_user):
         """All notification types should be creatable."""
         from apps.notifications.models import NotificationType, UserNotification

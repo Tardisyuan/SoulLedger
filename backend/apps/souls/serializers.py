@@ -1239,6 +1239,8 @@ class SoulStationMoveSerializer(serializers.Serializer):
     """`POST /souls/{id}/station/`:挪到十三站的哪一站(docs/06 §一)。"""
 
     station = serializers.ChoiceField(choices=Soul.DiyuStation.choices)
+    # 往回挪(到更早的一站)必须写(2026-11-21 用户决定);往前挪可省。规则在 `apps/souls/stations.py::move`。
+    reason = serializers.CharField(required=False, allow_blank=True, default="", max_length=500)
 
 
 class SoulStationRefusalSerializer(ProblemSerializer):

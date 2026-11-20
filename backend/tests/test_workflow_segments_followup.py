@@ -3,6 +3,8 @@
 1. 审批流程还在走时,召集人不能手动结束跨域审判(409 `workflow_running`);取消照旧可以。流程自己结束它照旧。
 2. 流程还在走时可以入席:新域按自己的默认流程接在最后一段之后、收到选站待办;前一段走完停在它门口。
    重排、排进中间、流程结束之后再入席:409 `order_locked`。
+   2026-11-21 用户收窄:只在联审还是 PROPOSED 时入席(与入席视图、文档一致);已开庭(ACTIVE)的联审流程在走也不收,
+   400 `bad_request`(状态机盘点 2026-11-20 #7)。
 (原第 3 条「跨域审判 PASS 时计划已刑满就重开」2026-10-29 删除:原审要等审批流程走完才执行,并入流程的联审
 先于计划结束,那个情形不再出现。)
 
@@ -103,7 +105,7 @@ def test_a_bench_with_no_workflow_concludes_as_before(w):
 
 def test_a_realm_seated_mid_flow_is_appended_last_and_the_flow_stops_at_its_gate(
         w, django_capture_on_commit_callbacks):
-    soul, _case, cj, wf = merged(w, [w.eg])
+    soul, _case, cj, wf = merged(w, [w.eg], convene=False)
     _run_local(w, wf)
     assert _pick(w.eg_judge, wf, 2).status_code == 200
     assert _decide(w.eg_judge, wf).status_code == 200
@@ -113,7 +115,7 @@ def test_a_realm_seated_mid_flow_is_appended_last_and_the_flow_stops_at_its_gate
     assert wf.current_node_id == eg_final.pk  # standing on the last stop of the last segment
 
     with django_capture_on_commit_callbacks(execute=True):
-        _seat(cj, w.eu, 3)  # the bench is ACTIVE: still accepted while the flow runs
+        _seat(cj, w.eu, 3)  # the bench is still PROPOSED: accepted while the flow runs
     appended = _seg(wf, 3)
     assert (appended.tenant_id, appended.state) == (w.eu.pk, SegmentState.AWAITING_PICK)
     assert max(n.node_order for n in _nodes(wf, 2)) < min(n.node_order for n in _nodes(wf, 3))
@@ -126,7 +128,7 @@ def test_a_realm_seated_mid_flow_is_appended_last_and_the_flow_stops_at_its_gate
     wf.refresh_from_db()
     assert (wf.status, wf.current_node_id) == (ApprovalWorkflowStatus.IN_PROGRESS, None)
     assert _seg(wf, 3).gate_reached_at is not None
-    assert _cj(cj).status == JudgmentStatus.ACTIVE
+    assert _cj(cj).status == JudgmentStatus.PROPOSED
     assert all(n.status == "PENDING" for n in _nodes(wf, 3))
 
     _run_realm(w.eu_judge, wf, 3)
@@ -139,13 +141,28 @@ def test_a_realm_seated_mid_flow_is_appended_last_and_the_flow_stops_at_its_gate
 
 
 def test_a_realm_seated_while_the_flow_is_in_the_local_segment_still_waits_its_turn(w):
-    _soul, _case, cj, wf = merged(w, [w.eg])
+    _soul, _case, cj, wf = merged(w, [w.eg], convene=False)
     _seat(cj, w.eu, 3)
     assert [s.order for s in wf.segments.order_by("order")] == [1, 2, 3]
     _run_local(w, wf)
     wf.refresh_from_db()
     assert wf.current_node_id is None and _seg(wf, 2).gate_reached_at is not None  # EG first, then EU
     assert _seg(wf, 3).gate_reached_at is None
+
+
+def test_a_convened_bench_takes_no_new_seat_even_while_the_flow_runs(w):
+    """2026-11-21 (#7): seats only while PROPOSED. The service used to take one on an ACTIVE bench with a running
+    flow, while the API's seat picker and the docs said no; the endpoint answers what the picker answers."""
+    _soul, _case, cj, wf = merged(w, [w.eg])
+    assert _cj(cj).status == JudgmentStatus.ACTIVE and wf.status == ApprovalWorkflowStatus.IN_PROGRESS
+    res = officer_client(w.cn_mod).post(f"{CJ}{cj.pk}/participate/", {
+        "participant_tenant_code": w.eu.code, "role": "CO_JUDGE", "node_order": 3}, format="json")
+    assert res.status_code == 400 and res.data["code"] == "bad_request", res.data
+    picker = officer_client(w.cn_mod).get(f"{CJ}{cj.pk}/seatable-actors/", {"tenant_code": w.eu.code,
+                                                                             "role": "CO_JUDGE"})
+    assert (picker.status_code, picker.data["code"]) == (400, res.data["code"])
+    assert not cj.participants.filter(participant_tenant=w.eu).exists()
+    assert not wf.segments.filter(tenant=w.eu).exists()
 
 
 def test_reordering_or_seating_into_the_middle_is_refused_while_the_flow_runs(w):
