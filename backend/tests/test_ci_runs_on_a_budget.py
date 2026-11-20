@@ -7,6 +7,7 @@
 唯一的例外是 `pr-checks.yml`(用户 2026-11-14 定:接受外部 PR):只在 PR 上跑，只做静态检查和
 一组点名的冒烟测试，只读 token、不碰 secret,用 `pull_request` 而不是 `pull_request_target`。
 """
+import json
 from pathlib import Path
 
 import pytest
@@ -44,8 +45,8 @@ def test_triggers_stay_on_the_budget(name):
 
 
 def test_a_manual_run_does_not_cancel_the_daily_one():
-    """docs/audit/ci-timing-2026-11-20.md §5.3: `ci-${{ github.ref }}` alone put a manual run on main in the
-    daily run's group, and `cancel-in-progress` threw away two ~2-hour daily runs (11-15, 11-16)."""
+    """The CI timing audit (docs/audit/ci-timing-2026-11-20.md §5.3): `ci-${{ github.ref }}` alone put a manual
+    run on main in the daily run's group, and `cancel-in-progress` threw away two ~2-hour daily runs (11-15, 11-16)."""
     data, _ = _load("ci.yml")
     assert "github.event_name" in data["concurrency"]["group"], data["concurrency"]
 
@@ -226,3 +227,21 @@ def test_a_green_main_run_uploads_its_suite_counts_and_only_the_stats_job_may_wr
     # every count the script reads is uploaded by the job that produces it
     artifacts = {(s.get("with") or {}).get("name") for j in data["jobs"].values() for s in j["steps"]}
     assert {"count-backend", "count-web", "count-soul_app", "count-officer_app"} <= artifacts
+
+
+def test_the_e2e_jobs_run_in_playwrights_image_at_the_locked_version():
+    """User decision 2026-11-21 (docs/audit/ci-timing-2026-11-20.md §5.4): the E2E jobs run in Playwright's own
+    image instead of `playwright install --with-deps` (its apt step once took 773 s). The image carries one
+    Playwright's browsers; a different @playwright/test looks for other builds and fails to launch, so the tag
+    has to follow package-lock.json."""
+    lock = json.loads((WORKFLOWS.parents[1] / "package-lock.json").read_text())["packages"]
+    versions = {lock[f"node_modules/{name}"]["version"] for name in ("@playwright/test", "playwright", "playwright-core")}
+    assert len(versions) == 1, versions
+    (version,) = versions
+    data, _ = _load("ci.yml")
+    e2e = [n for n, j in data["jobs"].items() if any("playwright test" in s.get("run", "") for s in j["steps"])]
+    assert {"e2e", "e2e-demo"} <= set(e2e), e2e
+    for name in e2e:
+        job = data["jobs"][name]
+        assert (job.get("container") or {}).get("image") == f"mcr.microsoft.com/playwright:v{version}-noble", name
+        assert not [s for s in job["steps"] if "playwright install" in s.get("run", "")], f"{name} installs browsers again"

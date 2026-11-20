@@ -441,23 +441,26 @@ jobs:
   # `fail-fast: false` because "chromium passes, firefox does not" is the whole
   # reason for having more than one engine — cancelling the others on the first
   # failure would throw away exactly the signal being bought here.
-  # `browser` is what gets installed and is not always `project`: mobile-chrome
-  # is Pixel 5 emulation running on the chromium build, so installing firefox
-  # for it would download a browser it never launches.
+  # The browsers and their system libraries come with Playwright's own image (user decision 2026-11-21,
+  # docs/audit/ci-timing-2026-11-20.md §5.4): `playwright install --with-deps` spent its time in apt, once
+  # 773 s on a slow Ubuntu mirror, against ~2 s for the browser itself. The tag must equal the Playwright
+  # version in package-lock.json (tests/test_ci_runs_on_a_budget.py); bump both together. `--user 1001` is
+  # the runner's uid, so the checkout in the mounted workspace is the container user's own, and Firefox does
+  # not refuse a HOME owned by another user, as it does when run as root.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: frontend
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
     strategy:
       fail-fast: false
       matrix:
         include:
           - project: chromium
-            browser: chromium
           - project: firefox
-            browser: firefox
           - project: mobile-chrome
-            browser: chromium
     name: e2e (${{ matrix.project }})
     env:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
@@ -480,10 +483,6 @@ jobs:
         run: |
           npx -y npm@11 ci
           npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
-      - name: Install Playwright browsers
-        run: |
-          cd frontend
-          npx playwright install --with-deps ${{ matrix.browser }}
       # Built, not `next dev`. `playwright.config.ts`'s `webServer` now runs
       # `npm run start:e2e`, which serves this output — see the long note there
       # for why: the dev server compiles routes on demand, so every
@@ -513,6 +512,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: frontend
+    # As `e2e`: Playwright's image, same tag.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
     env:
       NEXT_PUBLIC_DEMO_MODE: "1"
     steps:
@@ -526,10 +529,6 @@ jobs:
         run: |
           npx -y npm@11 ci
           npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
-      - name: Install Playwright browsers
-        run: |
-          cd frontend
-          npx playwright install --with-deps chromium
       - name: Build the demo
         run: |
           cd frontend
