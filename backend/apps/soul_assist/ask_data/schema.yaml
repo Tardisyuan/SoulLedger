@@ -1,0 +1,319 @@
+# 问数(docs/ARCHITECTURE-ask-data.md)的表与列:唯一来源。读它的有四处 —— 闸门的表白名单(gate.py)、
+# 只读角色的列授权(setup.py,`GRANT SELECT (列…)`)、召回语料与给模型的表结构(schema.py)。四处读同一份,不抄。
+#
+# 形状:
+#   tables.<db_table>:
+#     model         Django 模型(app_label.Model),测试按 `_meta` 核对表名与列(§5 验收)
+#     soft_delete   有 `is_deleted` 列:RLS 策略加 `AND NOT is_deleted`(§4)
+#     description   一段说明(中文业务叫法),进召回与给模型的表结构
+#     columns:      该表**全部**具体列,按模型字段顺序;每列:
+#       type        PostgreSQL 类型(给模型看,不参与授权)
+#       granted     true = 授给只读角色(列级 GRANT SELECT);false = 不授,也不给模型看
+#       label       一行说明
+#       synonyms    业务叫法(召回与评测反查用;可省)
+#       values      枚举值 → 含义(可省)
+#
+# 授权口径:自由文本、姓名与身份信息、联系方式、未公开的草稿、内部记账列(审计人、版本、软删 / 归档的理由)一律不授。
+# `tenant_id` 与 `is_deleted` 授出:策略引用它们,且本殿 / 未删是每一行都相同的值,不泄露任何东西。
+# 外键列(`*_id`)只授 id;它们指向的表不在白名单,问数只能按 id 计数分组,看不到对方的内容。
+version: 1
+tables:
+  judgment_judgment:
+    model: judgment.Judgment
+    soft_delete: true
+    description: >-
+      案件(审判):一个灵魂在一殿的一次审判。判决、是否结案、结案时间、冤情申诉、罪目、所属文明。
+      「结案」= is_final 为真;「结了多少案」按 concluded_at 计时间。同一灵魂每一世(cycle)可有多件案子。
+    columns:
+      - {name: is_deleted, type: boolean, granted: true, label: 已软删(只读角色看不到软删的行,恒为假)}
+      - {name: deleted_at, type: timestamptz, granted: false, label: 软删时间}
+      - {name: deleted_by_id, type: bigint, granted: false, label: 软删的人}
+      - {name: delete_reason, type: varchar, granted: false, label: 软删理由(自由文本)}
+      - {name: delete_cascade_id, type: uuid, granted: false, label: 级联软删批次}
+      - {name: create_user_id, type: bigint, granted: false, label: 建档人}
+      - {name: create_time, type: timestamptz, granted: false, label: 记录创建时间(业务上用 created_at)}
+      - {name: update_user_id, type: bigint, granted: false, label: 最后修改人}
+      - {name: update_time, type: timestamptz, granted: false, label: 最后修改时间}
+      - {name: version, type: integer, granted: false, label: 乐观锁版本}
+      - {name: sort_code, type: integer, granted: false, label: 排序码}
+      - {name: is_archived, type: boolean, granted: false, label: 已归档}
+      - {name: archived_at, type: timestamptz, granted: false, label: 归档时间}
+      - {name: archived_by_id, type: bigint, granted: false, label: 归档人}
+      - {name: archive_reason, type: varchar, granted: false, label: 归档理由(自由文本)}
+      - {name: id, type: uuid, granted: true, label: 案件 id}
+      - {name: case_number, type: varchar, granted: true, label: 案号(人类可读,唯一,不复用), synonyms: [案号, 卷宗号]}
+      - {name: soul_id, type: uuid, granted: true, label: 受审灵魂(souls_soul.id)}
+      - name: civilization
+        type: varchar
+        granted: true
+        label: 所属文明
+        synonyms: [文明, 地府, 冥界]
+        values: {CHINESE: 中国地府, EUROPEAN: 欧洲天堂地狱, EGYPTIAN: 埃及杜阿特, GREEK: 希腊冥界}
+      - {name: judge_id, type: uuid, granted: true, label: 主审判官(官员用户 id)}
+      - {name: court, type: varchar, granted: true, label: 殿名(如「第一殿」), synonyms: [殿, 审判庭]}
+      - {name: realm_id, type: uuid, granted: true, label: 审判所在的界域 id}
+      - {name: evidence_json, type: jsonb, granted: false, label: 证据(结构化原文)}
+      - {name: confession, type: text, granted: false, label: 供述(自由文本)}
+      - {name: summary, type: text, granted: false, label: 案情摘要(自由文本)}
+      - name: judgment_method
+        type: varchar
+        granted: true
+        label: 审判方式
+        values: {STANDARD: 常规审判(中国 / 欧洲 / 希腊), HEART_WEIGHING: 称心(埃及), DIABOLICAL_TRIAL: 魔鬼审判(欧洲地狱)}
+      - name: verdict
+        type: varchar
+        granted: true
+        label: 判决(结案前可为空)
+        synonyms: [判决, 判了什么, 结果]
+        values: {PASSED: 通过 / 得救, FAILED: 不过 / 定罪, PURGATORY: 炼狱 / 中间状态, RETRY: 重审 / 再议}
+      - {name: notes, type: text, granted: false, label: 判官备注(自由文本)}
+      - {name: is_final, type: boolean, granted: true, label: 已结案, synonyms: [结案, 已结, 结了, 定案]}
+      - {name: untimely, type: boolean, granted: true, label: 横死(早于命定死期而死,先在枉死城候审), synonyms: [横死, 枉死]}
+      - {name: held_until, type: date, granted: true, label: 横死者候审到这一天(之前不能认领)}
+      - name: wrongful_death_cause
+        type: varchar
+        granted: true
+        label: 冤死原因(空 = 不涉及)
+        values: {ACCIDENT: 意外身亡, VICTIM: 刑事被害, SUICIDE: 自杀, WAR: 战争死亡, OTHER: 其他}
+      - name: grievance_level
+        type: varchar
+        granted: true
+        label: 冤情轻重
+        synonyms: [冤情]
+        values: {NONE: 无冤情, MINOR: 轻, MAJOR: 重, SEVERE: 极重}
+      - name: grievance_status
+        type: varchar
+        granted: true
+        label: 冤魂申诉状态(空 = 没申诉;FILED = 已申诉、还没判)
+        synonyms: [申诉, 冤魂申诉, 喊冤, 没判的申诉]
+        values: {FILED: 已申诉(待判), UPHELD: 属实 · 提前释放, UPHELD_LATE: 属实 · 期满出城, DELIVERED: 属实 · 超度, REJECTED: 不属实}
+      - {name: grievance_plea, type: text, granted: false, label: 申诉陈词(自由文本)}
+      - {name: grievance_note, type: text, granted: false, label: 申诉裁定说明(自由文本)}
+      - {name: grievance_decided_at, type: timestamptz, granted: true, label: 申诉裁定时间}
+      - {name: grievance_filed_at, type: timestamptz, granted: true, label: 申诉提出时间}
+      - name: offence
+        type: varchar
+        granted: true
+        label: 罪目(地府;空 = 没填)
+        synonyms: [罪名, 罪目]
+        values: {ABDUCTION: 拐骗少年男女, SEIZING_PROPERTY: 欺占他人财物, MAIMING: 损坏人耳目手足, DEFYING_ELDERS: 忤逆尊长, INCITING_LITIGATION: 教唆兴讼, BETRAYING_TRUST: 背恩失节, WITHHOLDING_DUES: 抗粮赖租, TRADE_FRAUD: 交易欺诈, RESENTMENT: 怨怼, INGRATITUDE: 忘恩, ENVY: 嫉妒, MISERLINESS: 悭吝, CURSING_HEAVEN: 怨天尤地, SACRILEGE: 亵渎神佛, DISRESPECTING_SCRIPT: 不敬字纸经书, BONES_FOR_MEDICINE: 取骸合药, SEPARATING_KIN: 离散骨肉, NEGLECTING_PARENTS: 亲存不养, UNBURIED_PARENTS: 亲殁不葬, MURDER: 杀人, ARSON: 放火, POISONING: 制毒, FIVE_HEINOUS: 五逆}
+      - name: duat_stage
+        type: varchar
+        granted: true
+        label: 杜阿特旅程阶段(埃及;空 = 不涉及)
+        values: {EMBALMING: 木乃伊制作中, EARLY_DEATH: 早夭 · 直入芦苇原, NAMELESS: 无名者 · 不入冥界, IMPROPER_BURIAL: 葬仪不当 · 旅程未竟}
+      - {name: created_at, type: timestamptz, granted: true, label: 立案时间, synonyms: [立案, 收案, 新案]}
+      - {name: concluded_at, type: timestamptz, granted: true, label: 结案时间, synonyms: [结案时间, 什么时候结的]}
+      - {name: concluded_balance, type: integer, granted: true, label: 结案时的功过余额(功 − 过;旧案可为空), synonyms: [功过, 余额]}
+      - name: weighing_result
+        type: varchar
+        granted: true
+        label: 称心结果(埃及;非称心为空)
+        values: {LIGHTER: 未重于羽, HEAVIER: 重于羽, WAVERING: 天平摇摆 · 再称}
+      - {name: heart_weight, type: integer, granted: true, label: 心重(埃及称心;非称心为空)}
+      - {name: retrial_of_id, type: uuid, granted: true, label: 再称时指回的原案 id}
+      - {name: fail_reasons, type: jsonb, granted: true, label: 「不过」的理由代码列表(只在 FAILED 时有值;代码不是自由文本)}
+      - {name: fail_reason_note, type: varchar, granted: false, label: 「其他」理由的一句话(自由文本)}
+      - {name: greek_account, type: varchar, granted: true, label: 希腊审判依据, values: {GORGIAS: 《高尔吉亚》, REPUBLIC: 《理想国》}}
+      - {name: greek_curability, type: varchar, granted: true, label: 希腊可医与否, values: {CURABLE: 可医, INCURABLE: 不可医}}
+      - {name: concluded_tz, type: varchar, granted: false, label: 结案时的时区}
+      - {name: claimable_since, type: timestamptz, granted: false, label: 可认领起始时间(内部排队)}
+      - {name: deferred_total, type: interval, granted: false, label: 累计暂缓时长(内部排队)}
+      - {name: tenant_id, type: bigint, granted: true, label: 所属殿(RLS 已限定为本殿)}
+      - {name: owner_org_id, type: bigint, granted: false, label: 所属机构}
+      - {name: cycle, type: integer, granted: true, label: 第几世, synonyms: [第几世, 世]}
+      - name: kind
+        type: varchar
+        granted: true
+        label: 案件类型
+        values: {ORIGINAL: 原审判, AMENDMENT: 加项 / 减项审判, REOPEN: 重开审判}
+      - {name: amends_plan_id, type: uuid, granted: false, label: 加减项审判改的受刑计划}
+      - {name: draft_verdict, type: varchar, granted: false, label: 判决草稿(未公开)}
+      - {name: draft_saved_at, type: timestamptz, granted: false, label: 草稿保存时间}
+      - {name: draft_version, type: integer, granted: false, label: 草稿版本}
+      - {name: draft_destination_realm_id, type: uuid, granted: false, label: 草稿去向界域}
+      - {name: draft_term_years, type: integer, granted: false, label: 草稿刑期}
+      - {name: draft_eternal, type: boolean, granted: false, label: 草稿永久刑}
+      - {name: claimed_by_id, type: bigint, granted: true, label: 认领的判官(官员用户 id)}
+      - {name: claimed_at, type: timestamptz, granted: true, label: 认领时间, synonyms: [认领]}
+      - {name: deferred_at, type: timestamptz, granted: true, label: 暂缓时间(空 = 没暂缓), synonyms: [暂缓]}
+      - {name: deferred_by_id, type: bigint, granted: false, label: 暂缓的人}
+      - {name: defer_reason, type: varchar, granted: false, label: 暂缓理由(自由文本)}
+      - {name: reassign_requested_at, type: timestamptz, granted: false, label: 申请改派时间}
+      - {name: reassign_requested_by_id, type: bigint, granted: false, label: 申请改派的人}
+      - {name: reassign_reason, type: varchar, granted: false, label: 改派理由(自由文本)}
+      - {name: stale_since, type: timestamptz, granted: true, label: 30 天无进展起(空 = 不算积压), synonyms: [积压, 搁置, 久拖]}
+      - {name: concluded_by_id, type: bigint, granted: true, label: 结案的判官(官员用户 id)}
+      - {name: city_god_id, type: uuid, granted: false, label: 初审城隍}
+      - name: city_god_status
+        type: varchar
+        granted: true
+        label: 城隍初审状态(空 = 不经城隍)
+        values: {PENDING: 待初审, RETURNED: 退回补正, SENT_ON: 已解送}
+      - {name: city_god_note, type: text, granted: false, label: 城隍初审意见(自由文本)}
+      - {name: sent_on_at, type: timestamptz, granted: true, label: 城隍解送时间}
+      - {name: sent_on_by_id, type: bigint, granted: false, label: 解送的人}
+
+  souls_soul:
+    model: souls.Soul
+    soft_delete: true
+    description: >-
+      灵魂:状态、生卒年、出身与功过分。本表没有「文明」列:文明看本殿,或 JOIN judgment_judgment.civilization。
+      姓名、编号、联系方式、籍贯与生平文字不授权,只能计数和按状态 / 年份 / 功过分组。
+    columns:
+      - {name: is_deleted, type: boolean, granted: true, label: 已软删(只读角色看不到软删的行,恒为假)}
+      - {name: deleted_at, type: timestamptz, granted: false, label: 软删时间}
+      - {name: deleted_by_id, type: bigint, granted: false, label: 软删的人}
+      - {name: delete_reason, type: varchar, granted: false, label: 软删理由(自由文本)}
+      - {name: delete_cascade_id, type: uuid, granted: false, label: 级联软删批次}
+      - {name: create_user_id, type: bigint, granted: false, label: 建档人}
+      - {name: create_time, type: timestamptz, granted: true, label: 建档时间, synonyms: [建档, 登记, 入册]}
+      - {name: update_user_id, type: bigint, granted: false, label: 最后修改人}
+      - {name: update_time, type: timestamptz, granted: false, label: 最后修改时间}
+      - {name: version, type: integer, granted: false, label: 乐观锁版本}
+      - {name: sort_code, type: integer, granted: false, label: 排序码}
+      - {name: is_archived, type: boolean, granted: false, label: 已归档}
+      - {name: archived_at, type: timestamptz, granted: false, label: 归档时间}
+      - {name: archived_by_id, type: bigint, granted: false, label: 归档人}
+      - {name: archive_reason, type: varchar, granted: false, label: 归档理由(自由文本)}
+      - {name: id, type: uuid, granted: true, label: 灵魂 id}
+      - {name: name, type: varchar, granted: false, label: 姓名(身份信息)}
+      - name: current_state
+        type: varchar
+        granted: true
+        label: 当前状态
+        synonyms: [状态, 在世, 受审中, 服刑, 转世, 失踪]
+        values: {ALIVE: 在世, JUDGING: 受审中, DISPOSED: 已发落, REINCARNATING: 转世中, SETTLED: 终局安置, LOST: 失踪 / 挂起}
+      - {name: birth_year, type: integer, granted: true, label: 出生年, synonyms: [出生年份]}
+      - {name: birth_month, type: smallint, granted: false, label: 出生月(与年日合成生日,身份信息)}
+      - {name: birth_day, type: smallint, granted: false, label: 出生日(身份信息)}
+      - {name: death_year, type: integer, granted: true, label: 死亡年, synonyms: [死亡年份, 哪年死的, 亡故]}
+      - {name: death_month, type: smallint, granted: true, label: 死亡月}
+      - {name: death_day, type: smallint, granted: true, label: 死亡日}
+      - {name: fated_death_year, type: integer, granted: false, label: 命定死年(生死簿)}
+      - {name: fated_death_month, type: smallint, granted: false, label: 命定死月}
+      - {name: fated_death_day, type: smallint, granted: false, label: 命定死日}
+      - {name: origin_location, type: varchar, granted: false, label: 籍贯(自由文本,身份信息)}
+      - {name: death_location, type: varchar, granted: false, label: 死亡地点(自由文本)}
+      - {name: origin_region, type: varchar, granted: true, label: 出身地区, values: {EUROPE: 欧洲, ASIA: 亚洲}}
+      - name: duat_passage
+        type: varchar
+        granted: true
+        label: 杜阿特过境情形(埃及;空 = 不涉及)
+        values: {EARLY_DEATH: 婴儿或早夭, NAMELESS: 无名者, IMPROPER_BURIAL: 葬仪不当}
+      - name: ferry_passage
+        type: varchar
+        granted: true
+        label: 冥河渡口情形(希腊;空 = 正常渡河)
+        values: {UNBURIED: 未葬, NO_FARE: 无渡资}
+      - name: diyu_station
+        type: varchar
+        granted: true
+        label: 地府行程所在站(中国)
+        values: {TUDI_TEMPLE: 土地庙, YELLOW_SPRINGS_ROAD: 黄泉路, WANGXIANG_TERRACE: 望乡台, EVIL_DOG_VILLAGE: 恶狗岭, GOLDEN_ROOSTER_HILL: 金鸡山, WILD_GHOST_VILLAGE: 野鬼村, MIHUN_HALL: 迷魂殿, OFFERING_PAVILION: 供养阁, GHOST_FORT: 鬼界堡, FENGDU_CITY: 酆都城, EIGHTEEN_HELLS: 十八层地狱, LOTUS_TERRACE: 莲花台, HUANHUN_CLIFF: 还魂崖}
+      - name: birth_continent
+        type: varchar
+        granted: true
+        label: 出生部洲(中国)
+        values: {DONGSHENG: 东胜神洲, NANZHAN: 南瞻部洲, XINIU: 西牛贺洲, BEIJULU: 北俱卢洲}
+      - {name: birth_name, type: varchar, granted: false, label: 本名(身份信息)}
+      - {name: description, type: text, granted: false, label: 生平(自由文本)}
+      - name: baptism
+        type: varchar
+        granted: true
+        label: 受洗情况(欧洲)
+        values: {UNRECORDED: 未记录, BAPTISED: 已受洗, UNBAPTISED: 未受洗, BEFORE_CHRIST: 生于基督之前}
+      - {name: denied_immortality, type: boolean, granted: true, label: 否认灵魂不朽(欧洲,但丁第六圈)}
+      - {name: neutral_in_life, type: boolean, granted: true, label: 生前骑墙(欧洲,地狱前庭)}
+      - {name: merit_score, type: integer, granted: true, label: 功分, synonyms: [功, 功德, 善]}
+      - {name: demerit_score, type: integer, granted: true, label: 过分, synonyms: [过, 罪孽, 恶]}
+      - {name: needs_ledger_recalculation, type: boolean, granted: false, label: 待重算功过(内部)}
+      - {name: inherited_merit, type: integer, granted: true, label: 承自前世的功}
+      - {name: inherited_demerit, type: integer, granted: true, label: 承自前世的过}
+      - {name: soup_taken_at, type: timestamptz, granted: true, label: 本世饮孟婆汤的时间(地府), synonyms: [孟婆汤, 喝汤]}
+      - {name: tenant_id, type: bigint, granted: true, label: 当前所在殿(RLS 已限定为本殿)}
+      - {name: owner_org_id, type: bigint, granted: false, label: 所属机构}
+      - {name: home_tenant_id, type: bigint, granted: true, label: 本籍殿}
+      - {name: soul_code, type: varchar, granted: false, label: 灵魂编号(登录名,身份信息)}
+      - {name: contact_email, type: varchar, granted: false, label: 联系邮箱(身份信息)}
+      - {name: contact_phone, type: varchar, granted: false, label: 联系电话(身份信息)}
+      - {name: import_batch, type: uuid, granted: false, label: 导入批次}
+
+  disposition_disposition:
+    model: disposition.Disposition
+    soft_delete: true
+    description: >-
+      去向 / 处置:结案后灵魂被发落到哪个界域、刑期多少年、是否永久、是否已执行、何时期满。
+      一件案子至多一条(judgment_id);「发落」「服刑」「刑满」都看这张表。
+    columns:
+      - {name: is_deleted, type: boolean, granted: true, label: 已软删(只读角色看不到软删的行,恒为假)}
+      - {name: deleted_at, type: timestamptz, granted: false, label: 软删时间}
+      - {name: deleted_by_id, type: bigint, granted: false, label: 软删的人}
+      - {name: delete_reason, type: varchar, granted: false, label: 软删理由(自由文本)}
+      - {name: delete_cascade_id, type: uuid, granted: false, label: 级联软删批次}
+      - {name: create_user_id, type: bigint, granted: false, label: 建档人}
+      - {name: create_time, type: timestamptz, granted: false, label: 记录创建时间(业务上用 created_at)}
+      - {name: update_user_id, type: bigint, granted: false, label: 最后修改人}
+      - {name: update_time, type: timestamptz, granted: false, label: 最后修改时间}
+      - {name: version, type: integer, granted: false, label: 乐观锁版本}
+      - {name: sort_code, type: integer, granted: false, label: 排序码}
+      - {name: is_archived, type: boolean, granted: false, label: 已归档}
+      - {name: archived_at, type: timestamptz, granted: false, label: 归档时间}
+      - {name: archived_by_id, type: bigint, granted: false, label: 归档人}
+      - {name: archive_reason, type: varchar, granted: false, label: 归档理由(自由文本)}
+      - {name: id, type: uuid, granted: true, label: 处置 id}
+      - {name: soul_id, type: uuid, granted: true, label: 灵魂(souls_soul.id)}
+      - {name: judgment_id, type: uuid, granted: true, label: 来源案件(judgment_judgment.id,一对一)}
+      - {name: destination_realm_id, type: uuid, granted: true, label: 发落去的界域 id, synonyms: [去向, 发往, 哪一层]}
+      - name: memory_reset
+        type: varchar
+        granted: true
+        label: 抹去记忆的方式
+        values: {MENGPO: 孟婆汤, LETHE: 忘川, SPELL: 咒语, NONE: 不抹去}
+      - {name: is_eternal, type: boolean, granted: true, label: 永久刑, synonyms: [永久, 永世不得超生]}
+      - {name: sentence_years, type: integer, granted: true, label: 刑期(年;永久刑为空), synonyms: [刑期, 判了几年]}
+      - {name: term_start_year, type: integer, granted: true, label: 刑期起算年}
+      - {name: term_start_month, type: smallint, granted: true, label: 刑期起算月}
+      - {name: term_start_day, type: smallint, granted: true, label: 刑期起算日}
+      - {name: is_executed, type: boolean, granted: true, label: 已执行(已发落入刑), synonyms: [执行, 已发落]}
+      - {name: executed_at, type: timestamptz, granted: true, label: 执行时间}
+      - {name: expired_at, type: timestamptz, granted: true, label: 刑满时间(空 = 未满), synonyms: [刑满, 期满, 出狱]}
+      - {name: lost_since, type: timestamptz, granted: true, label: 失踪起(空 = 未失踪;失踪期间刑期不走)}
+      - {name: lost_days, type: integer, granted: true, label: 累计失踪天数}
+      - {name: notes, type: text, granted: false, label: 备注(自由文本)}
+      - {name: created_at, type: timestamptz, granted: true, label: 处置建立时间}
+      - {name: tenant_id, type: bigint, granted: true, label: 所属殿(RLS 已限定为本殿)}
+      - {name: cycle, type: integer, granted: true, label: 第几世}
+      - {name: sentence_node_id, type: uuid, granted: true, label: 对应受刑计划里的节点 id}
+
+  sentence_plan_sentenceplan:
+    model: sentence_plan.SentencePlan
+    soft_delete: true
+    description: >-
+      受刑计划:一个灵魂这一世结案后的整段受刑安排(可跨多殿,节点表不在白名单)。状态、来源案件、完成时间。
+    columns:
+      - {name: is_deleted, type: boolean, granted: true, label: 已软删(只读角色看不到软删的行,恒为假)}
+      - {name: deleted_at, type: timestamptz, granted: false, label: 软删时间}
+      - {name: deleted_by_id, type: bigint, granted: false, label: 软删的人}
+      - {name: delete_reason, type: varchar, granted: false, label: 软删理由(自由文本)}
+      - {name: delete_cascade_id, type: uuid, granted: false, label: 级联软删批次}
+      - {name: create_user_id, type: bigint, granted: false, label: 建档人}
+      - {name: create_time, type: timestamptz, granted: true, label: 计划建立时间, synonyms: [建立, 生成]}
+      - {name: update_user_id, type: bigint, granted: false, label: 最后修改人}
+      - {name: update_time, type: timestamptz, granted: false, label: 最后修改时间}
+      - {name: version, type: integer, granted: false, label: 乐观锁版本}
+      - {name: sort_code, type: integer, granted: false, label: 排序码}
+      - {name: id, type: uuid, granted: true, label: 计划 id}
+      - {name: soul_id, type: uuid, granted: true, label: 灵魂(souls_soul.id)}
+      - {name: tenant_id, type: bigint, granted: true, label: 所属殿(RLS 已限定为本殿)}
+      - {name: cycle, type: integer, granted: true, label: 第几世}
+      - name: status
+        type: varchar
+        granted: true
+        label: 计划状态
+        synonyms: [受刑计划, 执行中, 完成]
+        values: {ACTIVE: 执行中, RETRIAL: 重审中, HELD: 永久刑期挂起, COMPLETED: 已完成, CANCELLED: 已撤销}
+      - {name: origin_judgment_id, type: uuid, granted: true, label: 生成它的结案审判(judgment_judgment.id,无外键)}
+      - {name: cross_judgment_id, type: uuid, granted: true, label: 联审 id(单文明审判为空)}
+      - {name: completed_at, type: timestamptz, granted: true, label: 完成时间}
+      - {name: cancel_reason, type: text, granted: false, label: 撤销理由(自由文本)}
