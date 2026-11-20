@@ -76,13 +76,14 @@ def _tell_previous_owner(previous_user_id, was_active, device, user):
     旧主人还在用这部设备(登记有效)且账号没停用时,提交后再给他一条站内通知「你的推送设备已被另一个账号登记」。
     官员端的站内通知是 `UserNotification`(本模块文件头),走 `SYSTEM` + `params["kind"]`,文案在
     `apps/notifications/messages.py`。同一位官员重复登记走不到这里。"""
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.authentication.models import User
 
     previous = User.objects.select_related("tenant").filter(pk=previous_user_id).first()
     if previous is None:
         return
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=previous.tenant, user=user, action=AuditAction.UPDATE,
         resource="officer_push_device", resource_id=str(device.pk),
         description=f"推送设备被另一个账号登记({previous.username} → {user.username})"[:500],

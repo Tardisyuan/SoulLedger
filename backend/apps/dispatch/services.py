@@ -771,9 +771,10 @@ class DispatchService:
 
     @staticmethod
     def audit_return(locked, record, residence, home, actor, trigger, reason):
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=home,
             user=actor if getattr(actor, "is_authenticated", False) else None,
             action=AuditAction.UPDATE,

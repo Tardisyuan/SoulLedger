@@ -450,7 +450,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         Same template resolution, nodes and events as `create_from_judgment`; `judgment` is optional.
         """
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
         from apps.judgment.models import Judgment
         from apps.souls.models import Soul
 
@@ -509,7 +510,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     skip_node_orders=data.get("skip_node_orders") or (), picked_by=request.user,
                     manually_started=True,
                 )
-                AuditLog.objects.create(
+                write_audit_row(
                     tenant=tenant,
                     user=request.user if request.user.is_authenticated else None,
                     action=AuditAction.CREATE,
@@ -587,9 +588,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if not advanced:
             return problem(status.HTTP_400_BAD_REQUEST, "no_successor",
                            "No next node available or workflow already completed")
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=getattr(workflow, "tenant", None),
             user=request.user if request.user.is_authenticated else None,
             action=AuditAction.EXECUTE,
@@ -647,9 +649,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if not escalated:
             return problem(status.HTTP_400_BAD_REQUEST, "no_pending_node", "No pending node to escalate past")
 
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=getattr(workflow, "tenant", None),
             user=request.user if request.user.is_authenticated else None,
             action=AuditAction.EXECUTE,
@@ -685,13 +688,14 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return problem(status.HTTP_400_BAD_REQUEST, "reason_required", "结束流程必须说明理由")
         from django.db import transaction
 
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
         node = workflow.current_node
         with transaction.atomic():
             if not WorkflowService.terminate(workflow, user=request.user, reason=reason):
                 return problem(status.HTTP_409_CONFLICT, "workflow_finished", "This workflow has already ended")
-            AuditLog.objects.create(
+            write_audit_row(
                 tenant=getattr(workflow, "tenant", None),
                 user=request.user,
                 action=AuditAction.EXECUTE,

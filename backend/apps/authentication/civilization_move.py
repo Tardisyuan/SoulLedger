@@ -138,8 +138,8 @@ def civilization_of(user):
 
 def migrate(user, *, civilization, hall=None, organization=None, reason, actor, request=None):
     """Move `user` to `civilization`. Raises `MoveRefusedError` naming the condition that failed; returns the audit row."""
-    from apps.audit.models import AuditAction, AuditLog
-    from apps.audit.signals import explicit_audit_for
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import explicit_audit_for, write_audit_row
     from apps.core.client_ip import get_client_ip
     from apps.core.tenant import is_tenant_exempt
     from apps.events.realtime import close_user_sockets
@@ -200,7 +200,7 @@ def migrate(user, *, civilization, hall=None, organization=None, reason, actor, 
         close_user_sockets(user.pk)
         new = {"civilization": civilization, "tenant": hall.code if hall is not None else None,
                "organization": user.organization_id}
-        return AuditLog.objects.create(
+        return write_audit_row(
             tenant=hall, user=actor, action=AuditAction.UPDATE, resource="user", resource_id=str(user.pk),
             description=f"civilization moved {before} -> {civilization}: {reason}"[:500],
             changes={k: [old[k], new[k]] for k in old if old[k] != new[k]} | {"reason": reason},

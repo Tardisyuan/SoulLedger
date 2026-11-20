@@ -405,10 +405,10 @@ def redact_url(url):
 
 
 def audit(user, description, changes, request=None, resource_id="config"):
-    from apps.audit.models import AuditLog
+    from apps.audit.signals import write_audit_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=None, user=user, action="UPDATE", resource=AUDIT_RESOURCE, resource_id=resource_id,
         description=description[:500], changes=changes,
         ip_address=get_client_ip(request) if request is not None else None,

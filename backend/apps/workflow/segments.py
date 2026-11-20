@@ -513,9 +513,10 @@ def _name(user):
 
 
 def _audit(tenant_id, user, resource, workflow, description, changes):
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant_id=tenant_id, user=user if getattr(user, "is_authenticated", False) else None,
         action=AuditAction.UPDATE, resource=resource, resource_id=str(workflow.pk),
         description=description[:500], changes=changes,

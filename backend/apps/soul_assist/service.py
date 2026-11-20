@@ -435,10 +435,10 @@ def _delete(owner, user, tenant, conversation_id, description, request):
 
 def _audit(user, tenant, conversation, action, description, request, changes):
     """**不存原文**:原文只在 AssistMessage 里、30 天(§4.6)。"""
-    from apps.audit.models import AuditLog
+    from apps.audit.signals import write_audit_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=tenant, user=user, action=action, resource="assistant",
         resource_id=str(conversation.pk), description=description, changes=changes,
         ip_address=get_client_ip(request) if request is not None else None,

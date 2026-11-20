@@ -152,7 +152,8 @@ class CosignView(OfficerAppBaseView):
                    responses={201: CosignerSerializer, 400: CosignRefusalSerializer,
                               403: CosignRefusalSerializer, 404: None})
     def post(self, request, kind, item_id):
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
         from apps.events.services import EventService
         from apps.workflow import cosign
         from apps.workflow.models import ApprovalNode
@@ -171,7 +172,7 @@ class CosignView(OfficerAppBaseView):
                     raise cosign.CosignRefusedError(cosign.NOT_ELIGIBLE, "unknown user")
                 entry = cosign.add(node, request.user, candidate)
                 node.save(update_fields=["cosigners_json"])
-                AuditLog.objects.create(
+                write_audit_row(
                     tenant=workflow.tenant, user=request.user, action=AuditAction.EXECUTE,
                     resource="workflow.cosign", resource_id=str(workflow.id),
                     description=f"加签:{node.node_name} — {entry['user_name']}"[:500],
@@ -205,7 +206,8 @@ class CosignRemoveView(OfficerAppBaseView):
     @extend_schema(operation_id="officer_app_cosign_remove", request=None,
                    responses={204: None, 403: CosignRefusalSerializer, 404: CosignRefusalSerializer})
     def delete(self, request, kind, item_id, user_id):
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
         from apps.workflow import cosign
         from apps.workflow.models import ApprovalNode
 
@@ -218,7 +220,7 @@ class CosignRemoveView(OfficerAppBaseView):
                 node = ApprovalNode.objects.select_for_update().get(pk=workflow.current_node_id)
                 entry = cosign.remove(node, request.user, user_id)
                 node.save(update_fields=["cosigners_json"])
-                AuditLog.objects.create(
+                write_audit_row(
                     tenant=workflow.tenant, user=request.user, action=AuditAction.EXECUTE,
                     resource="workflow.cosign_remove", resource_id=str(workflow.id),
                     description=f"撤销加签:{node.node_name} — {entry.get('user_name', '')}"[:500],

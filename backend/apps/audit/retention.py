@@ -58,6 +58,7 @@ def purge_in_batches(queryset, batch_size: int) -> int:
 def prune_logs(tenant=None, *, now=None, batch_size: int = BATCH_SIZE) -> dict:
     """Prune one tenant's rows (`tenant=None`: the rows that have no tenant)."""
     from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.signals import write_audit_row
     from apps.authentication.models import LoginLog
 
     now = now or timezone.now()
@@ -88,7 +89,7 @@ def prune_logs(tenant=None, *, now=None, batch_size: int = BATCH_SIZE) -> dict:
 
     logger.info("audit retention: %s", result)
     if result["audit_deleted"] or result["login_deleted"]:
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=tenant,
             action=AuditAction.DELETE,
             resource="audit_retention",

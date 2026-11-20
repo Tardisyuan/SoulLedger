@@ -1341,7 +1341,8 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
     @idempotent
     def add_comment(self, request, pk=None):
         """Leave a comment. `POST /api/v1/judgment/{id}/comments/` `{"body": "..."}` (1..2000 chars)."""
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
         judgment = self.get_object()
         serializer = JudgmentCommentSerializer(data=request.data)
@@ -1350,7 +1351,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             judgment=judgment, author=request.user, tenant_id=judgment.tenant_id,
             body=serializer.validated_data["body"],
         )
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=judgment.tenant, user=request.user, action=AuditAction.CREATE,
             resource="judgment.comment", resource_id=str(judgment.id),
             description=f"评议:{judgment.case_number}"[:500],

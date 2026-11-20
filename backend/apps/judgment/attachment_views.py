@@ -102,7 +102,8 @@ class CaseAttachmentActionsMixin:
     )
     @attachments.mapping.post
     def add_attachment(self, request, pk=None):
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
         judgment = self.get_object()
         claims.assert_may_edit(judgment, request, "attachment")
@@ -113,7 +114,7 @@ class CaseAttachmentActionsMixin:
             row = svc.upload(request.user, judgment, uploaded)
         except svc.AttachmentError as exc:
             return _refused(exc)
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=judgment.tenant, user=request.user, action=AuditAction.CREATE,
             resource="judgment.attachment", resource_id=str(judgment.id),
             description=f"上传附件:{judgment.case_number} {row.name}"[:500],
@@ -129,7 +130,8 @@ class CaseAttachmentActionsMixin:
     @action(detail=True, methods=["delete"], url_path=r"attachments/(?P<attachment_id>[0-9a-fA-F-]{36})",
             pagination_class=None)
     def delete_attachment(self, request, pk=None, attachment_id=None):
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
         judgment = self.get_object()
         row = self._attachment(judgment, attachment_id)
@@ -137,7 +139,7 @@ class CaseAttachmentActionsMixin:
             svc.delete(request.user, row)
         except svc.AttachmentError as exc:
             return _refused(exc)
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=judgment.tenant, user=request.user, action=AuditAction.DELETE,
             resource="judgment.attachment", resource_id=str(judgment.id),
             description=f"删除附件:{judgment.case_number} {row.name}"[:500],

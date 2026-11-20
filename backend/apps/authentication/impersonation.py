@@ -33,7 +33,8 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.tokens import AccessToken
 
-from apps.audit.models import AuditAction, AuditLog
+from apps.audit.models import AuditAction
+from apps.audit.signals import write_audit_row
 from apps.authentication.impersonation_models import Impersonation
 from apps.authentication.signin_sessions import SID_CLAIM, is_revoked
 from apps.core.client_ip import get_client_ip
@@ -194,7 +195,7 @@ def _name(user):
 def _audit(record, action, request, *, description, changes):
     actor = record.actor
     resource, resource_id = ("tenant", record.hall.code) if record.hall_id else ("user", str(record.target_id))
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=record.hall if record.hall_id else actor.tenant, user=actor, action=action,
         resource=resource, resource_id=resource_id,
         description=description[:500], changes=changes,

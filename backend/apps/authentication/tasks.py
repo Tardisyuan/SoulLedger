@@ -102,6 +102,7 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     from django.contrib.auth import get_user_model
 
     from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.signals import write_audit_row
     from apps.notifications.messages import DEFAULT_LOCALE, render
     from apps.notifications.models import NotificationType, notify_user
 
@@ -170,7 +171,7 @@ def notify_password_help(username, ip_address=None, user_agent=""):
             params=params,
         )
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=user.tenant,
         user=None,  # nobody is signed in; the account is the subject, not the actor
         action=AuditAction.EXECUTE,

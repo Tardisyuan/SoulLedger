@@ -41,10 +41,10 @@ logger = logging.getLogger(__name__)
 
 
 def _audit(request, action_name, *, resource_id, description, changes=None, tenant=None):
-    from apps.audit.models import AuditLog
+    from apps.audit.signals import write_audit_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=tenant if tenant is not None else getattr(request, "tenant", None),
         user=request.user,
         action=action_name,

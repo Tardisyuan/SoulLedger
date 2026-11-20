@@ -23,7 +23,8 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
-from apps.audit.models import AuditAction, AuditLog
+from apps.audit.models import AuditAction
+from apps.audit.signals import write_audit_row
 from apps.core.client_ip import get_client_ip
 
 from .mail import fill, send_neutral_mail
@@ -164,7 +165,7 @@ def _link(path: str, user, generator) -> str:
 
 
 def _audit(user, description, *, request=None, changes=None, ip=None, ua=""):
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=user.tenant, user=user, action=AuditAction.EXECUTE, resource="auth", resource_id=str(user.pk),
         description=description[:500], changes=changes,
         ip_address=get_client_ip(request) if request is not None else ip,
