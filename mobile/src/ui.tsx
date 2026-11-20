@@ -243,9 +243,10 @@ export function useToplineRuns(): number {
 export function FadeModal({
   visible,
   closeTo,
+  closeFrom,
   children,
   ...rest
-}: Omit<ModalProps, "animationType" | "transparent"> & { visible: boolean; closeTo?: () => string | null }) {
+}: Omit<ModalProps, "animationType" | "transparent"> & { visible: boolean; closeTo?: () => string | null; closeFrom?: () => Rect | null }) {
   const { dialogIn, dialogOut } = useReducedMotionDurations();
   const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
@@ -258,8 +259,10 @@ export function FadeModal({
   const [held, setHeld] = useState<ReactNode>(children);
   if (visible && held !== children) setHeld(children);
   const closeToRef = useRef(closeTo);
+  const closeFromRef = useRef(closeFrom);
   useEffect(() => {
     closeToRef.current = closeTo;
+    closeFromRef.current = closeFrom;
   });
   useEffect(() => {
     if (!mounted) return;
@@ -289,7 +292,7 @@ export function FadeModal({
     node?.measureInWindow((x, y, width, height) => {
       thumb = { x, y, width, height };
     });
-    play(thumb ? photoShrinkTo(thumb, Dimensions.get("window")) : null, motion.photoClose);
+    play(thumb ? photoShrinkTo(thumb, Dimensions.get("window"), closeFromRef.current?.()) : null, motion.photoClose);
     return () => run?.stop();
   }, [visible, mounted, opacity, shrink, dialogIn, dialogOut, reduced]);
   const transform = onto
@@ -314,25 +317,69 @@ export type PhotoShrink = { dx: number; dy: number; scale: number };
  * 第六十批 P6: the move that lays a full-window layer onto `thumb` (window coordinates), or null -- fade in place --
  * when the thumbnail is not on screen at all (scrolled away) or has no size (gone).
  */
-export function photoShrinkTo(thumb: Rect, window: { width: number; height: number }): PhotoShrink | null {
+export function photoShrinkTo(thumb: Rect, window: { width: number; height: number }, from?: Rect | null): PhotoShrink | null {
   if (!(thumb.width > 0 && thumb.height > 0 && window.width > 0 && window.height > 0)) return null;
   const off = thumb.x + thumb.width <= 0 || thumb.y + thumb.height <= 0 || thumb.x >= window.width || thumb.y >= window.height;
   if (off) return null;
-  return {
-    dx: thumb.x + thumb.width / 2 - window.width / 2,
-    dy: thumb.y + thumb.height / 2 - window.height / 2,
-    scale: Math.max(thumb.width / window.width, thumb.height / window.height),
-  };
+  const cx = window.width / 2;
+  const cy = window.height / 2;
+  if (from && from.width > 0 && from.height > 0) {
+    // The photo itself, not the window, lands on the tile, fitted inside it. The layer scales about the window's centre,
+    // so a point p goes to c + s(p - c) + d. Before this the whole window was laid on the tile: a 4:3 photo under the
+    // 48 pt bar landed low and spilled past a square tile's edge (iPhone 17, 2026-11-21).
+    const scale = Math.min(thumb.width / from.width, thumb.height / from.height);
+    return {
+      dx: thumb.x + thumb.width / 2 - cx - scale * (from.x + from.width / 2 - cx),
+      dy: thumb.y + thumb.height / 2 - cy - scale * (from.y + from.height / 2 - cy),
+      scale,
+    };
+  }
+  return { dx: thumb.x + thumb.width / 2 - cx, dy: thumb.y + thumb.height / 2 - cy, scale: Math.max(thumb.width / window.width, thumb.height / window.height) };
+}
+
+/** Where a `contain`-fitted picture of `size` actually sits inside `box`. */
+export function containRect(box: Rect, size: { width: number; height: number }): Rect {
+  if (!(size.width > 0 && size.height > 0)) return box;
+  const s = Math.min(box.width / size.width, box.height / size.height);
+  const width = size.width * s;
+  const height = size.height * s;
+  return { x: box.x + (box.width - width) / 2, y: box.y + (box.height - height) / 2, width, height };
 }
 
 /** The photo in front of a viewer, as `FadeModal`'s `closeTo` reads it: the pages call `setFront(id)` as they turn. */
-export function useFrontPhoto(prefix: string): { closeTo: () => string | null; setFront: (id: string | null) => void } {
+export function useFrontPhoto(prefix: string) {
   const front = useRef<string | null>(null);
+  const nodes = useRef(new Map<string, View>());
+  const sizes = useRef(new Map<string, { width: number; height: number }>());
   const closeTo = useCallback(() => (front.current ? `${prefix}:${front.current}` : null), [prefix]);
   const setFront = useCallback((id: string | null) => {
     front.current = id;
   }, []);
-  return { closeTo, setFront };
+  /** Each page's picture: `attach` as the ref of the box it fills, `onLoad` on the image, so a close starts from the picture itself. */
+  const framePhoto = useCallback(
+    (id: string) => ({
+      attach: (node: View | null) => {
+        if (node) nodes.current.set(id, node);
+        else nodes.current.delete(id);
+      },
+      onLoad: (e: { source?: { width: number; height: number } }) => {
+        if (e?.source) sizes.current.set(id, { width: e.source.width, height: e.source.height });
+      },
+    }),
+    []
+  );
+  /** The picture in front where it actually shows (window coordinates); its box when the size is not known yet. */
+  const closeFrom = useCallback((): Rect | null => {
+    const id = front.current;
+    const node = id ? nodes.current.get(id) : undefined;
+    let box: Rect | null = null;
+    node?.measureInWindow((x, y, width, height) => {
+      box = { x, y, width, height };
+    });
+    const size = id ? sizes.current.get(id) : undefined;
+    return box && size ? containRect(box, size) : box;
+  }, []);
+  return { closeTo, closeFrom, setFront, framePhoto };
 }
 
 // ponytail: one module-level map, the last thumbnail mounted under a key wins; enough while a photo has one tile on screen.

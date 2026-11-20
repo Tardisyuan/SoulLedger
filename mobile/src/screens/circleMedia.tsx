@@ -121,16 +121,18 @@ export function MediaGrid({ media, onOpen, testID = "media-grid" }: { media: Pos
 /** 全屏查看:左右翻页,顶上是「图片 i / n」与关闭。 */
 export function MediaViewer({ media, index, onClose }: { media: PostMedia[]; index: number | null; onClose: () => void }) {
   // 第六十批 P6: closing shrinks back onto the tile of the picture in front (`MediaGrid`'s `thumb`).
-  const { closeTo, setFront } = useFrontPhoto("post");
+  const { closeTo, closeFrom, setFront, framePhoto } = useFrontPhoto("post");
   return (
-    <FadeModal visible={index !== null} onRequestClose={onClose} closeTo={closeTo}>
+    <FadeModal visible={index !== null} onRequestClose={onClose} closeTo={closeTo} closeFrom={closeFrom}>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始,计数与页一致。 */}
-      {index !== null ? <ViewerPages key={index} media={media} start={index} onClose={onClose} onFront={setFront} /> : null}
+      {index !== null ? <ViewerPages key={index} media={media} start={index} onClose={onClose} onFront={setFront} framePhoto={framePhoto} /> : null}
     </FadeModal>
   );
 }
 
-function ViewerPages({ media, start, onClose, onFront }: { media: PostMedia[]; start: number; onClose: () => void; onFront: (id: string | null) => void }) {
+type FramePhoto = ReturnType<typeof useFrontPhoto>["framePhoto"];
+
+function ViewerPages({ media, start, onClose, onFront, framePhoto }: { media: PostMedia[]; start: number; onClose: () => void; onFront: (id: string | null) => void; framePhoto: FramePhoto }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { width, height } = useWindowDimensions();
@@ -158,8 +160,9 @@ function ViewerPages({ media, start, onClose, onFront }: { media: PostMedia[]; s
         onMomentumScrollEnd={(e) => setCurrent(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))}
       >
         {media.map((m, i) => (
-          <Image
-            key={m.id}
+          <View key={m.id} ref={framePhoto(String(m.id)).attach}>
+            <Image
+            onLoad={framePhoto(String(m.id)).onLoad}
             testID={`media-viewer-image-${i}`}
             accessibilityLabel={tr("soul_app.circle.media.viewer", { i: String(i + 1), n: String(media.length) })}
             source={postImageSource(m)}
@@ -168,6 +171,7 @@ function ViewerPages({ media, start, onClose, onFront }: { media: PostMedia[]; s
             transition={fade}
             style={{ width, height: height - insets.top - insets.bottom - 48 }}
           />
+          </View>
         ))}
       </ScrollView>
     </View>

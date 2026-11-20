@@ -13,7 +13,7 @@ import * as Reanimated from "react-native-reanimated";
 
 import { Sheet } from "../feedback";
 import { motion } from "../theme";
-import { EASE, FadeModal, photoShrinkTo, thumbRef } from "../ui";
+import { EASE, FadeModal, containRect, photoShrinkTo, thumbRef } from "../ui";
 import { inSoulFrame, renderSoul } from "./harness";
 
 const reduce = (on: boolean) => jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(on);
@@ -33,6 +33,21 @@ describe("P6: photoShrinkTo", () => {
     ["gone (no size)", { x: 0, y: 0, width: 0, height: 0 }],
   ])("%s: null, fade in place", (_n, rect) => {
     expect(photoShrinkTo(rect, win)).toBeNull();
+  });
+  // iPhone 17, 2026-11-21: the whole window was laid on the tile, so a 4:3 photo under the 48 pt bar landed low and spilled
+  // past a square tile. From the photo's own rect it lands centred on the tile and inside it.
+  it("from the photo's own rect: lands centred on the tile, fitted inside it", () => {
+    const thumb = { x: 20, y: 300, width: 100, height: 100 };
+    const photo = containRect({ x: 0, y: 100, width: 400, height: 652 }, { width: 1200, height: 900 });
+    expect(photo).toEqual({ x: 0, y: 276, width: 400, height: 300 });
+    const s = photoShrinkTo(thumb, win, photo)!;
+    const land = (px: number, py: number) => ({ x: 200 + s.scale * (px - 200) + s.dx, y: 400 + s.scale * (py - 400) + s.dy });
+    const tl = land(photo.x, photo.y);
+    const br = land(photo.x + photo.width, photo.y + photo.height);
+    expect([(tl.x + br.x) / 2, (tl.y + br.y) / 2]).toEqual([70, 350]);
+    expect(br.x - tl.x).toBeCloseTo(100);
+    expect(br.y - tl.y).toBeLessThanOrEqual(100);
+    expect(tl.y).toBeGreaterThanOrEqual(300);
   });
   it("is 160 on the exit curve (motion.photo-close)", () => {
     expect(motion.photoClose).toBe(160);
