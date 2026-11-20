@@ -264,12 +264,17 @@ def _primary_soul(user):
     """The soul row of `user`'s account where it is written: control (D2, a civilization not write-cut) or its
     write-cut shard -- never control's mirror of a write-cut civilization's soul, which stage 5 deletes (PREP-stage5
     M1). The account names the soul (control); each master is asked by pk, narrowed as `legs` narrows a FANOUT read
-    of souls (a shard's copies of souls living elsewhere, a soul in mid-move: the source's row), the master of the
-    hall the account was opened in first, so a soul that never moved costs one shard query.
-    ponytail: one pk lookup per master the soul is not on; a denormalized SoulAccount.soul_tenant_id kept by the
+    of souls (a shard's copies of souls living elsewhere), the first one found wins:
+      * a soul in mid-move: the SOURCE hall's master first (control's SOUL_MOVING row, `soul_directory`). Its row there
+        is the primary until step 3, which demotes it in the transaction that closes the move; the target's row is
+        arriving. Not every master's outbox (`legs`' `_not_arriving`): that asked every shard on every soul request.
+      * else the master of the hall its last move took it to (SOUL_LIVES_IN), else of the hall the account was opened
+        in: a soul costs one shard query, its primary's.
+    ponytail: one pk lookup per master the soul is not on, where neither names its master; a denormalized SoulAccount.soul_tenant_id kept by the
     saga's step 3 makes it a control read, if a moved soul's extra lookups ever show."""
     from apps.soul_accounts.models import SoulAccount
     from apps.souls.models import Soul
+    from apps.tenants import soul_directory
     from apps.tenants.models import Tenant
 
     soul_id = (SoulAccount._base_manager.using(CONTROL_ALIAS).filter(user_id=user.pk)
@@ -277,11 +282,15 @@ def _primary_soul(user):
     if soul_id is None:
         return None
     first = CONTROL_ALIAS
-    if settings.SHARDED and getattr(user, "tenant_id", None) is not None:
-        opened = Tenant._base_manager.using(CONTROL_ALIAS).filter(pk=user.tenant_id).first()
-        first = master_alias(opened.civilization) if opened is not None else CONTROL_ALIAS
+    hall_id = None
+    if settings.SHARDED:
+        moving, lives = soul_directory.whereabouts(soul_id)
+        hall_id = moving or lives or getattr(user, "tenant_id", None)
+    if hall_id is not None:
+        hall = Tenant._base_manager.using(CONTROL_ALIAS).filter(pk=hall_id).first()
+        first = master_alias(hall.civilization) if hall is not None else CONTROL_ALIAS
     with _over(write_cut()):
-        masters = legs(Soul)
+        masters = legs(Soul, hide_arriving=False)
     for alias, narrow in sorted(masters, key=lambda leg: leg[0] != first):
         soul = narrow(Soul._base_manager.using(alias).filter(pk=soul_id)).select_related("tenant").first()
         if soul is not None:
@@ -291,20 +300,23 @@ def _primary_soul(user):
 
 def _rows_abroad(soul, civ):
     """Does a row naming `soul` through a crossing key live outside `civ`'s halls (another civilization's shard, or
-    control: a row with no hall)? One EXISTS per crossing key to Soul, in one query per master: control, and every
-    write-cut shard but the soul's own (its rows there are `civ`'s) -- not control alone, whose copy of a write-cut
-    civilization's rows is a mirror stage 5 deletes (PREP-stage5 M2). The rows that hang off such a row (a
-    judgment's confessions) are in its hall; the rows that follow the soul (`soul__tenant`) are in its primary's."""
+    control: a row with no hall)? Both asked of control: the other shards by what `soul_directory` noted of them
+    (SOUL_ROWS_IN) -- asking each shard put every other shard in every ACROSS request of every soul --, control's own
+    rows by one EXISTS per crossing key to Soul. Not control's copy of a write-cut civilization's rows: a mirror stage
+    5 deleted (PREP-stage5 M2). The rows that hang off such a row (a judgment's confessions) are in its hall; the rows
+    that follow the soul (`soul__tenant`) are in its primary's."""
     from apps.core.tenant import civilization_halls
+    from apps.tenants import soul_directory
     from apps.tenants.models import Tenant
 
+    if soul_directory.rows_abroad(soul.pk, civ):
+        return True
     mine = civilization_halls(civ).values("pk")
     found = functools.reduce(operator.or_, [
         models.Exists(f.model._base_manager.filter(**{f.attname: soul.pk})
                       .exclude(**{f"{tenant_path(f.model)}__in": mine})) for f in _keys_to_soul()])
-    masters = [CONTROL_ALIAS, *(alias_for_civilization(c) for c in write_cut() if c != civ)]
-    # The soul's hall is on every master (REFERENCE): one row to hang the EXISTS on.
-    return any(Tenant._base_manager.using(alias).filter(pk=soul.tenant_id).filter(found).exists() for alias in masters)
+    # The soul's hall is on control (REFERENCE): one row to hang the EXISTS on.
+    return Tenant._base_manager.using(CONTROL_ALIAS).filter(pk=soul.tenant_id).filter(found).exists()
 
 
 @functools.cache
@@ -625,11 +637,13 @@ def _over(civs):
         _merging.reset(token)
 
 
-def legs(model):
+def legs(model, *, hide_arriving=True):
     """[(alias, narrow)] covering every row of `model` exactly once: control without the cut-over
     civilizations' halls (hall-less rows stay, D2), then each cut-over shard (`_merging`: read-cut for FANOUT,
     write-cut for MASTER) -- for Soul only its own
-    civilization's souls, not the copies of souls residing elsewhere (D6)."""
+    civilization's souls, not the copies of souls residing elsewhere (D6), and not a soul arriving in a move still
+    open (`_not_arriving`: every master's outbox, asked once per merge). `hide_arriving=False` leaves that to the
+    caller (`_primary_soul`, which knows the soul's open move from control)."""
     from apps.souls.models import Soul
 
     path = tenant_path(model)
@@ -639,7 +653,7 @@ def legs(model):
     for civ in cut:
         narrow = functools.partial(_own_souls, civ=civ) if model._meta.concrete_model is Soul else (lambda qs: qs)
         out.append((alias_for_civilization(civ), narrow))
-    if model._meta.concrete_model is Soul:
+    if hide_arriving and model._meta.concrete_model is Soul:
         out = _not_arriving(out)
     return out
 

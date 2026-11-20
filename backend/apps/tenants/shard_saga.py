@@ -229,6 +229,10 @@ def send(kind, source, target, payload, *, subject=""):
     with transaction.atomic(using=alias):
         msg = outbox._base_manager.using(alias).create(
             message_id=message_id, tenant=source, target_tenant=target, kind=kind, subject=subject, payload=payload)
+        if kind in _MOVES and settings.SHARDED:
+            from apps.tenants import soul_directory
+
+            soul_directory.mark_moving(payload["soul"]["id"], source.pk)
         transaction.on_commit(_kick, using=alias)
     return msg
 
@@ -353,6 +357,12 @@ def _deliver(msg):
         row = outbox._base_manager.using(alias).select_for_update().filter(pk=msg.pk, state=state.PENDING).first()
         if row is None:
             return 0
+        if msg.kind in _MOVES and settings.SHARDED:
+            from apps.tenants import soul_directory
+
+            arrived = outcome == state.DONE
+            soul_directory.moved(msg.payload["soul"]["id"], msg.tenant_id, target.pk if arrived else None,
+                                 msg.tenant.civilization if arrived and alias != CONTROL_ALIAS else None)
         after = done if outcome == state.DONE else refused
         if after is not None:
             after(msg.payload)

@@ -64,4 +64,8 @@ class SoulsConfig(AppConfig):
         from apps.tenants import shard_saga
 
         shard_saga.connect_transit_guard()
+        # ... and control notes where a soul's rows are, so its own request reads one shard (soul_directory).
+        from apps.tenants import soul_directory
+
+        soul_directory.connect()
         shard_sync.connect_hall_copies()

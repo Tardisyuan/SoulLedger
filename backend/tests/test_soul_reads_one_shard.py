@@ -15,11 +15,13 @@ civilizations (a DIRECT conversation lives in the initiator's hall).
   ACROSS included (control too: the account, the hall). The soul in residence reads beyond it on ACROSS routes
   only.
 """
+import io
 import json
 import random
 import uuid
 
 import pytest
+from django.core.management import call_command
 from django.db import connections
 from django.test import override_settings
 
@@ -142,6 +144,7 @@ def world(django_db_setup, django_db_blocker):
             w = world_of._build(rng)
             w["souls"] = _souls(rng, w)
             _sync()
+            call_command("note_soul_whereabouts", stdout=io.StringIO())  # the pen pals' conversation, made above
             yield w
         finally:
             world_of._rollback(atomics)
@@ -257,16 +260,17 @@ def _shards_touched(client, url):
 
 
 @sharded
-@pytest.mark.xfail(strict=True, reason=(
-    "2026-11-21: held only while reads were cut and writes were not. Sharded (writes too, as on 115 since stage 4) "
-    "a soul's GET /me/, /me/life/, /me/sentence-plan/ ... also query every other shard: every Soul merge asks each "
-    "master's outbox for a move in flight (shard_saga.arriving via shard_reads.legs -> _not_arriving), and at least "
-    "one more cross-master read remains. A cost, not a wrong answer (test_every_soul_route_reads_like_the_single_"
-    "database is green). Strict: whoever narrows it sees this go red and drops the marker."))
 def test_a_soul_request_touches_its_primary_shard_and_no_other(world):
     """A soul whose rows are all in its own civilization (no residence, no letters abroad): every soul GET route,
     ACROSS too, runs its statements on control and on one shard, its primary hall's. The soul in residence reads
-    beyond its primary on an ACROSS route and only there: the other half of soul_read_context."""
+    beyond its primary on an ACROSS route and only there: the other half of soul_read_context.
+
+    Control is where the design needs it: the account, the hall, and what `soul_directory` keeps of the soul -- its
+    open move (SOUL_MOVING) and the shards holding rows that name it (SOUL_ROWS_IN). Until 2026-11-21 every request
+    also asked each other shard's outbox for a move in flight (`_primary_soul` through `legs` -> `_not_arriving`, 3
+    statements) and, on an ACROSS route, each other shard for rows naming the soul (`_rows_abroad`, 3 more).
+    Mutations: `_primary_soul` with `legs(Soul)` (hiding arriving souls by every outbox) -> every route reads every
+    shard; `_rows_abroad` asking the shards again -> every ACROSS route does."""
     rng = random.Random(f"{SEED}:counting")
     wrong = []
     for civ in CIVS:

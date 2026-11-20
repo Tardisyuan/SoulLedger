@@ -19,6 +19,7 @@ end (Django's setUpTestData shape); each case runs in a savepoint inside it.
 
     cd backend && ... python -m pytest --ds=config.settings_sharded -m sharded tests/test_sharded_reads_equal_single_db.py
 """
+import io
 import os
 import random
 
@@ -291,6 +292,7 @@ def _build(rng):
     _sync()
     for civ in CIVS:  # gap 4a: a GET that writes (an export's audit row, a profile made on first read) writes a shard
         call_command("assign_shard_id_ranges", "--civ", civ, verbosity=0)
+    call_command("note_soul_whereabouts", stdout=io.StringIO())  # deployed on a box whose shards hold rows already
     code, out = _reconcile("--all")
     assert code == 0 and "not copied" not in out and "dangling" not in out, f"SHARDED_READS_SEED={SEED}\n{out}"
     print(f"models the filler could not make in some hall: {sorted(unmade)}")
