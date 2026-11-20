@@ -260,10 +260,8 @@ t("nav.greeting", { username: user.username })
    不提版本的 `SyntaxError: … styleText`。
 1. `npm run build` — 必须 RC 0
 2. 清除 `.next` 缓存：`rm -rf .next`
-3. 重启前端服务：`bash scripts/stop-frontend.sh && bash scripts/start-frontend.sh`
-   （不要写 `fuser -k 3333/tcp && …`：macOS 的 `fuser` 没有 `-k`，`&&` 短路后启动脚本
-   根本不执行。`start-frontend.sh` 自己会用 lsof 清端口；`restart-*.sh` 被 `.gitignore:84`
-   忽略，clone 下来没有。）
+3. 重启前端服务：停掉 3333 上的旧进程（`lsof -ti tcp:3333 | xargs kill`；macOS 的 `fuser` 没有 `-k`），
+   再 `cd frontend && PORT=3333 npm start`。（本地起停脚本 `scripts/start-*.sh` / `stop-*.sh` 已于 2026-11-21 删除。）
 4. Playwright 手动验证（或描述验证步骤）
 
 ### 后端
@@ -401,10 +399,7 @@ SoulLedger/
 ├── mobile-officer/        ← 官员端 App(Expo);CI 的 officer job 跑它
 └── scripts/
     ├── install-hooks.sh   ← 装 pre-commit / pre-push,clone 后必跑
-    ├── run-gates.sh       ← pre-push 实际跑的门禁(jest 选择性),会话里也能直接跑
-    ├── start-frontend.sh
-    ├── stop-frontend.sh
-    └── start-backend.sh
+    └── run-gates.sh       ← pre-push 实际跑的门禁(jest 选择性),会话里也能直接跑
 ```
 
 ---

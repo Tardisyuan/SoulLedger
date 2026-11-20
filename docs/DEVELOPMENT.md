@@ -278,9 +278,6 @@ Maintenance commands (can also be run by hand):
 ### Convenience scripts
 
 ```bash
-bash scripts/start-all.sh      # backend + frontend (build, then start on :3333), backgrounded, logs in scripts/logs/
-bash scripts/status.sh
-bash scripts/stop-all.sh
 bash scripts/install-hooks.sh  # installs the git hooks; see [Testing, gates and CI](#testing-gates-and-ci)
 ```
 
