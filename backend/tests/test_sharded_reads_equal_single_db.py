@@ -29,9 +29,9 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework.pagination import PageNumberPagination
 
-from apps.core import shadow_reads as shadow
 from apps.core.shard_reads import FANOUT, crossing_keys, read_context
 from apps.core.sharding import SHARD, NoShardContext, alias_for_civilization, placement, tenant_path
+from tests import endpoint_answers as shadow
 from tests.test_shard_sync import CIVS, HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_READS_SEED") or random.SystemRandom().randrange(10 ** 6))
@@ -334,7 +334,7 @@ def _seed_in_report(request):
     request.node.add_report_section("setup", "seed", f"SHARDED_READS_SEED={SEED}")
 
 
-# ---- comparing (apps/core/shadow_reads.py) -------------------------------------------------------------------
+# ---- comparing (tests/endpoint_answers.py) -------------------------------------------------------------------
 
 def _fetch(client, url):
     return shadow.fetch(client, url, trace=bool(os.environ.get("SHARDED_READS_TRACE")))
@@ -636,52 +636,3 @@ def test_a_write_request_reads_control_and_a_read_request_its_shard(world):
                 assert Soul.objects.filter(pk=soul.pk).exists() is seen, method
             finally:
                 set_current_request(None)
-
-
-# ---- the 115 exit check: manage.py shadow_read_diff -------------------------------------------------------
-
-def _row_counts():
-    from django.db import router
-
-    return {(alias, m._meta.label): m._base_manager.using(alias).order_by().count()
-            for alias in connections for m in apps.get_models(include_auto_created=True)
-            if m._meta.managed and not m._meta.proxy and router.allow_migrate_model(alias, m)}
-
-
-def _shadow(*args):
-    import io
-
-    from django.core.management import call_command
-    from django.core.management.base import CommandError
-
-    out = io.StringIO()
-    try:
-        call_command("shadow_read_diff", *args, stdout=out)
-        return 0, out.getvalue()
-    except CommandError as e:
-        return 1, f"{out.getvalue()}\n{e}"
-
-
-@sharded
-def test_shadow_read_diff_is_clean_on_a_synced_world_and_writes_nothing(world):
-    """The command over the synced world: no difference, data compared, and not one row more or less on any
-    database afterwards (every request and the token minting are rolled back)."""
-    before = _row_counts()
-    code, out = _shadow("--all", "--endpoint", "soul", "--max-pages", "2")
-    assert code == 0, out
-    assert " 0 differ" in out and " 0 with data" not in out, out
-    assert _row_counts() == before
-
-
-@sharded
-def test_shadow_read_diff_reports_a_row_no_shard_has_yet(world):
-    """A soul written to control and not synced: cutting its civilization over changes the hall ADMIN's list,
-    and the command says so and exits non-zero."""
-    from apps.souls.models import Soul, SoulState
-    from apps.tenants.models import Tenant
-
-    hall = Tenant.objects.filter(declared_civilization="GREEK").order_by("code").first()
-    Soul._base_manager.using("default").create(name="unsynced-shadow", tenant=hall, current_state=SoulState.JUDGING)
-    code, out = _shadow("--civ", "GREEK", "--endpoint", "soul-list", "--max-pages", "50")
-    assert code == 1, out
-    assert "DIFFERS" in out and "unsynced-shadow" in out, out

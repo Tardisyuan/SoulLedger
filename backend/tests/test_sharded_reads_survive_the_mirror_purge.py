@@ -30,7 +30,7 @@ import pytest
 from django.core.management import call_command
 from django.test import override_settings
 
-from apps.core import shadow_reads as shadow
+from tests import endpoint_answers as shadow
 from tests import test_sharded_reads_equal_single_db as reads
 from tests import test_sharded_writes_equal_single_db as writes
 from tests.test_shard_sync import CIVS, sharded

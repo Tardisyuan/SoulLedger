@@ -23,10 +23,10 @@ import pytest
 from django.db import connections
 from django.test import override_settings
 
-from apps.core import shadow_reads as shadow
 from apps.core.shard_reads import READS_SOUL_ROWS_ABROAD
 from apps.core.sharding import alias_for_civilization
 from apps.soul_accounts.authentication import SoulJWTAuthentication
+from tests import endpoint_answers as shadow
 from tests import test_sharded_reads_equal_single_db as world_of
 from tests.test_shard_sync import CIVS, HAS_SHARDS, _sync, sharded
 from tests.test_sharded_reads_equal_single_db import _chat_on, _seed_in_report, _small_pages  # noqa: F401 -- autouse

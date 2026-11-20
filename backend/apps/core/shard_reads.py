@@ -30,7 +30,7 @@ from the control leg), and a sweep that reads, writes and reads again must read 
 purge that re-read its lagging shard got the deleted ids back and looped). Control holds every row in stage 3.
 A task that wants another answer says so: `read_context(FANOUT)` / `@fanout_reads` / `read_context(hall)`.
 A management command reads control for the same reason (`read_context("default")` around it: an operator's
-sweep reads, then writes to control); `shadow_read_diff` sets each request's context itself. Outside a request,
+sweep reads, then writes to control). Outside a request,
 Celery and a command: an explicit context or the tenant contextvar, else NoShardContext.
 
 FANOUT is not a database. A queryset evaluated under it visits every leg -- control with the cut-over

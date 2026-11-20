@@ -32,8 +32,8 @@ from django.apps import apps
 from django.db import connections, models, router, transaction
 from django.test import override_settings
 
-from apps.core import shadow_reads as shadow
 from apps.core.sharding import SHARD, placement
+from tests import endpoint_answers as shadow
 from tests.test_shard_sync import CIVS, HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_WRITES_SEED") or random.SystemRandom().randrange(10 ** 6))

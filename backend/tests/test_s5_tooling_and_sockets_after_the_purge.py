@@ -1,7 +1,6 @@
 """Stage 5, what G7 (tests/test_sharded_reads_survive_the_mirror_purge.py) does not ask (VERIFY-stage5 3): with all four
 civilizations write-cut and purged (115's state), control holds none of their SHARD rows.
 
-  shadow_read_diff   compares against control's answer: refuses once anything is purged (stage 5 retired it).
   websocket          an officer of each hall connects (`connected`, its data scope resolved over its hall's units, which
                      live only on the shard); a soul's token is refused at the handshake (4001), as before the cut.
   commands           every read-only management command (or dry run) that reads SHARD rows runs without raising, and the
@@ -63,17 +62,6 @@ def _souls_on(alias):
     from apps.souls.models import Soul
 
     return Soul._base_manager.using(alias).count()
-
-
-# ---- shadow_read_diff ------------------------------------------------------------------------------------------------
-
-@sharded
-def test_shadow_read_diff_refuses_once_a_civilization_is_purged():
-    _world()
-    out = io.StringIO()
-    with purged(*CIVS), pytest.raises(CommandError, match="purged"):
-        call_command("shadow_read_diff", "--civ", "GREEK", "--endpoint", "soul-list", stdout=out)
-    assert "compared" not in out.getvalue(), out.getvalue()  # refused before asking anything
 
 
 # ---- websocket -------------------------------------------------------------------------------------------------------
@@ -156,7 +144,7 @@ def test_an_officer_connects_with_its_data_scope_and_a_soul_is_refused_after_the
 # ---- management commands ---------------------------------------------------------------------------------------------
 
 #: Every read-only command (or dry run) that reads SHARD rows. Not here: the writers (seeders, backfills without a dry
-#: run, purge_soul, relay_outbox, setup_* ...), shadow_read_diff (above), purge_cut_over_tenant_rows (its own tests,
+#: run, purge_soul, relay_outbox, setup_* ...), purge_cut_over_tenant_rows (its own tests,
 #: tests/test_stage5_prep.py and tests/test_stage5_purge_safety.py), and commands that read no SHARD model
 #: (sync_permissions, seed_field_permissions, migrate_shards).
 READ_ONLY = [
