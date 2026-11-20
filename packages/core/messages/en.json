@@ -5391,10 +5391,10 @@
         "SETTLED": "This life is settled; no new rebirth application can be made."
       },
       "state_note": {
-        "EXCEPTION": "Review ran into a problem that needs a person to sort out, so your application is paused at this step. You don't need to do anything; review picks up again once it's fixed, and you'll be told.",
-        "RECONSIDERING": "Someone in the review objected to one step, and that step is being decided again. This is not an appeal of yours; you don't need to do anything.",
-        "TERMINATED": "The hall has ended this application: it won't be reviewed further and can't be appealed. You can apply again.",
-        "TERMINATED_COOLDOWN": "The hall has ended this application: it won't be reviewed further and can't be appealed. The cooling-off period runs until {{date}}; you can apply again after that."
+        "EXCEPTION": "Review ran into a problem that needs a person to sort out, so your application is paused at this step. You don’t need to do anything; review picks up again once it’s fixed, and you’ll be told.",
+        "RECONSIDERING": "Someone in the review objected to one step, and that step is being decided again. This is not an appeal of yours; you don’t need to do anything.",
+        "TERMINATED": "The hall has ended this application: it won’t be reviewed further and can’t be appealed. You can apply again.",
+        "TERMINATED_COOLDOWN": "The hall has ended this application: it won’t be reviewed further and can’t be appealed. The cooling-off period runs until {{date}}; you can apply again after that."
       }
     },
     "status": {
@@ -5599,7 +5599,7 @@
       "locked": "Can’t be turned off",
       "email_nudge_title": "Add a contact email",
       "email_nudge_body": "If you forget your password, the code goes to your contact email. Without one, only the hall’s counter can reset it.",
-      "push_unregistered": "Not registered · notifications won't arrive"
+      "push_unregistered": "Not registered · notifications won’t arrive"
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -5616,7 +5616,7 @@
       "no": "Not now",
       "live_hint_title": "No progress on the lock screen",
       "live_hint_body": "Notifications are off for SoulLedger. Turn them on in system settings to see on the lock screen which station you have reached.",
-      "register_failed": "Your phone allows notifications, but registering it didn't go through, so nothing will arrive yet."
+      "register_failed": "Your phone allows notifications, but registering it didn’t go through, so nothing will arrive yet."
     },
     "original": {
       "tag": "Original",
@@ -6552,11 +6552,11 @@
       "bio_here": "{{bio}} sign-in is on for this number"
     },
     "data_export": {
-      "failed_network": "Couldn't reach the server, so nothing was exported. Your face was recognised; no password needed.",
+      "failed_network": "Couldn’t reach the server, so nothing was exported. Your face was recognised; no password needed.",
       "failed_server": "Something went wrong on the server, so nothing was exported. Your face was recognised; no password needed."
     },
     "stale": {
-      "line": "Showing what was here at {{time}} · couldn't refresh"
+      "line": "Showing what was here at {{time}} · couldn’t refresh"
     }
   },
   "soul_push": {
@@ -7415,7 +7415,7 @@
         "other": "Other"
       }
     },
-    "draft_load_failed": "Couldn't fetch the saved draft. Editing is off until it loads, so it isn't overwritten."
+    "draft_load_failed": "Couldn’t fetch the saved draft. Editing is off until it loads, so it isn’t overwritten."
   },
   "sentence_plan": {
     "panel_title": "Placement plan",
@@ -10625,8 +10625,8 @@
   "errors": {
     "cross_civilization": "Not saved: the selected item belongs to another civilization and can’t be linked. Choose again, or refresh and try again.",
     "permissions_load": {
-      "title": "Couldn't load permissions",
-      "body": "This is not a refusal: the permissions just didn't arrive from the server this time. Reload; if it still fails, come back a little later."
+      "title": "Couldn’t load permissions",
+      "body": "This is not a refusal: the permissions just didn’t arrive from the server this time. Reload; if it still fails, come back a little later."
     }
   }
 }

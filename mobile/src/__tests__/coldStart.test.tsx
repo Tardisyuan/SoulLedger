@@ -192,10 +192,7 @@ describe("第六十一批 一: the cold start's ground and mark follow the schem
     expect(SPLASH.dark.ground).not.toBe(brand.ground);
   });
 
-  it.each([
-    ["light", "backgroundColor"],
-    ["dark", "dark"],
-  ] as const)("%s: the JS frame paints app.json's %s ground and the scheme's mark, never the other scheme's", async (scheme) => {
+  it.each(["light", "dark"] as const)("%s: the JS frame paints app.json's ground for that scheme and its mark, never the other scheme's", async (scheme) => {
     mockScheme = scheme;
     const plugins = require("../../app.json").expo.plugins as unknown[];
     const [, native] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, { backgroundColor: string; dark: { backgroundColor: string } }];
