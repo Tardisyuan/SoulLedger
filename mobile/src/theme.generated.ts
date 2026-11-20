@@ -141,6 +141,16 @@ export const seal = {
     "light": "#86422A"
   }
 } as const;
+export const splash = {
+  "dark": {
+    "ground": "#111113",
+    "mark": "#ECAA3D"
+  },
+  "light": {
+    "ground": "#F8F8F6",
+    "mark": "#8A6A24"
+  }
+} as const;
 export const radius = {
   "sheet": 12
 } as const;
