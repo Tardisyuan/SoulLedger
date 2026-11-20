@@ -543,6 +543,7 @@ def test_a_hall_less_reincarnation_follows_its_disposition_and_the_purge_no_long
             tenant=None)
         from apps.disposition.models import Disposition
 
+        Reincarnation._base_manager.using(CN).filter(disposition_id=rows["move"].pk)._raw_delete(CN)  # keys hold
         Disposition._base_manager.using(CN).filter(pk=rows["move"].pk)._raw_delete(CN)
         line = _line(_run("backfill_disposition_halls", "--dry-run"), lone.pk)
         assert line.startswith("BLOCKED") and f"{CN} lacks its disposition" in line
