@@ -118,7 +118,8 @@ JUDICIAL_PERSONNEL = {
 #
 # Every placement table below carries (role, realm_code), and that second
 # column is the whole reason these tables were rewritten on 2026-08-15. Until
-# then this file and consolidate_eu_pantheon.GRECO_ROMAN_EXPECTED both locked
+# then this file and consolidate_eu_pantheon.GRECO_ROMAN_EXPECTED (that one-off
+# command was deleted 2026-11-21; this file is now the only check) both locked
 # the role and said nothing about the realm, and role is the column that
 # happened to be right. Fourteen actors stood somewhere no source puts them and
 # every check in the repo reported OK:
@@ -135,14 +136,13 @@ JUDICIAL_PERSONNEL = {
 # A check that verifies one column of a two-column fact goes green at exactly
 # the rate the other column goes wrong. These tables are the fix, and the
 # mutation check is: move any one actor to a realm it does not belong in and
-# both this file and `manage.py consolidate_eu_pantheon` must go red naming who,
-# where they should be, and where they actually are.
+# this file must go red naming who, where they should be, and where they
+# actually are.
 # --------------------------------------------------------------------------
 
 # The three Greek figures Dante actually uses, as (role, realm_code). They are
 # EUROPEAN because every anchor their rows cite is the Commedia's, not because
-# of where the names come from. Kept in sync by hand with
-# consolidate_eu_pantheon.GRECO_ROMAN_EXPECTED — see rule 1 in the docstring.
+# of where the names come from.
 #
 # The sources, one per row:
 #   Minos        EU_HELL_2ND      Dante, Inferno V.4-15.
@@ -155,9 +155,8 @@ GRECO_ROMAN_CAST = {
 }
 
 # The Greek cast proper, under `Civilization.GREEK` and the `GR_HADES` tenant.
-# Hades, not Pluto: same god, and `consolidate_eu_pantheon` merges the pair into
-# Hades, so seeding Pluto would manufacture the duplicate the merge exists to
-# remove.
+# Hades, not Pluto: same god, so seeding a Greek Pluto would put a second
+# OVERSEER row for one god in this cast.
 #
 #   Hades        GR_PLATO_MEADOW  overseer of the Greek judgment ground. The one
 #                                 engineering placement of the four — no house
@@ -382,7 +381,7 @@ EGYPTIAN_PRINCIPALS = [
 # seeder's (civilization, name) match key would fold the deity into the
 # assessor's row instead of creating a second one — the same class of bug that
 # 'Ra' and 'Maat' caused in the deleted 33-name list, but silent, because a
-# merge produces no duplicate for fix_actor_civilization to find.
+# merge produces no duplicate row for anyone to find.
 ASSESSOR_NAMES_RESERVED_AGAINST_DEITIES = {
     "Nefer-Tem": 34,
     "Basti": 26,
@@ -1221,8 +1220,8 @@ def test_no_assessor_collides_with_an_egyptian_principal(seeded):
     """The bench and the principals share no name.
 
     The deleted 33-name list collided on 'Ra' and 'Maat', manufacturing on every
-    fresh database exactly the duplicate and cross-spelling rows that
-    `fix_actor_civilization` exists to clean up.
+    fresh database exactly the duplicate and cross-spelling rows that the
+    one-off `fix_actor_civilization` (deleted 2026-11-21) had to clean up.
     """
     collisions = sorted(set(FORTY_TWO_ASSESSORS) & set(EGYPTIAN_PRINCIPALS))
     assert not collisions, (
@@ -1248,7 +1247,7 @@ def test_nefertem_and_basti_belong_to_the_bench_not_to_the_pantheon(seeded):
     Bastet, neither of which is seeded. Whoever adds those deities must not
     spell them this way: the seeder matches on (civilization, name), so it would
     quietly overwrite an assessor rather than creating a second actor — a silent
-    merge, leaving no duplicate for `fix_actor_civilization` to catch. This test
+    merge, leaving no duplicate row for anyone to catch. This test
     is the tripwire on that.
     """
     bench = _assessors()
@@ -1329,10 +1328,10 @@ def test_greek_realms_present(seeded):
 def test_greco_roman_cast_present_with_correct_roles_and_realms(seeded):
     """The three Dante borrowed exist, cast AND placed, and stay EUROPEAN.
 
-    `consolidate_eu_pantheon` audits this exact roster. The seed used to create
-    only Charon, Minos, Cerberus and Pluto, so on a fresh database that audit
-    reported Hades, Aeacus and Rhadamanthus MISSING — the audit could not pass
-    on any database this project ships.
+    `consolidate_eu_pantheon` (a one-off, deleted 2026-11-21) audited this exact
+    roster. The seed used to create only Charon, Minos, Cerberus and Pluto, so
+    on a fresh database that audit reported Hades, Aeacus and Rhadamanthus
+    MISSING — the audit could not pass on any database this project ships.
 
     Then it could, and it still said nothing useful: with all six seeded, five
     of them were standing in a realm no source supports and both this test and
@@ -1344,10 +1343,7 @@ def test_greco_roman_cast_present_with_correct_roles_and_realms(seeded):
     fault = _placement_faults(
         "EUROPEAN", GRECO_ROMAN_CAST, "The Greco-Roman cast"
     )
-    assert fault is None, (
-        f"{fault}\nconsolidate_eu_pantheon audits exactly these three and its "
-        f"GRECO_ROMAN_EXPECTED must say the same thing this table does."
-    )
+    assert fault is None, fault
 
 
 @pytest.mark.django_db
@@ -1367,10 +1363,7 @@ def test_greek_cast_present_with_correct_roles_and_realms(seeded):
     assessors taught this repository is that a slot does not justify a row.
     """
     fault = _placement_faults("GREEK", GREEK_CAST, "The Greek cast")
-    assert fault is None, (
-        f"{fault}\nconsolidate_eu_pantheon.GREEK_EXPECTED audits exactly these "
-        f"rows and must say the same thing this table does."
-    )
+    assert fault is None, fault
 
 
 @pytest.mark.django_db
@@ -1494,8 +1487,7 @@ def test_hades_is_the_sole_greek_overseer(seeded):
     Pluto is not a Roman name for Hades but a Latin transcription of Πλούτων, a
     Greek cult title of the same god (Plato, Cratylus 403a); Rome's own
     underworld gods are Dis Pater and Orcus. Either way it is one god, and
-    seeding both spellings would put two OVERSEERs in one tenant and hand
-    `consolidate_eu_pantheon`'s merge step a duplicate to clean up on every
+    seeding both spellings would put two OVERSEERs in one tenant on every
     fresh database — so Pluto is deliberately not seeded, and this asserts it
     stays that way.
 
@@ -1533,87 +1525,7 @@ def test_no_norse_actors_are_seeded(seeded):
     )
     assert not present, (
         f"seed_mythology created Norse actors that are supposed to be out of "
-        f"this system: {present}. Remove them from the seed tables; use "
-        f"`manage.py consolidate_eu_pantheon --purge-norse` for rows that "
-        f"already exist in a database."
-    )
-
-
-@pytest.mark.django_db
-def test_consolidate_eu_pantheon_audit_is_clean_after_seeding(seeded):
-    """A freshly seeded database passes the EU consolidation audit.
-
-    End-to-end check of the two commands together, which is where the gap
-    actually showed: `seed_mythology` and `consolidate_eu_pantheon` each looked
-    fine on their own, but the second one's Step 2 audit reported every
-    Greco-Roman name MISSING against a database the first one had just filled.
-    """
-    out = io.StringIO()
-    call_command("consolidate_eu_pantheon", stdout=out, stderr=out)
-    output = out.getvalue()
-
-    missing_lines = [line.strip() for line in output.splitlines() if "MISSING" in line]
-    assert not missing_lines, (
-        "consolidate_eu_pantheon still reports missing actors against a "
-        "freshly seeded database:\n" + "\n".join(missing_lines)
-        + f"\n\nFull output:\n{output}"
-    )
-    # The audit prints each deviation as an indented bullet under a "Deviations
-    # found:" header. Matched on that shape rather than on a keyword: an earlier
-    # draft looked for "expected " and matched the Norse step's "this is the
-    # expected state", i.e. a check that failed on a line reporting success.
-    deviation_lines = [
-        line.strip() for line in output.splitlines()
-        if line.startswith("    - ")
-    ]
-    assert "Deviations found" not in output, (
-        "consolidate_eu_pantheon's Greco-Roman audit found deviations against a "
-        "freshly seeded database:\n" + "\n".join(deviation_lines)
-        + f"\n\nFull output:\n{output}"
-    )
-    assert not deviation_lines, (
-        "consolidate_eu_pantheon reports role or realm deviations against a "
-        "freshly seeded database:\n" + "\n".join(deviation_lines)
-        + f"\n\nFull output:\n{output}"
-    )
-    assert "All seven stand in the realm their source puts them in" in output, (
-        f"The audit did not report a clean pass, so the assertions above may be "
-        f"passing because the audit never ran — or because its realm check was "
-        f"removed, which is the failure this phrase exists to detect.\n{output}"
-    )
-    # Both halves of the split ran. The audit looks rows up by
-    # `(name, civilization)`, so a version of it that had kept one six-name
-    # table would report the four Greek names MISSING — which the assertions
-    # above would catch — but a version that dropped the Greek table entirely
-    # would report nothing at all and pass every check above by checking less.
-    for civilization in ("EUROPEAN", "GREEK"):
-        assert civilization in output, (
-            f"consolidate_eu_pantheon's audit never mentions {civilization}. "
-            f"A clean report over a cast it did not look at is not a clean "
-            f"cast.\n{output}"
-        )
-
-
-@pytest.mark.django_db
-def test_consolidate_eu_pantheon_leaves_a_freshly_seeded_database_alone(seeded):
-    """Seed and cleanup agree about the target state.
-
-    This used to assert the string "nothing to merge", from the Pluto/Hades
-    step that was retired on 2026-08-31 — Dante's Pluto is a distinct figure
-    and is now seeded. The half worth keeping is the one that was never about
-    that step: a freshly seeded database must give this command **nothing at
-    all** to do. If it did, seed and cleanup would be pulling in opposite
-    directions, and every fresh setup would drift on the first run.
-    """
-    out = io.StringIO()
-    call_command("consolidate_eu_pantheon", stdout=out, stderr=out)
-    output = out.getvalue()
-    assert "Nothing to do" in output, (
-        f"consolidate_eu_pantheon has changes queued against a freshly seeded "
-        f"database; seed and consolidation disagree about the target state.\n{output}"
-    )
-    assert "Pluto" not in output or "merge" not in output.lower(), (
-        f"the retired merge step is printing again:\n{output}"
+        f"this system: {present}. Remove them from the seed tables."
     )
 
 

@@ -43,25 +43,26 @@ import { formatStamp, TAG_GLYPH } from "../rules";
 import { radius } from "../theme";
 import {
   Button,
+  FadeModal,
   Interp,
   LandingWash,
   Notice,
   OneLine,
   PageEmptyArt,
+  Press,
   RadioMark,
   Screen,
   SectionLabel,
+  shade,
   Skeleton,
+  StaleLine,
   Txt,
   useLayout,
   usePullRefresh,
   useReducedMotion,
-  FadeModal,
   useReloadOnRefocus,
   useRemote,
   useTheme,
-  shade,
-  Press,
 } from "../ui";
 import { invalidateSocialStatus, mutedReasonOf, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
@@ -972,6 +973,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: t.s0 }]} behavior="padding" keyboardVerticalOffset={-insets.bottom}>
       {/* The comments are one more unbounded, paged list, so they are the FlatList and the post is its header. */}
       <Screen scroll={false} edges={["left", "right"]} testID="circle-post">
+        <StaleLine state={post} onRetry={() => void post.reload()} />
         {pull.frame(
         <FlatList
           ref={listRef}

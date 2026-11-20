@@ -1,6 +1,6 @@
 """官员端 App 的后端:免选殿登录、「待我处理」、详情、决定失败码、加签候选人、推送。
 
-设计见 docs/design-handoff/v3-pages/A13-officer-app.md。
+设计见 docs/design-handoff/v3-pages/A13-officer-app.md(2026-11-21 起在 archive/docs 分支)。
 """
 import pytest
 from django.utils import timezone

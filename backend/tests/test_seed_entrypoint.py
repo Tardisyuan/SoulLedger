@@ -111,9 +111,10 @@ RETIRED_SCRIPT_ACTORS = [
 ]
 
 # The one row the command deliberately does not carry over. Pluto is the Roman
-# name of Hades, `seed_mythology` seeds Hades, and `consolidate_eu_pantheon`
-# merges any Pluto row into it. Re-seeding Pluto would manufacture on every
-# fresh database exactly the duplicate that command exists to remove — so its
+# name of Hades, `seed_mythology` seeds Hades, and the one-off
+# `consolidate_eu_pantheon` (deleted 2026-11-21) merged a Pluto row into it.
+# Re-seeding Pluto would manufacture on every fresh database exactly that
+# duplicate — so its
 # absence is the fix, not a regression, and it is listed here so nobody
 # "restores" it by reading the inventory above as incomplete.
 DELIBERATELY_NOT_CARRIED_OVER = ["Pluto"]

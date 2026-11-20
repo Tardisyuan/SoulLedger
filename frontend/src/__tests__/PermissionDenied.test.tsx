@@ -168,7 +168,7 @@ describe("PermissionDenied", () => {
     expect(zh.permission.go_back).toBe("返回上一页");
     expect(en.permission.go_back).toBe("Go back");
     // egy:第三节审定(R1)定稿 —— 返回 = Wehem Er …,上一页 = Medjat Pehwy。
-    // Khet 已定为「内容 / 之后」,单用表达不了「返回」(docs/design-handoff/v3-prompts/egy-277-第三节-审定结果.md)。
+    // Khet 已定为「内容 / 之后」,单用表达不了「返回」(docs/design-handoff/v3-prompts/egy-277-第三节-审定结果.md,在 archive/docs 分支)。
     expect(egy.permission.go_back).toBe("Wehem Er Medjat Pehwy");
   });
 

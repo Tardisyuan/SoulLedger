@@ -84,10 +84,11 @@ def test_reaper_and_worker_ready_lost_transitions_are_pushed_too(layer, cn_tenan
     old = timezone.now() - timedelta(hours=2)
     TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="a", tenant=cn_tenant, status=RunStatus.RUNNING, started_at=old, worker_hostname="w1")
     TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="b", tenant=cn_tenant, status=RunStatus.PENDING, queued_at=old)
+    TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="r", tenant=cn_tenant, status=RunStatus.RETRY, started_at=old)
     layer.sent.clear()
 
     services.reap_stale_runs()
-    assert sorted(d["status"] for _, d in _events(layer, realtime.RUN_UPDATED)) == ["LOST", "LOST"]
+    assert sorted(d["status"] for _, d in _events(layer, realtime.RUN_UPDATED)) == ["LOST", "LOST", "LOST"]
 
     layer.sent.clear()
     TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="c", tenant=cn_tenant, status=RunStatus.RUNNING, started_at=old, worker_hostname="w1")

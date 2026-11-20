@@ -234,22 +234,24 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
  */
 export function ChatImageViewer({ images, index, onClose }: { images: ChatImageRef[]; index: number | null; onClose: () => void }) {
   // 第六十批 P6: closing shrinks back onto the thumbnail of the picture in front (`thumbRef` in `Picture`).
-  const { closeTo, setFront } = useFrontPhoto("chat");
+  const { closeTo, closeFrom, setFront, framePhoto } = useFrontPhoto("chat");
   return (
-    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent closeTo={closeTo}>
+    <FadeModal visible={index !== null} onRequestClose={onClose} statusBarTranslucent closeTo={closeTo} closeFrom={closeFrom}>
       {/* 以打开的那一张为 key:每次打开都从被点的那张开始。 */}
-      {index !== null ? <ViewerPages key={index} images={images} start={index} onClose={onClose} onFront={setFront} /> : null}
+      {index !== null ? <ViewerPages key={index} images={images} start={index} onClose={onClose} onFront={setFront} framePhoto={framePhoto} /> : null}
     </FadeModal>
   );
 }
 
-function ViewerPage({ image, width, height, onClose }: { image: ChatImageRef; width: number; height: number; onClose: () => void }) {
+type FramePhoto = ReturnType<typeof useFrontPhoto>["framePhoto"];
+
+function ViewerPage({ image, width, height, onClose, attach, onLoaded }: { image: ChatImageRef; width: number; height: number; onClose: () => void; attach: (node: View | null) => void; onLoaded: (e: { source?: { width: number; height: number } }) => void }) {
   const { t: tr } = useI18n();
   const { source, failed, reload } = useChatImageSource(image.id);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.media.close")} onPress={onClose} style={{ width, height, justifyContent: "center", alignItems: "center" }}>
       {source ? (
-        <Image testID={`chat-viewer-image-${image.id}`} source={source} contentFit="contain" cachePolicy="memory-disk" transition={0} style={{ width, height }} onError={reload} />
+        <View ref={attach}><Image onLoad={onLoaded} testID={`chat-viewer-image-${image.id}`} source={source} contentFit="contain" cachePolicy="memory-disk" transition={0} style={{ width, height }} onError={reload} /></View>
       ) : failed ? (
         <Txt variant="caption" style={styles.viewerText}>
           {tr("soul_app.circle.media.load_failed")}
@@ -266,11 +268,13 @@ function ViewerPages({
   start,
   onClose,
   onFront,
+  framePhoto,
 }: {
   images: ChatImageRef[];
   start: number;
   onClose: () => void;
   onFront: (id: string | null) => void;
+  framePhoto: FramePhoto;
 }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -291,7 +295,7 @@ function ViewerPages({
         onMomentumScrollEnd={(e) => setCurrent(Math.min(n - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))))}
       >
         {images.map((image) => (
-          <ViewerPage key={image.id} image={image} width={width} height={pageHeight} onClose={onClose} />
+          <ViewerPage key={image.id} image={image} width={width} height={pageHeight} onClose={onClose} attach={framePhoto(String(image.id)).attach} onLoaded={framePhoto(String(image.id)).onLoad} />
         ))}
       </ScrollView>
       {n > 1 ? (

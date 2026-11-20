@@ -1178,7 +1178,7 @@
       "$value": "{transition-duration.stagger}"
     },
     "choreography-max": {
-      "$description": "A whole choreography, first step's start to last step's end, is at most this (batch 60 P3). Past it, drop steps; do not stretch them. Named exceptions: the seal (200), breathe, the landing emblem (1.2 s; user decision 2026-11-09 and 2026-11-19). A cap, not a transition.",
+      "$description": "A whole choreography, first step's start to last step's end, is at most this (batch 60 P3). Past it, drop steps; do not stretch them. Named exceptions: the seal (200), breathe, and `landing-emblem`: the landing page emblem, about 1.2 s (line 1 s from 150 ms, ticks 450 ms from 900 ms; user decision 2026-11-09, restated 2026-11-19; Design batch 61 section 5 names it in its tokens.json motion.choreography). A cap, not a transition.",
       "$value": {
         "value": 480,
         "unit": "ms"
@@ -1314,6 +1314,14 @@
     },
     "warn": {
       "$value": "{color.warning}"
+    },
+    "splash-ground": {
+      "$description": "The soul app's cold start ground, native splash and the JS frame alike (Design v4 batch 61, section 1): the app's own canvas in each scheme, so the start does not jump into the app. Never the brand ground: that stays for brand surfaces like the landing page.",
+      "$value": "{color.canvas}"
+    },
+    "splash-mark": {
+      "$description": "The cold start mark (Design v4 batch 61, section 1): the neutral metal, the brand gold on dark and one step deeper on light (#8A6A24, 4.7:1 on #F8F8F6; #ECAA3D is 1.9:1 there). mobile/app.json's expo-splash-screen colours are pinned to these by coldStart.test.tsx.",
+      "$value": "{color.civ.neutral.metal}"
     }
   }
 }

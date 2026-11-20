@@ -80,7 +80,7 @@ def test_submit_creates_a_rebirth_workflow_and_shows_only_the_role(cn_tenant, ju
     assert set(response.data) == {
         "id", "cycle", "desired_form", "statement", "appeal_statement", "status", "cross_civilization",
         "target_hall", "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at", "current_step", "can_appeal",
-        "created_at", "updated_at"}
+        "reconsidered_at", "cooldown_until", "created_at", "updated_at"}
     assert set(response.data["current_step"]) == {"node_type", "approver_role", "is_appeal"}
     assert SoulEvent.objects.filter(soul=account.soul, event_type="REBIRTH_APPLICATION_SUBMITTED").exists()
 
@@ -153,7 +153,7 @@ def test_appeal_once_then_cooldown(cn_tenant, judge_user, cn_admin, django_captu
     application = _decide(judge_user, application, "FAILED", appeal=True, notes="内部备注:申诉无新证",
                           reason="维持原判", capture=django_capture_on_commit_callbacks)
     assert application.status == "APPEAL_REJECTED" and application.rejection_reason == "维持原判"
-    assert "内部备注" not in json.dumps(client.get(f"{APPLY}{application.pk}/").data, ensure_ascii=False)
+    assert "内部备注" not in json.dumps(client.get(f"{APPLY}{application.pk}/").data, ensure_ascii=False, default=str)
     third = client.post(f"{APPLY}{application.pk}/appeal/", {}, format="json")
     assert third.status_code == 409 and third.data["code"] == "appeal_used"
 

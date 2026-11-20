@@ -14916,7 +14916,9 @@ paths:
   /api/v1/notifications/mark_all_read/:
     post:
       operationId: v1_notifications_mark_all_read_create
-      description: Mark all of the user's notifications as read.
+      description: |-
+        Mark all of the user's notifications as read. `marked_read` counts rows that were still unread, as
+        `batch-read` does (state-machine audit 2026-11-20 #20); read -> unread through PATCH stays allowed.
       tags:
       - v1
       requestBody:
@@ -20579,7 +20581,10 @@ paths:
           - APPEALING
           - APPEAL_REJECTED
           - APPROVED
+          - EXCEPTION
+          - RECONSIDERING
           - REJECTED
+          - TERMINATED
           - UNDER_REVIEW
         description: |-
           * `UNDER_REVIEW` - 审批中
@@ -20587,6 +20592,9 @@ paths:
           * `APPEALING` - 申诉中
           * `APPEAL_REJECTED` - 申诉被驳回
           * `APPROVED` - 已批准
+          * `EXCEPTION` - 异常处理中
+          * `RECONSIDERING` - 复议中
+          * `TERMINATED` - 已终止
       tags:
       - v1
       security:
@@ -21818,8 +21826,8 @@ paths:
     post:
       operationId: v1_souls_station_create
       description: |-
-        挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世的灵魂;
-        可以往回挪。拒绝:`not_diyu` / `alive`(409)。
+        挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世、未终局的灵魂;
+        可以往回挪,要带 `reason`。拒绝:`not_diyu` / `alive` / `soul_settled`(409)、`reason_required`(400)。
       parameters:
       - in: path
         name: id
@@ -21850,6 +21858,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Soul'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
           description: ''
         '409':
           content:
@@ -35769,11 +35783,26 @@ components:
           type: integer
         total:
           type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeNegativeConfessionItem'
       required:
+      - items
       - total
       - truthful
       - unheard
       - untruthful
+    MeNegativeConfessionItem:
+      type: object
+      properties:
+        n:
+          type: integer
+        state:
+          $ref: '#/components/schemas/NegativeConfessionStateEnum'
+      required:
+      - n
+      - state
     MeProfile:
       type: object
       description: instance 是灵魂;本世账号经 context["account"] 传入。
@@ -35975,6 +36004,10 @@ components:
           type: string
           format: date-time
           nullable: true
+        reconsidered_at:
+          type: string
+          format: date-time
+          nullable: true
         current_step:
           allOf:
           - $ref: '#/components/schemas/MeCurrentStep'
@@ -35982,6 +36015,11 @@ components:
           readOnly: true
         can_appeal:
           type: boolean
+          readOnly: true
+        cooldown_until:
+          type: string
+          format: date-time
+          nullable: true
           readOnly: true
         created_at:
           type: string
@@ -35993,6 +36031,7 @@ components:
           readOnly: true
       required:
       - can_appeal
+      - cooldown_until
       - created_at
       - current_step
       - cycle
@@ -37131,6 +37170,16 @@ components:
       - statute_id
       - text
       - truthful
+    NegativeConfessionStateEnum:
+      enum:
+      - TRUTHFUL
+      - UNTRUTHFUL
+      - UNHEARD
+      type: string
+      description: |-
+        * `TRUTHFUL` - TRUTHFUL
+        * `UNTRUTHFUL` - UNTRUTHFUL
+        * `UNHEARD` - UNHEARD
     NegativeConfessionTally:
       type: object
       properties:
@@ -37618,6 +37667,9 @@ components:
         cooldown_past_days:
           type: integer
           readOnly: true
+        can_reject:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -37630,6 +37682,7 @@ components:
       - account
       - application
       - approved_days
+      - can_reject
       - cooldown_end
       - cooldown_original_until
       - cooldown_past_days
@@ -43539,6 +43592,7 @@ components:
       - soul_or_judgment
       - soul_recycled
       - soul_residing
+      - soul_settled
       - soul_state
       - soup_already_taken
       - soup_not_taken
@@ -44054,6 +44108,7 @@ components:
         * `soul_or_judgment` - soul_or_judgment
         * `soul_recycled` - soul_recycled
         * `soul_residing` - soul_residing
+        * `soul_settled` - soul_settled
         * `soul_state` - soul_state
         * `soup_already_taken` - soup_already_taken
         * `soup_not_taken` - soup_not_taken
@@ -44986,6 +45041,9 @@ components:
       - APPEALING
       - APPEAL_REJECTED
       - APPROVED
+      - EXCEPTION
+      - RECONSIDERING
+      - TERMINATED
       type: string
       description: |-
         * `UNDER_REVIEW` - 审批中
@@ -44993,6 +45051,9 @@ components:
         * `APPEALING` - 申诉中
         * `APPEAL_REJECTED` - 申诉被驳回
         * `APPROVED` - 已批准
+        * `EXCEPTION` - 异常处理中
+        * `RECONSIDERING` - 复议中
+        * `TERMINATED` - 已终止
     RebirthFormEnum:
       enum:
       - DIVINE
@@ -49184,6 +49245,10 @@ components:
       properties:
         station:
           $ref: '#/components/schemas/DiyuStationEnum'
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
       required:
       - station
     SoulTokenPair:

@@ -6,6 +6,13 @@
  * 0.96 and fades over 480. From there the app underneath takes touches and the ground fades out
  * over the last 240. A tap before then skips straight to the end.
  *
+ * LANDING (user 2026-11-21, 「开机动画结束之后 缩小并上移到logo位置」): when the caller passes `land` —
+ * the soul app arriving on its sign-in page — the mark does not recede: over the same 480 it shrinks
+ * to `land.size` and moves up to `land.top` (a window y), centred, which is where that page draws its
+ * own mark. It stays opaque; the ground then fades over the last 240 and the mark with it, onto the
+ * page's mark in the same spot — one mark, no jump. The target is measured against this layer's own
+ * laid-out height, so nothing moves until that is known.
+ *
  * WHEN: once per process — a cold start (`coldStart.played`, module-level: a remount is not one).
  * It waits while `booting`, but not for longer than `SESSION_WAIT_MS`. It does NOT play under the
  * OS "reduce motion" setting, or when the caller says `skip` (the soul app: its civilization's
@@ -16,7 +23,7 @@
  * Each app's `coldStart.tsx` is the thin shell that supplies them.
  */
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet } from "react-native";
 import Animated, {
   Easing,
@@ -52,13 +59,39 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const EASE_EXIT = Easing.bezier(...curves.exit);
 const EASE_ENTER = Easing.bezier(...curves.enter);
 const EASE_WRITE = Easing.bezier(0.4, 0, 0.2, 1);
+const EASE_MOVE = Easing.bezier(...curves.standard);
 
 type Phase = "wait" | "play" | "done";
 
-export function ColdStartView({ booting, skip = false, ground, mark }: { booting: boolean; skip?: boolean; ground: string; mark: string }) {
+/** Where the page under the cold start draws the mark: its top edge (window y) and its width. */
+export type Land = { top: number; size: number };
+
+/** The landing transform for a mark `BOX` wide centred in a layer `height` tall, onto `land`. */
+export function landing(land: Land, height: number) {
+  const centre = land.top + (land.size * MARK_HEIGHT) / MARK_WIDTH / 2;
+  return { translateY: centre - height / 2, scale: land.size / BOX };
+}
+
+export function ColdStartView({
+  booting,
+  skip = false,
+  ground,
+  mark,
+  land,
+}: {
+  booting: boolean;
+  skip?: boolean;
+  ground: string;
+  mark: string;
+  /** Land the mark here instead of receding (read once, when the cold start decides to play). */
+  land?: Land;
+}) {
   const [phase, setPhase] = useState<Phase>(coldStart.played ? "done" : "wait");
   const [waited, setWaited] = useState(false);
   const [interactive, setInteractive] = useState(false);
+  const [target, setTarget] = useState<Land | null>(null);
+  const [height, setHeight] = useState<number | null>(null);
+  const started = useRef(0);
 
   // Decide once the session has settled (or the wait ran out).
   useEffect(() => {
@@ -76,12 +109,15 @@ export function ColdStartView({ booting, skip = false, ground, mark }: { booting
         if (reduced || skip) {
           void SplashScreen.hideAsync().catch(() => {});
           setPhase("done");
-        } else setPhase("play");
+        } else {
+          setTarget(land ?? null);
+          setPhase("play");
+        }
       });
     return () => {
       alive = false;
     };
-  }, [phase, booting, skip, waited]);
+  }, [phase, booting, skip, waited, land]);
 
   // Frame 0 is the native splash: the ground, no mark yet.
   const drawn = useSharedValue(0);
@@ -94,16 +130,29 @@ export function ColdStartView({ booting, skip = false, ground, mark }: { booting
 
   useEffect(() => {
     if (phase !== "play") return;
-    const written = motion.coldStartDraw + motion.coldStartHold;
-    const recede = { duration: motion.coldStartInteractive, easing: EASE_EXIT };
+    started.current = Date.now();
     drawn.set(withTiming(1, { duration: motion.coldStartDraw, easing: EASE_WRITE }));
-    lift.set(withDelay(written, withTiming(-8, recede)));
-    scale.set(withDelay(written, withTiming(0.96, recede)));
-    shown.set(withDelay(written, withTiming(0, recede)));
+  }, [phase, drawn]);
+
+  // After the hold: recede, or land (once the layer's height is known). Timed from the start of the draw.
+  useEffect(() => {
+    if (phase !== "play" || (target && height === null)) return;
+    const written = Math.max(0, motion.coldStartDraw + motion.coldStartHold - (Date.now() - started.current));
+    if (target && height !== null) {
+      const to = landing(target, height);
+      const move = { duration: motion.coldStartInteractive, easing: EASE_MOVE };
+      lift.set(withDelay(written, withTiming(to.translateY, move)));
+      scale.set(withDelay(written, withTiming(to.scale, move)));
+    } else {
+      const recede = { duration: motion.coldStartInteractive, easing: EASE_EXIT };
+      lift.set(withDelay(written, withTiming(-8, recede)));
+      scale.set(withDelay(written, withTiming(0.96, recede)));
+      shown.set(withDelay(written, withTiming(0, recede)));
+    }
     cover.set(
       withDelay(written + motion.coldStartInteractive, withTiming(0, { duration: motion.coldStart - motion.coldStartInteractive, easing: EASE_ENTER })),
     );
-  }, [phase, drawn, lift, scale, shown, cover]);
+  }, [phase, target, height, lift, scale, shown, cover]);
 
   // The clock on its own, keyed on the phase alone: a re-render must never restart it.
   useEffect(() => {
@@ -130,7 +179,10 @@ export function ColdStartView({ booting, skip = false, ground, mark }: { booting
         testID="cold-start-skip"
         onPress={() => setPhase("done")}
         // The first frame is the native splash's picture: only now may that one go.
-        onLayout={() => void SplashScreen.hideAsync().catch(() => {})}
+        onLayout={(e) => {
+          void SplashScreen.hideAsync().catch(() => {});
+          setHeight(e.nativeEvent.layout.height);
+        }}
         style={[StyleSheet.absoluteFill, styles.centre, { backgroundColor: ground }]}
       >
         <Animated.View testID="cold-start-mark-layer" style={markStyle}>

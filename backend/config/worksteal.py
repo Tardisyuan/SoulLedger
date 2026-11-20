@@ -170,17 +170,23 @@ class TxLastWorkStealing(WorkStealingScheduling):
         if not idle:
             return
         if self.pending:
-            # Plain tests, while any are pending, to the clean idle workers in even shares (stock worksteal).
-            plain_nodes = [n for n in idle if not tainted(n)] if not self.db.isdisjoint(self.pending) else []
+            # Plain tests, while any are pending, to the clean idle workers in even shares (stock worksteal),
+            # never to more workers than there are plain tests.
+            plain = [x for x in self.pending if x in self.db]
+            plain_nodes = [n for n in idle if not tainted(n)][: len(plain)]
             for i, node in enumerate(plain_nodes):
                 plain = [x for x in self.pending if x in self.db]
                 self._send(node, plain[: len(plain) // (len(plain_nodes) - i)])
+            # Every plain test is out now. A worker whose share left it below MIN_PENDING takes the rest too
+            # (plain first, then the rest, is still the collected order); 2026-11-21 one plain test and two
+            # workers left both idle with nothing sent and xdist shut them down with 73 tests pending.
+            idle = idle_nodes()
             # Everyone else: transactional tests, longest first, only enough to keep MIN_PENDING queued, so the
             # next one goes to whichever worker frees first; then the no-database tests in even shares.
             # A clean worker is the only kind that can run plain tests, and taking a transactional one ends
             # that: while another clean worker still has plain tests to spare, it steals those instead (below).
             plain_backlog = any(steal_size(p) for n, p in up if not tainted(n))
-            rest_nodes = [n for n in idle if n not in plain_nodes and (tainted(n) or not plain_backlog)]
+            rest_nodes = [n for n in idle if tainted(n) or not plain_backlog]
             for i, node in enumerate(rest_nodes):
                 tx = sorted((x for x in self.pending if x in self.tx), key=lambda x: -self.expected[x])
                 if tx:

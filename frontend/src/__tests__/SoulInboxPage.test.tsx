@@ -351,6 +351,35 @@ it("the draft is restored from the server after a reload", async () => {
   expect(apiMock.saveDraft).not.toHaveBeenCalled();
 });
 
+it("第六十一批 E3: a draft that did not load locks the box, says so with 重试, and saves nothing until it loads", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  apiMock.draft.mockRejectedValueOnce(new Error("offline"));
+  renderPage();
+  const thread = await openThread();
+  const line = await within(thread).findByTestId("draft-load-failed");
+  expect(line).toHaveTextContent(tZh("soul_inbox.draft_load_failed"));
+  const box = within(thread).getByLabelText(tZh("soul_inbox.reply_label")) as HTMLTextAreaElement;
+  expect(box.readOnly).toBe(true);
+  fireEvent.focusOut(box);
+  expect(apiMock.saveDraft).not.toHaveBeenCalled();
+  // 重试取到了:这一行收起,框可以写,原草稿回来。
+  apiMock.draft.mockResolvedValueOnce({ data: { ...noDraft.data, draft: "上次没写完", draft_saved_at: "2026-09-18T02:00:00Z" } });
+  fireEvent.click(within(line).getByRole("button", { name: tZh("common.retry") }));
+  await waitFor(() => expect(box.value).toBe("上次没写完"));
+  expect(within(thread).queryByTestId("draft-load-failed")).toBeNull();
+  expect(box.readOnly).toBe(false);
+});
+
+it("a draft that loads leaves the box editable and shows no load-failed line", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  renderPage();
+  const thread = await openThread();
+  await waitFor(() => expect(apiMock.draft).toHaveBeenCalledWith("c1"));
+  const box = within(thread).getByLabelText(tZh("soul_inbox.reply_label")) as HTMLTextAreaElement;
+  expect(box.readOnly).toBe(false);
+  expect(within(thread).queryByTestId("draft-load-failed")).toBeNull();
+});
+
 it("typing saves the draft after a pause, and blur saves at once", async () => {
   asRole("soul_inbox.read", "soul_inbox.reply");
   renderPage();

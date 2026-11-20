@@ -20,7 +20,7 @@ import { Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { GoneScreen, useGone } from "../gone";
 import { useI18n } from "../i18n";
-import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, wasAppealed, type FlowStep } from "../rules";
+import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, stateNote, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
 import { publishVoiceNumber } from "../voiceCache";
 import { radius, space } from "../theme";
@@ -30,6 +30,7 @@ import {
   DataRow,
   DataRows,
   EnumBadge,
+  enumText,
   EnumValue,
   FadeIn,
   GUTTER,
@@ -41,16 +42,16 @@ import {
   Quote,
   RadioMark,
   Screen,
-  SectionLabel,
   ScreenError,
+  SectionLabel,
   Skeleton,
+  StaleLine,
   Txt,
-  enumText,
-  useReloadOnRefocus,
-  useReducedMotion,
   useLandingFade,
-  useRemote,
   useLayout,
+  useReducedMotion,
+  useReloadOnRefocus,
+  useRemote,
   useTheme,
 } from "../ui";
 import { CooldownShorteningBlock } from "./cooldown";
@@ -207,6 +208,7 @@ export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
   }
   return (
     <Screen refreshing={list.loading && !!list.data} onRefresh={list.reload} edges={["left", "right"]}>
+      <StaleLine state={list} onRetry={() => void list.reload()} />
       {!list.data ? (
         <Block>
           <Skeleton lines={3} />
@@ -489,6 +491,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
   const a = app.data;
   const reason = rejectionReasonOf(a);
   const appealed = wasAppealed(a);
+  const note = stateNote(a);
   const unrecorded = t("soul_app.detail.not_recorded");
 
   const submitAppeal = async () => {
@@ -508,6 +511,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
 
   return (
     <Screen refreshing={app.loading} onRefresh={app.reload}>
+      <StaleLine state={app} onRetry={() => void app.reload()} />
       <FadeIn>
         <LandingHighlight on={!!landed}>
         <Block testID="application-detail">
@@ -525,6 +529,11 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
               </View>
             ) : null}
           </View>
+          {note ? (
+            <Txt testID="state-note" variant="caption" tone="muted" style={styles.stateNote}>
+              {t(note.key, note.params)}
+            </Txt>
+          ) : null}
           <View style={styles.formTitle}>
             <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="display" />
           </View>
@@ -679,6 +688,7 @@ const styles = StyleSheet.create({
   formCode: { fontSize: 12, letterSpacing: 1.1 },
   statement: { marginTop: 4 },
   formTitle: { marginTop: 16 },
+  stateNote: { marginTop: 8 },
   landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   landingTagText: { fontSize: 12, letterSpacing: 0.4 },

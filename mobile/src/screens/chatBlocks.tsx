@@ -10,7 +10,7 @@ import { StyleSheet, View } from "react-native";
 import { useChat } from "../chat";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { Empty, Screen, SectionError, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
+import { Empty, Press, Screen, SectionError, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 
 function BlockRow({ block, busy, onUnblock }: { block: SoulChatBlock; busy: boolean; onUnblock: () => void }) {
   const theme = useTheme();
@@ -66,6 +66,7 @@ export function ChatBlocksScreen() {
   const rows = blocks.data?.filter((b) => !gone.has(b.id)) ?? null;
   return (
     <Screen testID="chat-blocks" refreshing={blocks.loading && rows !== null} onRefresh={() => void blocks.reload()}>
+      <StaleLine state={blocks} onRetry={() => void blocks.reload()} />
       {rows ? (
         rows.length === 0 ? (
           <Empty testID="chat-blocks-empty" text={t("soul_app.chat.blocks.empty")} />

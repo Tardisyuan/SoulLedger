@@ -7,7 +7,8 @@
 转世完成时清空(新的一世不在路上,`complete_rebirth`)。
 
 其余各站(黄泉路、望乡台……莲花台)没有业务事件对应,由官员在灵魂详情里挪(`move`,要 `soul.transition`),
-可以往回挪(记错了要能改)。每次变动一条 DIYU_STATION_CHANGED,与那一笔同一事务;payload:from / to / via。
+可以往回挪(记错了要能改),但要写理由;终态(状态机里没有出路的:SETTLED)的灵魂不挪(2026-11-21 用户决定,
+状态机盘点 #11)。每次变动一条 DIYU_STATION_CHANGED,与那一笔同一事务;payload:from / to / via(官员写了理由再加 reason)。
 """
 from django.db.models import F
 from django.utils import timezone
@@ -29,7 +30,7 @@ class StationRefusedError(Exception):
         self.detail = detail
 
 
-def arrive(soul, station: str, *, via: str, forward_only: bool = True, actor: str = "system") -> bool:
+def arrive(soul, station: str, *, via: str, forward_only: bool = True, actor: str = "system", reason: str = "") -> bool:
     """把灵魂记到 `station`,在调用方的事务里。不是地府的灵魂、已经在那一站、或(forward_only)不比现在靠前:不写。
 
     读写都按 pk 直接走库:调用方手上的 `soul` 可能是旧的(行程服务拿到的往往不是加锁的那一份),整行 save 会把
@@ -45,12 +46,16 @@ def arrive(soul, station: str, *, via: str, forward_only: bool = True, actor: st
     Soul.all_objects.filter(pk=soul.pk).update(
         diyu_station=station, version=F("version") + 1, update_time=timezone.now())
     soul.diyu_station = station
-    EventService.log(soul, "DIYU_STATION_CHANGED", {"from": current, "to": station, "via": via}, actor)
+    payload = {"from": current, "to": station, "via": via}
+    if reason:
+        payload["reason"] = reason
+    EventService.log(soul, "DIYU_STATION_CHANGED", payload, actor)
     return True
 
 
-def move(soul, station: str, user) -> Soul:
-    """官员挪站(`POST /souls/{id}/station/`)。拒绝:不是地府(`not_diyu`)、还在世(`alive`)、不是十三站之一。"""
+def move(soul, station: str, user, reason: str = "") -> Soul:
+    """官员挪站(`POST /souls/{id}/station/`)。拒绝:不是地府(`not_diyu`)、还在世(`alive`)、终态(`soul_settled`)、
+    不是十三站之一、往回挪没写理由(`reason_required`)。"""
     from django.db import transaction
 
     if station not in STATIONS:
@@ -61,6 +66,12 @@ def move(soul, station: str, user) -> Soul:
             raise StationRefusedError("not_diyu", "Only a soul of Diyu walks the thirteen stations.")
         if locked.current_state == SoulState.ALIVE:
             raise StationRefusedError("alive", "A living soul is not on the road.")
-        arrive(locked, station, via="officer", forward_only=False, actor=user.username if user else "system")
+        if not any(locked.can_transition_to(state) for state in SoulState):  # terminal: no exit (SETTLED)
+            raise StationRefusedError("soul_settled", "A soul whose account is closed is no longer on the road.")
+        reason = (reason or "").strip()
+        if ordinal(station) < ordinal(locked.diyu_station) and not reason:
+            raise StationRefusedError("reason_required", "Moving a soul back to an earlier station needs a reason.")
+        arrive(locked, station, via="officer", forward_only=False, actor=user.username if user else "system",
+               reason=reason)
     soul.diyu_station = locked.diyu_station
     return locked

@@ -2,17 +2,18 @@
  * 本世页的进度卡(Design 第六十二批):勾魂牒、已超度、冥河渡口、地狱前庭(位置类,五段条正下方),
  * 与四十二条否定告白(紧贴审判那一格上方)。字段是 `/me/` 的 `capture_warrant` / `wangsi_delivered_at` /
  * `greek_ferry` / `european_vestibule` / `negative_confession`,不适用时为 null —— null 就不画。
- * 版式照「赴冥 · 十三站」(life.tsx 的 StationsCard):通栏,上下 16,底边一条细线;不加动效。
+ * 版式照「赴冥 · 十三站」(life.tsx 的 StationsCard):通栏,上下 16,底边一条细线;不加动效(四十二条新记一格时那一格除外)。
  */
 import type { MeProfile } from "@soulledger/core/api/soul";
 import { formatIsoDay } from "@soulledger/core/domain/dates";
-import type { ReactNode, Ref } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
+import { Animated, StyleSheet, View, useWindowDimensions } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
-import { SectionLabel, Txt, useLayout, useTheme } from "../ui";
+import { motion } from "../theme";
+import { EASE, SectionLabel, Txt, useLayout, useReducedMotion, useTheme } from "../ui";
 
 type Ferry = NonNullable<MeProfile["greek_ferry"]>;
 type Confession = NonNullable<MeProfile["negative_confession"]>;
@@ -203,62 +204,117 @@ export function VestibuleCard({ vestibule }: { vestibule: MeProfile["european_ve
   );
 }
 
+type State = Confession["items"][number]["state"];
 type Kind = "truthful" | "untruthful" | "unheard";
+const KIND: Record<State, Kind> = { TRUTHFUL: "truthful", UNTRUTHFUL: "untruthful", UNHEARD: "unheard" };
 const KINDS: Kind[] = ["truthful", "untruthful", "unheard"];
 
-/** 一格:如实实心、不实斜线、未记空心。不实不用红 —— 斜线就分得出来。 */
-function Cell({ kind, flex }: { kind: Kind; flex: boolean }) {
-  const t = useTheme();
+/** 第六十二批:两排各 21(§ 1–21 / § 22–42,网页录入面板的两栏);窄于 360pt 三排各 14。 */
+export function confessionRows(total: number, width: number): number[][] {
+  const per = width < 360 ? 14 : 21;
+  return Array.from({ length: Math.ceil(total / per) }, (_, r) =>
+    Array.from({ length: Math.min(per, total - r * per) }, (_, i) => r * per + i + 1)
+  );
+}
+
+/** 不实的斜线:左下到右上,墨色。 */
+function Slash({ color }: { color: string }) {
   return (
-    <View
-      testID={`confession-cell-${kind}`}
-      style={[flex ? styles.cell : styles.swatch, { borderColor: kind === "truthful" ? t.ink : t.inkMuted }, kind === "truthful" && { backgroundColor: t.ink }]}
-    >
-      {kind === "untruthful" ? (
-        <Svg width="100%" height="100%" viewBox="0 0 10 14" preserveAspectRatio="none">
-          <Line x1="0" y1="14" x2="10" y2="0" stroke={t.inkMuted} strokeWidth={1.5} />
-        </Svg>
-      ) : null}
+    <Svg width="100%" height="100%" viewBox="0 0 10 14" preserveAspectRatio="none" style={StyleSheet.absoluteFill}>
+      <Line x1="0" y1="14" x2="10" y2="0" stroke={color} strokeWidth={1.5} />
+    </Svg>
+  );
+}
+
+/**
+ * 一格 = 一条告白、一位判官,位置按条号固定。如实墨实心;不实墨描边加一条斜线;未记发丝线空格。不用红,不用文明色。
+ * 页面开着时这一格从未记变成如实 / 不实:只有它的填充(连同斜线)160 淡入(进曲线);打开页面时什么都不动,
+ * 减少动态效果时直接换。
+ */
+function Cell({ n, kind }: { n: number; kind: Kind }) {
+  const t = useTheme();
+  const reduced = useReducedMotion();
+  const [fill] = useState(() => new Animated.Value(1));
+  const was = useRef(kind);
+  useEffect(() => {
+    const from = was.current;
+    was.current = kind;
+    if (from !== "unheard" || kind === "unheard" || reduced) return;
+    fill.setValue(0);
+    const run = Animated.timing(fill, { toValue: 1, duration: motion.fade, easing: EASE.enter, useNativeDriver: true });
+    run.start();
+    return () => run.stop();
+  }, [kind, reduced, fill]);
+  return (
+    <View testID={`confession-cell-${n}`} style={[styles.cell, { borderColor: kind === "unheard" ? t.hair : t.ink }]}>
+      {kind === "unheard" ? null : (
+        <Animated.View testID={`confession-fill-${n}`} style={[StyleSheet.absoluteFill, { opacity: fill }, kind === "truthful" && { backgroundColor: t.ink }]}>
+          {kind === "untruthful" ? <Slash color={t.ink} /> : null}
+        </Animated.View>
+      )}
     </View>
   );
 }
 
-/** 四十二条否定告白(埃及):42 小格 + 一行计数;整组一个读屏标签,不逐格读。 */
+/** 图例里的小样:与格子同画法。 */
+function Swatch({ kind }: { kind: Kind }) {
+  const t = useTheme();
+  return (
+    <View style={[styles.swatch, { borderColor: kind === "unheard" ? t.hair : t.ink }, kind === "truthful" && { backgroundColor: t.ink }]}>
+      {kind === "untruthful" ? <Slash color={t.ink} /> : null}
+    </View>
+  );
+}
+
+/**
+ * 四十二条否定告白(埃及,第六十二批):按条序固定位置的格子,每排下标起止条号;计数在标题行;图例一行,只列有的状态,
+ * 一条也没记时写「还没有记」。整组一个读屏标签,不逐格读。
+ */
 export function ConfessionCard({ tally }: { tally: Confession | null | undefined }) {
   const { t: tr } = useI18n();
+  const t = useTheme();
   const { width } = useWindowDimensions();
   if (!tally) return null;
   const counts: Record<Kind, number> = { truthful: tally.truthful, untruthful: tally.untruthful, unheard: tally.unheard };
   const recorded = tally.truthful + tally.untruthful;
-  const cells = KINDS.flatMap((k) => Array.from({ length: Math.max(0, counts[k]) }, () => k));
+  const byN = new Map((tally.items ?? []).map((item) => [item.n, KIND[item.state]]));
   const params = { truthful: String(tally.truthful), untruthful: String(tally.untruthful), unheard: String(tally.unheard), total: String(tally.total) };
-  // 393 宽一行放得下;更窄(< 360pt)只留色块与数字。
-  const labels = width >= 360;
   return (
     <Card testID="life-confession" title={tr("soul_app.life.confession.title")} right={`${recorded} / ${tally.total}`}>
       <Txt variant="caption" tone="subtle" style={styles.subtitle}>
         {tr("soul_app.life.confession.subtitle")}
       </Txt>
-      <View testID="life-confession-strip" accessible accessibilityLabel={tr("soul_app.life.confession.strip_aria", params)} style={styles.strip}>
-        {cells.map((k, i) => (
-          <Cell key={i} kind={k} flex />
-        ))}
-      </View>
-      <View testID="life-confession-tally" style={styles.tally}>
-        {KINDS.map((k) => (
-          <View key={k} style={styles.tallyItem}>
-            <Cell kind={k} flex={false} />
-            <Txt testID={`life-confession-${k}`} numberOfLines={1} variant="caption" tone="muted">
-              {labels ? `${tr(`soul_app.life.confession.${k}`)} ${counts[k]}` : String(counts[k])}
-            </Txt>
+      <View testID="life-confession-strip" accessible accessibilityLabel={tr("soul_app.life.confession.strip_aria", params)}>
+        {confessionRows(tally.total, width).map((row) => (
+          <View key={row[0]} testID="confession-row">
+            <View style={styles.row}>
+              {row.map((n) => (
+                <Cell key={n} n={n} kind={byN.get(n) ?? "unheard"} />
+              ))}
+            </View>
+            <View style={styles.ticks}>
+              <Txt variant="caption" style={[styles.tick, { color: t.inkSubtle }]}>{`§ ${row[0]}`}</Txt>
+              <Txt variant="caption" style={[styles.tick, { color: t.inkSubtle }]}>{`§ ${row[row.length - 1]}`}</Txt>
+            </View>
           </View>
         ))}
       </View>
-      <Txt testID="life-confession-status" variant="body">
-        {tally.unheard > 0
-          ? tr("soul_app.life.confession.partial", { recorded: String(recorded), total: String(tally.total) })
-          : tr("soul_app.life.confession.complete", { total: String(tally.total) })}
-      </Txt>
+      <View testID="life-confession-tally" style={styles.tally}>
+        {recorded === 0 ? (
+          <Txt testID="life-confession-none" variant="caption" tone="muted">
+            {tr("soul_app.life.confession.none")}
+          </Txt>
+        ) : (
+          KINDS.filter((k) => counts[k] > 0).map((k) => (
+            <View key={k} style={styles.tallyItem}>
+              <Swatch kind={k} />
+              <Txt testID={`life-confession-${k}`} numberOfLines={1} variant="caption" tone="muted">
+                {`${tr(`soul_app.life.confession.${k}`)} ${counts[k]}`}
+              </Txt>
+            </View>
+          ))
+        )}
+      </View>
     </Card>
   );
 }
@@ -273,9 +329,11 @@ const styles = StyleSheet.create({
   track: { height: 2, overflow: "hidden" },
   trackFill: { height: 2 },
   subtitle: { marginTop: -8 },
-  strip: { flexDirection: "row", gap: 2, height: 14 },
-  cell: { flex: 1, height: 14, borderWidth: 1, overflow: "hidden" },
-  swatch: { width: 8, height: 8, borderWidth: 1, overflow: "hidden" },
-  tally: { flexDirection: "row", flexWrap: "nowrap", gap: 16 },
+  row: { flexDirection: "row", gap: 2 },
+  cell: { flex: 1, height: 20, borderWidth: 1, borderRadius: 2, overflow: "hidden" },
+  ticks: { flexDirection: "row", justifyContent: "space-between", marginTop: 4, marginBottom: 4 },
+  tick: { fontSize: 10, lineHeight: 14 },
+  swatch: { width: 8, height: 12, borderWidth: 1, borderRadius: 1, overflow: "hidden" },
+  tally: { flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 4 },
   tallyItem: { flexDirection: "row", alignItems: "center", gap: 4 },
 });

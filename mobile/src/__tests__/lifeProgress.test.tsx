@@ -6,7 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
-import { AccessibilityInfo, ScrollView, View } from "react-native";
+import { AccessibilityInfo, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -249,29 +249,68 @@ describe("地狱前庭", () => {
 describe("四十二条否定告白", () => {
   const egypt = (tally: unknown) => ({ civilization: "EGYPTIAN", home_civilization: "EGYPTIAN", negative_confession: tally, diyu_station: "" });
 
-  it("42 cells — true, then false, then unrecorded — one label for the strip, a count row and the sentence", async () => {
-    await openAs(egypt({ truthful: 26, untruthful: 3, unheard: 13, total: 42 }));
-    const strip = screen.getByTestId("life-confession-strip");
-    const kinds = within(strip).getAllByTestId(/^confession-cell-/).map((c) => c.props.testID);
-    expect(kinds).toHaveLength(42);
-    expect(kinds).toEqual([...Array(26).fill("confession-cell-truthful"), ...Array(3).fill("confession-cell-untruthful"), ...Array(13).fill("confession-cell-unheard")]);
-    expect(strip.props.accessibilityLabel).toBe("如实 26，不实 3，未记 13，共 42 条");
-    expect(screen.getByTestId("life-confession-count")).toHaveTextContent("29 / 42");
-    expect(screen.getByTestId("life-confession-truthful")).toHaveTextContent("如实 26");
+  /** One letter per assessor, § 1 first: T 如实, U 不实, - 未记. */
+  const tally = (marks: string) => {
+    const items = [...marks].map((m, i) => ({ n: i + 1, state: m === "T" ? "TRUTHFUL" : m === "U" ? "UNTRUTHFUL" : "UNHEARD" }));
+    const count = (m: string) => [...marks].filter((x) => x === m).length;
+    return { truthful: count("T"), untruthful: count("U"), unheard: count("-"), total: marks.length, items };
+  };
+  const SOME = "TTTTTTUTTTTTTTTTTUTTTTTTTTTTTTUTTTTT------"; // 第六十二批的「有不实 · 还有 6 条未记」
+  const cellsOf = (row: ReturnType<typeof screen.getByTestId>) => within(row).getAllByTestId(/^confession-cell-\d+$/);
+
+  it("two rows of 21 in assessor order, each cell where its assessor is — not sorted by state; one label for the grid", async () => {
+    await openAs(egypt(tally(SOME)));
+    const rows = within(screen.getByTestId("life-confession-strip")).getAllByTestId("confession-row");
+    expect(rows.map((r) => cellsOf(r).map((c) => c.props.testID))).toEqual([
+      Array.from({ length: 21 }, (_, i) => `confession-cell-${i + 1}`),
+      Array.from({ length: 21 }, (_, i) => `confession-cell-${i + 22}`),
+    ]);
+    // The ticks under each row: its first and last assessor.
+    expect(within(rows[0]).getByText("§ 1")).toBeTruthy();
+    expect(within(rows[0]).getByText("§ 21")).toBeTruthy();
+    expect(within(rows[1]).getByText("§ 22")).toBeTruthy();
+    expect(within(rows[1]).getByText("§ 42")).toBeTruthy();
+    // § 7 is false (a stripe, no fill), § 8 true (solid), § 37 unrecorded (no fill at all).
+    expect(StyleSheet.flatten(screen.getByTestId("confession-fill-7").props.style).backgroundColor).toBeUndefined();
+    expect(StyleSheet.flatten(screen.getByTestId("confession-fill-8").props.style).backgroundColor).toBeDefined();
+    expect(screen.queryByTestId("confession-fill-37")).toBeNull();
+    expect(screen.getByTestId("life-confession-strip").props.accessibilityLabel).toBe("如实 33，不实 3，未记 6，共 42 条");
+    expect(screen.getByTestId("life-confession-count")).toHaveTextContent("36 / 42");
+    expect(screen.getByTestId("life-confession-truthful")).toHaveTextContent("如实 33");
     expect(screen.getByTestId("life-confession-untruthful")).toHaveTextContent("不实 3");
-    expect(screen.getByTestId("life-confession-unheard")).toHaveTextContent("未记 13");
-    expect(screen.getByTestId("life-confession-truthful").props.numberOfLines).toBe(1);
-    expect(screen.getByTestId("life-confession-status")).toHaveTextContent("已记 29 / 42 条，其余还没有记。");
-    // 不实 is a stripe, never red.
+    expect(screen.getByTestId("life-confession-unheard")).toHaveTextContent("未记 6");
+    // The closing sentence is gone: the title row says it.
+    expect(screen.queryByTestId("life-confession-status")).toBeNull();
+    expect(screen.queryByText(/其余还没有记|都已记下/)).toBeNull();
+    // Never red, never the civilization's colour: ink only.
     expect(JSON.stringify(screen.getByTestId("life-confession").props.style)).not.toMatch(/#[cC]|red/);
   });
 
-  it("all recorded; under 360pt the count row keeps only the swatches and the numbers", async () => {
+  it("under 360pt: three rows of 14, same order", async () => {
     Object.assign(mockWindow, { width: 340 });
-    await openAs(egypt({ truthful: 40, untruthful: 2, unheard: 0, total: 42 }));
-    expect(screen.getByTestId("life-confession-status")).toHaveTextContent("42 条都已记下。");
-    expect(screen.getByTestId("life-confession-truthful")).toHaveTextContent(/^40$/);
-    expect(screen.getByTestId("life-confession-untruthful")).not.toHaveTextContent("不实");
+    await openAs(egypt(tally(SOME)));
+    const rows = within(screen.getByTestId("life-confession-strip")).getAllByTestId("confession-row");
+    expect(rows.map((r) => cellsOf(r).map((c) => Number(c.props.testID.split("-").pop())))).toEqual([
+      Array.from({ length: 14 }, (_, i) => i + 1),
+      Array.from({ length: 14 }, (_, i) => i + 15),
+      Array.from({ length: 14 }, (_, i) => i + 29),
+    ]);
+    expect(within(rows[2]).getByText("§ 29")).toBeTruthy();
+  });
+
+  it("the legend lists only the states there are: all true is 「如实 42」 alone", async () => {
+    await openAs(egypt(tally("T".repeat(42))));
+    expect(screen.getByTestId("life-confession-truthful")).toHaveTextContent("如实 42");
+    expect(screen.queryByTestId("life-confession-untruthful")).toBeNull();
+    expect(screen.queryByTestId("life-confession-unheard")).toBeNull();
+    expect(screen.queryByTestId("life-confession-none")).toBeNull();
+  });
+
+  it("none recorded: 「还没有记」 and no legend", async () => {
+    await openAs(egypt(tally("-".repeat(42))));
+    expect(screen.getByTestId("life-confession-none")).toHaveTextContent("还没有记");
+    for (const k of ["truthful", "untruthful", "unheard"]) expect(screen.queryByTestId(`life-confession-${k}`)).toBeNull();
+    expect(screen.getByTestId("life-confession-count")).toHaveTextContent("0 / 42");
   });
 
   it("sits right above the judgments row, below the records", async () => {

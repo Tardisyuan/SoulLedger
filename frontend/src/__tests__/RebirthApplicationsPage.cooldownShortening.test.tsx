@@ -57,6 +57,8 @@ function shortening(over: Record<string, unknown> = {}) {
     cooldown_original_until: "2026-11-07T00:00:00Z",
     cooldown_total_days: 30,
     cooldown_past_days: 0,
+    // The server's answer: a request still PENDING may be rejected (even after its cooldown ended, decision #17).
+    can_reject: (over.status ?? "PENDING") === "PENDING",
     created_at: "2026-10-08T00:00:00Z",
     updated_at: "2026-10-08T00:00:00Z",
     ...over,
@@ -242,13 +244,26 @@ it("keeps the server order (days left, ended last), with counts on the chips and
   expect((near.querySelector('[data-testid="shortening-progress"] > div') as HTMLElement).style.width).toMatch(/^93\.3/);
 });
 
-it("an ended row says so in its cell only, and its detail has no decision area, just 关闭", async () => {
+it("an ended row says so in its cell; its detail offers 驳回 when the server says can_reject, never 批准 or the days", async () => {
+  // 用户决定 #17(2026-11-21):冷却结束的待决申请批不了,但驳回能把它收掉。
   as("JUDGE", "workflow.read", "workflow.approve");
-  soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening({ remaining_days: 0, cooldown_until: null })]));
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening({ remaining_days: 0, cooldown_until: null, can_reject: true })]));
   renderPage();
   await openTab();
   expect(screen.getByTestId("shortening-remaining")).toHaveTextContent("○ 冷却已结束");
   expect(screen.queryByTestId("shortening-progress")).not.toBeInTheDocument();
+  const dialog = await openDetail();
+  expect(within(dialog).getByTestId("shortening-reject")).toBeInTheDocument();
+  expect(within(dialog).getByTestId("shortening-note")).toBeInTheDocument();
+  expect(within(dialog).queryByTestId("shortening-approve")).not.toBeInTheDocument();
+  expect(within(dialog).queryByTestId("shortening-days")).not.toBeInTheDocument();
+});
+
+it("an ended row the server says cannot be rejected has no decision area, just 关闭", async () => {
+  as("JUDGE", "workflow.read", "workflow.approve");
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening({ remaining_days: 0, cooldown_until: null, can_reject: false })]));
+  renderPage();
+  await openTab();
   const dialog = await openDetail();
   expect(within(dialog).queryByTestId("cooldown-decision")).not.toBeInTheDocument();
   expect(within(dialog).queryByTestId("shortening-approve")).not.toBeInTheDocument();

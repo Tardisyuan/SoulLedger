@@ -29,8 +29,11 @@ on:
   push:
     tags: ['v*']
 
+# One group per ref *and event* (2026-11-21, docs/audit/ci-timing-2026-11-20.md §5.3): with the ref alone, a
+# manual run on main cancelled the daily run already in progress on main — 11-15 and 11-16 were cancelled after
+# ~6200 s and ~7150 s. A newer run of the same kind still supersedes an older one.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 # Least privilege for the job token (audit IS-19, 2026-09-14). Nothing here
@@ -118,22 +121,15 @@ jobs:
           python manage.py migrate
           # -n auto (pytest-xdist, requirements-dev.txt): it ran serially (2026-10-30). worksteal, as the
           # local gates do: plain -n queues the slow migration round trips on one worker. Coverage and its
-          # floor still apply (pytest-cov combines the workers).
-          python -m pytest --tb=short -q -n auto --dist worksteal --junitxml="$RUNNER_TEMP/backend.xml"
+          # floor still apply (pytest-cov combines the workers). --durations as run-gates.sh: the thirty slowest
+          # over 5 s, so the daily run's 1.5-hour tail says where it goes (docs/audit/ci-timing-2026-11-20.md §5).
+          python -m pytest --tb=short -q -n auto --dist worksteal --durations=30 --durations-min=5 --junitxml="$RUNNER_TEMP/backend.xml"
       - name: Upload suite count
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: count-backend
           path: ${{ runner.temp }}/backend.xml
           retention-days: 7
-      # Sharding stage 2: the four civilization shards exist only under settings_sharded; `sharded` tests skip
-      # anywhere else, so the suite above skips them (review C21, 2026-10-31). Same PostgreSQL and Redis.
-      # It replaced the multi-database guard (G3/G7 now run on the shards). `run-gates.sh --real-pg --full`
-      # runs it too. Under xdist (2026-11-16): one world per worker, cases spread over the runner's CPUs.
-      - name: Sharded group
-        run: |
-          cd backend
-          python -m pytest --tb=short -q --no-cov -n auto --dist worksteal --ds=config.settings_sharded -m sharded
       # ruff's version comes from requirements-dev.txt — the same pin the local
       # backend/.venv and the pre-push hook use. This used to install ruff
       # unpinned, i.e. whatever was newest on the day of the run. Installed above.
@@ -162,6 +158,53 @@ jobs:
           cd backend
           pip install pip-audit
           pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip
+
+  # Sharding stage 2: the four civilization shards exist only under settings_sharded; `sharded` tests skip
+  # anywhere else, so the backend suite skips them (review C21, 2026-10-31). It replaced the multi-database guard
+  # (G3/G7 now run on the shards). `run-gates.sh --real-pg --full` runs it too, beside the suite. Under xdist
+  # (2026-11-16): one world per worker, cases spread over the runner's CPUs. Its own job since 2026-11-21
+  # (docs/audit/ci-timing-2026-11-20.md §5.2): in the backend job it ran after the 1.5-hour suite, adding
+  # 760–910 s to the daily wall clock. pytest-django creates its own test databases, so no `migrate` first.
+  backend-sharded:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    env:
+      SECRET_KEY: ci-test-key-not-for-production-32-bytes-min
+      DEBUG: 'true'
+      DATABASE_URL: postgres://soulledger:soulledger@localhost:5432/soulledger_test
+      REDIS_URL: redis://localhost:6379/0
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: soulledger_test
+          POSTGRES_USER: soulledger
+          POSTGRES_PASSWORD: soulledger
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U soulledger"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install --no-deps -r requirements.lock -r requirements-dev.txt
+      - name: Sharded group
+        run: |
+          cd backend
+          python -m pytest --tb=short -q --no-cov -n auto --dist worksteal --durations=30 --durations-min=5 --ds=config.settings_sharded -m sharded
 
   frontend:
     runs-on: ubuntu-latest
@@ -398,23 +441,26 @@ jobs:
   # `fail-fast: false` because "chromium passes, firefox does not" is the whole
   # reason for having more than one engine — cancelling the others on the first
   # failure would throw away exactly the signal being bought here.
-  # `browser` is what gets installed and is not always `project`: mobile-chrome
-  # is Pixel 5 emulation running on the chromium build, so installing firefox
-  # for it would download a browser it never launches.
+  # The browsers and their system libraries come with Playwright's own image (user decision 2026-11-21,
+  # docs/audit/ci-timing-2026-11-20.md §5.4): `playwright install --with-deps` spent its time in apt, once
+  # 773 s on a slow Ubuntu mirror, against ~2 s for the browser itself. The tag must equal the Playwright
+  # version in package-lock.json (tests/test_ci_runs_on_a_budget.py); bump both together. `--user 1001` is
+  # the runner's uid, so the checkout in the mounted workspace is the container user's own, and Firefox does
+  # not refuse a HOME owned by another user, as it does when run as root.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: frontend
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
     strategy:
       fail-fast: false
       matrix:
         include:
           - project: chromium
-            browser: chromium
           - project: firefox
-            browser: firefox
           - project: mobile-chrome
-            browser: chromium
     name: e2e (${{ matrix.project }})
     env:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
@@ -437,10 +483,6 @@ jobs:
         run: |
           npx -y npm@11 ci
           npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
-      - name: Install Playwright browsers
-        run: |
-          cd frontend
-          npx playwright install --with-deps ${{ matrix.browser }}
       # Built, not `next dev`. `playwright.config.ts`'s `webServer` now runs
       # `npm run start:e2e`, which serves this output — see the long note there
       # for why: the dev server compiles routes on demand, so every
@@ -470,6 +512,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: frontend
+    # As `e2e`: Playwright's image, same tag.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
     env:
       NEXT_PUBLIC_DEMO_MODE: "1"
     steps:
@@ -483,10 +529,6 @@ jobs:
         run: |
           npx -y npm@11 ci
           npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
-      - name: Install Playwright browsers
-        run: |
-          cd frontend
-          npx playwright install --with-deps chromium
       - name: Build the demo
         run: |
           cd frontend
@@ -510,7 +552,7 @@ jobs:
   stats:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [backend, frontend, mobile, officer, synapse, e2e, e2e-demo]
+    needs: [backend, backend-sharded, frontend, mobile, officer, synapse, e2e, e2e-demo]
     if: github.ref == 'refs/heads/main'
     # The only job with write access, for the one commit below.
     permissions:

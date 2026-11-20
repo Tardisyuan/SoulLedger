@@ -151,9 +151,10 @@ export const motion = {
   toastInfoHold: 6000,
   // 文明气质 1h: the Loader's breath (not a loading line: those run `loadingLine`).
   breath: 1600,
-  welcomeIn: 600,
-  welcomeHold: 1200,
-  welcomeOut: 240,
+  // 第六十二批 §二: the welcome's entrance 360, a still hold 900, the hand-off 320 (welcome.tsx `WELCOME`).
+  welcomeIn: 360,
+  welcomeHold: 900,
+  welcomeOut: 320,
   coldStartDraw: 600,
   coldStartHold: 300,
   coldStartInteractive: 480,
@@ -195,14 +196,20 @@ export const HIGHLIGHT_ALPHA = generated.alpha.highlight;
 
 /**
  * The brand mark's two colours (v3 第三批 品牌色令牌): the gold balance on the deep canvas. For
- * the app icon (scripts/build-app-icon.mjs) and the cold start (coldStart.tsx) only — never a UI
- * colour, so it sits outside both schemes and `Theme`. v4 leaves the mark alone, so these stay
- * (`ground` was v3's dark canvas; v4's is #111113) and neither the icons nor the splash move.
+ * the app icon (scripts/build-app-icon.mjs) only — never a UI colour, so it sits outside both schemes
+ * and `Theme`. v4 leaves the mark alone, so these stay (`ground` was v3's dark canvas; v4's is #111113)
+ * and the icons do not move. The cold start left it in 第六十一批 一: it reads `splash` below.
  */
 /** The general curves (the web's --ease-*), as cubic-bezier control points for `Easing.bezier(...)`. */
 export const curves = { standard: m.ease.standard, enter: m.ease.enter, exit: m.ease.exit } as const;
 
 export const brand = { mark: "#ECAA3D", ground: "#10120F" } as const;
+
+/**
+ * The soul app's cold start, native splash and JS frame (Design v4 第六十一批 一, tokens `app.splash-ground` /
+ * `app.splash-mark`): the canvas and the neutral metal of each scheme. mobile/app.json writes the same pair.
+ */
+export const splash = generated.splash;
 
 export interface Theme {
   scheme: ColorScheme;

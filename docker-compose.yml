@@ -198,7 +198,7 @@ services:
     logging: *logging
     image: soulledger-backend
     # Explicit pool size: the default is one child per host CPU, and each
-    # child is a full Django process. Arithmetic (docs/DEPLOY.md §1.2, idle
+    # child is a full Django process. Arithmetic (docs/DEPLOYMENT.md「上线清单」§1.2, idle
     # worker measured 2026-10-31): parent 167 MB RSS, children 136 MB each,
     # ~267 MB PSS for all three — 2 children fit production's 512m limit;
     # --max-memory-per-child (KiB) replaces a child that grew past ~200 MB

@@ -19,6 +19,7 @@ import {
   radius,
   sealedTheme,
   semantic,
+  splash,
   themeFor,
   v4,
   type CivKey,
@@ -276,11 +277,14 @@ describe("brand (v3 第三批 品牌色令牌): the mark's gold and ground, one 
     expect(css.match(/--brand-mark:\s*(#[0-9A-F]{6});/i)?.[1]).toBe(brand.mark);
     expect(css.match(/--brand-ground:\s*(#[0-9A-F]{6});/i)?.[1]).toBe(brand.ground);
   });
-  it("the cold start takes them from here rather than its own literals", () => {
+  it("the cold start takes its colours from the splash tokens rather than its own literals (第六十一批 一)", () => {
     const cold = src("../coldStart.tsx");
-    expect(cold).toMatch(/const GROUND = brand\.ground;/);
-    expect(cold).toMatch(/const GOLD = brand\.mark;/);
-    expect(cold).not.toMatch(/#ECAA3D|#10120F/i);
+    expect(cold).toMatch(/import \{ splash \} from "\.\/theme";/);
+    expect(cold).toMatch(/ground=\{pair\.ground\} mark=\{pair\.mark\}/);
+    expect(cold).not.toMatch(/#[0-9A-F]{6}/i);
+    // On dark the mark is still the brand gold; the ground is the app's canvas, no longer the brand ground.
+    expect(splash.dark.mark).toBe(brand.mark);
+    expect([splash.dark.ground, splash.light.ground]).not.toContain(brand.ground);
   });
   it("is not a UI colour: no theme carries either value — except the neutral's dark metal, which Design batch 8 made the brand gold", () => {
     for (const civ of [null, "CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"])

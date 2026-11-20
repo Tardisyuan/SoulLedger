@@ -11,14 +11,22 @@ import sharp from "sharp";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 import { Path } from "react-native-svg";
 
-import { SHAPE, STROKES, VIEWBOX, pathLength } from "../brandMark";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+import { LOGIN_MARK, MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "../brandMark";
 import { ColdStart, coldStart } from "../coldStart";
 import type { SessionState } from "../session";
-import { brand, motion } from "../theme";
+import { brand, motion, splash as SPLASH } from "../theme";
 import { PROFILE } from "./stubApi";
 
 // Every other suite gets jest.setup's inert double; this one tests the real thing.
 jest.unmock("../coldStart");
+
+let mockScheme: "light" | "dark" | null = "light";
+jest.mock("react-native/Libraries/Utilities/useColorScheme", () => ({
+  __esModule: true,
+  default: () => mockScheme,
+}));
 
 /** The cold start is hidden from assistive tech; queries must ask for it. */
 const H = { includeHiddenElements: true };
@@ -34,6 +42,7 @@ describe("the cold start (补足 C18)", () => {
   beforeEach(() => {
     coldStart.played = false;
     reduced = false;
+    mockScheme = "light";
     hide.mockClear();
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockImplementation(async () => reduced);
     jest.useFakeTimers();
@@ -67,8 +76,13 @@ describe("the cold start (补足 C18)", () => {
   it("frame 0 is the native splash's picture: its ground, no mark yet — every stroke undrawn", async () => {
     const plugins = require("../../app.json").expo.plugins as unknown[];
     const [, splash] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, Record<string, never>];
-    // The ground alone, in both modes (the brand ground, v3's dark canvas; v4 leaves the mark alone): the mark is written by JS, so the native splash carries none.
-    expect(splash).toMatchObject({ image: "./assets/splash-blank.png", backgroundColor: brand.ground, dark: { image: "./assets/splash-blank.png", backgroundColor: brand.ground } });
+    // The ground alone, each scheme its own canvas (Design v4 第六十一批 一): the mark is written by JS, so the native
+    // splash carries none.
+    expect(splash).toMatchObject({
+      image: "./assets/splash-blank.png",
+      backgroundColor: SPLASH.light.ground,
+      dark: { image: "./assets/splash-blank.png", backgroundColor: SPLASH.dark.ground },
+    });
     const { data, info } = await sharp(join(__dirname, "../../assets/splash-blank.png")).raw().toBuffer({ resolveWithObject: true });
     expect(info.channels).toBe(4);
     expect(data.some((v, k) => k % 4 === 3 && v > 0)).toBe(false);
@@ -106,11 +120,11 @@ describe("the cold start (补足 C18)", () => {
   });
 
   it("the strokes write over coldStartDraw; after the hold the mark recedes by 480 — up 8, to 0.96, out — and the ground fades 480 → 720", async () => {
-    // The curve is read off the calls that build it.
+    // The curve is read off the calls that build it. Signed in: the 本世 page has no mark to land on.
     const R = jest.requireMock("react-native-reanimated") as Record<string, (...a: unknown[]) => unknown>;
     const timing = jest.spyOn(R, "withTiming");
     const delay = jest.spyOn(R, "withDelay");
-    render(<ColdStart session={{ status: "signedOut" }} />);
+    render(<ColdStart session={signedIn()} />);
     await act(async () => {});
     const recede = { duration: motion.coldStartInteractive, easing: expect.anything() };
     expect(timing.mock.calls).toEqual(expect.arrayContaining([[-8, recede], [0.96, recede], [0, recede]]));
@@ -120,6 +134,54 @@ describe("the cold start (补足 C18)", () => {
     expect(delay.mock.calls.map(([ms]) => ms)).toEqual([written, written, written, written + motion.coldStartInteractive]);
     timing.mockRestore();
     delay.mockRestore();
+  });
+
+  describe("signed out: the mark lands on the sign-in page's mark (user 2026-11-21)", () => {
+    const R = jest.requireMock("react-native-reanimated") as Record<string, (...a: unknown[]) => unknown>;
+    const metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
+    const play = async () => {
+      render(
+        <SafeAreaProvider initialMetrics={metrics}>
+          <ColdStart session={{ status: "signedOut" }} />
+        </SafeAreaProvider>,
+      );
+      await act(async () => {});
+    };
+
+    it("after the hold it shrinks to LOGIN_MARK.size and moves to inset + LOGIN_MARK.top, centred, over 480 — still opaque; then the ground fades 480 → 720", async () => {
+      const timing = jest.spyOn(R, "withTiming");
+      const delay = jest.spyOn(R, "withDelay");
+      await play();
+      layout();
+      // The cold start's mark is 112 wide, centred in the 844-tall layer; the page's sits 47 + 16 down, 66 wide.
+      const centre = 47 + LOGIN_MARK.top + (LOGIN_MARK.size * MARK_HEIGHT) / MARK_WIDTH / 2;
+      const move = { duration: motion.coldStartInteractive, easing: expect.anything() };
+      expect(timing.mock.calls).toContainEqual([expect.closeTo(centre - 844 / 2, 6), move]);
+      expect(timing.mock.calls).toContainEqual([expect.closeTo(LOGIN_MARK.size / 112, 6), move]);
+      expect(timing.mock.calls).toContainEqual([0, { duration: motion.coldStart - motion.coldStartInteractive, easing: expect.anything() }]);
+      // No recede: it does not lift 8, shrink to 0.96 or fade on its own — the ground's fade takes it onto the page's mark.
+      expect(timing.mock.calls.map(([to]) => to)).not.toEqual(expect.arrayContaining([-8]));
+      expect(timing.mock.calls.map(([to]) => to)).not.toEqual(expect.arrayContaining([0.96]));
+      expect(timing.mock.calls.filter(([to, c]) => to === 0 && (c as { duration: number }).duration === motion.coldStartInteractive)).toEqual([]);
+      const written = motion.coldStartDraw + motion.coldStartHold;
+      expect(delay.mock.calls.map(([ms]) => ms)).toEqual([written, written, written + motion.coldStartInteractive]);
+      expect(motion.coldStartInteractive).toBeLessThanOrEqual(480); // 第六十批: one moving part, at most 480
+      timing.mockRestore();
+      delay.mockRestore();
+    });
+
+    it("nothing moves until its own height is known: the target is measured against the laid-out layer", async () => {
+      const timing = jest.spyOn(R, "withTiming");
+      await play();
+      expect(timing.mock.calls.map(([, c]) => (c as { duration: number }).duration)).toEqual([motion.coldStartDraw]);
+      timing.mockRestore();
+    });
+
+    it("reduce motion: unchanged — nothing plays", async () => {
+      reduced = true;
+      await play();
+      expect(screen.queryByTestId("cold-start", H)).toBeNull();
+    });
   });
 
   it("a tap skips to the end", async () => {
@@ -163,5 +225,34 @@ describe("the cold start (补足 C18)", () => {
     render(<ColdStart session={signedIn()} />);
     await act(async () => {});
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
+  });
+});
+
+describe("第六十一批 一: the cold start's ground and mark follow the scheme", () => {
+  beforeEach(() => {
+    coldStart.played = false;
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockImplementation(async () => false);
+  });
+  const strokeColours = () =>
+    new Set(screen.UNSAFE_getAllByType(Path).filter((el) => el.props.testID === "cold-start-stroke").map((el) => el.props.stroke));
+
+  it("the token values are Design's: light canvas + deeper gold, dark canvas + brand gold -- not the brand's dark ground", () => {
+    expect(SPLASH).toEqual({ light: { ground: "#F8F8F6", mark: "#8A6A24" }, dark: { ground: "#111113", mark: "#ECAA3D" } });
+    expect(SPLASH.light.ground).not.toBe(brand.ground);
+    expect(SPLASH.dark.ground).not.toBe(brand.ground);
+  });
+
+  it.each(["light", "dark"] as const)("%s: the JS frame paints app.json's ground for that scheme and its mark, never the other scheme's", async (scheme) => {
+    mockScheme = scheme;
+    const plugins = require("../../app.json").expo.plugins as unknown[];
+    const [, native] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, { backgroundColor: string; dark: { backgroundColor: string } }];
+    const nativeGround = scheme === "dark" ? native.dark.backgroundColor : native.backgroundColor;
+    render(<ColdStart session={{ status: "signedOut" }} />);
+    await act(async () => {});
+    expect(flat(screen.getByTestId("cold-start-skip", H)).backgroundColor).toBe(nativeGround);
+    expect(nativeGround).toBe(SPLASH[scheme].ground);
+    const other = scheme === "dark" ? "light" : "dark";
+    expect(strokeColours()).toEqual(new Set([SPLASH[scheme].mark]));
+    expect(strokeColours().has(SPLASH[other].mark)).toBe(false);
   });
 });

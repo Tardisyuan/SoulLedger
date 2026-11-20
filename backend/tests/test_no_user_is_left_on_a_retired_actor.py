@@ -13,8 +13,8 @@
 Pluto 行已恢复,`consolidate_eu_pantheon` 的合并步骤已退役。
 
 于是这个文件里三条依赖那个步骤的测试没有了对象。**保留的是与那个步骤无关的那半**:
-一个账号不该挂在一个软删的 actor 上,而 `--purge-norse` 仍然是一条会软删行的路径 ——
-下面用它来守同一个不变式。
+一个账号不该挂在一个软删的 actor 上。(守 `--purge-norse` 的两条随命令本身于 2026-11-21
+删除 —— 一次性清理已做完,命令与测试都在 git 历史里。)
 
 根因也在那轮调查里定死了,而且不是推断:commit `7e93f3a` 的正文自陈「survivor 的
 选择与孤儿账号的停用是手做的」,时间比 Pluto 行的 `deleted_at` 晚 8 分钟 ——
@@ -28,25 +28,6 @@ from django.core.management import call_command
 
 from apps.actors.models import Actor
 from apps.authentication.models import User
-from apps.tenants.models import Tenant
-
-
-@pytest.fixture
-def eu(db):
-    return Tenant.objects.get_or_create(
-        code="EU_HEAVEN_HELL", defaults={"display_name": "European Afterlife"}
-    )[0]
-
-
-def make_pair(tenant):
-    """两行同一位神:欧洲的 Pluto 与希腊的 Hades,都是活的。"""
-    pluto = Actor.objects.create(
-        name="Pluto", civilization="EUROPEAN", role="OVERSEER", tenant=tenant, is_active=True
-    )
-    hades = Actor.objects.create(
-        name="Hades", civilization="GREEK", role="OVERSEER", tenant=tenant, is_active=True
-    )
-    return pluto, hades
 
 
 def orphaned_users():
@@ -56,46 +37,6 @@ def orphaned_users():
         for u in User._base_manager.filter(actor__isnull=False)
         if Actor._base_manager.filter(pk=u.actor_id, is_deleted=True).exists()
     ]
-
-
-
-@pytest.mark.django_db
-def test_purging_never_leaves_an_account_on_the_retired_row(eu):
-    """`--purge-norse` 是现在唯一一条会软删 actor 的清理路径。
-
-    它对被引用的行必须拒绝,而不是删掉再让账号挂空 —— 这正是 2026-08-04 那次
-    手工操作漏掉的那半步。
-    """
-    odin = Actor.objects.create(
-        name="Odin", civilization="EUROPEAN", role="OVERSEER", tenant=eu, is_active=True
-    )
-    User.objects.create_user(
-        username="on_odin", password="x", role="ADMIN", tenant=eu, actor=odin
-    )
-
-    out = StringIO()
-    call_command("consolidate_eu_pantheon", "--execute", "--purge-norse", stdout=out, stderr=out)
-
-    odin.refresh_from_db()
-    assert odin.is_deleted is False, (
-        f"一个被账号引用的行被清理掉了:\n{out.getvalue()}"
-    )
-    assert orphaned_users() == []
-
-
-@pytest.mark.django_db
-def test_purging_does_delete_an_unreferenced_row(eu):
-    """正对照。没有它,一个「永远不删」的实现同样满足上面那条,而这条清理命令
-    就彻底失效了 —— 而且失效得完全无声。"""
-    freya = Actor.objects.create(
-        name="Freya", civilization="EUROPEAN", role="GUARDIAN", tenant=eu, is_active=True
-    )
-
-    out = StringIO()
-    call_command("consolidate_eu_pantheon", "--execute", "--purge-norse", stdout=out, stderr=out)
-
-    freya.refresh_from_db()
-    assert freya.is_deleted is True, f"无人引用的 Norse 行没有被清掉:\n{out.getvalue()}"
 
 
 @pytest.mark.django_db

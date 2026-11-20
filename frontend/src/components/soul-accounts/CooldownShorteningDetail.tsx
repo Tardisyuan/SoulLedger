@@ -62,7 +62,11 @@ export function CooldownShorteningDetail({
   const noteBox = useRef<HTMLDivElement>(null);
 
   const ended = cooldownEnded(r);
-  const canDecide = r.status === "PENDING" && !ended && hasPermission("workflow.approve");
+  const mayDecide = hasPermission("workflow.approve");
+  // 用户决定 #17:冷却结束后批不了(没有剩余天数可缩),驳回照样可以 —— 按服务端的 `can_reject` 放,不自己推。
+  const canApprove = r.status === "PENDING" && !ended && mayDecide;
+  const canReject = r.can_reject && mayDecide;
+  const canDecide = canApprove || canReject;
   // 「下一件」 (officer App D1): in the to-do's order, read while this one still waits.
   const [decided, setDecided] = useState(false);
   const todoNext = useTodoNextAfter("cooldown", r.id, canDecide || decided);
@@ -135,18 +139,20 @@ export function CooldownShorteningDetail({
         >
           {t("soul_accounts.cooldown.reject")}
         </Button>
-        <Button
-          type="button"
-          size="lg"
-          variant="primary"
-          className="flex-[1.4] sm:flex-none sm:h-(--control-h-md)"
-          loading={approve.isPending}
-          disabled={busy}
-          onClick={doApprove}
-          data-testid="shortening-approve"
-        >
-          {t("soul_accounts.cooldown.approve_with_days", { days: String(Number.isFinite(Number(days)) && days.trim() !== "" ? days : 0) })}
-        </Button>
+        {canApprove && (
+          <Button
+            type="button"
+            size="lg"
+            variant="primary"
+            className="flex-[1.4] sm:flex-none sm:h-(--control-h-md)"
+            loading={approve.isPending}
+            disabled={busy}
+            onClick={doApprove}
+            data-testid="shortening-approve"
+          >
+            {t("soul_accounts.cooldown.approve_with_days", { days: String(Number.isFinite(Number(days)) && days.trim() !== "" ? days : 0) })}
+          </Button>
+        )}
       </div>
     </div>
   ) : decided ? (
@@ -221,7 +227,7 @@ export function CooldownShorteningDetail({
 
         {canDecide && (
           <section className="border-t border-[oklch(var(--color-line-strong))] pt-4 space-y-4" data-testid="cooldown-decision">
-            <div ref={daysBox}>
+            {canApprove && <div ref={daysBox}>
               <Field label={t("soul_accounts.cooldown.days_label")} error={daysError}>
                 {(control) => (
                   <div className="flex items-center gap-3">
@@ -255,7 +261,7 @@ export function CooldownShorteningDetail({
                   </div>
                 )}
               </Field>
-            </div>
+            </div>}
             <div ref={noteBox} className="space-y-3">
               {rejecting && <RecentReasons userId={me?.id} value={note} onChange={(v) => { setNote(v); setNoteError(null); }} max={2000} />}
               <TextAreaField

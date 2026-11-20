@@ -121,10 +121,16 @@ interface TenantContextValue {
    * 可选:测试里手搓的 context 没有这一项，读作已就绪。
    */
   permissionsReady?: boolean;
+  /**
+   * 整页加载时那一次没读到权限(第六十一批 E2):门照旧关着,但拒绝页换成「权限没读到」整页 ——
+   * 不是「没有权限」。只在加载那一次失败时为真(聚焦时那一次失败保留上一份答案,不算);重取成功即为假。
+   */
+  permissionsFailed?: boolean;
   logout: () => void;
   /** Re-read this user's permissions, role and hall from the server (focus, and the server's
-   *  `permission.refreshed` push after a demotion or a grant change — decision 10). */
-  refreshFromServer?: () => void;
+   *  `permission.refreshed` push after a demotion or a grant change — decision 10).
+   *  `initial`: the load-time read (permissions emptied first) — its failure is `permissionsFailed`. */
+  refreshFromServer?: (initial?: boolean) => void;
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -147,6 +153,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   // 挂载后读本地信封之前也算「未就绪」:那一拍里 user 还是 null,不能据此画拒绝页。
   const [permissionsReady, setPermissionsReady] = useState(false);
+  const [permissionsFailed, setPermissionsFailed] = useState(false);
   const tenantCode = user?.tenant?.code ?? null;
 
   // 文明皮(规范 v2 §三):<html data-civ="cn|eu|eg|gr|neutral">,globals.css 据此只换
@@ -191,11 +198,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
    * 失败时什么也不改:加载时那一次之前权限已清空(门关着,不猜开),聚焦时那一次保留上一份答案。
    */
   const lastRefresh = useRef(0);
-  const refreshFromServer = useCallback(() => {
+  const refreshFromServer = useCallback((initial = false) => {
     lastRefresh.current = Date.now();
     permApi
       .myRolePermissions()
       .then(({ data }) => {
+        setPermissionsFailed(false);
         setUserState((prev) =>
           prev
             ? {
@@ -232,6 +240,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         // Leave permissions as they are — on load they were just emptied (gates closed, not guessed open).
+        // 加载时那一次:说「没读到」,不让拒绝页冒充「没有权限」(第六十一批 E2)。
+        if (initial) setPermissionsFailed(true);
       })
       // 取到或取失败都算就绪:失败时门关着、拒绝页照画，不让骨架一直转。
       .finally(() => setPermissionsReady(true));
@@ -279,7 +289,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         // fails, permissions stay empty rather than guessed.
         setUserState({ ...envelope.user, permissions: [] });
         refreshing = true;
-        refreshFromServer();
+        refreshFromServer(true);
       }
     } catch {
       // ignore
@@ -364,12 +374,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       tenantCode,
       setUser,
       permissionsReady,
+      permissionsFailed,
       logout,
       refreshFromServer,
     }),
     // `tenantCode` is derived from `user` and cannot move without it; it is
     // listed because it is read here, not because it adds a trigger.
-    [user, tenantCode, setUser, permissionsReady, logout, refreshFromServer]
+    [user, tenantCode, setUser, permissionsReady, permissionsFailed, logout, refreshFromServer]
   );
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;

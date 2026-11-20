@@ -120,8 +120,7 @@ def test_an_advisor_seat_gets_no_segment_at_generation_or_when_seated_later(w): 
     seat = CrossTenantJudgmentService.add_participant(cj, w.eg, None, ParticipantRole.CO_JUDGE, node_order=2)
     CrossTenantJudgmentService.submit_sentence(seat, sp.stop_realm(w.eg), 5, "", None)
     CrossTenantJudgmentService.add_participant(cj, w.eu, None, ParticipantRole.ADVISOR)
-    CrossTenantJudgmentService.activate(cj)
-    case.conclude("FAILED", "")
+    case.conclude("FAILED", "")  # the bench stays PROPOSED: seats are taken only then (2026-11-21, #7)
     wf = ApprovalWorkflow.objects.get(judgment=case)
     assert set(wf.segments.values_list("tenant__code", flat=True)) == {"CN_DIYU", "EG_DUAT"}
 

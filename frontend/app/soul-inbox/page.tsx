@@ -122,6 +122,7 @@ function Composer({
   onBlur,
   toolbar,
   inputRef,
+  readOnly = false,
 }: {
   label: string;
   hint: ReactNode;
@@ -131,6 +132,8 @@ function Composer({
   onBlur?: () => void;
   toolbar?: ReactNode;
   inputRef?: RefObject<HTMLTextAreaElement | null>;
+  /** 原草稿没取到时锁住(第六十一批 E3):先打的字会盖掉服务端那份。 */
+  readOnly?: boolean;
 }) {
   const { t } = useI18n();
   const { hasPermission } = usePermissions();
@@ -219,6 +222,7 @@ function Composer({
           maxLength={4000}
           rows={3}
           value={value}
+          readOnly={readOnly}
           aria-describedby={`${id}-hint`}
           aria-controls={open ? listId : undefined}
           aria-activedescendant={open && results.length > 0 ? `${listId}-${Math.min(active, results.length - 1)}` : undefined}
@@ -387,7 +391,10 @@ function useDraft(conversationId: string, enabled: boolean) {
     setBody("");
     setStatus(null);
   };
-  return { body, setBody, status, persist, sent };
+  // 第六十一批 E3:原草稿没取到 —— 取到之前不能编辑(否则就要决定留哪一份),草稿状态行说一句并给「重试」。
+  const loadFailed = draft.isError && !draft.data;
+  const retryLoad = () => void draft.refetch();
+  return { body, setBody, status, persist, sent, loadFailed, retryLoad };
 }
 
 function Thread({ conversation }: { conversation: InboxConversation }) {
@@ -607,10 +614,21 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
             hint={
               <span className="flex flex-wrap gap-x-3">
                 <span>{t("soul_inbox.reply_hint")}</span>
-                {draftLine && (
-                  <span role="status" className={draft.status?.kind === "failed" ? "text-[oklch(var(--color-danger))]" : ""}>
-                    {draftLine}
+                {draft.loadFailed ? (
+                  /* 状态行(第六十一批 三):↻ + 一句 + 文字按钮「重试」;与「保存失败」同一个位置,不用 neg。 */
+                  <span role="status" data-testid="draft-load-failed" className="inline-flex flex-wrap items-center gap-2">
+                    <span aria-hidden="true">↻</span>
+                    {t("soul_inbox.draft_load_failed")}
+                    <button type="button" onClick={draft.retryLoad} className="underline underline-offset-2 text-[oklch(var(--color-ink))]">
+                      {t("common.retry")}
+                    </button>
                   </span>
+                ) : (
+                  draftLine && (
+                    <span role="status" className={draft.status?.kind === "failed" ? "text-[oklch(var(--color-danger))]" : ""}>
+                      {draftLine}
+                    </span>
+                  )
                 )}
               </span>
             }
@@ -619,12 +637,14 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
             onSubmit={submit}
             onBlur={() => draft.persist(draft.body)}
             inputRef={input}
+            readOnly={draft.loadFailed}
             toolbar={
               <span className="ml-auto flex items-center gap-2">
                 <label>
                   <span className="sr-only">{t("soul_inbox.template.pick")}</span>
                   <select
                     value=""
+                    disabled={draft.loadFailed}
                     onChange={(e) => insertTemplate(e.target.value)}
                     className={`rounded-control h-(--control-h-sm) max-w-[12rem] px-2 border ${LINE} bg-[oklch(var(--color-canvas))] text-xs text-[oklch(var(--color-ink))]`}
                   >

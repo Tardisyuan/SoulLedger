@@ -169,12 +169,13 @@ export function JudgmentActionBar({
           {state === "unclaimed" && canExecute && isDuatBarred(data) ? (
             // 埃及入殿前(review P2-9):到不了两真之殿,永远候着。
             <Txt variant="caption" tone="muted" testID="judgment-claim-held" style={{ flex: 1 }}>
-              {`${t(`judgment.duat_stage.${data.duat_stage}`)} · ${t("judgment.claim.duat_barred_short")}`}
+              {`⊘ ${t(`judgment.duat_stage.${data.duat_stage}`)} · ${t("judgment.claim.duat_barred_short")}`}
             </Txt>
           ) : state === "unclaimed" && canExecute && isHeldUntilFatedDate(data) ? (
             // 枉死城(第五十一批):候至阳寿那天,不放一个点了必然被拒的「认领」。
             <Txt variant="caption" tone="muted" testID="judgment-claim-held" style={{ flex: 1 }}>
-              {`${t("judgment.held_until", { date: formatIsoDay(data.held_until, locale) })} · ${t("judgment.claim.held_short")}`}
+              {/* 第六十一批 二: the same words as the list -- ‖ and the day it opens. */}
+              {`‖ ${t("judgment.claim.held_from", { date: formatIsoDay(data.held_until, locale) })}`}
             </Txt>
           ) : state === "unclaimed" && canExecute ? (
             <ActionButton testID="judgment-claim" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("officer_app.queue.claim")} onPress={claim} style={{ flex: 1 }} />

@@ -240,7 +240,7 @@ def _apply_statement_timeout(databases: dict, ms: int) -> None:
     Without it a slow leg of a fan-out read holds the request, and a stuck statement in a cross-database transaction
     holds the locks of the other databases with it (sharding review 2026-11-16, 2.7). PgBouncer does not pass
     `options` on (it refuses the connection), so the production compose, which connects through it, sets
-    DB_STATEMENT_TIMEOUT_MS=0 and puts the limit on the role instead (docs/DEPLOY.md「数据库超时」)."""
+    DB_STATEMENT_TIMEOUT_MS=0 and puts the limit on the role instead (docs/DEPLOYMENT.md「数据库超时与连接数」)."""
     if not ms:
         return
     for db in databases.values():
@@ -852,6 +852,8 @@ SPECTACULAR_SETTINGS = {
         "CityGodBureauEnum": "apps.judgment.models.CityGodBureau.choices",
         # 站梯一站的 `state`:字段名太通用,钉住免得和下一个同名字段互相改名。
         "AppealLadderStateEnum": "apps.judgment.appeals.LADDER_STATES",
+        # `/me/` 四十二条否认每格的 `state`(v4 第六十二批):同上,钉住。
+        "NegativeConfessionStateEnum": "apps.soul_accounts.serializers.NEGATIVE_CONFESSION_STATES",
         "ActorRoleEnum": "apps.actors.models.ActorRole.choices",
         "UserRoleEnum": "apps.authentication.models.UserRole.choices",
         "PasswordResetRefusalCodeEnum": "apps.authentication.serializers.PASSWORD_RESET_REFUSAL_CODES",

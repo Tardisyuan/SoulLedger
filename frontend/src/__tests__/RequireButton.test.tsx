@@ -24,6 +24,7 @@ describe("RequireButton", () => {
       isCivilizationAdmin: false,
       ownsHall: () => false,
       permissionsReady: true,
+      permissionsFailed: false,
       permissions: ["soul.create"],
     });
     render(
@@ -44,6 +45,7 @@ describe("RequireButton", () => {
       isCivilizationAdmin: false,
       ownsHall: () => false,
       permissionsReady: true,
+      permissionsFailed: false,
       permissions: [],
     });
     render(
@@ -64,6 +66,7 @@ describe("RequireButton", () => {
       isCivilizationAdmin: false,
       ownsHall: () => false,
       permissionsReady: true,
+      permissionsFailed: false,
       permissions: [],
     });
     render(
@@ -85,6 +88,7 @@ describe("RequireButton", () => {
       isCivilizationAdmin: false,
       ownsHall: () => false,
       permissionsReady: true,
+      permissionsFailed: false,
       permissions: [],
     });
     render(

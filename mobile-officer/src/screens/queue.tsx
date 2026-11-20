@@ -15,7 +15,7 @@
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
-import { useCallback, useState } from "react";
+import { Fragment, useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
@@ -40,15 +40,23 @@ const DAY = 86_400;
  * case nobody holds (no 认领 then); 他人认领; 待宣判 (in hand, not yet final: 滑卡审判) or 审判中; else the deadline.
  * `deadline`: the tag already says the deadline, so the second line does not repeat it.
  */
-export function deskTag(t: (key: string, vars?: Record<string, string>) => string, row: Judgment, group: DeskGroup): { tone: TagTone; text: string; deadline: boolean } {
+export function deskTag(
+  t: (key: string, vars?: Record<string, string>) => string,
+  row: Judgment,
+  group: DeskGroup,
+  locale?: Parameters<typeof formatIsoDay>[1]
+): { tone: TagTone; text: string; deadline: boolean } {
   const s = row.deadline_remaining_seconds;
   if (group !== "deferred" && row.is_overdue && s != null && s < 0) {
     return { tone: "neg", text: `${TAG_SHAPE.overdue} ${t("officer_app.desk.tag.overdue", { n: String(Math.ceil(-s / DAY)) })}`, deadline: true };
   }
   if (row.retrial_of) return { tone: "warn", text: `${TAG_SHAPE.returned} ${t("officer_app.desk.tag.returned")}`, deadline: false };
   if (group === "deferred") return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("officer_app.desk.groups.deferred")}`, deadline: false };
-  if (group === "unclaimed" && isDuatBarred(row)) return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("judgment.claim.duat_barred_short")}`, deadline: false };
-  if (group === "unclaimed" && isHeldUntilFatedDate(row)) return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("judgment.claim.held_short")}`, deadline: false };
+  // 第六十一批 二: a case nobody can claim yet says so on the right -- ⊘ 到不了殿, or ‖ and the day it opens.
+  if (group === "unclaimed" && isDuatBarred(row)) return { tone: "neutral", text: `⊘ ${t("judgment.claim.duat_barred_short")}`, deadline: false };
+  if (group === "unclaimed" && isHeldUntilFatedDate(row)) {
+    return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("judgment.claim.held_from", { date: formatIsoDay(row.held_until, locale) })}`, deadline: false };
+  }
   if (group === "others") return { tone: "neutral", text: `${TAG_SHAPE.others} ${t("officer_app.desk.tag.others")}`, deadline: false };
   if (group === "mine") return { tone: "warn", text: `${TAG_SHAPE.reviewing} ${t(row.is_final ? "officer_app.desk.tag.reviewing" : "officer_app.desk.tag.awaiting")}`, deadline: false };
   return { tone: "neutral", text: deadlineText(t, row), deadline: true };
@@ -60,6 +68,11 @@ export function deskTag(t: (key: string, vars?: Record<string, string>) => strin
  * 候至 while held.
  */
 export function rowNotes(t: (key: string, vars?: Record<string, string>) => string, row: Judgment, group: DeskGroup, tagHasDeadline: boolean, locale?: Parameters<typeof formatIsoDay>[1]): string[] {
+  // 第六十一批 二: a held row's day is on its tag (held_from); the second line says why it waits instead.
+  if (group === "unclaimed" && waitsBeforeClaim(row)) {
+    const why = isHeldUntilFatedDate(row) && row.untimely ? "judgment.claim.held_reason.wangsi" : row.duat_stage ? `judgment.duat_stage.${row.duat_stage}` : null;
+    return why ? [t(why)] : [];
+  }
   const held = isHeldUntilFatedDate(row) ? [t("judgment.held_until", { date: formatIsoDay(row.held_until, locale) })] : [];
   return [
     ...(group === "deferred" || tagHasDeadline ? [] : [`${t("queue.col.deadline")} ${deadlineText(t, row)}`]),
@@ -68,6 +81,14 @@ export function rowNotes(t: (key: string, vars?: Record<string, string>) => stri
     ...(row.untimely ? [t("judgment.untimely"), ...held] : []),
     ...(row.duat_stage ? [t(`judgment.duat_stage.${row.duat_stage}`), ...(row.untimely ? [] : held)] : []),
   ];
+}
+
+/**
+ * 第六十一批 二: the cases in 待认领 nobody can claim yet -- held until a day (枉死城, 木乃伊 70 天) or barred from the hall.
+ * A held_until already past is claimable whatever the server's phase still says.
+ */
+export function waitsBeforeClaim(row: Pick<Judgment, "held_until" | "duat_stage">): boolean {
+  return isHeldUntilFatedDate(row) || isDuatBarred(row);
 }
 
 /** 「今日 7 件 · 超期 1 · 本月已结 22%」; 0 overdue reads 「无超期」, unmarked. Parts that did not load are left out. */
@@ -211,6 +232,9 @@ export function QueueTab({
       ]
     : [];
 
+  // 第六十一批 二: 待认领's held cases, in the order they came (rowsOf already puts them after the claimable ones).
+  const heldOf = (group: DeskGroup, rows: Judgment[]) => (group === "unclaimed" ? rows.filter(waitsBeforeClaim) : []);
+
   return (
     <Screen testID="tab-queue-screen" edges={["left", "right"]} refreshing={groups.some((g) => g.loading && g.rows !== null)} onRefresh={refresh}>
       {overview.length ? (
@@ -258,17 +282,28 @@ export function QueueTab({
                     </Press>
                   ) : null}
                   <Txt variant="value" style={{ color: theme.faintText }}>
-                    {String((source === "all" ? c?.[group] : null) ?? rows.length)}
+                    {/* 第六十一批 二: 待认领's count is only the claimable ones; the held ones are counted on their own line. */}
+                    {String(Math.max(0, ((source === "all" ? c?.[group] : null) ?? rows.length) - heldOf(group, rows).length))}
                   </Txt>
                 </View>
               </View>
-              {rows.map((row) => {
-                const tag = deskTag(t, row, group);
+              {[...rows.filter((row) => !heldOf(group, rows).includes(row)), ...heldOf(group, rows)].map((row, i, all) => {
+                const held = heldOf(group, rows).includes(row);
+                const tag = deskTag(t, row, group, locale);
                 const action = !canClaim ? null : group === "unclaimed" && !heldBeforeClaim(row) ? "claim" : group === "mine" ? "release" : null;
                 return (
+                  <Fragment key={`${group}:${row.id}`}>
+                  {held && !heldOf(group, rows).includes(all[i - 1]) ? (
+                    // A dashed rule and 「候着的 · N」 at the end of 待认领 (第六十一批 二); no 「· 0」 when there are none.
+                    <View testID="desk-held-divider" style={[styles.heldHead, { borderTopColor: theme.hair2 }]}>
+                      <Txt variant="caption" style={{ color: theme.faintText }}>
+                        {t("judgment.claim.groups.held", { n: String(heldOf(group, rows).length) })}
+                      </Txt>
+                    </View>
+                  ) : null}
                   <DeskRow
-                    key={`${group}:${row.id}`}
                     row={row}
+                    held={held}
                     lineTwo={[t(`officer_app.desk.sources.${row.source ?? "queue"}`), courtLabel(t, row.court, locale), ...rowNotes(t, row, group, tag.deadline, locale)].join(" · ")}
                     tag={tag}
                     gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
@@ -284,6 +319,7 @@ export function QueueTab({
                         : null
                     }
                   />
+                  </Fragment>
                 );
               })}
               <MoreRow more={more} state={moreState} />
@@ -298,6 +334,7 @@ export function QueueTab({
 /** 72 high: the name in serif 16/24, 「来源 · 殿」 under it; the tag over the case number at the right. */
 function DeskRow({
   row,
+  held = false,
   lineTwo,
   tag,
   gone,
@@ -305,6 +342,8 @@ function DeskRow({
   action,
 }: {
   row: Judgment;
+  /** 第六十一批 二: a case nobody can claim yet -- the whole row in --sub. */
+  held?: boolean;
   lineTwo: string;
   tag: { tone: TagTone; text: string; deadline: boolean };
   gone: boolean;
@@ -322,7 +361,7 @@ function DeskRow({
       style={({ pressed }) => [styles.row, { borderBottomColor: theme.hair, backgroundColor: pressed ? theme.s2 : theme.s0 }, gone ? styles.gone : null]}
     >
       <View style={styles.rowText}>
-        <Txt numberOfLines={1} style={[styles.name, { color: theme.ink }]}>
+        <Txt numberOfLines={1} style={[styles.name, { color: held ? theme.inkMuted : theme.ink }]}>
           {row.soul_name}
         </Txt>
         <OneLine variant="caption" tone="muted" onPress={gone ? undefined : onPress}>
@@ -374,4 +413,5 @@ const styles = StyleSheet.create({
   name: { fontFamily: family.title, fontSize: 16, lineHeight: 24 },
   gone: { opacity: 0.45 },
   swipeAction: { width: 96, alignItems: "center", justifyContent: "center" },
+  heldHead: { paddingHorizontal: GUTTER, paddingTop: space[3], paddingBottom: space[2], borderTopWidth: 1, borderStyle: "dashed" },
 });

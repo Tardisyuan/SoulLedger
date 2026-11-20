@@ -1050,9 +1050,11 @@ class CrossTenantJudgmentService:
         the check below, so a "joint" judgment held one participant at most.
         The initiator convenes the bench explicitly through `activate`.
 
+        只在联审还是 PROPOSED 时入席(2026-11-21 用户决定,状态机盘点 #7):与入席视图(`seatable-actors`)、文档一致;
+        此前流程在走时 ACTIVE 也收。拒绝是 ValueError,视图答 400 `bad_request`,与选神祇那一步同一个码。
         审批流程已生成(第四十三批):流程还在走(IN_PROGRESS)时可以入席(2026-10-18 用户决定),那个域按自己的
         默认流程接在最后一段之后、收到选站待办(`segments.append_foreign`);席位序号必须排在现有各席之后 ——
-        排进中间就是重排,仍然 409 `order_locked`。审判此时已开庭(ACTIVE)也收。流程结束了 / 还没走:409。
+        排进中间就是重排,仍然 409 `order_locked`。流程结束了 / 还没走:409。
         先锁流程行(锁序 流程 → 跨域审判,同 `cancel`),入席与流程走完互斥。
         """
         from apps.workflow import segments
@@ -1061,7 +1063,7 @@ class CrossTenantJudgmentService:
         refuse_if_frozen()  # a seat of another civilization is a saga (`transfer.seat`), as a new bench is
         workflow = segments.lock_workflow_of(judgment)
         running = workflow is not None and workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
-        if judgment.status != JudgmentStatus.PROPOSED and not (running and judgment.status == JudgmentStatus.ACTIVE):
+        if judgment.status != JudgmentStatus.PROPOSED:
             raise ValueError("Can only add participants to proposed judgments")
         if workflow is not None and not (running and workflow.segments.exists()):
             raise OrderLockedError()

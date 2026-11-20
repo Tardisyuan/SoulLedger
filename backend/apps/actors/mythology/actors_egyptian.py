@@ -190,8 +190,8 @@ EGYPTIAN_ACTORS = [
 #     *identified with* Ra in some contexts, which is a theological claim and
 #     not a spelling. Recording it as an alias would assert the identification.
 #   * `Ma'at` / `Maat` — already recorded, in a column: `name_egy` is "Maat", and
-#     `fix_actor_civilization.SPELLING_MERGES` merges a stray `Maat` row into
-#     `Ma'at`. Nothing to add.
+#     the one-off `fix_actor_civilization.SPELLING_MERGES` (deleted 2026-11-21)
+#     merged the stray `Maat` row into `Ma'at`. Nothing to add.
 #
 # Every entry below names the file that uses the other spelling, so an alias
 # whose only user disappears can be removed on evidence.

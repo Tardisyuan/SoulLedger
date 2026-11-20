@@ -131,6 +131,8 @@ describe("审判队列", () => {
     expect(screen.getByTestId("group-count-others")).toHaveTextContent("4");
     expect(screen.getByTestId("group-count-deferred")).toHaveTextContent("1");
     expect(within(screen.getByTestId("queue-group-deferred")).getByText(tZh("judgment.claim.group_empty"))).toBeInTheDocument();
+    // Nothing held on this page: no 「候着的 · 0」 (第六十一批 二).
+    expect(screen.queryByTestId("queue-held-divider")).toBeNull();
   });
 
   it("v4 S05:组序 我手上 → 待定 → 别人在审 → 待认领;期限一格;「已过期限」是列表与组头计数上的筛选", async () => {
@@ -979,17 +981,31 @@ describe("埃及入殿前 (review P2-9)", () => {
     const names = within(screen.getByTestId("queue-group-unclaimed")).getAllByRole("link").map((a) => a.textContent);
     expect(names).toEqual(["海瑞", "Ka", "Ren"]);
 
+    // 第六十一批 二:候着的两件在组尾「候着的 · 2」之下,组头只数能认领的那一件。
+    expect(screen.getByTestId("queue-held-divider")).toHaveTextContent(tZh("judgment.claim.groups.held", { n: "2" }));
+    await waitFor(() => expect(screen.getByTestId("group-count-unclaimed")).toHaveTextContent("3")); // 5 on the server, 2 held
     const embalmed = rowOf("Ka");
+    expect(embalmed).toHaveAttribute("data-held", "held");
     expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.duat_stage.EMBALMING"));
-    expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.held_until", { date: formatIsoDay("2999-03-01") }));
-    expect(within(embalmed).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_short"));
+    expect(within(embalmed).getByTestId("held-reason")).toHaveTextContent(tZh("judgment.duat_stage.EMBALMING"));
+    // 日期在右侧写成「暂不能认领 · … 起可认领」,名字下不再重复「候至」。
+    expect(within(embalmed).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_from", { date: formatIsoDay("2999-03-01") }));
+    expect(within(embalmed).getByTestId("duat-mark")).not.toHaveTextContent(tZh("judgment.held_until", { date: formatIsoDay("2999-03-01") }));
+    expect(within(embalmed).getByTestId("held-glyph")).toHaveTextContent("‖");
+    expect(within(embalmed).queryByRole("checkbox")).toBeNull();
 
     const nameless = rowOf("Ren");
+    expect(nameless).toHaveAttribute("data-held", "barred");
     expect(within(nameless).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.duat_stage.NAMELESS"));
     expect(within(nameless).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.duat_barred_short"));
     expect(within(nameless).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
-    expect(within(nameless).getByRole("checkbox")).toBeDisabled();
-    expect(within(rowOf("海瑞")).queryByTestId("duat-mark")).toBeNull();
+    expect(within(nameless).getByTestId("held-glyph")).toHaveTextContent("⊘");
+    expect(within(nameless).queryByRole("checkbox")).toBeNull();
+    expect(within(nameless).queryByTestId("held-reason")).toBeNull();
+    const ok = rowOf("海瑞");
+    expect(within(ok).queryByTestId("duat-mark")).toBeNull();
+    expect(ok).not.toHaveAttribute("data-held");
+    expect(within(ok).getByRole("checkbox")).toBeEnabled();
   });
 });
 
@@ -1014,7 +1030,9 @@ describe("希腊过不了阿刻戎 (第五十七批 G-1)", () => {
     expect(within(unburied).getByTestId("ferry-mark")).toHaveTextContent(tZh("souls.ferry_passage.UNBURIED"));
     expect(within(unburied).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.ferry.barred_unburied"));
     expect(within(unburied).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
-    expect(within(unburied).getByRole("checkbox")).toBeDisabled();
+    // 第六十一批 二:过不了河的也在「候着的」小组里 —— 没有选择框,首列 ⊘。
+    expect(within(unburied).queryByRole("checkbox")).toBeNull();
+    expect(within(unburied).getByTestId("held-glyph")).toHaveTextContent("⊘");
 
     expect(within(rowOf("Kleon")).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.ferry.barred_no_fare"));
 
@@ -1047,16 +1065,22 @@ describe("枉死城 (第五十一批 F-2)", () => {
 
     const held = rowOf("王守仁");
     expect(within(held).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.untimely"));
-    expect(within(held).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.held_until", { date: formatIsoDay("2999-11-03") }));
-    expect(within(held).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_short"));
+    // 第六十一批 二:名字下是原因,右侧是「暂不能认领 · {日期} 起可认领」;没有选择框,首列 ‖。
+    expect(within(held).getByTestId("held-reason")).toHaveTextContent(tZh("judgment.claim.held_reason.wangsi"));
+    expect(within(held).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_from", { date: formatIsoDay("2999-11-03") }));
     expect(within(held).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
-    expect(within(held).getByRole("checkbox")).toBeDisabled();
+    expect(within(held).queryByRole("checkbox")).toBeNull();
+    expect(within(held).getByTestId("held-glyph")).toHaveTextContent("‖");
+    expect(screen.getByTestId("queue-held-divider")).toHaveTextContent(tZh("judgment.claim.groups.held", { n: "2" }));
   });
 
   it("到期之后:「候至」消失、认领回来,「枉死」徽标留着", async () => {
     renderPage();
     await screen.findByText("严嵩");
     const past = rowOf("严嵩");
+    // 候至已过:不管服务端的阶段怎么说,前端按可认领 —— 不在「候着的」小组里(第六十一批 二)。
+    expect(past).not.toHaveAttribute("data-held");
+    expect(within(past).queryByTestId("held-reason")).toBeNull();
     expect(within(past).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.untimely"));
     expect(within(past).getByTestId("untimely-mark")).not.toHaveTextContent("2000-01-01");
     expect(within(past).getByRole("button", { name: tZh("judgment.claim.claim") })).toBeInTheDocument();

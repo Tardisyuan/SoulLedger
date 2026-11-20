@@ -3,7 +3,7 @@
 > **版本：** 2.0（多租户重构版）
 > **更新日期：** 2026-05-09（正文）；2026-10-12 补「现状对照」（读法说明与 §12），正文未改写
 > **状态：** 设计稿；多数已实现，实现与本文的分叉见下面的读法说明与 §12
-> **OpenSpec 追踪：** `openspec/changes/archive/multi-tenant-architecture/`
+> **OpenSpec 追踪：** `openspec/changes/archive/multi-tenant-architecture/`(2026-11-21 起在 `archive/docs` 分支)
 > （2026-08-14 已归档——该提案的绝大部分早已实现，但任务清单从未被勾选过。
 > 归档头部有逐主题的现状核实与设计差异说明。）
 
@@ -31,7 +31,7 @@
 >   QuerySet」与 ADR-004 的「双重隔离」都是当时的设计；现在 `apps/tenants/managers.py` 只过滤
 >   软删除，租户隔离**单层**、全在视图层 `apps/core/tenant.py::scope_to_tenant`，
 >   由 `tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet。隐式过滤被移除的原因见
->   `managers.py` 头部与 `docs/tenant-contextvar-investigation.md`（历史快照）。
+>   `managers.py` 头部与 `docs/tenant-contextvar-investigation.md`（历史快照,在 `archive/docs` 分支）。
 > - **角色集合不同。** 现在是 `ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL`
 >   （`apps/authentication/models.py::UserRole`）。本文的 `SYS_ADMIN`、`TENANT_ADMIN`、
 >   `DISPATCH_JUDGE` 不存在；`ADMIN` 在 `apps/core/permissions.py::TenantPermission` 里直接放行、绕过租户检查，该层并不强制「只读」（ADR-008 是设计意图，未在这一层落成不变量）。
@@ -49,7 +49,7 @@
 >   §7.1、§7.2、§7.5 与 ADR-007 描述的是当时的设计。
 > - **没有 `/api/v1/stats/*`，也没有 `apps/stats`。** 统计在 `/api/v1/ledger/stats/{overview,trends,export}/`。
 > - **技术栈版本已变**，见 §1.4 的更新注记。§9 的里程碑表是 2026-05-09 的计划，状态列不是现状，
->   以 `git log` 与 `docs/MILESTONES.md` 为准。
+>   以 `git log` 为准(`docs/MILESTONES.md` 在 `archive/docs` 分支)。
 
 ---
 
@@ -297,10 +297,6 @@ SoulLedger/
 ├── docker-compose.yml          # + override (dev) / staging / production
 ├── nginx.conf                  # production 合并里 nginx 挂载的主配置
 ├── scripts/
-├── openspec/
-│   └── changes/
-│       ├── soulledger-system-design/
-│       └── multi-tenant-architecture/  # 当前变更
 ├── SPEC.md
 └── README.md
 ```
@@ -1748,7 +1744,7 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 
 ## 9. 里程碑规划
 
-> **现状（2026-10-12）：** 本节是 2026-05-09 的计划，状态列（✅／🔲）不是现状：例如 M4–M8 标 🔲 的内容大多已做。权威记录是 `git log` 与 `docs/MILESTONES.md`；M1 的「12 个测试」「M3 的 57 个测试」是当时的数字，不再成立。
+> **现状（2026-10-12）：** 本节是 2026-05-09 的计划，状态列（✅／🔲）不是现状：例如 M4–M8 标 🔲 的内容大多已做。权威记录是 `git log`(`docs/MILESTONES.md` 在 `archive/docs` 分支)；M1 的「12 个测试」「M3 的 57 个测试」是当时的数字，不再成立。
 
 ### Milestone 1 ✅ 已完成
 
@@ -2107,4 +2103,4 @@ localhost
 
 ---
 
-*本文档由 OpenSpec 变更追踪：`openspec/changes/archive/multi-tenant-architecture/`（已归档）*
+*本文档由 OpenSpec 变更追踪：`openspec/changes/archive/multi-tenant-architecture/`（已归档,在 `archive/docs` 分支）*

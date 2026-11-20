@@ -31,20 +31,21 @@ import { civKeyOf } from "../theme";
 import {
   Button,
   Empty,
+  enumText,
   FailedLine,
   GUTTER,
   OneLine,
+  Press,
   Screen,
   ScreenError,
   Section,
   Skeleton,
+  StaleLine,
   Txt,
-  enumText,
   useLayout,
   useReloadOnRefocus,
   useRemote,
   useTheme,
-  Press,
 } from "../ui";
 import type { SentenceLanding } from "../sentenceKinds";
 import type { AppStackParams } from "../navTypes";
@@ -505,6 +506,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
   const current = currentStation(plan);
   return (
     <Screen refreshing={remote.loading} onRefresh={remote.reload} testID={`sentence-screen-${plan.state}`}>
+      <StaleLine state={remote} onRetry={() => void remote.reload()} />
       {plan.state === "none" ? (
         <Empty testID="sentence-empty" text={t(civKey(t, "soul_app.sentence.empty", home))} />
       ) : (

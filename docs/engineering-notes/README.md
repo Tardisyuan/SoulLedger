@@ -27,7 +27,7 @@ Linux box that runs the gates, and "the shared test database" is a PostgreSQL in
 
 ## 1. 「Production Ready」报告被审计推翻
 
-- 2026-05-30 的 `docs/PRODUCTION_READINESS_REPORT.md`（`45a4a6358`）宣称「Production Ready / Security 8.5」。
+- 2026-05-30 的 `docs/PRODUCTION_READINESS_REPORT.md`（`45a4a6358`;2026-11-21 起在 `archive/docs` 分支）宣称「Production Ready / Security 8.5」。
 - 2026-08-07 的 M15 多租户审计，在同一份代码里找到 4 个 CRITICAL 级的租户隔离缺口。其中一个是
   `death_sync.cleanup_old_requests`：一条物理 `DELETE`，跨所有租户执行，没有租户边界。另有 4 个 HIGH、15 个 MEDIUM。
 - 2026-08 的 61 个修复提交里，不少是在补上一次修复漏掉的。例如 `580302ecc`「close the last two

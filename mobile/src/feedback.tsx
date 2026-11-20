@@ -35,8 +35,13 @@ type ToastKind = "success" | "info" | "failure";
  * the shown one instead of stacking under it -- a cancelled check's line otherwise stayed on screen after the
  * retry that succeeded (官员端真机 2026-11-14, a failure stays until it is closed).
  */
-type Show = (message: string, kind?: ToastKind, key?: string) => void;
-type Item = { message: string; kind: ToastKind; id: number; key?: string };
+/**
+ * `action`: a text button at the toast's right (Design v4 第六十一批 三: 「重试」 after a mark that did not reach the
+ * server). Pressing it runs the action and takes the toast down.
+ */
+export type ToastAction = { label: string; onPress: () => void };
+type Show = (message: string, kind?: ToastKind, key?: string, action?: ToastAction) => void;
+type Item = { message: string; kind: ToastKind; id: number; key?: string; action?: ToastAction };
 
 /** 第三十批: at most three at once; a fourth pushes the oldest out. */
 const MAX_TOASTS = 3;
@@ -52,8 +57,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Item[]>([]);
   const seq = useRef(0);
   const show = useCallback<Show>(
-    (message, kind = "success", key) =>
-      setToasts((list) => [...list.filter((x) => key === undefined || x.key !== key), { message, kind, key, id: ++seq.current }].slice(-MAX_TOASTS)),
+    (message, kind = "success", key, action) =>
+      setToasts((list) => [...list.filter((x) => key === undefined || x.key !== key), { message, kind, key, action, id: ++seq.current }].slice(-MAX_TOASTS)),
     []
   );
   const close = useCallback((id: number) => setToasts((list) => list.filter((x) => x.id !== id)), []);
@@ -96,7 +101,7 @@ function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: 
   }, [opacity, durations, failure, item.kind, leave]);
   return (
     <Animated.View
-      pointerEvents={failure ? "box-none" : "none"}
+      pointerEvents={failure || item.action ? "box-none" : "none"}
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
       style={[
@@ -111,6 +116,21 @@ function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: 
       <Txt testID={newest ? "toast" : "toast-earlier"} variant="body" style={styles.toastText}>
         {item.message}
       </Txt>
+      {item.action ? (
+        <Press
+          testID={newest ? "toast-action" : undefined}
+          accessibilityRole="button"
+          onPress={() => {
+            item.action?.onPress();
+            onGone(item.id);
+          }}
+          style={styles.toastAction}
+        >
+          <Txt variant="body" style={[styles.toastActionText, { color: t.ink }]}>
+            {item.action.label}
+          </Txt>
+        </Press>
+      ) : null}
       {failure ? (
         <Press
           testID={newest ? "toast-close" : undefined}
@@ -142,6 +162,9 @@ const styles = StyleSheet.create({
   },
   toastIcon: { paddingVertical: 4 },
   toastText: { flex: 1, paddingVertical: 0, paddingRight: 12 },
+  // A text button (第六十一批 三), underlined like the web's; a 44pt target.
+  toastAction: { minHeight: touch.controlSm, marginVertical: -12, paddingHorizontal: 8, justifyContent: "center" },
+  toastActionText: { textDecorationLine: "underline" },
   // The close is a 44pt target in the toast's corner.
   toastClose: { width: touch.controlSm, height: touch.controlSm, marginVertical: -12, alignItems: "center", justifyContent: "center" },
 });

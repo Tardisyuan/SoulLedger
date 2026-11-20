@@ -24,7 +24,7 @@ export const GLOBAL_ONLY_CODENAMES: ReadonlySet<string> = new Set(["menu.manage"
  * 好让 ViewingLock 把写按钮画成置灰而不是藏掉(Design 第二十八批 W6)。
  */
 export function usePermissions() {
-  const { user, permissionsReady = true } = useTenant();
+  const { user, permissionsReady = true, permissionsFailed = false } = useTenant();
   const viewing = useImpersonation() !== null;
 
   // One expression, read twice. It used to be written out twice — once here as
@@ -84,5 +84,7 @@ export function usePermissions() {
     permissions: user?.permissions ?? [],
     /** 刷新后权限还没从服务端回来(见 TenantContext)。`hasPermission` 不看它;画拒绝页之前看。 */
     permissionsReady,
+    /** 加载时那一次没读到权限(第六十一批 E2):拒绝页换成「权限没读到」。`hasPermission` 不看它。 */
+    permissionsFailed,
   };
 }
