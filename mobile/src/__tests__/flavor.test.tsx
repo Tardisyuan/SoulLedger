@@ -232,13 +232,20 @@ describe("the welcome (1b)", () => {
   });
 
   it("reduce-motion: a still frame is shown (第六十二批: no longer skipped), and written once it has been seen", async () => {
-    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
-    const { calls } = play(P({ welcomed_civilizations: [] }));
-    await act(async () => {});
-    expect(screen.getByTestId("welcome")).toBeTruthy();
-    expect(writes(calls)).toEqual([]);
-    await waitFor(() => expect(screen.queryByTestId("welcome")).toBeNull(), { timeout: 3000 });
-    expect(writes(calls)).toHaveLength(1);
+    // Fake timers: the still frame is 80 + 900 + 80 ms; a real-time wait with a 3 s budget ran out on a loaded gate host.
+    jest.useFakeTimers();
+    try {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      const { calls } = play(P({ welcomed_civilizations: [] }));
+      await act(async () => {});
+      expect(screen.getByTestId("welcome")).toBeTruthy();
+      expect(writes(calls)).toEqual([]);
+      await act(async () => void jest.advanceTimersByTime(5000));
+      expect(screen.queryByTestId("welcome")).toBeNull();
+      expect(writes(calls)).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("the write fails: no replay in this process (the next launch decides again)", async () => {
