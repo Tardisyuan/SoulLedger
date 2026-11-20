@@ -116,6 +116,35 @@ def test_clean_edit_stamps_but_keeps_an_officers_hide(world):
     assert post.moderation_status == ModerationStatus.HIDDEN
 
 
+@pytest.mark.parametrize("kind", ["post", "comment"])
+def test_an_edit_that_hits_a_review_word_never_lowers_an_officers_hide(world, kind):
+    """Screening on edit only raises the status (state-machine audit 2026-11-20). HIDDEN -> PENDING is no edge of
+    CONTENT_TRANSITIONS: an author who added a REVIEW word to a hidden post put it back in the review queue, where an
+    APPROVE published it. The officer's reason stays too."""
+    tenant, author, other = world
+    _word(tenant, "badword", SensitiveWordAction.REVIEW)
+    post = Post.objects.create(author=author, content="o", tenant=tenant)
+    target = post
+    if kind == "comment":
+        target = Comment.objects.create(post=post, author=author, content="o", tenant=tenant)
+    type(target).objects.filter(pk=target.pk).update(moderation_status=ModerationStatus.HIDDEN,
+                                                     moderation_reason="officer")
+    url = f"{BASE}/posts/{post.pk}/" if kind == "post" else f"{BASE}/comments/{target.pk}/"
+    r = _client(author, tenant).patch(url, {"content": "now badword"}, format="json")
+    assert r.status_code == 200, r.data
+    target.refresh_from_db()
+    assert (target.moderation_status, target.moderation_reason) == (ModerationStatus.HIDDEN, "officer")
+
+
+def test_an_edit_still_raises_a_published_post_to_review(world):
+    tenant, author, _ = world
+    _word(tenant, "badword", SensitiveWordAction.REVIEW)
+    post = Post.objects.create(author=author, content="o", tenant=tenant)
+    _client(author, tenant).patch(f"{BASE}/posts/{post.pk}/", {"content": "now badword"}, format="json")
+    post.refresh_from_db()
+    assert post.moderation_status == ModerationStatus.PENDING
+
+
 def test_other_people_interacting_never_stamps(world):
     tenant, author, other = world
     post = Post.objects.create(author=author, content="p", tenant=tenant)
