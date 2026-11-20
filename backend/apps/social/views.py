@@ -42,7 +42,7 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.social import media as post_media
 from apps.social.models import Comment, Follow, ModerationStatus, Post, PostMedia, Reaction, UserProfile, Visibility
-from apps.social.moderation import record_hits, screen_content
+from apps.social.moderation import edit_screening_fields, record_hits, screen_content
 from apps.social.permissions import (
     IsAuthorOrReadOnly,
     IsFollowOwnerOrReadOnly,
@@ -182,9 +182,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             screening = screen_content(serializer.instance.tenant, data["content"])
             data["content"] = screening.content
             data["edited_at"] = timezone.now()
-            if screening.status != ModerationStatus.PUBLISHED:
-                data["moderation_status"] = screening.status
-                data.update(screening.moderation_fields)
+            data.update(edit_screening_fields(serializer.instance.moderation_status, screening))
         was_seen = _seen_by_others(serializer.instance)
         with transaction.atomic():
             super().perform_update(serializer)
@@ -372,9 +370,7 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
         screening = screen_content(serializer.instance.tenant, data["content"]) if "content" in data else None
         if screening:
             data["content"] = screening.content
-            if screening.status != ModerationStatus.PUBLISHED:
-                data["moderation_status"] = screening.status
-                data.update(screening.moderation_fields)
+            data.update(edit_screening_fields(serializer.instance.moderation_status, screening))
         with transaction.atomic():
             super().perform_update(serializer)
             if screening:

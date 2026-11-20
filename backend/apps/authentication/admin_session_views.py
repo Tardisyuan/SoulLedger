@@ -119,6 +119,19 @@ def admin_sessions_view(request):
     } for s in page], many=True).data)
 
 
+def _end_soul_device_logins(user, sessions=None):
+    """A soul forced out loses that phone's 面容登录 too, as its own 「退出登录设备」 does (`MeSessionRevokeView`):
+    `signin_sessions.revoke` reaches only the officer app's credential, so the phone signed straight back in
+    (state-machine audit 2026-11-20). `sessions` None: every phone."""
+    if user.role != UserRole.SOUL:
+        return
+    from apps.soul_accounts import device_login
+    from apps.soul_accounts.models import SoulAccount
+
+    for account in SoulAccount.objects.filter(user=user):
+        device_login.revoke_signed_out(account, sessions=sessions)
+
+
 @extend_schema(request=None, responses={204: None, 400: SessionRefusalSerializer, 404: SessionRefusalSerializer})
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanManageSessions])
@@ -131,6 +144,7 @@ def admin_revoke_session_view(request, session_id):
         return refuse("这台设备请在右上角退出。", "current_session", status.HTTP_400_BAD_REQUEST)
     with transaction.atomic():
         signin_sessions.revoke(session)
+        _end_soul_device_logins(session.user, sessions=[session.pk])
         _audit(request.user, f"管理员强退会话:{session.user.username} · {session.label}", request=request,
                changes={"session_revoked": str(session.pk), "target_user": session.user_id, "label": session.label})
     return Response(status=status.HTTP_204_NO_CONTENT)
@@ -154,6 +168,7 @@ def admin_revoke_user_sessions_view(request):
     with transaction.atomic():
         count = _live(request).filter(user=target).count()
         end_sessions(target)
+        _end_soul_device_logins(target)
         _audit(request.user, f"管理员强退 {target.username} 的全部会话({count} 台)", request=request,
                changes={"target_user": target.pk, "sessions_revoked": count})
     return Response({"revoked": count})

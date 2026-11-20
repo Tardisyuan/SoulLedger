@@ -145,6 +145,29 @@ class TestForceSignOut:
         assert SignInSession.objects.get(pk=world["sessions"]["eu_judge"].pk).revoked_at is None
         assert AuditLog.objects.filter(description__startswith="管理员强退 cn_judge 的全部会话").count() == 1
 
+    @pytest.mark.parametrize("how", ["one", "user"])
+    def test_a_soul_forced_out_cannot_come_back_by_face(self, world, cn_tenant, how):
+        """State-machine audit 2026-11-20: the force sign-out ended a soul's session but left that phone's 面容登录
+        credential live (`signin_sessions.revoke` reaches only the officer app's), so it signed straight back in.
+        The soul's own 「退出登录设备」 revokes both; the admin's now does too -- and leaves another phone's alone."""
+        from apps.soul_accounts import device_login
+        from apps.soul_accounts.models import SoulDeviceLogin
+        from tests.soul_account_support import ready_soul
+
+        account, _ = ready_soul(cn_tenant, name="强退")
+        forced = SignInSession.objects.create(user=account.user, label="iPhone")
+        other = SignInSession.objects.create(user=account.user, label="iPad")
+        device_login.issue(account, forced)
+        device_login.issue(account, other)
+        admin = officer_client(world["root"])
+        if how == "one":
+            assert admin.post(f"{LIST}{forced.pk}/revoke/").status_code == 204
+        else:
+            assert admin.post(REVOKE_USER, {"user": account.user.pk}, format="json").status_code == 200
+        live = set(SoulDeviceLogin.objects.filter(account=account, revoked_at__isnull=True).values_list(
+            "session_id", flat=True))
+        assert live == ({other.pk} if how == "one" else set())
+
     def test_out_of_scope_ids_are_404_and_change_nothing(self, world):
         bound = officer_client(world["cn_admin"])
         eu = world["sessions"]["eu_judge"]

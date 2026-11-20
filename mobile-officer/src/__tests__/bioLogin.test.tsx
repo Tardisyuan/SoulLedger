@@ -337,6 +337,18 @@ describe("the app lock", () => {
     expect(screen.getByTestId("app-lock")).toBeTruthy();
   });
 
+  // State-machine audit 2026-11-20: leaving while LOCKED used to turn the lock into the brief-switch cover, so a return
+  // within five minutes took it down unasked -- a resumed session walked past the fingerprint.
+  it("a lock that is up stays up through a brief trip to the background", async () => {
+    fingerprintOn();
+    resumed();
+    bio.success = false;
+    withProviders(<AppLock />);
+    await screen.findByTestId("app-lock-failed");
+    await away(1);
+    expect(screen.getByTestId("app-lock")).toBeTruthy();
+  });
+
   it("「输入密码」 signs out the way the server would", async () => {
     fingerprintOn();
     resumed();

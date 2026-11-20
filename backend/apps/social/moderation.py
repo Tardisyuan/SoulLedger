@@ -416,6 +416,15 @@ CONTENT_TRANSITIONS = {
 }
 CONTENT_ACTIONS = [*CONTENT_TRANSITIONS, "DELETE"]
 
+#: An author's edit is screened again like a new post, except that it never touches a HIDDEN one: HIDDEN -> PENDING
+#: is no edge of CONTENT_TRANSITIONS, and an edit that did it put an officer's HIDE back in the review queue, where an
+#: APPROVE published it; HIDDEN -> HIDDEN overwrote the officer's reason (state-machine audit 2026-11-20).
+def edit_screening_fields(current, screening):
+    """The moderation fields an edit writes: none for a clean edit or for content already HIDDEN."""
+    if screening.status == ModerationStatus.PUBLISHED or current == ModerationStatus.HIDDEN:
+        return {}
+    return {"moderation_status": screening.status, **screening.moderation_fields}
+
 
 def _kind(obj):
     return ReportTargetType.POST if isinstance(obj, Post) else ReportTargetType.COMMENT

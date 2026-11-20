@@ -586,8 +586,19 @@ def _withdraw_foreign_stop(soul, node, reason, why):
     if node.status == SentenceNodeStatus.DISPATCHING and node.dispatch_record_id is not None:
         record = DispatchRecord._base_manager.filter(pk=node.dispatch_record_id).first()
         if record is not None and record.status in (DispatchStatus.PROPOSED, DispatchStatus.APPROVED):
-            record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now())
+            _cancel_stop_dispatch(record, node, timezone.now())
     _withdraw_stop(soul, node, reason, why)
+
+
+def _cancel_stop_dispatch(record, node, now):
+    """The stop's live dispatch CANCELLED, or 409: one the saga is executing (or that moved under its lock) cannot be
+    withdrawn, and its node must not be marked gone while the soul is still on its way (state-machine audit
+    2026-11-20). Raising rolls back what the caller wrote."""
+    from apps.dispatch.models import DispatchStatus
+
+    if not record.transition_to(DispatchStatus.CANCELLED, decided_at=now):
+        raise PlanChangeRefusedError("The soul is on its way to this stop; decide once it has arrived",
+                                     "plan_in_transit", status=409, node_order=node.order)
 
 
 def _return_from_withdrawn_stop(soul, plan):
@@ -853,7 +864,7 @@ def cancel(plan, *, reason, user):
                 if node.dispatch_record_id is not None:
                     record = DispatchRecord._base_manager.filter(pk=node.dispatch_record_id).first()
                     if record is not None and record.status in (DispatchStatus.PROPOSED, DispatchStatus.APPROVED):
-                        record.transition_to(DispatchStatus.CANCELLED, decided_at=now)
+                        _cancel_stop_dispatch(record, node, now)
                 node.status = SentenceNodeStatus.CANCELLED
                 _save(node, "status")
             elif node.status in (SentenceNodeStatus.ACTIVE, SentenceNodeStatus.WAITING, SentenceNodeStatus.ETERNAL):

@@ -520,6 +520,33 @@ def test_cancelling_at_home_waives_the_rest_and_the_soul_may_apply_for_rebirth(
     assert listing["can_apply"] is True and listing["reason"] is None
 
 
+def test_cancelling_while_a_stops_dispatch_cannot_be_withdrawn_is_refused_and_writes_nothing(
+        cn, eg, eu, judges, monkeypatch):
+    """The plan's cancel used to drop `transition_to`'s False (state-machine audit 2026-11-20): a dispatch the saga is
+    executing, or one that moved under its lock, stayed live while its node was marked CANCELLED -- the soul then
+    arrived at a stop of a plan already cancelled. Refused 409 `plan_in_transit` instead; nothing is written."""
+    from tests.soul_account_support import ready_soul
+
+    account, _ = ready_soul(cn, name="在途撤销")
+    soul = account.soul
+    case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
+    plan.bench(case, [(eg, plan.stop_realm(eg), 5), (eu, plan.stop_realm(eu), 7)])
+    case.conclude("FAILED", "")
+    plan.walk_flow(case)
+    p = SentencePlan.all_objects.get(soul=soul)
+    plan.serve(soul, p, 1)
+    [record] = DispatchRecord.all_objects.filter(soul=soul)
+    before = _shape(p)
+    monkeypatch.setattr(DispatchRecord, "transition_to", lambda self, *a, **k: False)
+
+    response = _cancel(plan.officer("cn_mod", "ADMIN", cn), p)
+
+    assert response.status_code == 409 and response.data["code"] == "plan_in_transit", response.data
+    p.refresh_from_db()
+    assert p.status == "ACTIVE" and _shape(p) == before
+    assert DispatchRecord.all_objects.get(pk=record.pk).status == record.status
+
+
 def test_cancelling_pushes_the_pardon_not_the_completion(cn, eg, enqueued):  # noqa: F811
     from apps.soul_push.models import PushDelivery
     from tests.soul_account_support import ready_soul

@@ -445,8 +445,9 @@ def mark_lost_for_worker(hostname: str) -> int:
     """worker_ready: whatever this hostname left RUNNING died with the old process."""
     lost = 0
     for run in TaskRun.objects.filter(status=RunStatus.RUNNING, worker_hostname=hostname):
-        run.finish(RunStatus.LOST, error=f"worker {hostname} restarted before this run finished")
-        lost += 1
+        if run.finish(RunStatus.LOST, error=f"worker {hostname} restarted before this run finished",
+                      only_from=RunStatus.RUNNING):
+            lost += 1
     if lost:
         logger.warning("scheduler: %s run(s) marked LOST on worker_ready of %s", lost, hostname)
     return lost
@@ -464,12 +465,14 @@ def reap_stale_runs(now=None) -> dict:
     for run in TaskRun.objects.filter(status=RunStatus.RUNNING).select_related("job"):
         limit = run.job.max_runtime if run.job else 600
         if run.started_at and now - run.started_at > timedelta(seconds=limit):
-            run.finish(RunStatus.LOST, error=f"still RUNNING after max_runtime={limit}s; presumed dead")
-            stats["running_lost"] += 1
+            if run.finish(RunStatus.LOST, error=f"still RUNNING after max_runtime={limit}s; presumed dead",
+                          only_from=RunStatus.RUNNING):
+                stats["running_lost"] += 1
     grace = timedelta(seconds=_setting("SCHEDULER_PENDING_GRACE_SECONDS", 900))
     for run in TaskRun.objects.filter(status=RunStatus.PENDING, queued_at__lt=now - grace):
-        run.finish(RunStatus.LOST, error=f"never picked up by a worker within {grace.total_seconds():.0f}s")
-        stats["pending_lost"] += 1
+        if run.finish(RunStatus.LOST, error=f"never picked up by a worker within {grace.total_seconds():.0f}s",
+                      only_from=RunStatus.PENDING):
+            stats["pending_lost"] += 1
     return dict(stats)
 
 

@@ -293,6 +293,35 @@ def test_the_reaper_closes_runs_stuck_past_max_runtime_and_never_picked_up(db, s
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("reap", ["max_runtime", "never_picked_up", "worker_ready"])
+def test_the_reaper_never_overwrites_an_outcome_that_landed_after_it_looked(db, settings, monkeypatch, reap):
+    """FINAL_STATUSES are never overwritten (models.py). The reaper reads RUNNING/PENDING, then writes LOST; a postrun
+    committing SUCCESS between the two used to be overwritten by LOST (state-machine audit 2026-11-20)."""
+    settings.SCHEDULER_PENDING_GRACE_SECONDS = 900
+    job = _job("tests.scheduler_ok")  # max_runtime 60
+    now = timezone.now()
+    if reap == "never_picked_up":
+        run = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="r", status=RunStatus.PENDING,
+                                     queued_at=now - timedelta(seconds=901))
+    else:
+        run = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="r", status=RunStatus.RUNNING,
+                                     worker_hostname="w1", started_at=now - timedelta(seconds=61))
+    real_finish = TaskRun.finish
+
+    def postrun_lands_first(self, status, **kwargs):
+        TaskRun.objects.filter(pk=self.pk).update(status=RunStatus.SUCCESS, result="done")
+        return real_finish(self, status, **kwargs)
+
+    monkeypatch.setattr(TaskRun, "finish", postrun_lands_first)
+    if reap == "worker_ready":
+        assert services.mark_lost_for_worker("w1") == 0
+    else:
+        assert services.reap_stale_runs(now) == {}
+    got = TaskRun.objects.get(pk=run.pk)
+    assert (got.status, got.result, got.error) == (RunStatus.SUCCESS, "done", "")
+
+
+@pytest.mark.django_db
 def test_a_lost_run_that_finishes_after_all_gets_its_real_outcome(db):
     job = _job("tests.scheduler_ok")
     task_id = str(uuid.uuid4())

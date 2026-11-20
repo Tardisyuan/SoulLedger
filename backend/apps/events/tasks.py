@@ -87,8 +87,8 @@ def _deliver_locked(delivery_id):
         logger.error("deliver_event_webhook: 投递记录 %s 不存在", delivery_id)
         return None
 
-    if delivery.status == EventWebhookStatus.SUCCESS:
-        return None
+    if delivery.status in (EventWebhookStatus.SUCCESS, EventWebhookStatus.ABANDONED):
+        return None  # terminal: ABANDONED is redelivered as a copy (death_sync/views.py), never re-sent itself
 
     webhook = delivery.webhook
     ceiling = attempt_ceiling(webhook)

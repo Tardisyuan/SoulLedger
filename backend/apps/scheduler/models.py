@@ -15,7 +15,7 @@ model for the same reason, and because the audit signal machinery on every
 insert would double the write cost of every run for rows nobody edits.
 """
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 from apps.scheduler import registry
@@ -133,7 +133,11 @@ class TaskRun(models.Model):
     def __str__(self) -> str:
         return f"{self.task_name} {self.status} {self.celery_task_id}"
 
-    def finish(self, status: str, *, error: str = "", result: str = "") -> None:
+    def finish(self, status: str, *, error: str = "", result: str = "", only_from: str | None = None) -> bool:
+        """Close the run. `only_from`: write only while the row is still in that status (compare-and-set) -- the
+        reaper's LOST must not overwrite an outcome a postrun committed after the reaper read the row (state-machine
+        audit 2026-11-20). Returns
+        whether it wrote."""
         now = timezone.now()
         self.status = status
         self.finished_at = now
@@ -143,4 +147,13 @@ class TaskRun(models.Model):
             self.error = error[:ERROR_MAX]
         if result:
             self.result = result[:RESULT_MAX]
-        self.save(update_fields=["status", "finished_at", "duration_ms", "error", "result"])
+        fields = ["status", "finished_at", "duration_ms", "error", "result"]
+        if only_from is None:
+            self.save(update_fields=fields)
+            return True
+        with transaction.atomic():  # a save, not an .update(): the realtime receiver (signals.py) hears post_save
+            if TaskRun.objects.select_for_update().filter(pk=self.pk).values_list("status", flat=True).first() \
+                    != only_from:
+                return False
+            self.save(update_fields=fields)
+        return True

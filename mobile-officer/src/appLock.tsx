@@ -34,6 +34,10 @@ export function AppLock() {
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const leftAt = useRef<number | null>(null);
+  const phaseRef = useRef(phase);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   const unlock = useCallback(async () => {
     setBusy(true);
@@ -60,6 +64,9 @@ export function AppLock() {
   useEffect(() => {
     const offSuspend = onSessionSuspend(() => {
       if (!officerDevice.appLockOn()) return;
+      // A lock that is up stays up: leaving while LOCKED must not become the brief-switch cover, which a return
+      // within five minutes takes down unasked (state-machine audit 2026-11-20).
+      if (phaseRef.current === "locked") return;
       leftAt.current = Date.now();
       setPhase("cover");
     });
