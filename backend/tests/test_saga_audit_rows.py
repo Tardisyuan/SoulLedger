@@ -57,7 +57,7 @@ def test_a_dispatch_abroad_and_home_again_loses_no_audit_row(param, caplog):
     print(where)
     officer = User.objects.create_user(username=f"officer_{w['seed']}", password="x", role="ADMIN")
     caplog.set_level(logging.ERROR)
-    with cut(*w["cut"]), read_context(CONTROL_ALIAS):  # reads every master, as a command does; writes as each hall
+    with cut(), read_context(CONTROL_ALIAS):  # reads every master, as a command does; writes as each hall
         with _in_hall(src):
             soul = Soul.objects.create(name=f"审计{w['seed']}", tenant=src, current_state="DISPOSED")
             record = DispatchService.propose(src, tgt, soul, officer, "audit")
@@ -118,7 +118,7 @@ def test_an_audit_row_naming_another_masters_hall_is_written_there(caplog):
     halls = _halls()
     _assign(*CIVS)
     caplog.set_level(logging.ERROR)
-    with cut(*CIVS), read_context(CONTROL_ALIAS), _in_hall(halls["CHINESE"]):
+    with cut(), read_context(CONTROL_ALIAS), _in_hall(halls["CHINESE"]):
         with transaction.atomic():
             user = User.objects.create_user(username="greek_by_chinese", password="x", role="JUDGE",
                                             tenant=halls["GREEK"])

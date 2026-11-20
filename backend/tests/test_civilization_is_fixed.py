@@ -395,7 +395,7 @@ def test_after_the_move_the_accounts_reads_come_from_the_new_civilizations_shard
     token["tenant_code"], token["sv"] = judge.tenant.code, judge.session_version
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    with override_settings(SHARD_READ_CIVS=["GREEK"]):
+    with override_settings(SHARDED=True):
         res = client.get(f"/api/v1/souls/{soul.pk}/")
     assert res.status_code == 200, res.data
     assert res.data["name"] == "on the shard"  # read from civ_greek, which the sync left one write behind

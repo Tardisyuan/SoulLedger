@@ -19,7 +19,7 @@ ENV_PREFIX = "SHARD_DATABASE_URL_"
 def databases_from_env(env, *, disable_server_side_cursors=False, conn_max_age=600):
     """{alias: DATABASES entry} for every `SHARD_DATABASE_URL_<CIV>` set in `env`; {} when none is, which
     leaves production with `default` alone. PostgreSQL only. A name that is no civilization
-    (SHARD_DATABASE_URL_CHINA) is refused at startup by `apps.core.sharding.check_cut_over_settings`."""
+    (SHARD_DATABASE_URL_CHINA) is refused at startup by `apps.core.sharding.check_shard_settings`."""
     import dj_database_url
 
     out = {}

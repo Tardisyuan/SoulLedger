@@ -66,7 +66,7 @@ def world(request):
     w = _world(seed_of(seed), forced)
     halls = _halls()
     _assign(*CIVS)
-    with cut(*w["cut"]):
+    with cut():
         yield w, halls
 
 
@@ -471,7 +471,7 @@ def test_a_claim_is_held_while_its_case_transaction_runs_and_taken_over_once_it_
     _assign(*CIVS)
     first, second = rng.sample([halls[src_civ], halls[tgt_civ]], 2)
     where = f"seed {seed} {first.code} holds, {second.code} waits"
-    with cut(*w["cut"]), read_context(CONTROL_ALIAS):
+    with cut(), read_context(CONTROL_ALIAS):
         soul = _residing(w, halls)
         opened, rolled_back = threading.Event(), threading.Event()
         errors = []
@@ -561,7 +561,7 @@ def test_a_late_home_follows_does_not_move_a_soul_that_has_come_home(seed, monke
     _assign(*CIVS)
     home, a, b = halls[t["home"]], halls[t["a"]], halls[t["b"]]
     where = f"seed {seed} {t}"
-    with cut(*t["cut"]):
+    with cut():
         soul, first = _approved({"seed": seed, "src": t["home"], "tgt": t["a"], "realm": False}, halls)
         _execute(first.pk)
         _relay()

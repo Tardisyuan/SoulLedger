@@ -221,7 +221,7 @@ def test_a_soul_on_a_civilization_shard_rolls_back_with_its_audit_row():
         with _in_hall(hall), transaction.atomic():
             Soul.objects.create(name="希腊审计", tenant=hall, current_state=SoulState.ALIVE)
 
-    with cut("GREEK"):
+    with cut():
         with failing_audit_insert(AuditAction.CREATE) as hits, pytest.raises(OperationalError, match="injected"):
             run()
         assert hits == [GREEK], hits  # the row's own master, not the context's default
@@ -241,20 +241,21 @@ def test_a_rolled_back_step_on_one_master_leaves_no_audit_row_on_another():
     """The saga's shape (2026-11-20): a step holds a transaction on ONE master (the relay's `atomic(using=<target>)`)
     and saves a row there whose audit row belongs to another master -- here a soul's copy on civ_greek that names an
     Egyptian hall (a residence's row, as `transfer._left_residence` rewrites it), its UPDATE row routed to the
-    Egyptian hall's master, control. Written in its own transaction that row outlived the step's rollback; it now
+    Egyptian hall's master, civ_egyptian. Written in its own transaction that row outlived the step's rollback; it now
     waits for the step's commit. Rolled back: no row anywhere, the copy unchanged. Committed: exactly one, on
-    control."""
+    civ_egyptian."""
     from tests.test_shard_sync import HAS_SHARDS
 
     if not HAS_SHARDS:
         pytest.skip("needs the four civ_* aliases (--ds=config.settings_sharded)")
+    from tests.test_shard_sync import CIVS
     from tests.test_sharded_writes import GREEK, _assign, _halls, _in_hall, cut
 
     halls = _halls()
-    _assign("GREEK")
+    _assign(*CIVS)
     egypt = halls["EGYPTIAN"]
-    with cut("GREEK"):
-        with _in_hall(egypt):  # control's: Egypt is not cut
+    with cut():
+        with _in_hall(egypt):  # on civ_egyptian
             soul = Soul.objects.create(name="步骤前", tenant=egypt, current_state=SoulState.ALIVE)
         org = soul.owner_org  # the copy's keys must hold on the shard: Egypt's root unit goes with it
         if not type(org)._base_manager.using(GREEK).filter(pk=org.pk).exists():
@@ -278,7 +279,7 @@ def test_a_rolled_back_step_on_one_master_leaves_no_audit_row_on_another():
         step(fail=False)
         assert Soul._base_manager.using(GREEK).get(pk=soul.pk).name == "步骤后"
         assert rows(action=AuditAction.UPDATE, resource_id=str(soul.pk)) == 1
-        assert AuditLog._base_manager.using("default").filter(
+        assert AuditLog._base_manager.using("civ_egyptian").filter(
             action=AuditAction.UPDATE, resource_id=str(soul.pk)).count() == 1
 
 
@@ -300,7 +301,7 @@ def test_a_row_written_beside_the_open_transaction_keeps_its_audit_row_when_that
     made = []
     # No hall of the context: the role's row names none, so it is control's (in a Greek hall's context it would
     # name that hall and go to civ_greek, inside the step -- see `_write_row`'s docstring).
-    with cut("GREEK"), pytest.raises(RuntimeError), transaction.atomic(using=GREEK):
+    with cut(), pytest.raises(RuntimeError), transaction.atomic(using=GREEK):
         made.append(Role.objects.create(name="BESIDE", display_name="B"))
         raise RuntimeError("the step fails after the control write")
     role = made[0]

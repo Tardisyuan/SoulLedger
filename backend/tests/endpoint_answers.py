@@ -1,17 +1,16 @@
-"""Shadow reads: ask every GET endpoint the same question twice -- with a civilization's reads where they are
-and with them cut over to its shard -- and compare the answers (stage 3, docs/audit/2026-11-15-sharding/PLAN.md).
-
-Shared by the in-repo guard (tests/test_sharded_reads_equal_single_db.py, a random world) and the 115 exit
-check (`manage.py shadow_read_diff`, the live database). Endpoints come from the URLconf, never a list here.
+"""Endpoint answers: ask every GET endpoint the same question twice -- in the single-database form and sharded --
+and compare the answers. The engine of tests/test_sharded_reads_equal_single_db.py and its siblings (a random
+world). Endpoints come from the URLconf, never a list here. Until 2026-11-21 this was apps/core/shadow_reads.py and
+also drove `manage.py shadow_read_diff`, the stage-3 exit check against 115 (retired with the per-civilization
+cut-over; the module is test code now).
 
 Every request runs inside a transaction on every database that is always rolled back, so nothing a GET writes
 (an audit row for an export, a profile made on first read) survives. The transaction is marked the way a test
 case marks its own (`_from_testcase`): `shard_reads.reads_control` takes only the code's own transactions for
-"read your writes", so the reads inside still go where the cut-over sends them.
+"read your writes", so the reads inside still go where the sharded form sends them.
 """
 import json
 import re
-import time
 from contextlib import ExitStack, contextmanager
 from unittest import mock
 from urllib.parse import urlsplit
@@ -100,7 +99,7 @@ class UnreachableMatrix:
         from apps.chat.matrix import MatrixError
 
         def unreachable(*args, **kwargs):
-            raise MatrixError("shadow_read_diff: Synapse is not asked")
+            raise MatrixError("endpoint_answers: Synapse is not asked")
         return unreachable
 
 
@@ -182,26 +181,6 @@ def rolled_back():
         for alias, a in reversed(atomics):
             transaction.set_rollback(True, using=alias)
             a.__exit__(None, None, None)
-
-
-@contextmanager
-def measured():
-    """{"queries": n, "ms": t} of the block: statements on every database, and wall time. The cost columns of
-    `shadow_read_diff` (review 2026-11-16 2.0); not part of any answer that is compared."""
-    out = {"queries": 0, "ms": 0.0}
-
-    def count(execute, sql, params, many, context):
-        out["queries"] += 1
-        return execute(sql, params, many, context)
-
-    started = time.perf_counter()
-    try:
-        with ExitStack() as stack:
-            for alias in connections:
-                stack.enter_context(connections[alias].execute_wrapper(count))
-            yield out
-    finally:
-        out["ms"] = (time.perf_counter() - started) * 1000
 
 
 def fetch(client, url, max_pages=None, trace=False, **extra):

@@ -465,23 +465,21 @@ def greek_hall():
                                                                    "declared_civilization": "GREEK"})[0]
 
 
-def test_a_shard_rows_primary_moves_to_its_shard_only_when_its_writes_are_cut_over(hall, greek_hall, settings):
+def test_a_shard_rows_primary_moves_to_its_shard_only_when_sharded(hall, greek_hall, settings):
     from apps.core.bare_ids import primary_alias
     from apps.souls.models import Soul
 
     greek, chinese = Soul.objects.create(name="g", tenant=greek_hall), Soul.objects.create(name="c", tenant=hall)
     user = User.objects.create_user(username="bare-primary", password="x", role=UserRole.JUDGE, tenant=greek_hall)
     assert [primary_alias(x) for x in (greek, chinese, user)] == ["default"] * 3
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
-    assert [primary_alias(x) for x in (greek, chinese, user)] == ["civ_greek", "default", "default"]
-    settings.SHARD_WRITE_CIVS = []  # reads alone do not move the authoritative copy
-    assert primary_alias(greek) == "default"
+    settings.SHARDED = True
+    assert [primary_alias(x) for x in (greek, chinese, user)] == ["civ_greek", "civ_chinese", "default"]
 
 
 def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hall, settings, monkeypatch):
-    """With Greek writes cut over, the control database's Greek Soul is a leftover copy: deleting it must
-    not cascade to the control SoulAccount naming the soul (the shard's Soul is the real one). The
-    primary's delete still does. tests/test_shard_aliases.py has the same on a real shard."""
+    """Sharded, the control database's Greek Soul is a leftover copy: deleting it must not cascade to the
+    control SoulAccount naming the soul (the shard's Soul is the real one). Not sharded, control's row is the
+    primary and its delete still does. tests/test_shard_aliases.py has the same on a real shard."""
     from apps.soul_accounts.models import AccountOrigin, SoulAccount
     from apps.souls.models import Soul
 
@@ -493,22 +491,23 @@ def test_deleting_a_copy_that_is_not_the_primary_applies_no_rule(hall, greek_hal
     kept, gone = account_of(greek, "bare-copy-g"), account_of(chinese, "bare-copy-c")
     from apps.events.models import SoulEvent
 
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
-    # fanout() would name civ_greek, which this settings file has no database for; the rows are here. So is
-    # every write: stage 4 routes a Greek soul's writes to civ_greek, so the deletes name control themselves
+    settings.SHARDED = True
+    # fanout() would name the shards, which this settings file has no database for; the rows are here. So is
+    # every write: sharded, a Greek soul's writes go to civ_greek, so the deletes name control themselves
     # (`Soul.purge` there would, which is what test_shard_aliases.py does on a real shard).
     monkeypatch.setattr("apps.core.sharding.fanout", lambda: ["default"])
 
     from apps.core.shard_reads import control_mirror_writes
 
     def delete_on_control(soul):
-        with control_mirror_writes():  # stage 4 refuses a direct write of a write-cut row on control otherwise
+        with control_mirror_writes():  # sharded, a direct write of a hall's row on control is refused otherwise
             SoulEvent.all_objects.using("default").filter(soul=soul).delete()
             Soul.all_objects.using("default").filter(pk=soul.pk).delete()
 
     delete_on_control(greek)
     assert SoulAccount.objects.filter(pk=kept.pk).exists()
-    delete_on_control(chinese)  # Chinese writes are not cut over: default is its primary, the rule applies
+    settings.SHARDED = False
+    delete_on_control(chinese)  # not sharded: default is its primary, the rule applies
     assert not SoulAccount.objects.filter(pk=gone.pk).exists()
 
 

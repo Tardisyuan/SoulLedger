@@ -91,14 +91,14 @@ def _civ(alias):
 
 def problems(alias, *, written=None):
     """What is wrong with `alias`'s integer ids. A shard: an id of another range; and when its civilization writes
-    there (`written`, default SHARD_WRITE_CIVS), a sequence outside its range. Control: on PostgreSQL its sequences
+    there (`written`, default every civilization while sharded), a sequence outside its range. Control: on PostgreSQL its sequences
     must stay below 1e15 (rows copied back from the shards carry explicit ids and do not move them). SQLite's
     AUTOINCREMENT does move past a copied id, so control's sequence is not checked there (tests only)."""
-    from django.conf import settings
+    from apps.core.sharding import cut_civilizations
 
     out = []
     civ = None if alias == "default" else _civ(alias)
-    written = settings.SHARD_WRITE_CIVS if written is None else written
+    written = cut_civilizations() if written is None else written
     for model in models_with_int_ids():
         label = model._meta.label
         if civ is None:
@@ -141,7 +141,7 @@ def assign(alias):
     return out
 
 
-#: Shards checked in this process since SHARD_WRITE_CIVS last changed (`ensure_ranges`).
+#: Shards checked in this process since SHARDED last changed (`ensure_ranges`).
 _verified = set()
 
 
@@ -162,6 +162,6 @@ def _reset(**kwargs):
 def connect():
     from django.test.signals import setting_changed
 
-    setting_changed.connect(lambda setting, **kw: setting in ("SHARD_WRITE_CIVS", "DATABASES") and _reset(),
+    setting_changed.connect(lambda setting, **kw: setting in ("SHARDED", "DATABASES") and _reset(),
                             weak=False, dispatch_uid="shard_ids_reset")
     post_migrate.connect(_reset, dispatch_uid="shard_ids_reset_on_migrate")

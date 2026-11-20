@@ -57,6 +57,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 | `REDIS_CACHE_URL` / `CHANNEL_LAYER_REDIS_URL` / `CACHE_PERMISSION_REDIS_URL` | — | 2026-11-16 起 Redis 按用途分库:`REDIS_URL` 的 db 0 = **状态**缓存 `default`(登录锁定、验证码、一次性标记、幂等键、锁、版本号;不清、不淘汰,Redis 挂了答 503 `unavailable`);db 1 / 2 = Celery;**db 3 = 纯缓存 `data`**(功过摘要、价格表、Matrix 令牌)与权限缓存;**db 4 = WebSocket channel layer**。不设时按 `REDIS_URL` 的主机换 db 号推出来(带密码的 URL 一并带过去),不用手写。纯缓存挂了照常服务(查库) | `settings.py` Redis 一节;`apps/core/cache.py` |
 | `CACHE_KEY_PREFIX` | — | 默认库名。两个缓存别名的键都带它,两个部署共用一台 Redis 时互不读写 | `settings.py` CACHES |
 | `REDIS_SOCKET_TIMEOUT` | — | 默认 0.5 秒(连接与读);此前没设,redis-py 默认 5 秒 —— Redis 黑洞时每个请求先等 5 秒。channel layer 仍是 15 秒(必须长于它的阻塞读) | `settings.py` |
+| `SHARD_DATABASE_URL_<CIV>` | — | 分库(CHINESE / EUROPEAN / EGYPTIAN / GREEK,只认 PostgreSQL)。**四个都设 = 分库形态**(各文明的行读写在自己的分库,控制库不留它们);**都不设 = 单库**;只设一部分启动即拒绝。2026-11-21 起没有「逐文明切换」:旧的 `SHARD_READ_CIVS` / `SHARD_WRITE_CIVS` / `SHARD_PURGED_CIVS` 不再读取,可以从环境里删掉。新建的分库先 `migrate_shards` 再 `assign_shard_id_ranges --all`。控制库有 `SHARD_PURGED` 记录(第五阶段清除过)时,不配分库的进程同步即拒绝 | `settings.py` `SHARDED`;`apps/core/sharding.py::check_shard_settings` |
 | `DB_STATEMENT_TIMEOUT_MS` | — | 默认 60000:每个 PostgreSQL 别名(控制库与各分库)连接时带 `-c statement_timeout=…`;0 = 不设。**经 PgBouncer 连时必须设 0**(PgBouncer 不转发 `options`,会拒绝连接),生产叠加文件已设 0,见 §4「数据库超时与连接数」 | `settings.py::_apply_statement_timeout` |
 | `TRUSTED_PROXY_COUNT` | — | 生产叠加文件写死 `"1"`(nginx 一跳)。别改成 0:审计日志/登录限速/API key IP 白名单都会取到 nginx 的地址 | `production.yml:53`;`settings.py:49` |
 | `CORS_ALLOWED_ORIGINS` | 推 | 默认只有 localhost。**走同一个 nginx 域名(Web 与 API 同源)时不需要设。** Web 与 API 分在不同源时必须列**完整源**(`https://desk.example.com`),不能是 `*`:`CORS_ALLOW_CREDENTIALS=True` 是为 2FA「30 天不再询问」设备 cookie 开的(`mfa.py:325-331`:httpOnly、`SameSite=Lax`、`secure=not DEBUG`、path `/api/v1/auth/`)。Lax cookie 只在**同站**(同一可注册主域,如 `desk.example.com` 与 `api.example.com`)的 XHR 里随请求发送;跨站域名这个 cookie 永远发不出去,2FA 每次都要验 | `settings.py:236-239` |
@@ -149,7 +150,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   不能用连接参数,设在角色上:`ALTER ROLE soulledger SET statement_timeout = '60s';`(各分库若用不同角色,每个角色一条),
   分库上再加 `ALTER ROLE … SET idle_in_transaction_session_timeout = '60s'`。迁移里有超过 60 秒的单条语句(大表建索引)时,
   迁移前临时 `SET statement_timeout = 0` 或在那一条迁移里 `RunSQL("SET LOCAL statement_timeout = 0")`。
-- **连接预算**:每个线程 / worker 对每个摸到的别名各持一条长连接(`conn_max_age=600`)。分库切读之后灵魂端与全局任务会摸到
+- **连接预算**:每个线程 / worker 对每个摸到的别名各持一条长连接(`conn_max_age=600`)。分库形态下灵魂端与全局任务会摸到
   全部 5 个别名,所以按 **5 × 并发线程数** 算:daphne 线程池 + celery `--concurrency=2` + beat。生产叠加文件的 PgBouncer
   只配了一个库(`DATABASE_URL`)、`MAX_CLIENT_CONN 200`、`DEFAULT_POOL_SIZE 20`:加分库时 (a) 给 PgBouncer 配上 4 个分库的条目
   (edoburu 镜像用 `DATABASES_*` 或挂一份 `pgbouncer.ini`),`SHARD_DATABASE_URL_<CIV>` 指向 PgBouncer 而不是直连;(b) `MAX_CLIENT_CONN`
@@ -196,7 +197,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 | `seed_workflow_templates` | 2026-10-19 起按殿建正式模板(带退回规则),默认只建缺的;已有且不同的行要 `--update` 才发布成新版本(旧版留在历史里),有未发布草稿的行不动 |
 | `seed_tenants` | `get_or_create`,幂等;但与 `seed_mythology` 里建租户重复(`actors/mythology/seeding.py:175`)。二选一即可,用 `seed_mythology` |
 | `init_organizations` | 组织架构初始数据。是否幂等:**未核实** |
-| `backfill_disposition_halls`、`backfill_soul_accounts` | 回填命令,针对已有历史数据;全新库不需要。**别在生产盲跑**(其余一次性修复命令 `fix_actor_civilization`、`consolidate_eu_pantheon`、`migrate_actors_to_users`、`backfill_sentence_plans`、`backfill_soul_entry_path` 已于 2026-11-21 删除,见 git 历史) |
+| `backfill_soul_accounts` | 回填命令,针对已有历史数据;全新库不需要。**别在生产盲跑**(其余一次性修复命令 `fix_actor_civilization`、`consolidate_eu_pantheon`、`migrate_actors_to_users`、`backfill_sentence_plans`、`backfill_soul_entry_path`,以及分库过渡期的 `backfill_disposition_halls`、`purge_cut_over_tenant_rows`、`shadow_read_diff` 已于 2026-11-21 删除,见 git 历史) |
 
 ### 7. celery-beat 只能起一个
 

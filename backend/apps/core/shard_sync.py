@@ -1,8 +1,11 @@
-"""Stage 2 of the civilization split: shadow shards (docs/audit/2026-11-15-sharding/PLAN.md, D2 / D4 / D6).
+"""Control-to-shard sync (docs/audit/2026-11-15-sharding/PLAN.md, D2 / D4 / D6). Sync and reconcile are one
+operation: `reconcile(..., fix=True)` is the sync.
 
-Reads and writes still go to the control database ("default"). Each configured shard alias (`civ_*`)
-is a copy of what its civilization will own, kept up to date from control and compared with it. Sync and
-reconcile are one operation: `reconcile(..., fix=True, direction=CONTROL_TO_SHARD)` is the sync.
+Sharded (settings.SHARDED), control is the master of the REFERENCE rows (Tenant) and of the control-mastered SHARD
+models (`shard_reads.control_mastered`), and every shard keeps a copy of them; every other SHARD row is written on its
+shard and control holds none (stage 5). Not sharded, a shard alias (only the test group config.settings_sharded has
+one then) is a full copy of what its civilization owns on control: how that group builds a world before `cut()`.
+The shard-to-control direction (stage 4's way back) was removed with the per-civilization cut-over (2026-11-21).
 
 What a shard is supposed to hold, derived from `apps.core.sharding.placement` (no list of models here):
   REFERENCE  every row (Tenant: control is the master, every shard has a copy; D4).
@@ -36,15 +39,14 @@ from dataclasses import dataclass
 
 from django.apps import apps
 from django.conf import settings
+from django.core import checks
 from django.core.cache import cache
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.db.models import Q
 from django.db.models.signals import m2m_changed, post_delete, post_save
 
 from apps.core.sharding import CONTROL, REFERENCE, SHARD, alias_for_civilization, placement, tenant_path
 
-CONTROL_TO_SHARD = "control-to-shard"
-SHARD_TO_CONTROL = "shard-to-control"
 CHUNK = 500  # pk__in batches: SQLite's bound-parameter limit
 
 
@@ -100,16 +102,17 @@ def owned(model, alias, civ, halls, *, copies=True):
 
 
 def purged_models():
-    """SHARD models whose control rows of a write-cut civilization are a mirror: what a purge deletes. Not the
-    control-mastered ones (`shard_reads.control_mastered`: control is their master), not REFERENCE, not CONTROL."""
+    """SHARD models whose rows control must not hold while sharded (stage 5 purged them). Not the control-mastered
+    ones (`shard_reads.control_mastered`: control is their master), not REFERENCE, not CONTROL."""
     from apps.core.shard_reads import control_mastered
 
     return [m for m in compared_models() if placement(m) == SHARD and not control_mastered(m)]
 
 
 def purge_plan(civ):
-    """{model: queryset on control of `civ`'s rows a purge deletes}: the rows of its halls (a soul is its hall's,
-    `tenant`, never its home's). D2 rows (no hall, a hall of UNKNOWN civilization) are in no civilization's plan."""
+    """{model: queryset on control of `civ`'s rows control must not hold while sharded} -- what
+    `reconcile_shards --assert-control-empty` counts: the rows of its halls (a soul is its hall's, `tenant`, never its
+    home's). D2 rows (no hall, a hall of UNKNOWN civilization) are in no civilization's plan."""
     halls = halls_of(civ)
     return {m: owned(m, "default", civ, halls, copies=False) for m in purged_models()}
 
@@ -182,23 +185,18 @@ def _diff(src, dst):
             + [("differs", pk) for pk in src.keys() & dst.keys() if src[pk] != dst[pk]])
 
 
-def _control_masters(model, civ):
-    """Whether control is the master of `model`'s rows of `civ`: always for REFERENCE (D4); for SHARD rows until
-    the civilization's writes are cut over (stage 4), and after it for the control-mastered models
-    (`apps.core.shard_reads.control_mastered`: their reads stay on control, so their writes do)."""
+def _control_masters(model):
+    """Whether control is the master of `model`'s rows: always for REFERENCE (D4) and the control-mastered models
+    (`apps.core.shard_reads.control_mastered`: their reads stay on control, so their writes do); for every SHARD
+    model while not sharded."""
     from apps.core.shard_reads import control_mastered
 
-    return placement(model) == REFERENCE or civ not in settings.SHARD_WRITE_CIVS or control_mastered(model)
-
-
-def purged_civs():
-    """SHARD_PURGED_CIVS (stage 5): write-cut civilizations whose SHARD rows on control are no longer synced."""
-    return set(getattr(settings, "SHARD_PURGED_CIVS", ()))
+    return placement(model) == REFERENCE or not settings.SHARDED or control_mastered(model)
 
 
 #: GlobalCode kind of the record "control's copy of this civilization was purged" (value = the civilization), written
-#: by `purge_cut_over_tenant_rows --confirm` (or `--record-purged`) and never cleared by a setting: control no longer
-#: holds its SHARD rows, so the shard is their only copy (VERIFY-stage5 H1).
+#: on 115 by stage 5's purge (2026-11-20) and never cleared: control no longer holds its SHARD rows, so the shard is
+#: their only copy (VERIFY-stage5 H1). The purge tool is gone; the record still decides `check_purge_records`.
 PURGED = "SHARD_PURGED"
 
 
@@ -213,35 +211,45 @@ def purge_records():
 
 
 def check_purge_records():
-    """Refuse to sync while a purged civilization is off SHARD_WRITE_CIVS or SHARD_PURGED_CIVS (`check_cut_over_settings`):
-    taking it off is stage 4's rollback, and with control empty a control-to-shard sync would empty its shard (H1)."""
-    from apps.core.sharding import check_cut_over_settings
+    """Refuse to sync while a purged civilization's database runs not sharded (`check_shard_settings`): with control
+    empty a control-to-shard sync would empty its shard (H1)."""
+    from apps.core.sharding import check_shard_settings
 
-    check_cut_over_settings(settings.SHARD_READ_CIVS, settings.SHARD_WRITE_CIVS,
-                            purged=getattr(settings, "SHARD_PURGED_CIVS", ()), recorded=purge_records())
+    check_shard_settings(recorded=purge_records())
 
 
-def _sides(model, shard, civ, halls, direction, purged=None, recorded=()):
-    """(source queryset, target queryset) for one model and shard, or None when not compared that way: each
-    direction only writes over the side that is not the master (a write-cut shard's own rows are never
-    overwritten from control, control's master rows never from a shard). A purged civilization (`purged`, default
-    SHARD_PURGED_CIVS) has no shard-to-control side: control's copy of its rows is being deleted, and a sync would
-    copy them all back (G1). Its control-to-shard side (REFERENCE, the control-mastered models) stays (G3). A
-    civilization in `recorded` (`purge_records`) never has a control-to-shard side for its shard-mastered models."""
+@checks.register("sharding")
+def purged_control_needs_shards(app_configs=None, **kwargs):
+    """Django system check, so `runserver`, `migrate` (the web container runs it before daphne) and `check` refuse a
+    process that is not sharded over a control database whose civilizations were purged: it would serve their rows as
+    empty, and only the sync refused it (`check_purge_records`). Celery runs no system checks: config/celery.py asks
+    this at worker and beat start. No table yet (a first `migrate`) is no record; a database that cannot be reached
+    is left to the command that needs it -- nothing can be served from it either."""
+    if settings.SHARDED:
+        return []
+    try:
+        recorded = purge_records()
+    except DatabaseError:
+        return []
+    if not recorded:
+        return []
+    return [checks.Error(
+        f"{sorted(recorded)} were purged (GlobalCode {PURGED}): control no longer holds their rows, so this database "
+        f"runs sharded only", hint="Set SHARD_DATABASE_URL_<CIV> for every civilization.", id="sharding.E001")]
+
+
+def _sides(model, shard, halls, recorded=()):
+    """(control queryset, shard queryset) for one model and shard, or None when control is not the master of these
+    rows (`_control_masters`). A civilization in `recorded` (`purge_records`) never has a side for its shard-mastered
+    models, whatever the settings say (H1)."""
     from apps.core.shard_reads import control_mastered
 
-    if direction == CONTROL_TO_SHARD:
-        if civ in recorded and placement(model) == SHARD and not control_mastered(model):
-            return None  # purged (PURGED record): control holds none of these rows, whatever the settings say (H1)
-        if not _control_masters(model, civ):
-            return None  # stage 4: the shard is this model's master (the sync runs shard-to-control)
-        return owned(model, "default", civ, halls), owned(model, shard, civ, halls)
-    if placement(model) == REFERENCE or (civ in settings.SHARD_WRITE_CIVS and _control_masters(model, civ)):
-        return None  # control stays the master of reference tables (D4) and of the control-mastered models
-    if civ in (purged_civs() if purged is None else purged):
+    if civilization_of(shard) in recorded and placement(model) == SHARD and not control_mastered(model):
         return None
-    # The shard is the master of its own rows; its soul copies are not its rows.
-    return owned(model, shard, civ, halls, copies=False), owned(model, "default", civ, halls, copies=False)
+    if not _control_masters(model):
+        return None
+    civ = civilization_of(shard)
+    return owned(model, "default", civ, halls), owned(model, shard, civ, halls)
 
 
 def _keys_within_shards(model):
@@ -280,17 +288,14 @@ def _dangling(sources, halls):
     return out
 
 
-def compare(shard, direction=CONTROL_TO_SHARD, retry_window=0, *, purged=None):
+def compare(shard, retry_window=0):
     """{model: (source qs, target qs, [(kind, pk)], halls)} between control and one shard. Differences still
-    there after `retry_window` seconds of re-checking (in-flight writes settle) are the ones returned. `purged`
-    overrides SHARD_PURGED_CIVS (the purge compares a purged civilization's mirror with `purged=()`)."""
-    civ = civilization_of(shard)
-    halls = halls_of(civ)
-    recorded = purge_records() if direction == CONTROL_TO_SHARD else ()
-    sides = {m: s for m in compared_models()
-             if (s := _sides(m, shard, civ, halls, direction, purged, recorded)) is not None}
+    there after `retry_window` seconds of re-checking (in-flight writes settle) are the ones returned."""
+    halls = halls_of(civilization_of(shard))
+    recorded = purge_records()
+    sides = {m: s for m in compared_models() if (s := _sides(m, shard, halls, recorded)) is not None}
     sources = {m: (src, fingerprints(src, halls)) for m, (src, _) in sides.items()}
-    dangling = _dangling(sources, halls) if direction == CONTROL_TO_SHARD else {}
+    dangling = _dangling(sources, halls)
     found = {}
     for model, (src, dst) in sides.items():
         left_out = dangling.get(model, set())
@@ -308,21 +313,14 @@ def compare(shard, direction=CONTROL_TO_SHARD, retry_window=0, *, purged=None):
     return found
 
 
-def apply_fix(found, direction):
+def apply_fix(found):
     """Make the target side equal the source side for the rows in `found` (from `compare`)."""
     if not found:
         return
     target = next(iter(found.values()))[1].db
     with transaction.atomic(using=target):
-        # Shard-to-control: a row "missing" from control's slice of this civilization may still be on control under
-        # its pk, filed under the civilization it left -- a soul come home (or moved on) is primary here now, and
-        # control's mirror still names its last hall until that civilization's own sync drops it, which runs later
-        # when it sorts after this one: the insert met the pk (IntegrityError on souls_soul.id; VERIFY-stage4-r3
-        # follow-up). The shard is the master of its own rows (`_sides`), so its row replaces whatever control holds
-        # under that pk. A soul copy (another hall's soul) is never a source row here (`owned(copies=False)`).
-        replaced = ("extra", "differs", "missing") if direction == SHARD_TO_CONTROL else ("extra", "differs")
         for _model, (_src, dst, diffs, _halls) in found.items():
-            gone = [pk for kind, pk in diffs if kind in replaced]
+            gone = [pk for kind, pk in diffs if kind in ("extra", "differs")]
             for chunk in _chunks(gone):
                 # _raw_delete: no collector, no pre_delete -- bare-id rules never fire from here.
                 dst.model._base_manager.using(target).filter(pk__in=chunk)._raw_delete(target)
@@ -348,64 +346,23 @@ def apply_fix(found, direction):
         bump_for(model, using=target)
 
 
-def sync_direction(shard):
-    """Which way a civilization's sync runs: shard-to-control once its writes are cut over (stage 4: control stays
-    a full mirror until stage 5, so taking the civilization back off SHARD_WRITE_CIVS stays cheap), else
-    control-to-shard. A write-cut shard still takes control's REFERENCE and control-mastered rows (`_sides`)."""
-    return SHARD_TO_CONTROL if civilization_of(shard) in settings.SHARD_WRITE_CIVS else CONTROL_TO_SHARD
-
-
-#: GlobalCode kind of the stamp "SHARD_PURGED_CIVS stopped this civilization's shard-to-control sync" (value = the
-#: civilization, claimed_at = the first sync that ran stopped). The purge wants a dump newer than that (G5).
-SYNC_STOPPED = "SHARD_SYNC_STOPPED"
-
-
-def stamp_sync_stopped(shards):
-    """Record on control when the sync of each purged civilization of `shards` first ran stopped; drop the stamp of
-    one taken back off SHARD_PURGED_CIVS (purging it later then needs a dump newer than its next stop)."""
-    GlobalCode = apps.get_model("tenants", "GlobalCode")
-    civs = {civilization_of(a) for a in shards}
-    stopped = civs & purged_civs()
-    stamps = GlobalCode.objects.using("default").filter(kind=SYNC_STOPPED)
-    stamps.filter(value__in=civs - stopped).delete()
-    for civ in stopped:
-        stamps.get_or_create(kind=SYNC_STOPPED, value=civ)
-
-
-def sync_stopped_at(civ):
-    """When the sync of `civ` was first seen stopped (`stamp_sync_stopped`), or None."""
-    GlobalCode = apps.get_model("tenants", "GlobalCode")
-    row = GlobalCode.objects.using("default").filter(kind=SYNC_STOPPED, value=civ).first()
-    return row.claimed_at if row else None
-
-
 def sync(shards):
-    """The sync of each shard, each in its own direction (`sync_direction`): {alias: rows fixed}. A purged
-    civilization's shard-to-control pass compares nothing (`_sides`); the run stamps when it first saw it so."""
-    check_purge_records()
-    stamp_sync_stopped(shards)
-    out = {}
-    for shard in shards:
-        n = 0
-        if sync_direction(shard) == SHARD_TO_CONTROL:
-            n += len(reconcile([shard], fix=True, direction=SHARD_TO_CONTROL)[shard])
-        n += len(reconcile([shard], fix=True)[shard])
-        out[shard] = n
-    return out
+    """The control-to-shard sync of each shard: {alias: rows fixed}."""
+    return {shard: len(reconcile([shard], fix=True)[shard]) for shard in shards}
 
 
-def reconcile(shards, *, fix=False, direction=CONTROL_TO_SHARD, retry_window=0):
+def reconcile(shards, *, fix=False, retry_window=0):
     """{shard alias: [Difference]} before any fix. With `fix`, each shard's differences are repaired in
     one transaction on the target database."""
     if fix:
         check_purge_records()
     report = {}
     for shard in shards:
-        found = compare(shard, direction, retry_window)
+        found = compare(shard, retry_window)
         report[shard] = [Difference(shard, m._meta.label, pk, kind)
                          for m, (_, _, diffs, _) in found.items() for kind, pk in sorted(diffs, key=lambda d: d[1])]
         if fix:
-            apply_fix(found, direction)
+            apply_fix(found)
     return report
 
 
@@ -424,12 +381,8 @@ def _enqueue():
 
 
 def _on_write(sender, using="default", **kwargs):
-    """A write to a master queues the sync: control, or (stage 4) a shard whose writes are cut over and not purged
-    (stage 5: none of its rows go back to control)."""
-    if not shard_aliases():
-        return
-    if using != "default" and not (using in shard_aliases() and sync_direction(using) == SHARD_TO_CONTROL
-                                   and civilization_of(using) not in purged_civs()):
+    """A write to control queues the sync (a shard's own writes are never copied anywhere)."""
+    if using != "default" or not shard_aliases():
         return
     conn = transaction.get_connection(using)
     if conn.in_atomic_block and any(func is _enqueue for _, func, _ in conn.run_on_commit):
@@ -441,8 +394,8 @@ def _copy_hall(sender, instance, using="default", raw=False, **kwargs):
     """Stage 4: a hall saved on control is copied into every shard at once (REFERENCE, D4), in that shard's open
     transaction when there is one. A new hall of a write-cut civilization is seeded on its shard in the same request
     (`tenants.views.TenantViewSet.create`), whose foreign keys to the hall must hold at the shard's commit -- the
-    next sync is too late. Only while some civilization's writes are cut over; before that the sync copies it."""
-    if not settings.SHARD_WRITE_CIVS or using != "default" or raw:
+    next sync is too late. Only while sharded; before that the sync copies it."""
+    if not settings.SHARDED or using != "default" or raw:
         return
     fields = [f for f in sender._meta.concrete_fields if not f.primary_key]
     for alias in shard_aliases():

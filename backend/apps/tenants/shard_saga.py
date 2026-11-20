@@ -1,6 +1,6 @@
 """Cross-civilization saga (sharding stage 4 part C; docs/audit/2026-11-15-sharding/PLAN.md 阶段 4, D6).
 
-A business transaction holds on ONE database. Once a civilization's writes are cut over (SHARD_WRITE_CIVS), a flow
+A business transaction holds on ONE database. Sharded (settings.SHARDED), a flow
 whose rows belong to halls of two civilizations with different masters cannot commit in one transaction, and 4A
 refuses the second database's write (WriteOutsideTransaction). Those flows -- a dispatch executed across
 civilizations, a residence ended across them, a cross-civilization rebirth, a seat on another civilization's joint
@@ -32,9 +32,8 @@ bench, and the origin side's writes to a soul that resides elsewhere (D6) -- go 
 A crash between the steps leaves a PENDING row; relaying until quiescent finishes the saga, never half of it
 (tests/test_cross_civilization_saga.py injects a failure at every write and checks exactly that).
 
-Nothing here runs while SHARD_WRITE_CIVS is empty, and a flow whose halls share a master never sends: it runs
-inline, the same statements in the same transaction as before (`crosses`). Only the masters' rows are read -- a
-civilization's shadow (not cut over) and control's mirror of a cut-over civilization hold copies, not messages.
+Nothing here runs in the one-database form, and a flow whose halls share a master never sends: it runs inline,
+the same statements in the same transaction as before (`crosses`). Only the masters' rows are read.
 """
 import json
 import logging
@@ -102,7 +101,7 @@ def master_of(hall):
 
 def crosses(*halls):
     """Whether rows of `halls` are written on more than one database: then one transaction cannot hold them."""
-    return bool(settings.SHARD_WRITE_CIVS) and len({master_of(h) for h in halls if h is not None}) > 1
+    return settings.SHARDED and len({master_of(h) for h in halls if h is not None}) > 1
 
 
 def _models():
@@ -128,7 +127,7 @@ def arriving():
     written as primary) and step 3 (the source's row demoted) a soul has a primary-looking row on two masters, and
     a read across them takes the SOURCE row as the primary -- the target's is not visible until the move closes
     (`apps.core.shard_reads.legs`). Empty while no civilization writes to its shard."""
-    if not settings.SHARD_WRITE_CIVS or not _MOVES:
+    if not settings.SHARDED or not _MOVES:
         return []
     outbox, _, _ = _models()
     out = []
@@ -162,7 +161,7 @@ def inside_another_hall(hall):
     or MASTER: SYSTEM_ADMIN, a command). A step of `hall`'s then waits for that transaction's commit (a message)."""
     from apps.core.shard_reads import _code_transaction_open, acting_alias
 
-    return bool(settings.SHARD_WRITE_CIVS) and _code_transaction_open() and acting_alias() != master_of(hall)
+    return settings.SHARDED and _code_transaction_open() and acting_alias() != master_of(hall)
 
 
 class StepOutsideTransaction(Exception):  # noqa: N818 -- a programming error, like WriteOutsideTransaction
@@ -185,7 +184,7 @@ def on_master(hall):
     from apps.tenants import managers
 
     alias = master_of(hall)
-    if settings.SHARD_WRITE_CIVS and not joins(hall):
+    if settings.SHARDED and not joins(hall):
         raise StepOutsideTransaction(f"a saga step on {alias} inside a transaction that is not open there")
     user = request_local._user_var.set(request_local.get_current_user())  # the actor stays; the request's hall goes
     request = request_local._request_var.set(None)
@@ -208,7 +207,7 @@ def atomic_on_master(hall):
     target: Soul.DoesNotExist) or not the transaction its row is written in (a cut source: WriteOutsideTransaction)."""
     from apps.core.shard_reads import MASTER, acting_alias
 
-    if settings.SHARD_WRITE_CIVS and acting_alias() not in (None, MASTER, master_of(hall)):
+    if settings.SHARDED and acting_alias() not in (None, MASTER, master_of(hall)):
         return on_master(hall)
     return transaction.atomic()
 
@@ -230,6 +229,10 @@ def send(kind, source, target, payload, *, subject=""):
     with transaction.atomic(using=alias):
         msg = outbox._base_manager.using(alias).create(
             message_id=message_id, tenant=source, target_tenant=target, kind=kind, subject=subject, payload=payload)
+        if kind in _MOVES and settings.SHARDED:
+            from apps.tenants import soul_directory
+
+            soul_directory.mark_moving(payload["soul"]["id"], source.pk)
         transaction.on_commit(_kick, using=alias)
     return msg
 
@@ -354,6 +357,12 @@ def _deliver(msg):
         row = outbox._base_manager.using(alias).select_for_update().filter(pk=msg.pk, state=state.PENDING).first()
         if row is None:
             return 0
+        if msg.kind in _MOVES and settings.SHARDED:
+            from apps.tenants import soul_directory
+
+            arrived = outcome == state.DONE
+            soul_directory.moved(msg.payload["soul"]["id"], msg.tenant_id, target.pk if arrived else None,
+                                 msg.tenant.civilization if arrived and alias != CONTROL_ALIAS else None)
         after = done if outcome == state.DONE else refused
         if after is not None:
             after(msg.payload)
@@ -376,7 +385,7 @@ def held(instance):
 
     from apps.core.shard_reads import _code_transaction_open, write_alias_of
 
-    if not settings.SHARD_WRITE_CIVS or not _code_transaction_open():
+    if not settings.SHARDED or not _code_transaction_open():
         return True
     return any(not b._from_testcase for b in connections[write_alias_of(instance)].atomic_blocks)
 
@@ -477,7 +486,7 @@ def _moving(aliases, soul_ids=None):
 def _refuse_row(sender, instance, using=None, raw=False, **kwargs):
     """pre_save / pre_delete of a Soul: refused while a move of it is open on the database written (the source's
     master, where step 1 wrote the move's message; every read takes the source row as the soul until step 3)."""
-    if raw or not settings.SHARD_WRITE_CIVS or not _MOVES or instance._state.adding:
+    if raw or not settings.SHARDED or not _MOVES or instance._state.adding:
         return
     moving = _moving([using or CONTROL_ALIAS], [instance.pk])
     if moving:
@@ -486,7 +495,7 @@ def _refuse_row(sender, instance, using=None, raw=False, **kwargs):
 
 def refuse_in_transit(queryset):
     """`SoulQuerySet.update`: refused when it touches a soul with a move open on any master."""
-    if not settings.SHARD_WRITE_CIVS or not _MOVES:
+    if not settings.SHARDED or not _MOVES:
         return
     moving = _moving([alias for alias, _ in masters()])
     if moving:

@@ -37,7 +37,7 @@ from tests.test_cross_civilization_saga import _ownership, _walk
 from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _in_hall, cut
 
-CUTS = ("none", "home", "residence", "both")
+CUTS = ("both",)  # sharded: every civilization on its shard (the partial cut-overs are gone, 2026-11-21)
 #: Halls by civilization; the fixtures' realms are keyed by these codes (`sentence_plan_support.REALM_OF`).
 HALLS = {"CHINESE": "CN_DIYU", "EGYPTIAN": "EG_DUAT", "EUROPEAN": "EU_HEAVEN_HELL", "GREEK": "GR_HADES"}
 
@@ -244,7 +244,7 @@ def test_the_home_hall_cancels_the_plan_of_a_soul_serving_abroad(world, mode):
     x = _prepare(_abroad(w))
     disposition_before = _residence_disposition(x)
     client = _client(x["home"], f"d6c_{mode}")
-    with cut(*_civs(w, mode)):
+    with cut():
         r = client.post(_plan_url("cancel", pk=x["plan"].pk), {"reason": "赦免剩余刑期"}, format="json",
                         HTTP_IDEMPOTENCY_KEY=f"d6c-{mode}-{w['seed']}")
         assert r.status_code == 200, (where, r.status_code, r.content[:2000])
@@ -297,7 +297,7 @@ def test_an_appeal_amendment_withdrawing_the_current_foreign_stop_brings_the_sou
 
     client = sign_in(APIClient(), reviewer)
     executed = _residence_disposition(x).is_executed
-    with cut(*_civs(w, mode)):
+    with cut():
         r = client.post(reverse(_route(JudgmentAppealViewSet, "decide"), kwargs={"pk": appeal.pk}),
                         {"outcome": "AMENDED", "verdict": "PASSED", "note": "改判", "keep_foreign_stops": False},
                         format="json")
@@ -335,7 +335,7 @@ def test_the_home_hall_accepts_a_third_civilizations_request_and_the_soul_comes_
     x = _prepare(_abroad(w, pending_from_third="AMEND"))
     req = SentencePlanRequest.all_objects.get(plan_id=x["plan"].pk, status="PENDING")
     client = _client(x["home"], f"d6d_{mode}")
-    with cut(*_civs(w, mode)):
+    with cut():
         r = client.post(_plan_url("decide", pk=x["plan"].pk, request_id=req.pk),
                         {"decision": "ACCEPT", "reason": "准"}, format="json", HTTP_IDEMPOTENCY_KEY=f"d6d-{req.pk}")
         assert r.status_code == 200, (where, r.status_code, r.content[:2000])
@@ -362,7 +362,7 @@ def test_the_third_civilization_withdraws_its_request_and_the_served_soul_comes_
     x = _prepare(_abroad(w, third_stop=True, pending_from_third="REOPEN"))  # its own stop 3: it sees the plan
     req = SentencePlanRequest.all_objects.get(plan_id=x["plan"].pk, status="PENDING")
     client = _client(x["third"], f"d6w_{mode}")
-    with cut(*_civs(w, mode)):
+    with cut():
         r = client.post(_plan_url("withdraw", pk=x["plan"].pk, request_id=req.pk), {}, format="json",
                         HTTP_IDEMPOTENCY_KEY=f"d6w-{req.pk}")
         assert r.status_code == 200, (where, r.status_code, r.content[:2000])
@@ -383,7 +383,7 @@ def test_a_third_civilization_files_and_the_home_hall_rejects_while_the_soul_ser
     w, where = world, _where(world, mode)
     x = _prepare(_abroad(w, third_stop=True))  # the third hall sees the plan through its own stop 3
     third, home = _client(x["third"], f"d6f3_{mode}"), _client(x["home"], f"d6fh_{mode}")
-    with cut(*_civs(w, mode)):
+    with cut():
         r = third.post(_plan_url("file_request", pk=x["plan"].pk), {"kind": "REOPEN", "reason": "新证据"},
                        format="json", HTTP_IDEMPOTENCY_KEY=f"d6f-{x['plan'].pk}")
         assert r.status_code == 201, (where, r.status_code, r.content[:2000])
@@ -413,7 +413,7 @@ def test_retrying_the_next_stop_while_the_soul_is_abroad_is_refused_and_writes_n
 
     _sync()
     client = _client(x["home"], f"d6rt_{mode}")
-    with cut(*_civs(w, mode)):
+    with cut():
         r = client.post(_plan_url("retry_dispatch", pk=x["plan"].pk, node_id=node3.pk), {}, format="json",
                         HTTP_IDEMPOTENCY_KEY=f"d6rt-{node3.pk}")
         assert r.status_code == 409 and r.json()["code"] == "soul_away", (where, r.status_code, r.content[:2000])
@@ -457,7 +457,7 @@ def test_a_refused_flow_is_not_reheard_in_the_home_hall_while_its_soul_resides_o
     _sync()
     _assign(*CIVS)
     civs = _civs(w, mode)
-    with cut(*civs):
+    with cut():
         flow = _read(lambda: ApprovalWorkflow.all_objects.select_related("judgment").get(pk=flow.pk))
         crossing = w["home"] in civs and w["residence"] in civs
         try:
@@ -498,7 +498,7 @@ def test_a_soul_in_transit_refuses_writes_from_the_target_the_home_hall_and_syst
     w = _world(seed_of(RUN))
     halls = _halls()
     _assign(*CIVS)
-    with cut(*w["cut"]), read_context(CONTROL_ALIAS):
+    with cut(), read_context(CONTROL_ALIAS):
         writes = hardening._writes()
         route = hardening._patch_route()
 
@@ -579,7 +579,7 @@ def test_a_saga_step_inside_a_transaction_not_open_on_its_master_is_refused_and_
     halls = _halls()
     _assign(*CIVS)
     home, there = halls["CHINESE"], halls["EGYPTIAN"]
-    with cut("CHINESE", "EGYPTIAN"):
+    with cut():
         with _in_hall(there):
             soul = Soul.objects.create(name="守卫", tenant=there, current_state="DISPOSED")
         with pytest.raises(StepOutsideTransaction), _in_hall(home), transaction.atomic(), on_master(there):
@@ -616,7 +616,7 @@ def test_a_contact_save_queued_for_the_residence_lands_on_the_primary_after_the_
     from tests.test_cross_civilization_saga_hardening import _contacts, _soul
 
     w, halls, ctx, approved, execute, relay = _contact_world(seed, forced)
-    with cut(*w["cut"]), ctx:
+    with cut(), ctx:
         home, _residence = halls[w["src"]], halls[w["tgt"]]
         where = f"seed {w['seed']} cut {w['cut']}"
         soul, record = approved(w, halls)
@@ -646,7 +646,7 @@ def test_retry_failed_delivers_a_dead_contact_save_addressed_to_a_hall_the_soul_
     from tests.test_cross_civilization_saga_hardening import _soul
 
     w, halls, ctx, approved, execute, relay = _contact_world(seed, forced)
-    with cut(*w["cut"]), ctx:
+    with cut(), ctx:
         home, residence = halls[w["src"]], halls[w["tgt"]]
         where = f"seed {w['seed']} cut {w['cut']}"
         soul, record = approved(w, halls)
@@ -683,10 +683,9 @@ def test_dispatch_frozen_refuses_propose_approve_execute_and_a_new_joint_bench_w
     w = {"seed": seed, "cut": mode, "src": src, "tgt": tgt, "realm": rng.random() < 0.5}
     halls = _halls()
     _assign(*CIVS)
-    which = {"none": [], "home": [src], "residence": [tgt], "both": [src, tgt]}[mode]
     where = f"seed {seed} cut {mode} {src}->{tgt}"
     routes = over_http._routes()
-    with cut(*which):
+    with cut():
         home, there = over_http._officers(halls, w)
         _, approved_pk = over_http._proposal(w, halls, home, routes, n=1)
         assert there.post(reverse(routes["approve"], kwargs={"pk": approved_pk}), {}, format="json").status_code == 200

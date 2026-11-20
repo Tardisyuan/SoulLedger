@@ -174,7 +174,7 @@ def locks(monkeypatch):
 def world():
     halls = _halls()
     _assign(*CIVS)
-    with cut(*CIVS):  # as on 115 since 2026-11-17: every civilization writes to its shard
+    with cut():  # as on 115 since 2026-11-17: every civilization writes to its shard
         yield halls
 
 

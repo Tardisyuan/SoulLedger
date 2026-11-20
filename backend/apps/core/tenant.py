@@ -355,7 +355,7 @@ def residence_read_q(model, tenant):
     from django.conf import settings
     from django.db.models import QuerySet
 
-    if path and settings.SHARD_READ_CIVS:
+    if path and settings.SHARDED:
         return _residence_pairs_q(tenant)
     home = f"{path}home_tenant__in" if isinstance(tenant, QuerySet) else f"{path}home_tenant"
     away = Q(**{home: tenant}) & Q(**{f"{path}tenant__isnull": False})

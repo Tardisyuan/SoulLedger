@@ -816,7 +816,7 @@ def _claim_open_case(soul, fields, tenant, claimed):
 
 def _soul_master(soul):
     """The database holding `soul`'s own row (its hall's master) while civilizations write to their shards; else None."""
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return None
     from apps.core.shard_reads import write_alias_of
 
@@ -884,7 +884,7 @@ class JudgmentService:
                 if open_ids:
                     raise OpenCaseRefusedError(
                         "This soul already has an open case. Conclude it before opening another.", "open_case", open_ids)
-                if settings.SHARD_WRITE_CIVS:
+                if settings.SHARDED:
                     _claim_open_case(soul, fields, tenant, claimed)
             plan = in_progress_plan(soul)
             # A case on a soul that no conclusion can move is a case that never ends (review 2026-11-01 #10): an

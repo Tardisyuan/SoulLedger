@@ -174,7 +174,7 @@ class DispatchRecord(AuditUserFields, models.Model):
             # Stage 4 part C: a cross-civilization execution in flight (its saga message pending, the transfer
             # EXECUTING) owns the record until the saga closes it (`apps/dispatch/transfer.py`); nobody cancels or
             # executes it meanwhile. Nothing to ask while no civilization writes to its shard.
-            if not in_saga and settings.SHARD_WRITE_CIVS:
+            if not in_saga and settings.SHARDED:
                 from apps.dispatch.transfer import executing
 
                 if executing(locked):

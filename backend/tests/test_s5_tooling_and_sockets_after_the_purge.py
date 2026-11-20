@@ -1,14 +1,12 @@
-"""Stage 5, what G7 (tests/test_sharded_reads_survive_the_mirror_purge.py) does not ask (VERIFY-stage5 3): with all four
-civilizations write-cut and purged (115's state), control holds none of their SHARD rows.
+"""Sharded, after stage 5's purge (VERIFY-stage5 3; 115's state): control holds none of the halls' SHARD rows.
 
-  shadow_read_diff   compares against control's answer: refuses once anything is purged (stage 5 retired it).
   websocket          an officer of each hall connects (`connected`, its data scope resolved over its hall's units, which
                      live only on the shard); a soul's token is refused at the handshake (4001), as before the cut.
   commands           every read-only management command (or dry run) that reads SHARD rows runs without raising, and the
                      ones that count souls count the shards' souls (control has none of them).
 
-The world is built after the cut and never synced shard-to-control, and what stage 3 synced to control (each hall's root
-unit) is deleted the way stage 5 does (`purge_plan`, `_raw_delete`): control is as empty as on 115.
+The world is built after `cut()`, and what the one-database form synced to control first (each hall's root unit) is
+deleted the way stage 5 did (`shard_sync.purge_plan`, `_raw_delete`): control is as empty as on 115.
 
     cd backend && ... python -m pytest --ds=config.settings_sharded -m sharded tests/test_s5_tooling_and_sockets_after_the_purge.py
 """
@@ -20,15 +18,14 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from tests.test_shard_sync import CIVS, sharded
-from tests.test_sharded_writes import _assign, _halls, _in_hall
-from tests.test_stage5_prep import purged
+from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 
 def purge_control():
-    """Delete control's copy of every civilization's purgeable SHARD rows, as `purge_cut_over_tenant_rows --confirm`
-    does (per model, raw); inside `purged(*CIVS)`."""
+    """Delete control's copy of every civilization's SHARD rows, as stage 5's purge did on 115 (per model, raw;
+    the tool is retired); inside `cut()`."""
     from apps.core.shard_reads import control_mirror_writes
-    from apps.tenants.management.commands.purge_cut_over_tenant_rows import purge_plan
+    from apps.core.shard_sync import purge_plan
 
     plan = [(m, pks) for civ in CIVS for m, qs in purge_plan(civ).items() if (pks := list(qs.values_list("pk", flat=True)))]
     with control_mirror_writes():
@@ -46,7 +43,7 @@ def _world():
     halls = _halls()
     _assign(*CIVS)
     officers, accounts, units, below = {}, {}, {}, {}
-    with purged(*CIVS):
+    with cut():
         for civ, hall in halls.items():
             with _in_hall(hall):
                 units[civ] = org(hall, "本司")
@@ -63,17 +60,6 @@ def _souls_on(alias):
     from apps.souls.models import Soul
 
     return Soul._base_manager.using(alias).count()
-
-
-# ---- shadow_read_diff ------------------------------------------------------------------------------------------------
-
-@sharded
-def test_shadow_read_diff_refuses_once_a_civilization_is_purged():
-    _world()
-    out = io.StringIO()
-    with purged(*CIVS), pytest.raises(CommandError, match="purged"):
-        call_command("shadow_read_diff", "--civ", "GREEK", "--endpoint", "soul-list", stdout=out)
-    assert "compared" not in out.getvalue(), out.getvalue()  # refused before asking anything
 
 
 # ---- websocket -------------------------------------------------------------------------------------------------------
@@ -131,7 +117,7 @@ def test_an_officer_connects_with_its_data_scope_and_a_soul_is_refused_after_the
 
     w = _world()
     resolve = NotificationConsumer.__dict__["_resolve_data_scope"].func  # the sync body the consumer awaits
-    with purged(*CIVS):
+    with cut():
         for civ, user in w["officers"].items():
             connected, _, frame = async_to_sync(_ws)(_officer_token(user))
             assert connected and frame["type"] == "connected", (civ, frame)
@@ -156,8 +142,7 @@ def test_an_officer_connects_with_its_data_scope_and_a_soul_is_refused_after_the
 # ---- management commands ---------------------------------------------------------------------------------------------
 
 #: Every read-only command (or dry run) that reads SHARD rows. Not here: the writers (seeders, backfills without a dry
-#: run, purge_soul, relay_outbox, setup_* ...), shadow_read_diff (above), purge_cut_over_tenant_rows (its own tests,
-#: tests/test_stage5_prep.py and tests/test_stage5_purge_safety.py), and commands that read no SHARD model
+#: run, purge_soul, relay_outbox, setup_* ...), and commands that read no SHARD model
 #: (sync_permissions, seed_field_permissions, migrate_shards).
 READ_ONLY = [
     ("check_bare_ids",),
@@ -167,7 +152,6 @@ READ_ONLY = [
     ("assign_shard_id_ranges", "--all", "--check"),
     ("count_open_case_overlaps", "--list", "5"),
     ("check_soul_dates",),
-    ("backfill_disposition_halls", "--dry-run"),
     ("backfill_soul_accounts", "--dry-run"),
     ("cleanup_orphan_post_media", "--dry-run"),
     ("rotate_encryption_key", "--dry-run"),
@@ -181,7 +165,7 @@ READ_ONLY = [
 def test_a_read_only_command_runs_over_the_purged_world(args):
     _world()
     out, err = io.StringIO(), io.StringIO()
-    with purged(*CIVS):
+    with cut():
         on_shards = sum(_souls_on(f"civ_{c.lower()}") for c in CIVS)
         try:
             call_command(*args, stdout=out, stderr=err)
