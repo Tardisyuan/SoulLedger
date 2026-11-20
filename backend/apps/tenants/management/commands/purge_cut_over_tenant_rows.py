@@ -2,6 +2,7 @@
 
     manage.py purge_cut_over_tenant_rows --civ GREEK --dry-run       --dump /backups/soulledger_manifest_<ts>.txt
     manage.py purge_cut_over_tenant_rows --civ GREEK --confirm GREEK --dump /backups/soulledger_manifest_<ts>.txt
+    manage.py purge_cut_over_tenant_rows --civ GREEK --record-purged
 
 --confirm deletes, only after the user has seen the dry run's counts and said yes in chat (PREP-stage5 §4 step 7);
 its value must repeat the civilization exactly (upper case, as printed). It runs every check of the dry run again
@@ -30,7 +31,12 @@ The delete (G6): one transaction on control for the civilization, foreign keys d
 `control_mirror_writes()`; per model the pks read first (a row reached through its parent stops matching once the
 parent is gone), then `_raw_delete` by pk -- no collector, no pre_delete receiver (`apps.core.bare_ids` would apply
 a soul's CASCADE to control's SoulAccount). A model whose master is control is refused, never deleted. A rerun
-finds nothing and deletes nothing.
+finds nothing and deletes nothing. The same transaction writes the record `GlobalCode(kind=shard_sync.PURGED,
+value=<CIV>)`: from then on the civilization must stay in SHARD_WRITE_CIVS and SHARD_PURGED_CIVS (every sync checks,
+`shard_sync.check_purge_records`), and no control-to-shard sync touches its shard-mastered rows (VERIFY-stage5 H1).
+
+--record-purged writes that record for a civilization purged before the record existed (115, 2026-11-20), only when
+`reconcile_shards --civ <CIV> --assert-control-empty` passes: control holds none of its purge plan.
 """
 import time
 from pathlib import Path
@@ -42,6 +48,7 @@ from django.db import connections, router, transaction
 
 from apps.core.shard_reads import CONTROL_ALIAS, control_mastered, control_mirror_writes
 from apps.core.shard_sync import (
+    PURGED,
     SHARD_TO_CONTROL,
     _chunks,
     compare,
@@ -151,11 +158,16 @@ def purge(civ):
                 n += model._base_manager.using(CONTROL_ALIAS).filter(pk__in=chunk)._raw_delete(CONTROL_ALIAS)
             if n:
                 deleted[model] = n
+        _record(civ)
     from apps.core.versioned import bump_for  # raw deletes send no signal (as in shard_sync.apply_fix)
 
     for model in deleted:
         bump_for(model, using=CONTROL_ALIAS)
     return deleted
+
+
+def _record(civ):
+    apps.get_model("tenants", "GlobalCode").objects.using(CONTROL_ALIAS).get_or_create(kind=PURGED, value=civ)
 
 
 class Command(BaseCommand):
@@ -166,14 +178,26 @@ class Command(BaseCommand):
         mode = parser.add_mutually_exclusive_group(required=True)
         mode.add_argument("--dry-run", action="store_true", help="Count and check, delete nothing")
         mode.add_argument("--confirm", metavar="CIV", help="Delete; repeat the civilization exactly, e.g. GREEK")
+        mode.add_argument("--record-purged", action="store_true",
+                          help="Only write the purge record of a civilization already purged without one")
         parser.add_argument("--dump", help="backup-db.sh manifest (soulledger_manifest_<ts>.txt) of the last 24 h")
 
-    def handle(self, *args, civ, dry_run, confirm, dump, **options):
+    def handle(self, *args, civ, dry_run, confirm, dump, record_purged=False, **options):
         civ = civ.upper()
         try:
             alias = alias_for_civilization(civ)
         except ValueError:
             raise CommandError(f"unknown civilization {civ!r}") from None
+        if record_purged:
+            from django.core.management import call_command
+
+            try:
+                call_command("reconcile_shards", "--civ", civ, "--assert-control-empty", stdout=self.stdout)
+            except CommandError as e:
+                raise CommandError(f"reconcile_shards --assert-control-empty fails for {civ} ({e}): not recorded") from None
+            _record(civ)
+            self.stdout.write(f"recorded {civ} as purged ({PURGED}); keep it in SHARD_WRITE_CIVS and SHARD_PURGED_CIVS")
+            return
         if confirm is not None and confirm != civ:
             raise CommandError(f"--confirm {confirm!r} does not repeat the civilization {civ!r}: nothing deleted")
         found = checks(civ, alias, dump)
