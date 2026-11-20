@@ -126,6 +126,22 @@ def test_a_delivered_one_is_not_sent_twice(hook):
 
 
 @pytest.mark.django_db
+def test_an_abandoned_one_is_not_sent_either(hook):
+    """ABANDONED is terminal like SUCCESS (state-machine audit 2026-11-20). A row abandoned for a missing secret has
+    attempt 0, under the ceiling; a duplicate queue message after the secret was set used to send it -- while the
+    admin's 「重新投递」 (death_sync/views.py) had already made a copy of it, so the endpoint got it twice."""
+    row = _record(_envelope())[0]
+    row.status = EventWebhookStatus.ABANDONED
+    row.save(update_fields=["status"])
+
+    sent = []
+    with patch("requests.Session.post", side_effect=lambda *a, **k: sent.append(1)):
+        deliver_event_webhook.apply(args=[str(row.id)])
+    assert sent == []
+    assert EventWebhookDelivery.objects.get(pk=row.pk).status == EventWebhookStatus.ABANDONED
+
+
+@pytest.mark.django_db
 def test_a_row_the_enqueue_never_reached_is_picked_up(hook):
     """**入队是尽力而为的。** broker 不可达时行停在 PENDING —— 兜底任务要能捡到。"""
     from datetime import timedelta

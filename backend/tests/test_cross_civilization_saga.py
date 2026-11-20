@@ -424,6 +424,27 @@ def test_a_transfer_is_executing_until_the_relay_closes_it_and_nobody_else_moves
 
 
 @sharded
+@pytest.mark.parametrize("world", [5], indirect=True)
+def test_executing_a_copy_read_before_a_cancel_sends_nothing(world):
+    """Step 1 asks the record's status under its row lock (state-machine audit 2026-11-20). `DispatchService.execute`
+    checked the caller's copy, read before the lock; a cancel committed in between left an APPROVED copy, and the
+    EXECUTE message went out for a CANCELLED record -- step 2 upserted the soul as primary on the target's master,
+    step 3 saw CANCELLED and returned before retiring the source's row: two primaries, the message DONE."""
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+    from apps.dispatch.services import DispatchService
+
+    w, halls = world
+    soul, record = _approved(w, halls)
+    stale = DispatchRecord.all_objects.get(pk=record.pk)
+    assert DispatchRecord.all_objects.get(pk=record.pk).transition_to(DispatchStatus.CANCELLED)
+    with pytest.raises(ValueError):
+        DispatchService.execute(stale, "executor")
+    assert _pending() == [], "an EXECUTE message went out for a cancelled record"
+    assert DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.CANCELLED
+    _ownership()
+
+
+@sharded
 @pytest.mark.parametrize("world", [5, 6], indirect=True)
 def test_a_refusing_target_compensates_back_to_approved_and_the_start_state(world):
     from apps.dispatch.models import DispatchRecord, DispatchStatus

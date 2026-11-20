@@ -132,6 +132,12 @@ def execute(record, executor):
     source = record.source_tenant
     with saga.on_master(source):
         soul = Soul.lock(record.soul_id)
+        # The caller checked its own copy, read before any lock; a cancel may have committed since. Asked again under
+        # the record's lock (soul first, then record: the order of the single-database execute).
+        status = DispatchRecord._base_manager.select_for_update().values_list("status", flat=True).get(
+            pk=record.pk)
+        if status != DispatchStatus.APPROVED:
+            raise ValueError(f"Cannot execute dispatch in status: {status}")
         DispatchService.check_executable(record, soul)
         if executing(record):
             raise ValueError(f"Cannot execute dispatch in status: {record.status} (already executing)")
