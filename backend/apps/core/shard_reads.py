@@ -60,7 +60,8 @@ control before (`master_alias`); control stays a full mirror (shard-to-control s
   mirror      control keeps a mirror of each write-cut civilization's rows (shard-to-control sync). A direct write
               there (`.using("default")`, loaddata) is refused (ControlMirrorWrite): the sync would undo it.
               RULE: no data migration that writes SHARD rows while any civilization is write-cut. Its historical
-              models have no guard, `placed_here` keeps it on control, and the next sync reverts what it did;
+              models have no guard (no receivers; `_hook` hands them Django's own QuerySet methods),
+              `placed_here` keeps it on control, and the next sync reverts what it did;
               merge such a migration only after taking writes back (or once stage 5 runs them on the masters).
 """
 import decimal
@@ -1281,10 +1282,20 @@ def _install_celery_signals():
 
 
 def _hook(name, make):
+    """Patch QuerySet.`name` with `make(original)`. A migration's historical model (module "__fake__") gets
+    Django's own method: a data migration names its database (`.using(alias)`), and the routing and guards here
+    read the *current* models -- `_halls` asks the current Tenant for a column a half-migrated database does not
+    have yet, so an empty database migrated with every civilization cut over failed at disposition/0009
+    (tests/test_migrate_under_full_cut_over.py)."""
     original = getattr(QuerySet, name)
     if getattr(original, "_shard_reads", False):
         return
-    wrapped = make(original)
+    routed = make(original)
+
+    def wrapped(self, *args, **kwargs):
+        if getattr(self.model, "__module__", None) == "__fake__":
+            return original(self, *args, **kwargs)
+        return routed(self, *args, **kwargs)
     wrapped._shard_reads = True
     functools.update_wrapper(wrapped, original)
     setattr(QuerySet, name, wrapped)
