@@ -18,7 +18,7 @@ The transfer state machine, EXECUTING -> EXECUTED, in three steps:
 Between 2 and 3 the soul has a primary-looking row on both masters; while the message is PENDING every read across
 them takes the source's row as the primary and does not see the target's (`shard_saga.arriving`, `legs`).
 
-From step 1's commit to step 3's the soul is read-only (`shard_saga.SoulInTransit`, 423 `locked`): step 2 writes
+From step 1's commit to step 3's the soul is read-only (`shard_saga.SoulInTransit`, 423 `soul_in_transit`): step 2 writes
 the row step 1 copied into the message, and step 3 retires the source row, so a write to it in between would be
 lost. The steps' own writes are exempt (the message being delivered).
 
