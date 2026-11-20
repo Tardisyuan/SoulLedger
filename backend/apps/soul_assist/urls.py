@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.soul_assist import admin_views, feature_views, views
+from apps.soul_assist.ask_data import views as ask_data_views
 
 #: 挂在 `/api/v1/me/` 之下(与 apps/chat、apps/soul_push 同一前缀、同一 SoulAPIView 分界)。
 urlpatterns = [
@@ -17,6 +18,11 @@ officer_urlpatterns = [
     path("conversations/<uuid:conversation_id>/", views.OfficerAssistConversationDetailView.as_view(),
          name="officer-assist-conversation"),
     path("ai-drafts/<int:pk>/decide/", feature_views.AIDraftDecideView.as_view(), name="assist-ai-draft-decide"),
+]
+
+#: 挂在 `/api/v1/ask-data/` 之下:问数(官员令牌,judgment.read;docs/ARCHITECTURE-ask-data.md §2)。
+ask_data_urlpatterns = [
+    path("", ask_data_views.AskDataView.as_view(), name="ask-data"),
 ]
 
 #: 挂在 `/api/v1/assist-admin/` 之下:助手管理页,只许 ADMIN(docs/ARCHITECTURE-assist-admin.md)。

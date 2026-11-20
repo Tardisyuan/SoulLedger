@@ -1480,6 +1480,12 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "tests/test_ask_data_rls.py::test_a_long_result_is_cut_at_max_rows_and_flagged",
         "tests/test_ask_data_rls.py::test_a_statement_that_sets_another_hall_still_sees_only_its_own",
         "tests/test_ask_data_rls.py::test_setup_runs_twice_to_the_same_wall_and_the_owner_is_untouched",
+        # 2026-11-21 问数第 2 步:评测种子上的离线整套(真闸门 + 真执行器,以只读角色过 RLS;「忘了租户过滤」的题判 ok
+        # 才说明墙兜住),和接口 + 演示命令走同一堵墙。比对、分类、用例集自检与接口的其余验收每个引擎都跑
+        # (test_ask_data_evals.py / test_ask_data_api.py,执行器在 SQLite 上换成替身)。
+        "tests/test_ask_data_evals.py::test_the_offline_run_on_the_seed_lands_where_the_evalset_says",
+        "tests/test_ask_data_api.py::"
+        "test_through_the_wall_the_model_forgets_the_hall_and_still_counts_only_its_own",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
