@@ -26,7 +26,7 @@ import { Emblem, Icon, type IconName } from "../emblems";
 import { useToast } from "../feedback";
 import { useAskLogout } from "../logout";
 import { translate, useI18n } from "../i18n";
-import { PRIMER_SEEN_KEY, easProjectId, permission, registerDevice, requestPermission, type Permission } from "../push";
+import { PRIMER_SEEN_KEY, easProjectId, hasRegisteredDevice, permission, registerDevice, requestPermission, type Permission } from "../push";
 import { useSession } from "../session";
 import {
   Block,
@@ -37,11 +37,13 @@ import {
   Hairline,
   Loader,
   Notice,
+  Press,
   RadioMark,
   Screen,
-  SectionLabel,
   SectionError,
+  SectionLabel,
   Skeleton,
+  StaleLine,
   SwitchMark,
   Txt,
   useLayout,
@@ -271,8 +273,20 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const perm = usePermission();
   const available = easProjectId() !== null;
+  // 第六十一批 E5: the phone allows notifications but this device never got registered (the primer's 「以后再说」 after
+  // a failed registration): say so under 通知; tapping it registers again, and the line goes once that works.
+  const [, reread] = useState(0);
+  const unregistered = perm === "granted" && available && !hasRegisteredDevice();
+  const registerAgain = () => void registerDevice().then(() => reread((n) => n + 1));
   return (
     <>
+      {unregistered ? (
+        <Press testID="push-unregistered" accessibilityRole="button" onPress={registerAgain} style={[styles.notice, { paddingHorizontal: gutter }]}>
+          <Txt variant="caption" tone="muted">
+            {t("soul_app.settings.push_unregistered")}
+          </Txt>
+        </Press>
+      ) : null}
       {!available ? (
         <View style={[styles.notice, { paddingHorizontal: gutter }]}>
           <Notice tone="neutral" testID="push-unavailable">
@@ -507,6 +521,7 @@ export function SettingsScreen() {
 
   return (
     <Screen testID="settings">
+      <StaleLine state={remote} onRetry={() => void remote.reload()} />
       <View style={[styles.identity, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
         <Txt variant="title">{me.name}</Txt>
         <View style={styles.civRow}>
@@ -611,13 +626,23 @@ export function NotificationPrimerScreen() {
   const { gutter } = useLayout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const [busy, setBusy] = useState(false);
+  // 第六十一批 E5: the system said yes but the server did not take the device -- the primer stays, says so, and its
+  // button becomes 重试. 「以后再说」 still closes it (the settings page then shows 没登记上).
+  const [failed, setFailed] = useState(false);
   const done = () => {
     platform().persistent.set(PRIMER_SEEN_KEY, "1");
     if (navigation.canGoBack()) navigation.goBack();
   };
   const yes = async () => {
     setBusy(true);
-    if ((await requestPermission()) === "granted") await registerDevice();
+    if ((await requestPermission()) === "granted") {
+      const registration = await registerDevice();
+      if (!registration.ok && (registration.reason === "token_failed" || registration.reason === "server_failed")) {
+        setFailed(true);
+        setBusy(false);
+        return;
+      }
+    }
     done();
   };
   return (
@@ -659,7 +684,12 @@ export function NotificationPrimerScreen() {
         </View>
       </View>
       <Block last style={styles.primerButtons}>
-        <Button testID="primer-yes" title={t("soul_app.push.yes")} onPress={() => void yes()} busy={busy} />
+        {failed ? (
+          <Txt testID="push-register-failed" variant="caption">
+            {t("soul_app.push.register_failed")}
+          </Txt>
+        ) : null}
+        <Button testID="primer-yes" title={t(failed ? "soul_app.common.retry" : "soul_app.push.yes")} onPress={() => void yes()} busy={busy} />
         <Button testID="primer-no" kind="secondary" title={t("soul_app.push.no")} onPress={done} />
       </Block>
     </Screen>

@@ -14,7 +14,7 @@ import { landingGoneKey, useGone } from "../gone";
 import { useI18n } from "../i18n";
 import { landOn, landingOf } from "../push";
 import { formatStamp } from "../rules";
-import { Button, Empty, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, OneLine, Screen, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "../navTypes";
 
 /** Statuses where the lock screen never showed it; the content is still readable. */
@@ -96,6 +96,7 @@ export function NotificationHistoryScreen() {
 
   return (
     <Screen testID="notification-history" refreshing={remote.loading && rows !== null} onRefresh={reload}>
+      <StaleLine state={remote} onRetry={() => void remote.reload()} />
       {rows === null ? (
         remote.error ? (
           <View style={{ padding: gutter }}>

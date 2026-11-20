@@ -15957,8 +15957,12 @@ export interface components {
             first_rejection_reason?: string;
             /** Format: date-time */
             first_decided_at?: string | null;
+            /** Format: date-time */
+            reconsidered_at?: string | null;
             readonly current_step: components["schemas"]["MeCurrentStep"] | null;
             readonly can_appeal: boolean;
+            /** Format: date-time */
+            readonly cooldown_until: string | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -16686,6 +16690,7 @@ export interface components {
             readonly cooldown_original_until: string | null;
             readonly cooldown_total_days: number;
             readonly cooldown_past_days: number;
+            readonly can_reject: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -20443,9 +20448,12 @@ export interface components {
          *     * `APPEALING` - 申诉中
          *     * `APPEAL_REJECTED` - 申诉被驳回
          *     * `APPROVED` - 已批准
+         *     * `EXCEPTION` - 异常处理中
+         *     * `RECONSIDERING` - 复议中
+         *     * `TERMINATED` - 已终止
          * @enum {string}
          */
-        RebirthApplicationStatusEnum: "UNDER_REVIEW" | "REJECTED" | "APPEALING" | "APPEAL_REJECTED" | "APPROVED";
+        RebirthApplicationStatusEnum: "UNDER_REVIEW" | "REJECTED" | "APPEALING" | "APPEAL_REJECTED" | "APPROVED" | "EXCEPTION" | "RECONSIDERING" | "TERMINATED";
         /**
          * @description * `DIVINE` - Deva (Heaven Path)
          *     * `HUMAN` - Human (Human Path)
@@ -41261,8 +41269,11 @@ export interface operations {
                  *     * `APPEALING` - 申诉中
                  *     * `APPEAL_REJECTED` - 申诉被驳回
                  *     * `APPROVED` - 已批准
+                 *     * `EXCEPTION` - 异常处理中
+                 *     * `RECONSIDERING` - 复议中
+                 *     * `TERMINATED` - 已终止
                  */
-                status?: "APPEALING" | "APPEAL_REJECTED" | "APPROVED" | "REJECTED" | "UNDER_REVIEW";
+                status?: "APPEALING" | "APPEAL_REJECTED" | "APPROVED" | "EXCEPTION" | "RECONSIDERING" | "REJECTED" | "TERMINATED" | "UNDER_REVIEW";
             };
             header?: never;
             path?: never;

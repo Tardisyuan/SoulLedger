@@ -1024,10 +1024,11 @@ def test_a_successful_rebirth_decision_commits_workflow_and_application_together
 
 
 def test_a_terminated_rebirth_flow_does_not_leave_the_application_under_review():
-    """`_project` read only COMPLETED and REJECTED, so a CANCELLED flow left the application open for good."""
+    """`_project` read only COMPLETED and REJECTED, so a CANCELLED flow left the application open for good.
+    Since Design v4 第六十一批 四 (2026-11-21) a termination is TERMINATED, not REJECTED: nobody refused it."""
     from apps.soul_accounts.models import RebirthApplication
     from apps.workflow.services import WorkflowService
 
     _account, application = _submitted_application()
     assert WorkflowService.terminate(application.workflow, reason="卡死") is True
-    assert RebirthApplication.objects.get(pk=application.pk).status == "REJECTED"
+    assert RebirthApplication.objects.get(pk=application.pk).status == "TERMINATED"

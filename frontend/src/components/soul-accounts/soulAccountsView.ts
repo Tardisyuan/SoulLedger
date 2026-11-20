@@ -12,12 +12,19 @@ const CREDENTIAL_TONE: Record<string, BadgeTone> = {
   VOID: "neutral",
 };
 
+/**
+ * Design v4 第六十一批 四:异常处理中 warn(停住等人,不是灵魂的错);复议中与审批中同一个中性;
+ * 已终止不用 neg(不是按实质驳回)—— Design 画的是 faint 描边次要字,标签只有四色(第三十批),落到中性(○)。
+ */
 const REBIRTH_TONE: Record<string, BadgeTone> = {
   UNDER_REVIEW: "info",
+  RECONSIDERING: "info",
+  EXCEPTION: "warning",
   APPEALING: "info",
   REJECTED: "error",
   APPEAL_REJECTED: "error",
   APPROVED: "success",
+  TERMINATED: "neutral",
 };
 
 export const credentialTone = (status: string): BadgeTone => CREDENTIAL_TONE[status] ?? "neutral";
@@ -30,7 +37,18 @@ export const CREDENTIAL_FILTERS = ["PENDING", "REVEALED", "DELIVERED", "VOID", "
 /** 缩短冷却申请的筛选签:待决定在前(默认),「全部」殿后。 */
 export const COOLDOWN_FILTERS = ["PENDING", "APPROVED", "REJECTED", ""] as const;
 
-export const REBIRTH_FILTERS = ["", "UNDER_REVIEW", "REJECTED", "APPEALING", "APPEAL_REJECTED", "APPROVED"] as const;
+/** 按流程先后(Design 第六十一批 四):全部 · 审批中 · 复议中 · 异常处理中 · 申诉中 · 已批准 · 已驳回 · 申诉被驳回 · 已终止。 */
+export const REBIRTH_FILTERS = [
+  "",
+  "UNDER_REVIEW",
+  "RECONSIDERING",
+  "EXCEPTION",
+  "APPEALING",
+  "APPROVED",
+  "REJECTED",
+  "APPEAL_REJECTED",
+  "TERMINATED",
+] as const;
 
 /** Status → tone for 缩短冷却申请 (StatusBadge turns the tone into ◐ / ✓ / ✕). */
 const COOLDOWN_TONE: Record<string, BadgeTone> = { PENDING: "warning", APPROVED: "success", REJECTED: "error" };

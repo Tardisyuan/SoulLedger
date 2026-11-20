@@ -15,6 +15,7 @@ const mockHasAnyPermission = jest.fn();
 const mockHasAllPermissions = jest.fn();
 
 let mockReady: boolean | undefined = undefined;
+let mockFailed: boolean | undefined = undefined;
 let mockIsAdmin = false;
 
 jest.mock("@/src/hooks/usePermissions", () => ({
@@ -24,6 +25,7 @@ jest.mock("@/src/hooks/usePermissions", () => ({
     hasAllPermissions: mockHasAllPermissions,
     permissions: [],
     permissionsReady: mockReady,
+    permissionsFailed: mockFailed,
     isAdmin: mockIsAdmin,
   }),
 }));
@@ -32,7 +34,59 @@ describe("RequirePermission", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockReady = undefined;
+    mockFailed = undefined;
     mockIsAdmin = false;
+  });
+
+  // 第六十一批 E2: permissions that did not load are not a refusal -- a ↻ page with 重新加载, not the ⊘ denial.
+  it("when the permissions failed to load, shows 权限没读到 in the denial's place, not the fallback", () => {
+    mockHasAnyPermission.mockReturnValue(false);
+    mockReady = true;
+    mockFailed = true;
+    render(
+      <RequirePermission permissions="soul.create" fallback={<div>No Access</div>}>
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+    expect(screen.getByTestId("permissions-load-failed")).toBeInTheDocument();
+    expect(screen.getByText("↻")).toBeInTheDocument();
+    expect(screen.queryByText("No Access")).not.toBeInTheDocument();
+    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
+  });
+
+  it("loaded permissions that refuse show the fallback, never the load-failed page; access wins over a stale failure", () => {
+    mockHasAnyPermission.mockReturnValue(false);
+    mockReady = true;
+    mockFailed = false;
+    const { unmount } = render(
+      <RequirePermission permissions="soul.create" fallback={<div>No Access</div>}>
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+    expect(screen.getByText("No Access")).toBeInTheDocument();
+    expect(screen.queryByTestId("permissions-load-failed")).not.toBeInTheDocument();
+    unmount();
+    mockHasAnyPermission.mockReturnValue(true);
+    mockFailed = true;
+    render(
+      <RequirePermission permissions="soul.create" fallback={<div>No Access</div>}>
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+    expect(screen.getByText("Protected Content")).toBeInTheDocument();
+    expect(screen.queryByTestId("permissions-load-failed")).not.toBeInTheDocument();
+  });
+
+  it("RequireAdmin shows the same page when the permissions failed to load", () => {
+    mockReady = true;
+    mockFailed = true;
+    render(
+      <RequireAdmin fallback={<div>No Access</div>}>
+        <div>Admin Content</div>
+      </RequireAdmin>
+    );
+    expect(screen.getByTestId("permissions-load-failed")).toBeInTheDocument();
+    expect(screen.queryByText("No Access")).not.toBeInTheDocument();
   });
 
   // 2026-10-30 D3: after a reload the codes are still on their way; the refusal must not flash.

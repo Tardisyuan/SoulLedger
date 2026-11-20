@@ -7,8 +7,11 @@
                                                          申诉工作流 COMPLETED → APPROVED
                                                          申诉工作流 REJECTED  → APPEAL_REJECTED
 
+    工作流(任一份)EXCEPTION → EXCEPTION、APPEAL → RECONSIDERING(都仍算进行中,结束后回到上面的投影);
+    工作流 CANCELLED(管理员终止)→ TERMINATED:不可申诉,冷却照算(第六十一批 四,用户 2026-11-21)。
+
 服务端强制:
-* 同时只有一份进行中(UNDER_REVIEW / APPEALING)—— 锁账号行 + 部分唯一约束;
+* 同时只有一份进行中(UNDER_REVIEW / APPEALING / EXCEPTION / RECONSIDERING)—— 锁账号行 + 部分唯一约束;
 * 每份申请申诉一次 —— 只有 REJECTED 可申诉,申诉后状态离开 REJECTED 就回不来;
 * 冷却 —— 最近一次**终局驳回**(REJECTED 或 APPEAL_REJECTED)之后
   `Tenant.settings["soul_rebirth_cooldown_days"]` 天(默认 30)内不能再提交新申请。
@@ -41,6 +44,9 @@ from apps.workflow.english import NAME_EN
 DEFAULT_COOLDOWN_DAYS = 30
 COOLDOWN_SETTING = REBIRTH_COOLDOWN_SETTING
 FINAL_REJECTIONS = (RebirthApplicationStatus.REJECTED, RebirthApplicationStatus.APPEAL_REJECTED)
+#: 冷却由这些终局起算:两种驳回,加上管理员终止(此前终止投影成 REJECTED,本来就起冷却;改名不改这一条,
+#: 否则「让殿里终止再立刻重交」绕过冷却)。终止不可申诉,`can_appeal` 只认 REJECTED。
+COOLDOWN_STATUSES = (*FINAL_REJECTIONS, RebirthApplicationStatus.TERMINATED)
 
 #: 节点按**角色**指定审批人,不按神祇:转生申请没有经典出处的审理殿,
 #: 编一个等于替神话造人(apps/workflow/templates.py 对 TEMPLATE_NODES_WITHOUT_AN_APPROVER 的立场)。
@@ -112,9 +118,9 @@ def eligibility(account):
 
 
 def cooldown_application(soul):
-    """最近一次终局驳回的申请 —— 冷却期(若还在)由它起算。"""
+    """最近一次终局驳回(或终止)的申请 —— 冷却期(若还在)由它起算。"""
     return (
-        RebirthApplication.objects.filter(soul=soul, status__in=FINAL_REJECTIONS, decided_at__isnull=False)
+        RebirthApplication.objects.filter(soul=soul, status__in=COOLDOWN_STATUSES, decided_at__isnull=False)
         .order_by("-decided_at").first()
     )
 
@@ -138,7 +144,7 @@ def cooldown_span(application):
     总天数以**现截止**起算,所以批准后进度线仍然是满刻度:`past ≤ total`。
     没有终局驳回的申请(`decided_at` 为空)返回 `None`。
     """
-    if application.status not in FINAL_REJECTIONS or application.decided_at is None:
+    if application.status not in COOLDOWN_STATUSES or application.decided_at is None:
         return None
     original = application.decided_at + timedelta(days=cooldown_days(application.soul.home_tenant))
     end = _cooldown_end(application)
@@ -283,20 +289,22 @@ def appeal(account, application_id, statement=""):
 
 
 def _project(application):
-    """两个工作流的状态 → 申请状态。"""
-    if application.appeal_workflow_id is not None:
-        status = application.appeal_workflow.status
-        if status == "COMPLETED":
-            return RebirthApplicationStatus.APPROVED
-        if status in ("REJECTED", "CANCELLED"):  # CANCELLED: an administrator ended it (`terminate`); not left open
-            return RebirthApplicationStatus.APPEAL_REJECTED
-        return RebirthApplicationStatus.APPEALING
-    status = application.workflow.status
+    """两个工作流的状态 → 申请状态。看的是正在起作用的那一份(有申诉就是申诉那份)。"""
+    appealed = application.appeal_workflow_id is not None
+    status = (application.appeal_workflow if appealed else application.workflow).status
     if status == "COMPLETED":
         return RebirthApplicationStatus.APPROVED
-    if status in ("REJECTED", "CANCELLED"):
-        return RebirthApplicationStatus.REJECTED
-    return RebirthApplicationStatus.UNDER_REVIEW
+    if status == "REJECTED":
+        return RebirthApplicationStatus.APPEAL_REJECTED if appealed else RebirthApplicationStatus.REJECTED
+    # 管理员终止(`terminate`):不是按实质驳回,不显示成「已驳回 / 申诉被驳回」(第六十一批 四)。
+    if status == "CANCELLED":
+        return RebirthApplicationStatus.TERMINATED
+    if status == "EXCEPTION":
+        return RebirthApplicationStatus.EXCEPTION
+    # 审批流内部的 APPEAL 段 = 复议,不是灵魂自己的申诉(APPEALING)。
+    if status == "APPEAL":
+        return RebirthApplicationStatus.RECONSIDERING
+    return RebirthApplicationStatus.APPEALING if appealed else RebirthApplicationStatus.UNDER_REVIEW
 
 
 def active_workflow(application):
@@ -326,8 +334,8 @@ def can_appeal(application, account) -> bool:
 
 
 def cooldown_until(application):
-    """这份申请的终局驳回引起的冷却截止时刻;不在冷却中为 None。批准的缩短已算在内。"""
-    if application.status not in FINAL_REJECTIONS or application.decided_at is None:
+    """这份申请的终局驳回(或终止)引起的冷却截止时刻;不在冷却中为 None。批准的缩短已算在内。"""
+    if application.status not in COOLDOWN_STATUSES or application.decided_at is None:
         return None
     until = _cooldown_end(application)
     return until if until > timezone.now() else None
@@ -505,8 +513,10 @@ def sync_from_workflow(workflow_id):
             return application
         old = application.status
         application.status = new
-        if new in (RebirthApplicationStatus.APPROVED, *FINAL_REJECTIONS):
+        if new in (RebirthApplicationStatus.APPROVED, *COOLDOWN_STATUSES):
             application.decided_at = timezone.now()
+        if old == RebirthApplicationStatus.RECONSIDERING:
+            application.reconsidered_at = timezone.now()
         # 驳回理由不在这里取:它是审批人另填的「给灵魂的理由」,由 approve_node 在同一事务里
         # 写进 rejection_reason(record_reason_for_soul)。节点 notes 是内部备注,灵魂看不到。
         application.save()

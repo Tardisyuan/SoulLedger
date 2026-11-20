@@ -539,6 +539,40 @@ describe("notification settings", () => {
     await waitFor(() => expect(screen.queryByTestId("enable-push")).not.toBeOnTheScreen());
   });
 
+  it("第六十一批 E5: allowed but not registered keeps the primer, says so, and its button becomes 重试", async () => {
+    constants.expoConfig.extra = { eas: { projectId: "p-123" } };
+    persistentStore.set(PRIMER_SEEN_KEY, "1");
+    const calls = signedIn({ "POST /me/push-tokens/": [{ status: 500, data: {} }, { status: 201, data: {} }] });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("enable-push"));
+    fireEvent.press(await screen.findByTestId("primer-yes"));
+    expect((await screen.findByTestId("push-register-failed")).props.children).toBe("手机已允许通知，但没登记上，暂时还收不到。");
+    expect(screen.getByTestId("push-primer")).toBeTruthy();
+    expect(within(screen.getByTestId("primer-yes")).getByText("重试")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("primer-yes"));
+    await screen.findByTestId("settings");
+    expect(calls.filter((c) => c.url === "/me/push-tokens/")).toHaveLength(2);
+    expect(screen.queryByTestId("push-unregistered")).toBeNull();
+  });
+
+  it("第六十一批 E5: the settings page names an unregistered device under 通知; tapping registers it and the line goes", async () => {
+    constants.expoConfig.extra = { eas: { projectId: "p-123" } };
+    persistentStore.set(PRIMER_SEEN_KEY, "1");
+    system.status = "granted";
+    const calls = signedIn({ "POST /me/push-tokens/": [{ status: 500, data: {} }, { status: 201, data: {} }] });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await waitFor(() => expect(calls.filter((c) => c.url === "/me/push-tokens/")).toHaveLength(1));
+    fireEvent.press(screen.getByTestId("header-account"));
+    const line = await screen.findByTestId("push-unregistered");
+    expect(within(line).getByText("没登记上 · 收不到通知")).toBeTruthy();
+    fireEvent.press(line);
+    await waitFor(() => expect(screen.queryByTestId("push-unregistered")).toBeNull());
+    expect(calls.filter((c) => c.url === "/me/push-tokens/")).toHaveLength(2);
+  });
+
   it("with push available, the primer is offered once after sign-in — not again", async () => {
     constants.expoConfig.extra = { eas: { projectId: "p-123" } };
     signedIn();

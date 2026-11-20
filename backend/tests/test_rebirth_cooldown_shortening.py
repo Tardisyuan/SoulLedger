@@ -297,6 +297,22 @@ def test_an_officer_can_still_reject_a_request_whose_cooldown_ended(cn_tenant, j
     assert CooldownShorteningRequest.objects.get(pk=row_id).status == "REJECTED"
 
 
+def test_the_officer_row_says_whether_it_may_still_be_rejected(cn_tenant, judge_user,
+                                                                django_capture_on_commit_callbacks):
+    """用户决定 #17(2026-11-21):冷却结束的待决申请批不了,驳回可以 —— 服务端说 `can_reject`,网页照它放「驳回」。"""
+    _, client, application = _rejected_soul(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    row_id = _request(client).data["id"]
+    officer = officer_client(judge_user)
+    live = officer.get(f"{OFFICER}{row_id}/").data
+    assert live["can_reject"] is True and live["cooldown_until"] is not None
+    RebirthApplication.objects.filter(pk=application.pk).update(decided_at=timezone.now() - timezone.timedelta(days=31))
+    ended = officer.get(f"{OFFICER}{row_id}/").data
+    assert ended["cooldown_until"] is None and ended["can_reject"] is True
+    with django_capture_on_commit_callbacks(execute=True):
+        assert officer.post(f"{OFFICER}{row_id}/reject/", {"note": "冷却已过"}, format="json").status_code == 200
+    assert officer.get(f"{OFFICER}{row_id}/").data["can_reject"] is False
+
+
 # ── 行锁 ─────────────────────────────────────────────────────────────────
 
 SQLITE = connection.vendor == "sqlite"

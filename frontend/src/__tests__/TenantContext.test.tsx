@@ -170,6 +170,25 @@ describe("TenantContext rehydration", () => {
     expect(result.current.user?.permissions).toEqual([]);
   });
 
+  it("第六十一批 E2: a failed load-time read says so (permissionsFailed); a retry that answers clears it", async () => {
+    seedStoredUser();
+    mockMyRolePermissions.mockRejectedValue(new Error("network error"));
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    await waitFor(() => expect(result.current.permissionsFailed).toBe(true));
+    mockMyRolePermissions.mockResolvedValue({ data: { role: "JUDGE", permissions: ["soul.read"], details: [] } });
+    act(() => result.current.refreshFromServer?.(true));
+    await waitFor(() => expect(result.current.permissionsFailed).toBe(false));
+    expect(result.current.user?.permissions).toEqual(["soul.read"]);
+  });
+
+  it("a read that answers is never a failure", async () => {
+    seedStoredUser();
+    mockMyRolePermissions.mockResolvedValue({ data: { role: "JUDGE", permissions: [], details: [] } });
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    await waitFor(() => expect(result.current.permissionsReady).toBe(true));
+    expect(result.current.permissionsFailed).toBe(false);
+  });
+
   it("with no stored user there is nothing to wait for", () => {
     const { result } = renderHook(() => useTenant(), { wrapper });
     expect(result.current.permissionsReady).toBe(true);
@@ -249,6 +268,8 @@ describe("TenantContext refresh on window focus", () => {
     await waitFor(() => expect(mockMyRolePermissions).toHaveBeenCalledTimes(2));
     expect(result.current.user?.permissions).toEqual(["soul.read"]);
     expect(result.current.tenantCode).toBe("CN_DIYU");
+    // Not the load-time read: the last answer stands, so no 「权限没读到」 page (第六十一批 E2).
+    expect(result.current.permissionsFailed).toBe(false);
   });
 });
 

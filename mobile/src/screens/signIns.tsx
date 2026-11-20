@@ -13,7 +13,7 @@ import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
-import { Button, Empty, FadeModal, OneLine, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
+import { Button, Empty, FadeModal, OneLine, Press, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
 import type { AppStackParams } from "../navTypes";
 
@@ -135,6 +135,7 @@ export function SignInsScreen() {
 
   return (
     <Screen testID="sign-ins" refreshing={(devices.loading || records.loading) && rows !== null} onRefresh={() => void reload()}>
+      <StaleLine state={devices} onRetry={() => void devices.reload()} />
       <View style={[styles.head, { paddingHorizontal: gutter }]}>
         <SectionLabel>{t("soul_app.security.devices")}</SectionLabel>
       </View>

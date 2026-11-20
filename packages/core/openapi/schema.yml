@@ -20579,7 +20579,10 @@ paths:
           - APPEALING
           - APPEAL_REJECTED
           - APPROVED
+          - EXCEPTION
+          - RECONSIDERING
           - REJECTED
+          - TERMINATED
           - UNDER_REVIEW
         description: |-
           * `UNDER_REVIEW` - 审批中
@@ -20587,6 +20590,9 @@ paths:
           * `APPEALING` - 申诉中
           * `APPEAL_REJECTED` - 申诉被驳回
           * `APPROVED` - 已批准
+          * `EXCEPTION` - 异常处理中
+          * `RECONSIDERING` - 复议中
+          * `TERMINATED` - 已终止
       tags:
       - v1
       security:
@@ -35975,6 +35981,10 @@ components:
           type: string
           format: date-time
           nullable: true
+        reconsidered_at:
+          type: string
+          format: date-time
+          nullable: true
         current_step:
           allOf:
           - $ref: '#/components/schemas/MeCurrentStep'
@@ -35982,6 +35992,11 @@ components:
           readOnly: true
         can_appeal:
           type: boolean
+          readOnly: true
+        cooldown_until:
+          type: string
+          format: date-time
+          nullable: true
           readOnly: true
         created_at:
           type: string
@@ -35993,6 +36008,7 @@ components:
           readOnly: true
       required:
       - can_appeal
+      - cooldown_until
       - created_at
       - current_step
       - cycle
@@ -37618,6 +37634,9 @@ components:
         cooldown_past_days:
           type: integer
           readOnly: true
+        can_reject:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -37630,6 +37649,7 @@ components:
       - account
       - application
       - approved_days
+      - can_reject
       - cooldown_end
       - cooldown_original_until
       - cooldown_past_days
@@ -44986,6 +45006,9 @@ components:
       - APPEALING
       - APPEAL_REJECTED
       - APPROVED
+      - EXCEPTION
+      - RECONSIDERING
+      - TERMINATED
       type: string
       description: |-
         * `UNDER_REVIEW` - 审批中
@@ -44993,6 +45016,9 @@ components:
         * `APPEALING` - 申诉中
         * `APPEAL_REJECTED` - 申诉被驳回
         * `APPROVED` - 已批准
+        * `EXCEPTION` - 异常处理中
+        * `RECONSIDERING` - 复议中
+        * `TERMINATED` - 已终止
     RebirthFormEnum:
       enum:
       - DIVINE

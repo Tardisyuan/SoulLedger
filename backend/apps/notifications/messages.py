@@ -64,6 +64,9 @@ MESSAGES = {
         "rebirth_status_appealing": {"title": "转生申请状态更新", "body": "你的转生申请状态：申诉中。"},
         "rebirth_status_appeal_rejected": {"title": "转生申请状态更新", "body": "你的转生申请状态：申诉被驳回。"},
         "rebirth_status_approved": {"title": "转生申请状态更新", "body": "你的转生申请状态：已批准。"},
+        "rebirth_status_exception": {"title": "转生申请状态更新", "body": "你的转生申请状态：暂停审理。"},
+        "rebirth_status_reconsidering": {"title": "转生申请状态更新", "body": "你的转生申请状态：复议中。"},
+        "rebirth_status_terminated": {"title": "转生申请状态更新", "body": "你的转生申请状态：已终止。"},
         "cooldown_decided_approved": {"title": "缩短冷却申请有了结果", "body": "你的缩短冷却申请：已批准。"},
         "cooldown_decided_rejected": {"title": "缩短冷却申请有了结果", "body": "你的缩短冷却申请：已驳回。"},
         "assistant_cap_warning": {"title": "助手本月花费已到上限的 80%", "body": "本月估算花费 {{spent}},上限 {{cap}}。到上限时助手会自动关闭;每月 1 日早上 8 点(北京时间)换月。"},
@@ -132,6 +135,9 @@ MESSAGES = {
         "rebirth_status_appealing": {"title": "Rebirth application update", "body": "Your rebirth application is under appeal."},
         "rebirth_status_appeal_rejected": {"title": "Rebirth application update", "body": "The appeal on your rebirth application was rejected."},
         "rebirth_status_approved": {"title": "Rebirth application update", "body": "Your rebirth application was approved."},
+        "rebirth_status_exception": {"title": "Rebirth application update", "body": "The review of your rebirth application is paused."},
+        "rebirth_status_reconsidering": {"title": "Rebirth application update", "body": "Your rebirth application is being looked at again."},
+        "rebirth_status_terminated": {"title": "Rebirth application update", "body": "Your rebirth application was ended by the hall."},
         "cooldown_decided_approved": {"title": "Cooldown shortening decided", "body": "Your request to shorten the cooldown was approved."},
         "cooldown_decided_rejected": {"title": "Cooldown shortening decided", "body": "Your request to shorten the cooldown was rejected."},
         "assistant_cap_warning": {"title": "Assistant spend at 80% of this month’s cap", "body": "Estimated spend this month is {{spent}} against a cap of {{cap}}. The assistant switches off at the cap; the month rolls over on the 1st at 8:00 Beijing time."},
@@ -196,6 +202,10 @@ MESSAGES = {
         "rebirth_status_rejected": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Khesef-N."},
         "rebirth_status_appealing": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Em Sepret."},
         "rebirth_status_appeal_rejected": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Sepret Khesef-N."},
+        # 第六十一批 四:状态词照 Design 的 soul_app.status(灵魂端)写。
+        "rebirth_status_exception": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Wedja Smen-N."},
+        "rebirth_status_reconsidering": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Em Wehem Wedja."},
+        "rebirth_status_terminated": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Khetem-N Em Wesekhet."},
         "soul_account_provisioning_failed": {"title": "Aq Ba Nen Iri", "body": "{{soul}}: Sesh Mut-N; Aq Ba Nen Iri. Iri {{command}}: Aq Ba Iri."},
         "city_god_case_received": {"title": "Chenghuang: Sep Mawy · Nen Maa Djer", "body": "{{soul}}: Sep Iyi Er {{city_god}} · Nen Maa Djer."},
         "city_god_case_returned": {"title": "Chenghuang Khesef Er Semawy", "body": "{{city_god}}: Sep {{soul}} Khesef Er Semawy. Sab: {{by}}. Khet: {{reason}}"},
@@ -244,6 +254,7 @@ SYSTEM_KINDS = {
     # 给灵魂的转生申请 / 缩短冷却结果,一种状态一句(`apps/soul_accounts/rebirth.py`)。
     "rebirth_status_under_review", "rebirth_status_rejected", "rebirth_status_appealing",
     "rebirth_status_appeal_rejected", "rebirth_status_approved",
+    "rebirth_status_exception", "rebirth_status_reconsidering", "rebirth_status_terminated",
     "cooldown_decided_approved", "cooldown_decided_rejected",
     # 助手花费上限的三种提醒(`apps/soul_assist/usage.py`)。
     "assistant_cap_warning", "assistant_cap_closed", "assistant_reopened",

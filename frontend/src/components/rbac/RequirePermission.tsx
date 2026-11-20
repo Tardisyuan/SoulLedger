@@ -4,6 +4,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { ViewingLock } from "@/src/components/impersonation/ViewingLock";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { MissingPermissionContext } from "./PermissionDenied";
+import { PermissionsLoadFailed } from "@/src/components/ui/PageError";
 
 interface RequirePermissionProps {
   permissions: string | string[];
@@ -18,7 +19,7 @@ export function RequirePermission({
   children,
   fallback = null,
 }: RequirePermissionProps) {
-  const { hasAnyPermission, hasAllPermissions, permissionsReady } = usePermissions();
+  const { hasAnyPermission, hasAllPermissions, permissionsReady, permissionsFailed } = usePermissions();
 
   const permArray = Array.isArray(permissions) ? permissions : [permissions];
 
@@ -30,6 +31,8 @@ export function RequirePermission({
   // 没有 fallback 的(藏一个按钮)本来就什么都不画。`!== false`:测试里手搓的 usePermissions 没有这一项。
   if (!hasAccess) {
     if (permissionsReady === false && fallback !== null) return <PermissionsPending />;
+    // 权限没读到不是没有权限(第六十一批 E2):拒绝页的位置画「权限没读到」整页。
+    if (permissionsFailed && fallback !== null) return <PermissionsLoadFailed />;
     // 拒绝页(`PermissionDenied`)从这里读到缺的是哪个权限,见 MissingPermissionContext。
     return <MissingPermissionContext.Provider value={{ permissions: permArray }}>{fallback}</MissingPermissionContext.Provider>;
   }
@@ -63,9 +66,10 @@ export function RequireAdmin({
   /** SYSTEM_ADMIN only (backend `is_tenant_exempt`): not a hall-bound ADMIN, not a civilization ADMIN. */
   system?: boolean;
 }) {
-  const { isAdmin, isSystemAdmin, permissionsReady } = usePermissions();
+  const { isAdmin, isSystemAdmin, permissionsReady, permissionsFailed } = usePermissions();
   if (!(system ? isSystemAdmin : isAdmin)) {
     if (permissionsReady === false && fallback !== null) return <PermissionsPending />;
+    if (permissionsFailed && fallback !== null) return <PermissionsLoadFailed />;
     return <MissingPermissionContext.Provider value={{ admin: true }}>{fallback}</MissingPermissionContext.Provider>;
   }
   return <>{children}</>;

@@ -205,6 +205,33 @@ describe("face instead of the password", () => {
     expect(screen.queryByTestId("export-sheet")).toBeNull();
   });
 
+  it("第六十一批 E4: no network after the face says so above 重试, asks no password, and 重试 resends without a second face", async () => {
+    faceOn();
+    const calls = signedIn({
+      "POST /me/export/": ["offline", { status: 201, data: row() }],
+      "GET /me/export/": [state(null), state(row())],
+    });
+    await openPage();
+    fireEvent.press(await screen.findByTestId("export-request"));
+    expect((await screen.findByTestId("export-send-failed")).props.children).toBe("没连上服务器，资料还没导出。脸已认出，不用改输密码。");
+    expect(screen.queryByTestId("export-sheet")).toBeNull();
+    expect(within(screen.getByTestId("export-request")).getByText("重试")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("export-request"));
+    await screen.findByTestId("export-queued");
+    expect(secure.__auth.prompts).toHaveLength(1);
+    expect(calls.filter((c) => c.method === "POST" && c.url === "/me/export/").map((c) => c.body)).toEqual([{ credential: CRED }, { credential: CRED }]);
+    expect(screen.queryByTestId("export-send-failed")).toBeNull();
+  });
+
+  it("第六十一批 E4: a 5xx after the face says the server failed, not the face; still no password sheet", async () => {
+    faceOn();
+    signedIn({ "POST /me/export/": { status: 503, data: {} } });
+    await openPage();
+    fireEvent.press(await screen.findByTestId("export-request"));
+    expect((await screen.findByTestId("export-send-failed")).props.children).toBe("服务那边出了问题，资料还没导出。脸已认出，不用改输密码。");
+    expect(screen.queryByTestId("export-sheet")).toBeNull();
+  });
+
   it("a face that is not recognised falls back to the password sheet and sends nothing", async () => {
     faceOn();
     secure.__auth.error = Object.assign(new Error("user cancel"), { code: "ERR_AUTHENTICATION_CANCELED" });
