@@ -4,7 +4,8 @@ civilization's SHARD rows gone, every request answers what it answered before th
 The world is the stage-3 differential's (`tests/test_sharded_reads_equal_single_db.py::_build`, same seed variable):
 every civilization, crossing keys pointed across, a soul in residence and one back home, synced. Each case:
 
-  before     all four read- and write-cut (stage 4, as on 115), control still a full mirror
+  before     all four read- and write-cut (stage 4, as on 115), step 0c applied (`backfill_disposition_halls --apply`),
+             control still a full mirror
   purged     the same, and control's rows of their halls deleted the way stage 5 will
              (`purge_cut_over_tenant_rows.purge_plan`, `_raw_delete` inside `control_mirror_writes()`)
 
@@ -22,9 +23,11 @@ hall, a hall of UNKNOWN civilization), the control-mastered models (CONTROL_READ
       tests/test_sharded_reads_survive_the_mirror_purge.py
 """
 # ruff: noqa: F811 -- `world` is the stage-3 differential's module fixture, imported
+import io
 from contextlib import contextmanager
 
 import pytest
+from django.core.management import call_command
 from django.test import override_settings
 
 from apps.core import shadow_reads as shadow
@@ -37,15 +40,9 @@ from tests.test_sharded_writes_equal_single_db import _Savepoint, _Seeded
 SEED = reads.SEED
 
 #: Cases the purge still changes, each with its reason: stage 5 must not run until this is empty (an xfail names the
-#: difference; a case off this list that differs fails). The crossing-key sites read the other side by ids and a
-#: shard refuses such a join (CrossShardJoin, 2026-11-20); what is left is not a crossing join:
-#: G4 (PREP-stage5 section 3): the world's hall-less disposition (`_what_115_had` (e)) stays on control and names a
-#: judgment and a realm of a Chinese hall, which the purge deletes there -- the purge's own dry run reports it as a
-#: blocker. Step 0c (`backfill_disposition_halls --apply`) is to move it first; that command's --apply tests are red
-#: on main (test_stage5_prep, 2026-11-20), so it is not run here. Cases that read that row:
-_G4 = "G4: a hall-less disposition naming a purged judgment / realm; needs step 0c (backfill_disposition_halls)"
-PENDING = {case: _G4 for case in ("disposition-list", "disposition-detail", "disposition-export",
-                                  "disposition-detail:patch", "judgment-precedents")}
+#: difference; a case off this list that differs fails). Empty since every run applies step 0c first (`stage`): the
+#: world's hall-less disposition (`_what_115_had` (e), G4) moves to its judgment's hall before the purge, as on 115.
+PENDING = {}
 
 
 def _held(case, mismatches, seed_line):
@@ -80,14 +77,19 @@ def purge_control_mirrors(world):
 
 @contextmanager
 def stage(world, purge):
-    """One run: a savepoint on every database, all four civilizations read- and write-cut, and -- `purge` -- control's
-    mirror gone."""
+    """One run: a savepoint on every database, all four civilizations read- and write-cut, step 0c applied, and --
+    `purge` -- control's mirror gone."""
+    from apps.audit.models import AuditLog
     from apps.core.shard_ids import assign
     from apps.core.sharding import alias_for_civilization
 
     with _Savepoint(), override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=list(CIVS)):
         for civ in CIVS:
             assign(alias_for_civilization(civ))
+        call_command("backfill_disposition_halls", "--apply", stdout=io.StringIO())  # step 0c, as on 115 (L7)
+        for alias in ("default", *map(alias_for_civilization, CIVS)):  # its audit rows carry this run's clock and ids:
+            AuditLog._base_manager.using(alias).filter(  # the two runs would differ by them alone
+                description__startswith="backfill_disposition_halls")._raw_delete(alias)
         _plan(world)  # before any purge
         if purge:
             purge_control_mirrors(world)
@@ -98,14 +100,23 @@ def stage(world, purge):
 def test_the_purge_empties_controls_mirror_and_leaves_the_shards_and_d2(world):
     from apps.audit.models import AuditLog
     from apps.core.sharding import alias_for_civilization
+    from apps.disposition.models import Disposition
     from apps.souls.models import Soul
     from apps.tenants.management.commands.purge_cut_over_tenant_rows import blockers, purge_plan
 
+    case, _sibling = world["hall_less_disposition"]
+    cn = alias_for_civilization("CHINESE")
+
+    def backfilled():  # G4's disposition after step 0c: {alias: its hall} where it is
+        rows = {a: Disposition._base_manager.using(a).filter(judgment_id=case.pk) for a in ("default", cn)}
+        return {a: qs.get().tenant_id for a, qs in rows.items() if qs.exists()}
+
     on_shards = {civ: Soul._base_manager.using(alias_for_civilization(civ)).count() for civ in CIVS}
-    with stage(world, purge=False):  # the only staying rows naming a row the purge deletes: G4's disposition
-        found = {key for civ in CIVS for key, _ in blockers(purge_plan(civ))}
-        assert found <= {"disposition.Disposition.judgment", "disposition.Disposition.destination_realm"}, found
+    with stage(world, purge=False):  # after step 0c no staying row names a row the purge deletes
+        assert {key for civ in CIVS for key, _ in blockers(purge_plan(civ))} == set()
+        assert backfilled() == {"default": case.tenant_id, cn: case.tenant_id}
     with stage(world, purge=True):
+        assert backfilled() == {cn: case.tenant_id}  # gone from control's mirror, there on its master
         plan = _plan(world)
         assert len(plan) >= 20, [m._meta.label for m, _ in plan]
         souls = next(pks for m, pks in plan if m is Soul)

@@ -182,7 +182,8 @@ class GlobalCode(models.Model):
     in control (apps.core.sharding: CONTROL). It records who claimed; it is not part of the key.
 
     One kind is not a code: `SHARD_SYNC_STOPPED` (apps/core/shard_sync.py), value = a civilization, claimed_at = when
-    SHARD_PURGED_CIVS first stopped its sync (stage 5: the purge wants a dump newer than that)."""
+    SHARD_PURGED_CIVS first stopped its sync (stage 5: the purge wants a dump newer than that). Nor is `SHARD_PURGED`
+    (same module, `PURGED`): value = a civilization whose control rows were purged, never cleared by a setting."""
 
     kind = models.CharField(max_length=20)
     value = models.CharField(max_length=64)

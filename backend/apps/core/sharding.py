@@ -183,12 +183,14 @@ def shard_aliases():
     return [alias for alias in civilization_aliases() if alias in settings.DATABASES]
 
 
-def check_cut_over_settings(read, write, databases=None, purged=()):
+def check_cut_over_settings(read, write, databases=None, purged=(), recorded=()):
     """SHARD_READ_CIVS / SHARD_WRITE_CIVS (D8) name civilizations that have a shard, each one's alias is
     configured in DATABASES, a civilization's writes are cut over only after its reads, and its control rows are
     purged (SHARD_PURGED_CIVS, stage 5) only after its writes. Raised at
     startup (`apps/souls/apps.py`), so a typo such as `CHINA` or a missing `civ_greek` database refuses
-    to boot instead of surfacing at the first `fanout()`."""
+    to boot instead of surfacing at the first `fanout()`. `recorded`: the civilizations whose control rows were
+    purged (`shard_sync.purge_records`, read from the database, so checked by every sync rather than at startup): each
+    must stay in SHARD_WRITE_CIVS and SHARD_PURGED_CIVS for good (VERIFY-stage5 H1)."""
     from django.core.exceptions import ImproperlyConfigured
 
     from apps.souls.models import Civilization
@@ -204,6 +206,12 @@ def check_cut_over_settings(read, write, databases=None, purged=()):
     unwritten = sorted(set(purged) - set(write))
     if unwritten:
         raise ImproperlyConfigured(f"SHARD_PURGED_CIVS {unwritten} are not in SHARD_WRITE_CIVS: cut writes over first")
+    loose = sorted(set(recorded) - (set(write) & set(purged)))
+    if loose:
+        raise ImproperlyConfigured(
+            f"{loose} were purged (GlobalCode SHARD_PURGED): keep them in SHARD_WRITE_CIVS and SHARD_PURGED_CIVS. Control "
+            f"no longer holds their rows: off SHARD_WRITE_CIVS a sync would empty their shards, off SHARD_PURGED_CIVS it "
+            f"would copy the purged rows back")
     databases = settings.DATABASES if databases is None else databases
     # A shard alias (`civ_*`, from SHARD_DATABASE_URL_<CIV>) that names no civilization is a typo such as
     # SHARD_DATABASE_URL_CHINA: refuse it rather than migrate and sync a database nobody routes to.

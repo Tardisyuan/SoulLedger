@@ -254,7 +254,7 @@ def test_the_purge_dry_run_counts_keeps_d2_and_names_the_keys_that_would_strand_
         assert "purge disposition.Disposition 1" in out.getvalue()
         assert rows["move"].pk in purge_plan("CHINESE")[Disposition].values_list("pk", flat=True)
 
-        with pytest.raises(CommandError, match="--dry-run --confirm is required"):
+        with pytest.raises(CommandError, match="--dry-run --confirm --record-purged is required"):
             _run("purge_cut_over_tenant_rows", "--civ", "CHINESE")
 
 

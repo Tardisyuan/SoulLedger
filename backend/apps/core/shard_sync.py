@@ -196,13 +196,43 @@ def purged_civs():
     return set(getattr(settings, "SHARD_PURGED_CIVS", ()))
 
 
-def _sides(model, shard, civ, halls, direction, purged=None):
+#: GlobalCode kind of the record "control's copy of this civilization was purged" (value = the civilization), written
+#: by `purge_cut_over_tenant_rows --confirm` (or `--record-purged`) and never cleared by a setting: control no longer
+#: holds its SHARD rows, so the shard is their only copy (VERIFY-stage5 H1).
+PURGED = "SHARD_PURGED"
+
+
+def purge_records():
+    """The civilizations with a PURGED record on control. Empty while the table does not exist yet (migrate)."""
+    from django.db import connections
+
+    GlobalCode = apps.get_model("tenants", "GlobalCode")
+    if GlobalCode._meta.db_table not in connections["default"].introspection.table_names():
+        return set()
+    return set(GlobalCode.objects.using("default").filter(kind=PURGED).values_list("value", flat=True))
+
+
+def check_purge_records():
+    """Refuse to sync while a purged civilization is off SHARD_WRITE_CIVS or SHARD_PURGED_CIVS (`check_cut_over_settings`):
+    taking it off is stage 4's rollback, and with control empty a control-to-shard sync would empty its shard (H1)."""
+    from apps.core.sharding import check_cut_over_settings
+
+    check_cut_over_settings(settings.SHARD_READ_CIVS, settings.SHARD_WRITE_CIVS,
+                            purged=getattr(settings, "SHARD_PURGED_CIVS", ()), recorded=purge_records())
+
+
+def _sides(model, shard, civ, halls, direction, purged=None, recorded=()):
     """(source queryset, target queryset) for one model and shard, or None when not compared that way: each
     direction only writes over the side that is not the master (a write-cut shard's own rows are never
     overwritten from control, control's master rows never from a shard). A purged civilization (`purged`, default
     SHARD_PURGED_CIVS) has no shard-to-control side: control's copy of its rows is being deleted, and a sync would
-    copy them all back (G1). Its control-to-shard side (REFERENCE, the control-mastered models) stays (G3)."""
+    copy them all back (G1). Its control-to-shard side (REFERENCE, the control-mastered models) stays (G3). A
+    civilization in `recorded` (`purge_records`) never has a control-to-shard side for its shard-mastered models."""
+    from apps.core.shard_reads import control_mastered
+
     if direction == CONTROL_TO_SHARD:
+        if civ in recorded and placement(model) == SHARD and not control_mastered(model):
+            return None  # purged (PURGED record): control holds none of these rows, whatever the settings say (H1)
         if not _control_masters(model, civ):
             return None  # stage 4: the shard is this model's master (the sync runs shard-to-control)
         return owned(model, "default", civ, halls), owned(model, shard, civ, halls)
@@ -256,7 +286,9 @@ def compare(shard, direction=CONTROL_TO_SHARD, retry_window=0, *, purged=None):
     overrides SHARD_PURGED_CIVS (the purge compares a purged civilization's mirror with `purged=()`)."""
     civ = civilization_of(shard)
     halls = halls_of(civ)
-    sides = {m: s for m in compared_models() if (s := _sides(m, shard, civ, halls, direction, purged)) is not None}
+    recorded = purge_records() if direction == CONTROL_TO_SHARD else ()
+    sides = {m: s for m in compared_models()
+             if (s := _sides(m, shard, civ, halls, direction, purged, recorded)) is not None}
     sources = {m: (src, fingerprints(src, halls)) for m, (src, _) in sides.items()}
     dangling = _dangling(sources, halls) if direction == CONTROL_TO_SHARD else {}
     found = {}
@@ -350,6 +382,7 @@ def sync_stopped_at(civ):
 def sync(shards):
     """The sync of each shard, each in its own direction (`sync_direction`): {alias: rows fixed}. A purged
     civilization's shard-to-control pass compares nothing (`_sides`); the run stamps when it first saw it so."""
+    check_purge_records()
     stamp_sync_stopped(shards)
     out = {}
     for shard in shards:
@@ -364,6 +397,8 @@ def sync(shards):
 def reconcile(shards, *, fix=False, direction=CONTROL_TO_SHARD, retry_window=0):
     """{shard alias: [Difference]} before any fix. With `fix`, each shard's differences are repaired in
     one transaction on the target database."""
+    if fix:
+        check_purge_records()
     report = {}
     for shard in shards:
         found = compare(shard, direction, retry_window)
