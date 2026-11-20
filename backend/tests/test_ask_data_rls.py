@@ -94,6 +94,9 @@ def wall(halls):
         setup.apply(connection, role, password)
         connections.settings[alias] = {**connection.settings_dict, "USER": role, "PASSWORD": password,
                                        "CONN_MAX_AGE": 0}
+        # Log in now: Django's test case refuses to *open* a connection on an alias outside its `databases`,
+        # and this alias did not exist when the test case was set up. An open one it leaves alone.
+        connections[alias].connect()
         yield {**halls, "role": role, "alias": alias}
     finally:
         # Gone before Django's own teardown, which walks every alias in `connections`.
