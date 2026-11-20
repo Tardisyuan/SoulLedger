@@ -51,11 +51,10 @@ REALM_FIELDS = (
 ACTOR_FIELDS = (
     "name_zh", "name_en", "name_egy", "role", "realm",
     "title", "title_zh", "title_en", "title_egy", "description", "description_en",
-    # `is_active` 在比对集合里,因为有两处真实消费方读它(2026-08-30 全仓核实):
+    # `is_active` 在比对集合里,因为有真实消费方读它(2026-08-30 全仓核实;当时的
+    # 第二处 `migrate_actors_to_users` 是一次性迁移命令,2026-11-21 删除):
     #   apps/actors/views.py:31                       queryset = filter(is_active=True)
-    #   .../commands/migrate_actors_to_users.py:152   is_active=actor.is_active
-    # 一个 `is_active=False` 的种子行,会让 Actor 接口**返回空**,并且在
-    # Actor→User 迁移里产出一个**被停用的用户账号**。
+    # 一个 `is_active=False` 的种子行,会让 Actor 接口**返回空**。
     #
     # 它此前既不在 values 里也不在这个元组里,于是 `--update` 修不了它,变异测试
     # 也看不见它:往 values 注入 `"is_active": False`,13 个作用域测试文件
@@ -636,11 +635,12 @@ class MythologySeeder:
         alive = [obj for obj in existing if not obj.is_deleted]
 
         if len(alive) > 1:
-            # Duplicate rows predate this command (see fix_actor_civilization).
-            # Reconciling them is that command's job; say so and move on.
+            # Duplicate rows predate this command. The one-off repair that deduped
+            # them (fix_actor_civilization) was deleted 2026-11-21 and is in git
+            # history; a duplicate now is reconciled by hand. Say so and move on.
             self.stdout.write(self.style.ERROR(
                 f"  [warn] {identity}: {len(alive)} live rows match {lookup} — "
-                f"ambiguous, skipping. Run `manage.py fix_actor_civilization` to dedupe."
+                f"ambiguous, skipping. Dedupe the rows by hand, then re-run."
             ))
             stats.skipped += 1
             return

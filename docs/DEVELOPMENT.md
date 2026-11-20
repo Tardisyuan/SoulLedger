@@ -258,7 +258,6 @@ Django management commands:
 cd backend   # the interpreter is backend/.venv, not whatever `python` is on PATH
 .venv/bin/python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT, GR_HADES
 .venv/bin/python manage.py seed_mythology             # realms + actors, all four (idempotent)
-.venv/bin/python manage.py consolidate_eu_pantheon
 .venv/bin/python manage.py seed_workflow_templates
 .venv/bin/python manage.py seed_field_permissions
 .venv/bin/python manage.py init_organizations
@@ -271,7 +270,6 @@ cd backend   # the interpreter is backend/.venv, not whatever `python` is on PAT
 Maintenance commands (can also be run by hand):
 
 ```bash
-.venv/bin/python manage.py backfill_soul_entry_path   # first path station for souls that died before death wrote one (--dry-run)
 .venv/bin/python manage.py cleanup_orphan_post_media  # delete circle images uploaded but never attached to a post
 .venv/bin/python manage.py process_workflow_timeouts  # fire due per-node workflow timeouts (escalate / auto-reject / notify)
 .venv/bin/python manage.py reconcile_inbox            # recompute each hall-inbox conversation's latest message from Synapse

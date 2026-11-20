@@ -531,7 +531,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 
 ### 7.2 存量数据回填(115 上是测试数据;要幂等)
 
-管理命令 `manage.py backfill_sentence_plans`(与 `seed_mythology` 同一「幂等种子」惯例),**不**放进 schema 迁移的数据步骤(CLAUDE.md:PG 上失败语句中止整个事务):
+管理命令 `manage.py backfill_sentence_plans`(已在 115 跑完,2026-11-21 删除,见 git 历史;与 `seed_mythology` 同一「幂等种子」惯例),**不**放进 schema 迁移的数据步骤(CLAUDE.md:PG 上失败语句中止整个事务):
 
 1. 每个灵魂、每个 `cycle`,若存在 `verdict IS NOT NULL` 的审判且没有计划 → 建 `SentencePlan(origin_judgment_id=最早那份, cycle, tenant=home_tenant)`。
 2. 原属节点:`order=1, is_home=True, tenant_code=home.code`,`disposition_id=` 该审判的处置,`realm_code / sentence_years / is_eternal / memory_reset` 抄处置;状态:`is_executed and is_eternal → ETERNAL`;`is_executed → COMPLETED`;否则 ACTIVE。

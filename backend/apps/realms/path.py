@@ -21,9 +21,9 @@ realm-path-fields cloud report (kept in the project memory directory).
 Death is the first station (maintainer decision, 2026-09-25): the ALIVE ->
 JUDGING edge in `Soul.transition_to` calls `enter_on_death`, which puts the
 soul in its civilization's entry realm (`ENTRY_REALM_CODES`). Souls that died
-before that hook have their first station written once, by
-`manage.py backfill_soul_entry_path`, from the recorded death date — never
-from `created_at`.
+before that hook had their first station written once, by the one-off
+`backfill_soul_entry_path` command (deleted 2026-11-21; in git history), from
+the recorded death date — never from `created_at`.
 """
 from django.db import transaction
 from django.db.models import Max

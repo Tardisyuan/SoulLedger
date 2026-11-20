@@ -4,13 +4,12 @@
 文件 grep `is_active` **零命中**。变异:往 values 注入 `"is_active": False` →
 **92 passed,0 红**。
 
-而这个字段有两个真实消费方(2026-08-30 全仓核实):
+而这个字段有一个真实消费方(2026-08-30 全仓核实时是两个;第二个
+`migrate_actors_to_users` 是一次性迁移命令,2026-11-21 删除):
 
     apps/actors/views.py:31                        queryset = filter(is_active=True)
-    .../commands/migrate_actors_to_users.py:152    is_active=actor.is_active
 
-所以那个缺陷会让 **Actor 接口返回空**,并在 Actor→User 迁移里产出一个**被停用的
-用户账号** —— 而测试全绿。
+所以那个缺陷会让 **Actor 接口返回空** —— 而测试全绿。
 
 **审计账本 H45 写的第二个消费方是错的**:它说 `apps/workflow/services.py:704` 的
 审批人解析同样过滤 `is_active=True`。704 行过滤的是 `WorkflowTemplate.is_active`;
@@ -49,25 +48,6 @@ def test_every_seeded_actor_is_visible_to_the_actors_queryset(seeded):
     assert visible == total, (
         f"{total} 个种子 actor 里只有 {visible} 个能被 /api/v1/actors/ 看到。"
         f"那个接口的 queryset 是 filter(is_active=True)。"
-    )
-
-
-@pytest.mark.django_db
-def test_seeded_actors_migrate_into_enabled_user_accounts(seeded):
-    """第二个消费方。两处用同一个字段,坏起来的样子不一样:一个是接口返回空列表,
-    一个是**迁移出来的用户登不进去**,而迁移命令报告「创建成功」。"""
-    from apps.authentication.models import User
-
-    someone = Actor.all_objects.filter(civilization="CHINESE", deleted_at__isnull=True).first()
-    assert someone is not None
-
-    call_command("migrate_actors_to_users", verbosity=0)
-
-    user = User.objects.filter(username=someone.name).first()
-    assert user is not None, f"迁移没有为 {someone.name!r} 建用户"
-    assert user.is_active is True, (
-        f"{someone.name!r} 迁移出来的账号是停用的 —— "
-        f"migrate_actors_to_users.py:152 直接抄 actor.is_active"
     )
 
 

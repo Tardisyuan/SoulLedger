@@ -221,8 +221,9 @@ class TestCivilizationReadings:
         failing and revealed that the *branch under test* had lost its only
         witness. The replacement is not an arbitrary string: Norse was removed
         from this system outright because a pantheon whose destination follows
-        the manner of death has no judgment step to host (see
-        `consolidate_eu_pantheon`'s module docstring), so it is a cosmology this
+        the manner of death has no judgment step to host (see the module
+        docstring of `consolidate_eu_pantheon`, a one-off command deleted
+        2026-11-21 and kept in git history), so it is a cosmology this
         repository has decided will never be in `TENANT_CIVILIZATION` — the one
         thing this test needs of it.
         """

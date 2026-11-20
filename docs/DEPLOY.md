@@ -174,12 +174,11 @@
 
 | 命令 | 为什么 |
 |---|---|
-| `migrate_actors_to_users` | 给每个 Actor 建 User。2026-11-12 起每个新账号一个随机密码(创建时打印一次)并强制首登改密,OVERSEER 映射成 GUARDIAN 而不是全局 ADMIN(流程走查 F-ADM-05;此前写死 `soul123456`)。仍只在迁移旧数据时用 |
 | `seed_field_permissions` | 文件头写的是「seed **example** FieldPermission rules」,按 `ADMIN/JUDGE/GUARDIAN/VIEWER` 建角色。这是示例数据,会不会和运维在权限矩阵里的配置打架:**未核实**。生产不跑,除非先读完它 |
 | `seed_workflow_templates` | 2026-10-19 起按殿建正式模板(带退回规则),默认只建缺的;已有且不同的行要 `--update` 才发布成新版本(旧版留在历史里),有未发布草稿的行不动 |
 | `seed_tenants` | `get_or_create`,幂等;但与 `seed_mythology` 里建租户重复(`actors/mythology/seeding.py:175`)。二选一即可,用 `seed_mythology` |
 | `init_organizations` | 组织架构初始数据。是否幂等:**未核实** |
-| `fix_actor_civilization`、`consolidate_eu_pantheon`(含 Norse purge)、`backfill_*` | 数据修复/回填命令,针对已有历史数据的一次性修复;全新库不需要。**别在生产盲跑** |
+| `backfill_disposition_halls`、`backfill_soul_accounts` | 回填命令,针对已有历史数据;全新库不需要。**别在生产盲跑**(其余一次性修复命令 `fix_actor_civilization`、`consolidate_eu_pantheon`、`migrate_actors_to_users`、`backfill_sentence_plans`、`backfill_soul_entry_path` 已于 2026-11-21 删除,见 git 历史) |
 
 ## 7. celery-beat 只能起一个
 

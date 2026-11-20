@@ -68,18 +68,6 @@ def test_they_hold_different_offices(seeded):
 
 
 @pytest.mark.django_db
-def test_the_cleanup_command_does_not_touch_either_row(seeded):
-    """合并步骤已退役。这一条钉住「退役」是真的,不是改小了阈值。"""
-    out = io.StringIO()
-    call_command("consolidate_eu_pantheon", "--execute", stdout=out, stderr=out)
-
-    pluto = one("Pluto", "EUROPEAN")
-    hades = one("Hades", "GREEK")
-    assert pluto.is_deleted is False, f"清理命令又把 Pluto 删了:\n{out.getvalue()}"
-    assert hades.is_deleted is False, f"清理命令把 Hades 删了:\n{out.getvalue()}"
-
-
-@pytest.mark.django_db
 def test_the_name_resolver_gives_one_answer_per_cast(seeded):
     """一个名字在一个阵容里只有一个答案。
 

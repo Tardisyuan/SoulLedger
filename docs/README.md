@@ -73,7 +73,7 @@ copies fork on the first correction — the problem raised in
 | [03_七宗罪与地狱惩罚.md](03_七宗罪与地狱惩罚.md) | 七宗罪与但丁的圈层 |
 
 `EUROPEAN` 只有基督教一支。北欧神话没有审判环节(去向取决于死法而非裁决),
-`backend/apps/actors/management/commands/consolidate_eu_pantheon.py` 记录了把它移出系统的决定;
+`consolidate_eu_pantheon` 命令记录了把它移出系统的决定(一次性命令,2026-11-21 删除,见 git 历史);
 研究稿 `05_北欧死后世界.md` 已于 2026-10-24 删除(用户决定不做第五个文明)。
 *`EUROPEAN` is the Christian material only. Norse was removed from the system (no judgment step); its research
 draft was deleted on 2026-10-24.*
