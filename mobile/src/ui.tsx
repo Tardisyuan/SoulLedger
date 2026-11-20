@@ -2045,7 +2045,7 @@ export function useReloadOnReconnect(reload: () => unknown, state?: RemoteState)
 }
 
 export const styles = StyleSheet.create({
-  staleLine: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, paddingVertical: 6 },
+  staleLine: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, paddingVertical: 8 },
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   grow: { flexGrow: 1 },

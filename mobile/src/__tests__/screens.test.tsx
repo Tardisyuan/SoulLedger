@@ -1,5 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useState, type ReactNode } from "react";
 import { StyleSheet } from "react-native";
 
@@ -316,23 +316,23 @@ describe("application detail", () => {
     expect(screen.queryByText("已驳回")).toBeNull();
   });
 
-  it("第六十一批 四: 暂停审理 and 复议中 each say the soul need do nothing; 审批中 has no such sentence", async () => {
-    stubApi({
-      "GET /me/rebirth-applications/a1/": [
-        { status: 200, data: application({ status: "EXCEPTION" }) },
-      ],
-    });
+  it("第六十一批 四: 暂停审理 says the soul need do nothing, and names the current point", async () => {
+    stubApi({ "/me/rebirth-applications/a1/": { status: 200, data: application({ status: "EXCEPTION" }) } });
     wrap(<ApplicationDetailScreen id="a1" />);
     expect((await screen.findByTestId("state-note")).props.children).toBe(
       "审理时遇到一个要人工处理的问题，申请先停在这一步。不需要你做什么；处理好后接着审，到时会通知你。"
     );
     expect(within(screen.getByTestId("step-current")).getByText("暂停审理")).toBeTruthy();
-    cleanup();
+  });
+
+  it("第六十一批 四: 复议中 says it is not the soul's appeal, under ≡", async () => {
     stubApi({ "/me/rebirth-applications/a1/": { status: 200, data: application({ status: "RECONSIDERING" }) } });
     wrap(<ApplicationDetailScreen id="a1" />);
     expect((await screen.findByTestId("state-note")).props.children).toContain("这不是你提起的申诉");
     expect(screen.getByTestId("status-badge-glyph").props.children).toBe("≡");
-    cleanup();
+  });
+
+  it("第六十一批 四: 审批中 has no such sentence", async () => {
     stubApi({ "/me/rebirth-applications/a1/": { status: 200, data: application({ status: "UNDER_REVIEW" }) } });
     wrap(<ApplicationDetailScreen id="a1" />);
     await screen.findByTestId("status-badge");
