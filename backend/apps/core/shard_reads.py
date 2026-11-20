@@ -838,6 +838,14 @@ def guard(qs, alias):
     return None
 
 
+def _strip_for_write(qs):
+    """A read for a write (select_for_update, get_or_create's get) goes where `db_for_write` says, so `_guard_routed`
+    never strips its select_related: on a shard a JOIN through a CONTROL row (a conversation's SoulAccount) raised
+    "no such table", through a bare id it dropped the row. Strip them the same way; the accessor reads the row."""
+    if settings.SHARD_WRITE_CIVS and qs.query.select_related and placement(qs.model) == SHARD:
+        strip_unreachable_joins(qs, qs.db)
+
+
 def _guard_routed(qs, aggregates=None):
     """A read the router sends to one shard (not a FANOUT merge, not an explicit `.using`). `aggregates`: the
     expressions an aggregate() is about to add (their filters may join too)."""
@@ -1290,6 +1298,7 @@ def install():
         def _fetch_all(self):
             if self._result_cache is None and self._for_write:
                 _locate(self)
+                _strip_for_write(self)
             if self._result_cache is None and settings.SHARD_READ_CIVS:
                 civs = _wanted(self)
                 if civs is not None:
@@ -1305,6 +1314,7 @@ def install():
         def _iterator(self, chunk_size=None):
             if self._for_write:
                 _locate(self)
+                _strip_for_write(self)
             if settings.SHARD_READ_CIVS:
                 civs = _wanted(self)
                 if civs is not None:
@@ -1386,6 +1396,13 @@ def _split(qs):
                 guard(leg, alias)
             out.append(leg)
     return out
+
+
+def per_master(qs):
+    """`qs` as one queryset per master holding its rows, for a bulk write the QuerySet hooks do not split: a
+    `_raw_delete` asks `qs.db`, which in a context of no single civilization (MASTER: a global job) has no answer
+    and raises NoShardContext. `_split`'s parts where it splits; else `[qs]`, which the router answers alone."""
+    return _split(qs) or [qs]
 
 
 def _locate(qs):

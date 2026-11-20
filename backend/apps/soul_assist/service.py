@@ -456,7 +456,11 @@ def purge_history(now=None) -> dict:
     cutoff = now - timedelta(days=RETENTION_DAYS)
     old = AssistMessage.objects.filter(created_at__lt=cutoff).delete()[0]
     gone = AssistConversation.all_objects.filter(is_deleted=True)
-    deactivated = AssistConversation.all_objects.filter(user__is_active=False)
+    from apps.authentication.models import User
+
+    # The officers' ids read on control, not a join: the delete runs on every master, and a shard has no User table.
+    deactivated = AssistConversation.all_objects.filter(
+        user_id__in=list(User.objects.filter(is_active=False).values_list("pk", flat=True)))
     empty = AssistConversation.all_objects.filter(messages__isnull=True)
     conversations = 0
     for qs in (gone, deactivated, empty):

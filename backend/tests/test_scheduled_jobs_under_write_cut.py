@@ -2,7 +2,9 @@
 
 On 115 one run of each job raised: `chat.cleanup_unsent_images`, `soul_accounts.prune_data_exports` and
 `soul_assist.purge_history` NoShardContext ("a write naming no row and no single civilization"), and
-`chat.sync_all_rooms` ProgrammingError (a SoulAccount JOIN on a shard, which has no such table).
+`chat.sync_all_rooms` ProgrammingError (a SoulAccount JOIN on a shard, which has no such table). Called directly the
+first three had no shard context at all; through Celery `purge_history` still joined User on a shard, and the
+retention jobs' `purge_in_batches` asked `queryset.db`, which a global job cannot answer (NoShardContext).
 
   per job   the job does its work on every master: each civilization's shard, and control for the hall-less rows
             (D2) -- rows it should touch changed or gone, rows it should leave exactly as they were. Both ways a job
@@ -24,7 +26,7 @@ from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall
 from tests.test_stage5_prep import purged
 
-OLD = timedelta(days=400)
+OLD = timedelta(days=1000)  # past every window here (assistant usage: 730 days)
 SHARD = {civ: f"civ_{civ.lower()}" for civ in CIVS}
 ALIASES = ("default", *SHARD.values())
 
@@ -57,6 +59,7 @@ def _run(name, how, **kwargs):
     """Run the registered task `name` the way beat's worker does (`apply`: a Celery request) or directly."""
     from config.celery import app
 
+    app.loader.import_default_modules()  # autodiscovery: the tasks modules of every app
     cache.clear()  # the single-flight locks of an earlier run
     task = app.tasks[name]
     if how == "direct":
@@ -104,7 +107,8 @@ def _images(world):
         with _in_hall(hall):
             soul = Soul.all_objects.get(pk=world.souls[civ])
             room = Conversation.objects.create(kind=ConversationKind.OFFICER_INBOX, room_id=f"!img-{civ}:x",
-                                               soul_a=soul, tenant=hall, account_a=world.accounts[civ])
+                                               soul_a=soul, tenant=hall, account_a=world.accounts[civ],
+                                               closed_at=timezone.now(), silenced_at=timezone.now())  # beside `_rooms`
 
             def image(tag, room=room, civ=civ):
                 return ChatImage.objects.create(conversation=room, uploader=world.accounts[civ], file=f"chat/{tag}.png",
@@ -191,8 +195,9 @@ def _assist(world):
                 for active in (True, False)}
     on_control = {}
     for active, officer in officers.items():
-        conv = AssistConversation.objects.create(user=officer, screen="other")
-        AssistMessage.objects.create(conversation=conv, role="user", content="officer")
+        with _in_hall(world.halls["CHINESE"]):  # an officer's question is asked in his hall's request
+            conv = AssistConversation.objects.create(user=officer, screen="other")
+            AssistMessage.objects.create(conversation=conv, role="user", content="officer")
         on_control[active] = conv
     return made, on_control
 
@@ -256,6 +261,46 @@ def test_every_room_of_every_shard_gets_its_speaking_levels(world, synapse, how)
         assert _where(Conversation, open_room.pk) == [SHARD[civ]], civ
 
 
+# ---- audit.prune_retained_data / audit.prune_untenanted_logs (`purge_in_batches`) ------------------------------------
+
+def _retained(world):
+    """Per hall an old and a recent assistant usage row (each on its shard), and the same pair with no hall (control,
+    D2); an old hall-less audit row (control) and an old audit row of each hall, which the GLOBAL job leaves alone."""
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.soul_assist.models import AssistUsage
+
+    old = timezone.now() - OLD
+    usage, audit = {}, {}
+    for civ, hall in [*world.halls.items(), (None, None)]:
+        with _in_hall(hall) if hall else _in_hall(world.halls["CHINESE"]):
+            pair = [AssistUsage.objects.create(side="soul", tenant=hall, status="ok") for _ in range(2)]
+            log = AuditLog.objects.create(tenant=hall, action=AuditAction.READ, resource="soul", resource_id=f"r-{civ}")
+        alias = SHARD[civ] if civ else "default"
+        AssistUsage._base_manager.using(alias).filter(pk=pair[0].pk).update(created_at=old)
+        AuditLog._base_manager.using(alias).filter(pk=log.pk).update(timestamp=old)
+        usage[civ], audit[civ] = pair, log
+    return usage, audit
+
+
+@sharded
+@pytest.mark.parametrize("how", ["worker", "direct"])
+def test_retention_purges_every_master_in_batches(world, how):
+    from apps.audit.models import AuditLog
+    from apps.soul_assist.models import AssistUsage
+
+    with purged("GREEK"):
+        usage, audit = _retained(world)
+        assert _run("audit.prune_retained_data", how)["assist_usage"] == len(CIVS) + 1
+        assert _run("audit.prune_untenanted_logs", how)["audit_deleted"] == 1
+    for civ, (old, recent) in usage.items():
+        alias = SHARD[civ] if civ else "default"
+        assert _where(AssistUsage, old.pk) == [], civ
+        assert _where(AssistUsage, recent.pk) == [alias], civ
+    assert _where(AuditLog, audit[None].pk) == []
+    for civ in CIVS:
+        assert _where(AuditLog, audit[civ].pk) == [SHARD[civ]], civ  # a hall's: its TENANT job's, not this one's
+
+
 # ---- the registry -----------------------------------------------------------------------------------------------------
 
 @sharded
@@ -266,7 +311,7 @@ def test_every_registered_job_runs_under_an_all_civilization_write_cut(world, sy
 
     failed = {}
     with purged("GREEK"), mock.patch("apps.soul_accounts.data_export.enqueue"):
-        _images(world), _exports(world), _assist(world), _rooms(world)
+        _images(world), _exports(world), _assist(world), _rooms(world), _retained(world)
         for key, spec in sorted(_BY_KEY.items()):
             for hall in (world.halls.values() if spec.scope == TENANT else [None]):
                 try:

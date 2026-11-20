@@ -21,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 class SchedulerTask(Task):
     def __call__(self, *args, **kwargs):
+        with _shard_context(self.name):
+            return self._call(*args, **kwargs)
+
+    def _call(self, *args, **kwargs):
         req = self.request
         # A direct Python call (`some_task()` in a test or a service) is not a
         # scheduled execution; keep plain-function semantics for it.
@@ -50,6 +54,24 @@ class SchedulerTask(Task):
             from apps.scheduler.services import release_lock
 
             release_lock(key, owner)
+
+
+def _shard_context(task_name):
+    """A GLOBAL job belongs to no hall: it reads and writes every master, as an operator's command does
+    (`read_context("default")`; apps/core/shard_reads.py header) -- however it is called. Inside a worker that
+    is what Celery already gets (`in_celery`); a direct call (an operator's shell, `job()`) had no context at
+    all, and once every civilization's writes were cut over each read or write raised NoShardContext (115,
+    2026-11-20). A TENANT job's hall is set by its own body from `tenant_id`."""
+    from contextlib import nullcontext
+
+    from apps.scheduler import registry
+
+    spec = registry.get(task_name)
+    if spec is None or spec.scope != registry.GLOBAL:
+        return nullcontext()
+    from apps.core.shard_reads import CONTROL_ALIAS, read_context
+
+    return read_context(CONTROL_ALIAS)
 
 
 def _gate(task_name, req, args, kwargs):
