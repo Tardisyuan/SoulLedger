@@ -196,8 +196,10 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
         path: r.code === "GR_TARTARUS" ? cycle.label : tr("live.path.gr_isles"),
       };
     }
-    if (judging) return { civ, steps: base, at: 2, place: base[2].label };
+    // The bank before the meadow: an unburied soul is JUDGING from the day it dies but waits a hundred years on the
+    // bank (backend path: GR_ACHERON open). Judging first drew it on the meadow (iPhone 17, 2026-11-21).
     if (me.greek_ferry && !me.greek_ferry.crossed) return { civ, steps: base, at: 1, place: base[1].label };
+    if (judging) return { civ, steps: base, at: 2, place: base[2].label };
     return null;
   }
   return null;

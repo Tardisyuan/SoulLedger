@@ -110,6 +110,15 @@ describe("soulRoute", () => {
     expect(r.steps.map((s) => s.id)).not.toContain("CYCLE");
   });
 
+  it("希腊: an unburied soul is JUDGING but still on the bank, not on the meadow (2026-11-21)", () => {
+    const waiting = { ferry_passage: "UNBURIED", crossed: false, crosses_on: "2126-11-20" };
+    const r = soulRoute({ me: me({ current_state: "JUDGING", greek_ferry: waiting } as never), civ: "gr", hall: "", now: NOW }, tr)!;
+    expect(r.steps[r.at].id).toBe("GR_ACHERON");
+    expect(r.place).not.toBe("岔路口的草地");
+    const crossed = soulRoute({ me: me({ current_state: "JUDGING", greek_ferry: { ...waiting, crossed: true } } as never), civ: "gr", hall: "", now: NOW }, tr)!;
+    expect(crossed.steps[crossed.at].id).toBe("GR_PLATO_MEADOW");
+  });
+
   it("no definite place, no route: alive, an unknown station, a plan with nothing current", () => {
     expect(soulRoute({ me: me({ diyu_station: "" } as never), civ: "cn", hall: "", now: NOW }, tr)).toBeNull();
     expect(soulRoute({ me: me({ current_state: "ALIVE" }), civ: "eg", hall: "", now: NOW }, tr)).toBeNull();
