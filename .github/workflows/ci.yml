@@ -118,8 +118,9 @@ jobs:
           python manage.py migrate
           # -n auto (pytest-xdist, requirements-dev.txt): it ran serially (2026-10-30). worksteal, as the
           # local gates do: plain -n queues the slow migration round trips on one worker. Coverage and its
-          # floor still apply (pytest-cov combines the workers).
-          python -m pytest --tb=short -q -n auto --dist worksteal --junitxml="$RUNNER_TEMP/backend.xml"
+          # floor still apply (pytest-cov combines the workers). --durations as run-gates.sh: the thirty slowest
+          # over 5 s, so the daily run's 1.5-hour tail says where it goes (docs/audit/ci-timing-2026-11-20.md §5).
+          python -m pytest --tb=short -q -n auto --dist worksteal --durations=30 --durations-min=5 --junitxml="$RUNNER_TEMP/backend.xml"
       - name: Upload suite count
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -133,7 +134,7 @@ jobs:
       - name: Sharded group
         run: |
           cd backend
-          python -m pytest --tb=short -q --no-cov -n auto --dist worksteal --ds=config.settings_sharded -m sharded
+          python -m pytest --tb=short -q --no-cov -n auto --dist worksteal --durations=30 --durations-min=5 --ds=config.settings_sharded -m sharded
       # ruff's version comes from requirements-dev.txt — the same pin the local
       # backend/.venv and the pre-push hook use. This used to install ruff
       # unpinned, i.e. whatever was newest on the day of the run. Installed above.
