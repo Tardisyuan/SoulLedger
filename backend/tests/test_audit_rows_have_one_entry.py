@@ -144,17 +144,27 @@ def test_a_data_scope_set_then_its_role_copied(world, who):
     hall = world["GREEK"]
     with _in_hall(hall):
         root = tenant_root(hall)
-    actor = _system_admin("oe_scope") if who == "SYSTEM_ADMIN" else _civ_admin("oe_scope_civ")
-    client = _client(actor)
+    system = _system_admin("oe_scope")
+    client = _client(system)
     role, _ = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "判官"})
     rule = {"scope": "DEFINE", "orgs": [root.pk]}
     url = f"/api/v1/perm/roles/{role.pk}/data-scope/"
+    if who == "civ ADMIN":
+        # A civilization's ADMIN reads the scope (the same `role_config`) but may not write it (CanWriteGlobalSettings:
+        # the role tables are shared by every hall): refused, and no audit row.
+        _ok(client.put(url, {"default": rule, "overrides": []}, format="json"))
+        civ = _client(_civ_admin("oe_scope_civ"))
+        assert civ.get(url).json()["default"] == rule
+        _ok(civ.put(url, {"default": {"scope": "ALL"}, "overrides": []}, format="json"), 403)
+        assert RoleDataScope.objects.get(role=role, resource="").scope == "DEFINE"
+        _on("default", action="PERMISSION_CHANGE", resource="role", resource_id=str(role.pk))  # the system's, alone
+        return
     _ok(client.put(url, {"default": rule, "overrides": []}, format="json"))
     assert client.get(url).json()["default"] == rule
     assert RoleDataScope.objects.filter(role=role, resource="", scope="DEFINE").count() == 1
-    _on("default", action="PERMISSION_CHANGE", resource="role", resource_id=str(role.pk), user_id=actor.pk)
+    _on("default", action="PERMISSION_CHANGE", resource="role", resource_id=str(role.pk), user_id=system.pk)
 
-    judge = User.objects.create_user(username=f"oe_scoped_{who[:3]}", password="x", role="JUDGE", tenant=hall)
+    judge = User.objects.create_user(username="oe_scoped", password="x", role="JUDGE", tenant=hall)
     _ok(_client(judge).get("/api/v1/souls/"))
 
     if who == "SYSTEM_ADMIN":  # copy_role (SYSTEM_ADMIN only): the copy keeps the org
