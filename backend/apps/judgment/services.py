@@ -93,7 +93,7 @@ class StatuteCitationService:
         an explainable verdict is for — so they go in with the verdict
         (`conclude(..., statute_ids=[...])`) or not at all.
         """
-        if judgment.is_final or judgment.verdict is not None:
+        if judgment.is_concluded:
             raise CitationRefusedError(
                 "This judgment has been concluded; its cited grounds are part "
                 "of the record and can no longer be changed."
@@ -277,8 +277,14 @@ class JudgmentConclusionService:
             else:
                 locked = _lock(judgment.pk)
                 assert_concludable(locked)
-            if locked.is_final or locked.verdict is not None:
+            if locked.is_concluded:
                 raise ClaimRefusedError("This judgment has already been concluded.", "already_concluded")
+            # Everything below reads and writes `judgment` and ends in a whole-row `save()`: make it the locked row
+            # (审计 2026-11-20 §4 #2). It was the caller's pre-lock copy, so a claim, deferral, draft save or 枉死
+            # ruling committed in between was written back to its old value. Copied in place, not rebound: callers
+            # read their object after this returns. Cached relations are kept (the soul / tenant ids cannot differ).
+            for field in type(locked)._meta.concrete_fields:
+                setattr(judgment, field.attname, getattr(locked, field.attname))
 
             # Step -1 (Q17): an attached cross-tenant judgment must have ended —
             # its PASS nodes are copied into the plan below. Raises before
@@ -561,7 +567,7 @@ class DraftConflictError(Exception):
 
 
 def _assert_open(judgment):
-    if judgment.is_final or judgment.verdict is not None:
+    if judgment.is_concluded:
         raise JudgmentFrozenError(
             "This judgment has been concluded; its evidence and draft can no longer be changed."
         )

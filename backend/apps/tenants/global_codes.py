@@ -237,7 +237,7 @@ def _release_on_close(sender, instance, using=None, **kwargs):
     write to their shards: before that no claim is taken)."""
     from django.conf import settings
 
-    if not settings.SHARD_WRITE_CIVS or (instance.verdict is None and not instance.is_final and not instance.is_deleted):
+    if not settings.SHARD_WRITE_CIVS or (not instance.is_concluded and not instance.is_deleted):
         return
     pk = instance.pk
     transaction.on_commit(lambda: release_open_case(pk), using=using)

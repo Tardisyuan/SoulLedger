@@ -44,7 +44,7 @@ class CaseAttachmentSerializer(serializers.ModelSerializer):
     def get_can_delete(self, obj) -> bool:
         """给界面决定要不要画「删除」;服务端在 DELETE 时仍然重判。"""
         request = self.context.get("request")
-        return bool(request and obj.uploader_id == request.user.pk and not svc.is_concluded(obj.judgment))
+        return bool(request and obj.uploader_id == request.user.pk and not obj.judgment.is_concluded)
 
 
 class CaseAttachmentListSerializer(serializers.Serializer):
@@ -92,7 +92,7 @@ class CaseAttachmentActionsMixin:
             "items": rows,
             "count": len(rows), "total_bytes": sum(r.byte_size for r in rows),
             "max_count": svc.MAX_COUNT, "max_total_bytes": svc.MAX_TOTAL_BYTES,
-            "max_file_bytes": svc.MAX_FILE_BYTES, "concluded": svc.is_concluded(judgment),
+            "max_file_bytes": svc.MAX_FILE_BYTES, "concluded": judgment.is_concluded,
         }, context={"request": request}).data)
 
     @extend_schema(

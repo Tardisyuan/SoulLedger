@@ -60,7 +60,7 @@ def _assert_pending(judgment: Judgment) -> None:
     与 `open_judgments` 同一组列;`is_archived` 额外排除,因为队列(`_pending_queue`)
     也排除它。结案后认领信息保留,但不能再改。
     """
-    if judgment.verdict is not None or judgment.is_final or judgment.is_deleted or judgment.is_archived:
+    if judgment.is_concluded or judgment.is_deleted or judgment.is_archived:
         raise ClaimRefusedError("This judgment is no longer pending.", "not_pending")
     _assert_sent_on(judgment)
 
@@ -156,8 +156,7 @@ class NotClaimantError(APIException):
 
 def overrides_claim(judgment: Judgment, user) -> bool:
     """这次编辑是不是在别人认领中的开着的案子上(`assert_may_edit` 要么拒、要么留痕的那一种)。"""
-    return (judgment.claimed_by_id not in (None, user.pk) and judgment.verdict is None
-            and not judgment.is_final)
+    return judgment.claimed_by_id not in (None, user.pk) and not judgment.is_concluded
 
 
 def may_edit(judgment: Judgment, user) -> bool:

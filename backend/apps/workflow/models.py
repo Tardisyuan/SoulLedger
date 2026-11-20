@@ -803,6 +803,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             transaction.on_commit(lambda: segments.notify_waiting(self.pk, segment.pk))
 
     def _finish(self, status: str, now, end_reason: str = "") -> None:
+        if self.status in TERMINAL_WORKFLOW_STATUSES:
+            # Ends once (审计 2026-11-20 §4 #9). Called from other apps (appeals, cross-realm segments), and a second
+            # call rewrote the end and re-ran every hook below — a refused flow withdrew its conclusion again. No
+            # hook relies on a second call: they are all reached from the first.
+            return
         # A completed flow's untouched nodes were routed past (a branch not
         # taken, a node behind a 结束): SKIPPED. A REJECTED flow's stay PENDING —
         # the refusal ended it, not routing (see `complete_node`).

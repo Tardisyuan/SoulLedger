@@ -169,6 +169,24 @@ def test_a_diyu_acquittal_waits_for_its_flow_then_goes_to_rebirth(cn):
     assert (plan.status, soul.current_state) == ("COMPLETED", SoulState.REINCARNATING)
 
 
+def test_a_finished_flow_is_not_finished_again(cn):
+    """审计 2026-11-20 §4 #9:`_finish` 被跨 app 调用(申诉作废、联审、段),自己不看流程是否已终态:第二次调用
+    改写状态、结束时间、结束原因,再跑一遍钩子(驳回 → 撤回结案、重开一案)。现在已终态就什么都不做。"""
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    soul, case = sp.open_case(cn)
+    case.conclude(Verdict.PASSED, "", create_workflow=True)
+    flow = ApprovalWorkflow.objects.get(judgment=case)
+    first = timezone.now()
+    flow._finish(ApprovalWorkflowStatus.COMPLETED, first)
+    flow.save()
+    flow._finish(ApprovalWorkflowStatus.REJECTED, first + datetime.timedelta(hours=1), end_reason="AGAIN")
+    flow.save()
+    flow.refresh_from_db()
+    assert (flow.status, flow.completed_at, flow.end_reason) == (ApprovalWorkflowStatus.COMPLETED, first, "")
+    assert not Judgment.all_objects.filter(retrial_of_id=case.pk).exists()
+
+
 def test_a_diyu_acquittal_with_a_merged_cross_judgment_gets_its_foreign_stops(cn):
     """F-DISP-02(2026-11-12):判无罪的计划没有站,联审以 PASS 结束时 `append_cross_stops` 对空列表取 `max()`,
     ValueError 被包成 CrossConclusionRefusedError,流程终审永远批不过。外地站应从 2 起。"""

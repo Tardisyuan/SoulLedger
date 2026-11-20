@@ -35,7 +35,7 @@ def refresh_claimable_since(judgment, now=None) -> bool:
     """按案子此刻的列重算 `claimable_since`;变了返回 True(调用方把列加进 update_fields)。结案后不再动。"""
     from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED
 
-    if judgment.verdict is not None or judgment.is_final:
+    if judgment.is_concluded:
         return False
     now = now or timezone.now()
     if judgment.city_god_status in AT_CITY_GOD or judgment.duat_stage in DUAT_BARRED:
@@ -55,7 +55,7 @@ def refresh_claimable_since(judgment, now=None) -> bool:
 
 def deadline_at(judgment):
     """截止时刻;不计期限(未到可认领、已结案、殿没有天数)是 None。"""
-    if judgment.claimable_since is None or judgment.verdict is not None or judgment.is_final:
+    if judgment.claimable_since is None or judgment.is_concluded:
         return None
     days = judgment.tenant.judgment_deadline_days if judgment.tenant_id is not None else None
     if days is None:

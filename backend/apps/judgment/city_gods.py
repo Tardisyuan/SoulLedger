@@ -130,7 +130,7 @@ def _lock(pk) -> Judgment:
 
 
 def _assert_at_city_god(judgment, *statuses) -> None:
-    if judgment.verdict is not None or judgment.is_final or judgment.is_deleted:
+    if judgment.is_concluded or judgment.is_deleted:
         raise CityGodRefusedError("This judgment is no longer pending.", "not_pending")
     if judgment.city_god_status not in statuses:
         raise CityGodRefusedError(

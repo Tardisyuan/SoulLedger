@@ -136,7 +136,7 @@ def phase_of(judgment) -> str:
     """一件看得见的案子此刻在哪一段。撤案(软删)的案子本来就不在 queryset 里,所以没有 WITHDRAWN。"""
     from apps.workflow.models import ApprovalWorkflowStatus as S
 
-    if judgment.verdict is not None or judgment.is_final:
+    if judgment.is_concluded:
         # A reverse one-to-one raises when no workflow was ever opened (legacy rows on 115, 2026-11-16) — that is CLOSED, not a 500.
         flow = getattr(judgment, "approval_workflow", None)
         if flow is not None and flow.decides_judgment and flow.status in (S.PENDING, S.IN_PROGRESS, S.APPEAL, S.EXCEPTION):

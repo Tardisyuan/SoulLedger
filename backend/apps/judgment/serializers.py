@@ -491,7 +491,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
         if "soul" in attrs and attrs["soul"].pk != instance.soul_id:
             raise serializers.ValidationError(
                 {"soul": "A judgment's soul is fixed once the case is opened."}, code="soul_fixed")
-        if instance.verdict is None and not instance.is_final:
+        if not instance.is_concluded:
             return
         changed = sorted(f for f, v in attrs.items()
                          if f not in self._WRITABLE_AFTER_CONCLUSION and v != getattr(instance, f, v))
@@ -505,7 +505,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
         (罪目在结案时已决定了去哪一殿,事后改它只会让记录与处置对不上)。空串总是可以写回。"""
         instance = self.instance
         errors = {}
-        concluded = instance is not None and (instance.verdict is not None or instance.is_final)
+        concluded = instance is not None and instance.is_concluded
         civilization = attrs.get("civilization") or (instance.civilization if instance else None)
         untimely = bool(instance and instance.untimely)
         for field in ("offence", "wrongful_death_cause", "grievance_level"):

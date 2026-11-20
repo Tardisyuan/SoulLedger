@@ -45,10 +45,6 @@ class AttachmentError(Exception):
         self.status = status
 
 
-def is_concluded(judgment):
-    return judgment.verdict is not None or judgment.is_final
-
-
 def live(judgment):
     return CaseAttachment.all_objects.filter(judgment=judgment, deleted_at__isnull=True)
 
@@ -109,7 +105,7 @@ def upload(user, judgment, uploaded_file):
     with transaction.atomic():
         # 锁案子行:两个并发上传不能同时通过「已满」检查。
         locked = Judgment.all_objects.select_for_update().get(pk=judgment.pk)
-        if is_concluded(locked):
+        if locked.is_concluded:
             raise AttachmentError("The case is concluded; attachments can no longer be added.", "concluded", 403)
         _check_room(locked, uploaded_file.size)
         content, content_type, ext = _prepare(uploaded_file)
@@ -136,7 +132,7 @@ def upload(user, judgment, uploaded_file):
 
 def ensure_can_delete(user, attachment):
     """设计稿 W4 的答复:上传人、结案前;结案后谁都不行 —— 殿主、管理员也不行。"""
-    if is_concluded(attachment.judgment):
+    if attachment.judgment.is_concluded:
         raise AttachmentError("The case is concluded; attachments can no longer be deleted.", "concluded", 403)
     if attachment.uploader_id != user.pk:
         raise AttachmentError("Only the uploader can delete an attachment.", "not_uploader", 403)

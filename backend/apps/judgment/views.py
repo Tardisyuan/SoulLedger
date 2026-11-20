@@ -455,7 +455,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
 
         instance = serializer.instance
         claims.assert_may_edit(instance, self.request, "update")
-        if "notes" in serializer.validated_data and instance.verdict is None and not instance.is_final:
+        if "notes" in serializer.validated_data and not instance.is_concluded:
             raise NotesOnOpenCaseError()
 
         with transaction.atomic():
