@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script></helmet>
+<div class="{{ theme }}" data-civ="{{ civ }}" style="width:393px;height:852px;overflow:hidden;position:relative;background:oklch(var(--color-canvas));color:oklch(var(--color-ink));font-family:var(--font-sans);font-size:15px;line-height:24px">
+<x-import component-from-global-scope="SoulLedger.SoulLedgerProvider" civ="{{ civ }}" pathname="/login" hint-size="393px,852px">
+<div style="height:852px;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));box-sizing:border-box">
+<sc-if value="{{ hdrBrand }}" hint-placeholder-val="{{ true }}"><header style="height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;background:oklch(var(--color-surface-1))"><dc-import name="BrandMark" size="{{ 24 }}" tone="ink" hint-size="26px,24px"></dc-import><span style="font-weight:600;font-size:17px">灵魂簿</span></header></sc-if>
+<sc-if value="{{ hdrBack }}" hint-placeholder-val="{{ false }}"><header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line));background:oklch(var(--color-surface-1))"><span role="button" aria-label="返回" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px;line-height:24px">设置</h1></header></sc-if>
+
+<sc-if value="{{ sLogin }}" hint-placeholder-val="{{ true }}"><div style="flex:1;min-height:0;overflow:hidden;padding:24px 24px 16px;display:flex;flex-direction:column;gap:20px;background:oklch(var(--color-surface-1))">
+<div style="display:flex;flex-direction:column;gap:4px"><h2 style="margin:0;font-weight:600;font-size:28px;line-height:36px">灵魂登录</h2><sc-if value="{{ isNew }}" hint-placeholder-val="{{ true }}"><span style="color:oklch(var(--color-ink-muted));text-wrap:pretty">使用随初始密码一起发给你的灵魂编号登录</span></sc-if></div>
+<sc-if value="{{ lNetwork }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;flex-direction:column;gap:2px;padding:12px 16px;border:1px solid oklch(var(--color-danger));background:oklch(var(--color-canvas))"><span style="font-weight:600;color:oklch(var(--color-danger))">! 没有连上</span><span style="color:oklch(var(--color-ink-muted))">检查网络后再点「登录」。输入的内容还在。</span></div></sc-if>
+<sc-if value="{{ lNotice }}" hint-placeholder-val="{{ false }}"><div role="status" style="display:flex;gap:10px;padding:12px 16px;border:1px solid oklch(var(--color-line-strong));background:oklch(var(--color-canvas))"><span aria-hidden="true" style="flex:none">◇</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ noticeTitle }}</span><span style="color:oklch(var(--color-ink-muted));text-wrap:pretty">{{ noticeBody }}</span></span></div></sc-if>
+
+<sc-if value="{{ isNew }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-weight:500">灵魂编号</span>
+<div aria-label="{{ idAria }}" style="position:relative;height:56px;box-sizing:border-box;padding:0 4px 0 16px;display:flex;align-items:center;gap:8px;border:1px solid oklch(var(--color-line-strong));background:oklch(var(--color-canvas))">
+<sc-if value="{{ idFocus }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position:absolute;inset:-1px;border:1px solid oklch(var(--color-ink));box-shadow:0 0 0 2px oklch(var(--color-focus) / .35);pointer-events:none"></span></sc-if>
+<sc-if value="{{ idErr }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position:absolute;inset:-1px;border:1px solid oklch(var(--color-danger));pointer-events:none"></span></sc-if>
+<span style="flex:1;display:flex;align-items:center;gap:14px;font-family:var(--font-mono);font-size:22px;letter-spacing:.08em"><sc-if value="{{ idEmpty }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="display:flex;gap:14px;color:oklch(var(--color-ink-subtle))"><span>···</span><span>····</span><span>···</span></span></sc-if><sc-for list="{{ idGroups }}" as="g" hint-placeholder-count="0"><span>{{ g }}</span></sc-for><sc-if value="{{ idCaret }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width:2px;height:26px;margin-left:-12px;background:oklch(var(--color-ink))"></span></sc-if></span>
+<span role="button" style="height:48px;padding:0 12px;display:flex;align-items:center;gap:6px;border-left:1px solid oklch(var(--color-line));font-weight:500"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2.75 7V2.75H7M13 2.75h4.25V7M17.25 13v4.25H13M7 17.25H2.75V13M5.5 10h9"></path></svg>扫码</span>
+</div>
+<sc-if value="{{ idHint }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;line-height:16px;color:oklch(var(--color-ink-muted))">10 位字母数字 · 交付单上有，也可以扫码</span></sc-if>
+<sc-if value="{{ idScanned }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:16px;font-weight:500">✓ 已从二维码填入</span></sc-if>
+<sc-if value="{{ idErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="display:flex;flex-direction:column;font-size:13px;line-height:20px;color:oklch(var(--color-danger))"><span style="font-weight:600">! 编号里没有「O」</span><span style="color:oklch(var(--color-ink-muted))">编号不用 0、O、1、I、L 这五个，请对照交付单再看一下。</span></span></sc-if>
+</div></sc-if>
+
+<sc-if value="{{ isKnown }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;padding:8px 4px 8px 16px;border:1px solid oklch(var(--color-line));background:oklch(var(--color-canvas))"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:600;font-size:17px">塞内布</span><span aria-label="灵魂编号 Q U 3，3 Q 9 F，W 5 F" style="font-family:var(--font-mono);letter-spacing:.06em;color:oklch(var(--color-ink-muted))">QU3 3Q9F W5F</span></span><span role="button" style="height:44px;padding:0 12px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px">换一个账号</span></div></sc-if>
+
+<sc-if value="{{ showPw }}" hint-placeholder-val="{{ true }}"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-weight:500">密码</span><span style="position:relative;height:56px;box-sizing:border-box;padding:0 4px 0 16px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong));background:oklch(var(--color-canvas))"><sc-if value="{{ pwFocus }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position:absolute;inset:-1px;border:1px solid oklch(var(--color-ink));box-shadow:0 0 0 2px oklch(var(--color-focus) / .35);pointer-events:none"></span></sc-if><span style="flex:1;font-size:20px;letter-spacing:.15em">{{ pwDots }}</span><span role="button" style="height:44px;padding:0 12px;display:flex;align-items:center;color:oklch(var(--color-ink-muted))">显示</span></span></label></sc-if>
+
+<sc-if value="{{ btnOn }}" hint-placeholder-val="{{ true }}"><span role="button" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">{{ btnLabel }}</span></sc-if>
+<sc-if value="{{ btnOff }}" hint-placeholder-val="{{ false }}"><span aria-disabled="true" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-surface-2));color:oklch(var(--color-ink-subtle));font-weight:500">{{ btnLabel }}</span></sc-if>
+<sc-if value="{{ bioRetry }}" hint-placeholder-val="{{ false }}"><span role="button" style="height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-ink))">再用{{ bioWord }}试一次</span></sc-if>
+<div style="display:flex;flex-direction:column">
+<sc-if value="{{ linkPw }}" hint-placeholder-val="{{ false }}"><span role="link" style="height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px">输入密码</span></sc-if>
+<span role="link" style="height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px">忘记密码</span>
+</div>
+<span style="margin-top:auto;height:44px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:oklch(var(--color-ink-muted))">语言 · <span style="color:oklch(var(--color-ink));font-weight:500">简体中文</span></span>
+</div></sc-if>
+
+<sc-if value="{{ sScanLive }}" hint-placeholder-val="{{ false }}"><div style="flex:1;min-height:0;position:relative;overflow:hidden;background:oklch(0.2 0.005 135);color:#fff">
+<div style="position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px"><span role="button" aria-label="关闭扫码" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px">✕</span><span style="font-weight:600;font-size:17px">扫交付单上的码</span></div>
+<sc-if value="{{ scanBad }}" hint-placeholder-val="{{ false }}"><div role="alert" style="position:absolute;left:16px;right:16px;top:64px;display:flex;flex-direction:column;gap:2px;padding:12px 16px;background:oklch(var(--color-surface-1));color:oklch(var(--color-ink));border:1px solid oklch(var(--color-danger))"><span style="font-weight:600;color:oklch(var(--color-danger))">! 这不是灵魂簿交付单上的码</span><span style="color:oklch(var(--color-ink-muted))">请扫交付单右侧那个。也可以关掉这里，手动输入编号。</span></div></sc-if>
+<div aria-hidden="true" style="position:absolute;left:72px;top:196px;width:248px;height:248px"><span style="position:absolute;left:0;top:0;width:32px;height:32px;border-left:3px solid #fff;border-top:3px solid #fff"></span><span style="position:absolute;right:0;top:0;width:32px;height:32px;border-right:3px solid #fff;border-top:3px solid #fff"></span><span style="position:absolute;left:0;bottom:0;width:32px;height:32px;border-left:3px solid #fff;border-bottom:3px solid #fff"></span><span style="position:absolute;right:0;bottom:0;width:32px;height:32px;border-right:3px solid #fff;border-bottom:3px solid #fff"></span></div>
+<div style="position:absolute;left:24px;right:24px;top:468px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center"><span style="font-weight:500">把交付单上的二维码放进框里</span><span style="font-size:13px;line-height:20px;color:oklch(0.85 0 0)">扫到就自动填好编号，密码仍然自己输。</span></div>
+<div style="position:absolute;left:0;right:0;bottom:32px;display:flex;flex-direction:column;align-items:center;gap:16px">
+<sc-if value="{{ torchOff }}" hint-placeholder-val="{{ true }}"><span role="switch" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px"><span style="width:56px;height:56px;box-sizing:border-box;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6.25 2.75h7.5v3.5l-2 3v8h-3.5v-8l-2-3z"></path></svg></span>手电筒</span></sc-if>
+<sc-if value="{{ torchOn }}" hint-placeholder-val="{{ false }}"><span role="switch" aria-checked="true" style="display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600"><span style="width:56px;height:56px;background:#fff;color:oklch(0.2 0.005 135);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6.25 2.75h7.5v3.5l-2 3v8h-3.5v-8l-2-3z"></path></svg></span>手电筒 · 开</span></sc-if>
+<span role="link" style="height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px">手动输入编号</span>
+</div>
+</div></sc-if>
+
+<sc-if value="{{ sScanDenied }}" hint-placeholder-val="{{ false }}"><div style="flex:1;min-height:0;display:flex;flex-direction:column;background:oklch(var(--color-surface-1))"><div style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span role="button" aria-label="关闭扫码" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px">✕</span><span style="font-weight:600;font-size:17px">扫交付单上的码</span></div>
+<div style="padding:24px 16px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-weight:600;font-size:24px;line-height:32px">没有相机权限</h2><p style="margin:0;text-wrap:pretty">扫码要用相机。可以去系统设置里给灵魂簿打开相机，也可以直接手动输入编号。</p><span role="button" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">去系统设置打开 ↗</span><span role="button" style="height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-ink))">手动输入编号</span><div style="display:flex;gap:10px;align-items:baseline"><span aria-hidden="true" style="width:16px;flex:none">◇</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted));text-wrap:pretty">相机只用来读二维码，不拍照、不存图。</span></div></div></div></sc-if>
+
+<sc-if value="{{ sSettings }}" hint-placeholder-val="{{ false }}"><div style="flex:1;min-height:0;overflow:hidden;padding:16px 0;display:flex;flex-direction:column;gap:24px">
+<section style="display:flex;flex-direction:column"><span style="padding:0 16px 8px;font-size:11px;line-height:16px;letter-spacing:.1em;color:oklch(var(--color-ink-subtle))">偏好</span><div style="background:oklch(var(--color-surface-1));border-top:1px solid oklch(var(--color-line));border-bottom:1px solid oklch(var(--color-line))"><div style="min-height:56px;display:flex;align-items:center;padding:0 16px"><span style="flex:1">语言</span><span style="color:oklch(var(--color-ink-muted))">简体中文</span></div><div style="min-height:56px;display:flex;align-items:center;padding:0 16px;border-top:1px solid oklch(var(--color-line))"><span style="flex:1">通知</span><span style="color:oklch(var(--color-ink-muted))">开</span></div></div></section>
+<section style="display:flex;flex-direction:column"><span style="padding:0 16px 8px;font-size:11px;line-height:16px;letter-spacing:.1em;color:oklch(var(--color-ink-subtle))">账号安全</span><div style="background:oklch(var(--color-surface-1));border-top:1px solid oklch(var(--color-line));border-bottom:1px solid oklch(var(--color-line))"><div style="min-height:56px;display:flex;align-items:center;padding:0 16px"><span style="flex:1">修改密码</span><span style="color:oklch(var(--color-ink-muted))">›</span></div><div style="min-height:56px;display:flex;align-items:center;gap:8px;padding:0 16px;border-top:1px solid oklch(var(--color-line))"><span style="flex:1">两步验证</span><span style="color:oklch(var(--color-ink-muted))">○ 未开启 ›</span></div>
+<div role="switch" aria-checked="{{ bioAria }}" style="min-height:64px;display:flex;align-items:center;gap:12px;padding:8px 16px;box-sizing:border-box;border-top:1px solid oklch(var(--color-line))"><span style="flex:1;display:flex;flex-direction:column"><span>{{ bioWord }}登录</span><span style="font-size:12px;line-height:16px;color:oklch(var(--color-ink-muted))">只在这部手机上</span></span>
+<sc-if value="{{ bioOn }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:8px;font-weight:500">开<span style="width:40px;height:24px;background:oklch(var(--color-ink));position:relative"><span style="position:absolute;right:3px;top:3px;width:18px;height:18px;background:oklch(var(--color-surface-1))"></span></span></span></sc-if>
+<sc-if value="{{ bioOff }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:8px;color:oklch(var(--color-ink-muted))">关<span style="width:40px;height:24px;box-sizing:border-box;border:1px solid oklch(var(--color-line-strong));position:relative"><span style="position:absolute;left:2px;top:2px;width:18px;height:18px;background:oklch(var(--color-ink-subtle))"></span></span></span></sc-if>
+</div></div></section>
+<section style="background:oklch(var(--color-surface-1));border-top:1px solid oklch(var(--color-line));border-bottom:1px solid oklch(var(--color-line))"><div style="min-height:56px;display:flex;align-items:center;padding:0 16px"><span style="flex:1">关于</span><span style="color:oklch(var(--color-ink-muted))">›</span></div></section>
+<section style="background:oklch(var(--color-surface-1));border-top:1px solid oklch(var(--color-line));border-bottom:1px solid oklch(var(--color-line))"><div style="min-height:56px;display:flex;align-items:center;padding:0 16px">退出登录</div></section>
+<span style="padding:0 16px;font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">灵魂编号 <span aria-label="Q U 3，3 Q 9 F，W 5 F" style="font-family:var(--font-mono);letter-spacing:.06em">QU3 3Q9F W5F</span></span>
+</div></sc-if>
+
+<sc-if value="{{ sHome }}" hint-placeholder-val="{{ false }}"><div style="flex:1;min-height:0;padding:24px 16px;display:flex;flex-direction:column;gap:12px;background:oklch(var(--color-canvas))"><span style="font-weight:600;font-size:20px">塞内布</span><span style="height:120px;border:1px solid oklch(var(--color-line));background:oklch(var(--color-surface-1))"></span><span style="height:120px;border:1px solid oklch(var(--color-line));background:oklch(var(--color-surface-1))"></span></div></sc-if>
+</div>
+
+<sc-if value="{{ hasSheet }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:oklch(0 0 0 / .4)"></div><div role="dialog" aria-modal="true" style="position:absolute;left:0;right:0;bottom:0;padding:24px 16px 32px;background:oklch(var(--color-surface-1));border-top:3px solid oklch(var(--color-main));display:flex;flex-direction:column;gap:16px">
+<h2 style="margin:0;font-weight:600;font-size:20px;line-height:28px">{{ sheetTitle }}</h2>
+<p style="margin:0;text-wrap:pretty">{{ sheetBody }}</p>
+<sc-if value="{{ sheetNote }}" hint-placeholder-val="{{ false }}"><span style="margin-top:-8px;font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">以后可以在「设置 › 账号安全」里关掉。</span></sc-if>
+<sc-if value="{{ sheetPw }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;line-height:20px;font-weight:500">当前密码</span><span style="height:56px;box-sizing:border-box;padding:0 4px 0 16px;display:flex;align-items:center;border:1px solid oklch(var(--color-ink));box-shadow:0 0 0 2px oklch(var(--color-focus) / .35);background:oklch(var(--color-canvas))"><span style="flex:1;font-size:20px;letter-spacing:.15em">••••••</span><span style="height:44px;padding:0 12px;display:flex;align-items:center;color:oklch(var(--color-ink-muted))">显示</span></span></label></sc-if>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><span role="button" style="height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-ink))">{{ sheetCancel }}</span><span role="button" style="height:48px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">{{ sheetOk }}</span></div>
+</div></sc-if>
+<sc-if value="{{ sysPrompt }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:oklch(0 0 0 / .25)"></div><div style="position:absolute;left:72px;right:72px;top:300px;height:200px;border:1.5px dashed oklch(var(--color-ink));background:oklch(var(--color-surface-1) / .92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:16px"><span style="font-weight:600">系统{{ bioWord }}验证</span><span style="font-size:12px;line-height:16px;color:oklch(var(--color-ink-muted))">系统自带的弹窗，不画。<br></br>理由文案见回复 §四。</span></div></sc-if>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:393,&quot;height&quot;:852},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;civ&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;eg&quot;,&quot;cn&quot;],&quot;default&quot;:&quot;eg&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;device&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;face&quot;,&quot;finger&quot;],&quot;default&quot;:&quot;face&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;scan&quot;,&quot;known&quot;,&quot;ask&quot;,&quot;switch&quot;,&quot;settings&quot;,&quot;bio-on&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;empty&quot;,&quot;typing&quot;,&quot;invalid&quot;,&quot;scanned&quot;,&quot;sending&quot;,&quot;network&quot;,&quot;denied&quot;,&quot;torch&quot;,&quot;default&quot;,&quot;bio&quot;,&quot;bio-prompt&quot;,&quot;bio-failed&quot;,&quot;pw-changed&quot;,&quot;reset&quot;,&quot;reborn&quot;,&quot;bio-changed&quot;,&quot;on&quot;,&quot;off&quot;],&quot;default&quot;:&quot;empty&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const sc = this.props.screen ?? 'login', st = this.props.state ?? 'empty', fing = (this.props.device ?? 'face') === 'finger';
+    const bioWord = fing ? '指纹' : '面容';
+    const login = sc === 'login' || sc === 'known';
+    const isNew = sc === 'login', isKnown = sc === 'known';
+    const lapsed = { 'pw-changed': ['密码已在别处修改', '请输入新密码。登录后可以在设置里重新开启' + bioWord + '登录。'], reset: ['本殿官员已重置你的密码', '请用官员给你的初始密码登录，登录后要设新密码。'], reborn: ['你已转生，这是新一世的账号', '编号不变。请用这一世的初始密码登录。'], 'bio-changed': [bioWord + '登录已关闭', '这部手机上的' + bioWord + '有变动，为了安全先关闭。输入密码后可以重新开启。'] }[st];
+    const groups = { empty: [], typing: ['QU3', '3Q'], invalid: ['QU3', '3Q'], scanned: ['QU3', '3Q9F', 'W5F'], sending: ['QU3', '3Q9F', 'W5F'], network: ['QU3', '3Q9F', 'W5F'] }[st] || [];
+    const idOk = groups.join('').length === 10;
+    const bio = isKnown && st === 'bio', bioFail = isKnown && st === 'bio-failed', prompt = isKnown && st === 'bio-prompt';
+    const sending = st === 'sending';
+    const pwFilled = isKnown ? (st === 'sending' || st === 'default-filled') : (st === 'scanned' || sending || st === 'network');
+    const showPw = login && !bio && !prompt;
+    const sheet = sc === 'ask' || sc === 'switch' || sc === 'bio-on';
+    const scanLive = sc === 'scan' && st !== 'denied';
+    const canSubmit = isNew ? idOk && pwFilled && !sending : pwFilled && !sending;
+    return {
+      theme: this.props.theme ?? 'light', civ: this.props.civ ?? 'eg', bioWord,
+      hdrBrand: login, hdrBack: sc === 'settings' || sc === 'bio-on',
+      sLogin: login, isNew, isKnown, lNetwork: st === 'network', lNotice: isKnown && !!lapsed,
+      noticeTitle: lapsed ? lapsed[0] : '', noticeBody: lapsed ? lapsed[1] : '',
+      idGroups: groups, idEmpty: groups.length === 0, idCaret: st === 'typing' || st === 'invalid',
+      idFocus: st === 'typing', idErr: st === 'invalid', idHint: isNew && st !== 'invalid' && st !== 'scanned', idScanned: st === 'scanned',
+      idAria: '灵魂编号 ' + groups.map(g => g.split('').join(' ')).join('，'),
+      showPw, pwFocus: (isNew && st === 'scanned') || bioFail || (isKnown && (st === 'default' || !!lapsed)), pwDots: pwFilled ? '••••••••' : '',
+      btnOn: bio || canSubmit, btnOff: !bio && !canSubmit && !prompt,
+      btnLabel: bio ? '用' + bioWord + '登录' : sending ? '登录中…' : '登录',
+      bioRetry: bioFail, linkPw: bio, bioOn: st === 'on', bioOff: st !== 'on', bioAria: st === 'on' ? 'true' : 'false',
+      sScanLive: scanLive, sScanDenied: sc === 'scan' && st === 'denied', scanBad: st === 'invalid', torchOn: st === 'torch', torchOff: st !== 'torch',
+      sSettings: sc === 'settings' || sc === 'bio-on', sHome: sc === 'ask' || sc === 'switch',
+      hasSheet: sheet, sheetPw: sc === 'bio-on', sheetNote: sc === 'ask',
+      sheetTitle: sc === 'ask' ? '下次用' + bioWord + '登录？' : sc === 'switch' ? '换一个账号？' : '开启' + bioWord + '登录',
+      sheetBody: sc === 'ask' ? '只在这部手机上，打开灵魂簿时不用再输密码。手机里录入的' + bioWord + '都能用来登录，和家人共用这部手机就别开。' : sc === 'switch' ? '这部手机会忘掉编号 QU3 3Q9F W5F,' + bioWord + '登录一起关闭。下次要重新输入或扫码。' : '先输入当前密码，再验证' + bioWord + '。',
+      sheetCancel: sc === 'ask' ? '以后再说' : '取消', sheetOk: sc === 'ask' ? '开启' : sc === 'switch' ? '换一个账号' : '下一步',
+      sysPrompt: prompt
+    };
+  }
+}
+</script>
+</body>
+</html>
