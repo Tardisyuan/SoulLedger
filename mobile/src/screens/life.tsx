@@ -422,7 +422,9 @@ const CODE_FOOT_SMALL = 4;
  * `bandCompact` (instant under reduce motion). At ≥ 1.7× text it never compacts and takes the
  * height its words need.
  */
-function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean; onAccount: () => void }) {
+/** `place`: where the soul is now (soulRoute's 「你现在在哪」). The meta line names it rather than the hall, which read
+ * as a contradiction under it (欧洲 「炼狱」 over 地狱前庭; user 2026-11-21). No route: the hall, as before. */
+function LifeBand({ me, place, compact, onAccount }: { me: MeProfile; place?: string; compact: boolean; onAccount: () => void }) {
   const t = useTheme();
   const { t: tr, enumLabel } = useI18n();
   const { stack } = useLayout();
@@ -440,7 +442,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
   // v4 (V4Batch07 05 App): no band — the page's ground with the header light, the seal in the civilization's
   // colour, the name in the serif at 30/38 and everything else in the page's inks.
   const on = t.ink;
-  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), thisLifeLabel(tr, me.civilization, me.account.cycle + 1) ?? tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
+  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), thisLifeLabel(tr, me.civilization, me.account.cycle + 1) ?? tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), place || hall]
     .filter(Boolean)
     .join(" · ");
   // 第四十六批 页头记号: right of the text, left of the account icon (20 → this band's 16, + 44 + 16), and only while
@@ -1097,7 +1099,7 @@ export function MyLifeScreen() {
 
   return (
     <View testID="life" style={[styles.fill, { backgroundColor: theme.s0 }]}>
-      <LifeBand me={me} compact={compact} onAccount={() => navigation.navigate("Settings")} />
+      <LifeBand me={me} place={route?.place} compact={compact} onAccount={() => navigation.navigate("Settings")} />
       <Screen
         refreshing={life.loading && !!life.data}
         onRefresh={refresh}

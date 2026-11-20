@@ -66,6 +66,22 @@ beforeEach(async () => {
 afterEach(() => jest.restoreAllMocks());
 
 describe("the identity band", () => {
+  it("names where the soul is now, not its hall, once the route places it (user 2026-11-21)", async () => {
+    stubApi({
+      "/me/": { status: 200, data: { ...PROFILE, diyu_station: "WANGXIANG_TERRACE" } },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/past-lives/": { status: 200, data: [] },
+      "/me/sentence-plan/": { status: 200, data: { state: "none", rebirth_open: true, stations: [] } },
+    });
+    renderApp();
+    await screen.findByTestId("section-records-body");
+    await act(async () => {});
+    const meta = screen.getByTestId("identity-meta").props.children as string;
+    expect(meta).toMatch(/· 望乡台$/);
+    expect(meta).not.toMatch(/第五殿/);
+    await act(async () => new Promise((r) => setTimeout(r, 400))); // the route's fade-in settles before the test ends
+  });
+
   it("full at the top; one compact row past 68pt; open again only back near the top", async () => {
     await open();
     expect(screen.getByTestId("identity-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
