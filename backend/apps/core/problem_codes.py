@@ -368,6 +368,7 @@ class ProblemCode(StrEnum):
     SOUL_CANNOT_REOPEN = "soul_cannot_reopen"
     SOUL_DEVOURED = "soul_devoured"
     SOUL_HAS_PENDING_JUDGMENT = "soul_has_pending_judgment"
+    SOUL_IN_TRANSIT = "soul_in_transit"
     SOUL_IS_HERE = "soul_is_here"
     SOUL_NOT_FOUND = "soul_not_found"
     SOUL_NOT_IN_UNDERWORLD = "soul_not_in_underworld"
@@ -442,6 +443,7 @@ class ProblemCode(StrEnum):
     WORKFLOW_REQUIRED = "workflow_required"
     WORKFLOW_RUNNING = "workflow_running"
     WORKFLOW_STARTED = "workflow_started"
+    WRITE_ELSEWHERE = "write_elsewhere"
     WRONG = "wrong"
     WRONG_STATUS = "wrong_status"
     # Withdrawing a seal before any approver acts (2026-11-14, `weighing.withdrawal_refusal`).

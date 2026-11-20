@@ -90,12 +90,25 @@ def exception_handler(exc, context):
 
         logging.getLogger(__name__).error("state cache unavailable: %s: %s", type(exc).__name__, exc)
         exc = Problem(503, "unavailable", "A required service is temporarily unavailable; try again shortly.")
+    elif _is_write_elsewhere(exc):
+        # The row is mastered on a database this request's transaction does not hold -- a soul residing in another
+        # civilization, saved from its home hall. Refused before the write, the whole transaction rolled back; the
+        # caller acts again from the hall the row is on, or once it is back. 423 like `soul_in_transit`, not a 500.
+        exc = Problem(423, "write_elsewhere", "This record is held by another civilization's hall right now "
+                      "(a soul residing there) and cannot be changed from here.")
     response = drf_exception_handler(exc, context)
     if response is None:
         return None
     response.data = from_exception(exc, response.status_code, response.data)
     response.content_type = CONTENT_TYPE
     return response
+
+
+def _is_write_elsewhere(exc) -> bool:
+    from apps.core.shard_reads import WriteOutsideTransaction
+    from apps.tenants.shard_saga import StepOutsideTransaction
+
+    return isinstance(exc, (WriteOutsideTransaction, StepOutsideTransaction))
 
 
 def _is_redis_error(exc) -> bool:

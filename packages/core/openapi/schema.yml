@@ -43532,6 +43532,7 @@ components:
       - soul_cannot_reopen
       - soul_devoured
       - soul_has_pending_judgment
+      - soul_in_transit
       - soul_is_here
       - soul_not_found
       - soul_not_in_underworld
@@ -43618,6 +43619,7 @@ components:
       - workflow_required
       - workflow_running
       - workflow_started
+      - write_elsewhere
       - wrong
       - wrong_password
       - wrong_status
@@ -44045,6 +44047,7 @@ components:
         * `soul_cannot_reopen` - soul_cannot_reopen
         * `soul_devoured` - soul_devoured
         * `soul_has_pending_judgment` - soul_has_pending_judgment
+        * `soul_in_transit` - soul_in_transit
         * `soul_is_here` - soul_is_here
         * `soul_not_found` - soul_not_found
         * `soul_not_in_underworld` - soul_not_in_underworld
@@ -44131,6 +44134,7 @@ components:
         * `workflow_required` - workflow_required
         * `workflow_running` - workflow_running
         * `workflow_started` - workflow_started
+        * `write_elsewhere` - write_elsewhere
         * `wrong` - wrong
         * `wrong_password` - wrong_password
         * `wrong_status` - wrong_status
