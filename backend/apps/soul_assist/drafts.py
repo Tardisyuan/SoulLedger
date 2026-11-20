@@ -52,10 +52,10 @@ def decide(draft, request, *, adopted, final_text=""):
 
 
 def _audit(draft, request, action, description, changes):
-    from apps.audit.models import AuditLog
+    from apps.audit.signals import write_audit_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=draft.tenant, user=request.user, action=action, resource="ai_draft", resource_id=str(draft.pk),
         description=description, changes={"draft_id": draft.pk, **changes},
         ip_address=get_client_ip(request), user_agent=request.META.get("HTTP_USER_AGENT", "")[:500])

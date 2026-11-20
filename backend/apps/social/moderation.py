@@ -53,10 +53,10 @@ AUTO_REASON_PREFIX = "sensitive_word:"
 
 
 def audit(action, tenant, resource_id, description, *, actor=None, request=None, changes=None):
-    from apps.audit.models import AuditLog
+    from apps.audit.signals import write_audit_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=tenant,
         user=actor if getattr(actor, "is_authenticated", False) else None,
         action=action,

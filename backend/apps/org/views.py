@@ -152,7 +152,8 @@ class OrganizationViewSet(
     @staticmethod
     def _move_owned(request, org, target) -> None:
         """名下的灵魂 / 审判整批改归属(连软删的,免得还原后指着已删的机构);审计一行记数。"""
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
         from apps.core.client_ip import get_client_ip
         from apps.judgment.models import Judgment
         from apps.souls.models import Soul
@@ -160,7 +161,7 @@ class OrganizationViewSet(
         souls = Soul.all_objects.filter(owner_org=org).update(owner_org=target)
         judgments = Judgment.all_objects.filter(owner_org=org).update(owner_org=target)
         if souls or judgments:
-            AuditLog.objects.create(
+            write_audit_row(
                 tenant_id=org.tenant_id, user=request.user, action=AuditAction.BATCH_UPDATE, resource="organization",
                 resource_id=str(org.pk), description=f"owner_org moved before delete: {org.pk} -> {target.pk}",
                 changes={"field": "owner_org", "from": org.pk, "to": target.pk, "souls": souls, "judgments": judgments},

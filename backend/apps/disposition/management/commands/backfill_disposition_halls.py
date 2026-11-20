@@ -249,7 +249,8 @@ def _give_halls(rows, hall, why):
     the civilization that the shard lacks after the update and did not lack before it (shard-to-control `compare`, with
     the purge switch off), so a row the shard deleted and control still has is not resurrected. Shard first: a crash
     between the two commits leaves the shard's rows and hall-less control rows, which a rerun completes (no audit)."""
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.core.shard_sync import CONTROL_TO_SHARD, SHARD_TO_CONTROL, apply_fix, compare
 
     alias = master_alias(hall.civilization)
@@ -277,8 +278,8 @@ def _give_halls(rows, hall, why):
             if audit_on != CONTROL_ALIAS:
                 apply_fix(found, CONTROL_TO_SHARD)  # control's rows as read, onto the shard (its target)
             for model, pk in given:
-                AuditLog.objects.using(audit_on).create(
-                    tenant=hall, action=AuditAction.UPDATE, resource=model._meta.model_name, resource_id=str(pk),
+                write_audit_row(
+                    using=audit_on, tenant=hall, action=AuditAction.UPDATE, resource=model._meta.model_name, resource_id=str(pk),
                     changes={"tenant": [None, hall.code]},
                     description=f"backfill_disposition_halls: hall-less {model._meta.model_name} given {why}")
 
@@ -292,7 +293,8 @@ def _move_judgment(pk, hall):
 def _move(d, hall):
     """Give `d` (control's row) the hall `hall` on its master, and control's mirror the same; audited once (a rerun
     after a crash between the two commits only finishes control's side)."""
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.disposition.models import Disposition
 
     alias = master_alias(hall.civilization)
@@ -307,8 +309,8 @@ def _move(d, hall):
         else:
             moved = 0
         if moved:
-            AuditLog.objects.using(alias).create(
-                tenant=hall, action=AuditAction.UPDATE, resource="disposition", resource_id=str(d.pk),
+            write_audit_row(
+                using=alias, tenant=hall, action=AuditAction.UPDATE, resource="disposition", resource_id=str(d.pk),
                 changes={"tenant": [None, hall.code]},
                 description="backfill_disposition_halls: hall-less disposition filed under its judgment's hall")
     if alias != CONTROL_ALIAS:

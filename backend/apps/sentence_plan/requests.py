@@ -415,7 +415,8 @@ def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None
     """节点集合变了:事件、审计、通知(被加 / 被删节点所在文明的判官 + 原属判官)、推送。
 
     `added_node_ids`:新加的站 —— 推送落地时 App 在这几站上标「新」(画布 1d)。减项的站灵魂看不见,不列。"""
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.events.models import EventType
 
     record_event(soul, EventType.SENTENCE_PLAN_AMENDED, {
@@ -423,7 +424,7 @@ def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None
         "judgment_id": str(judgment_id) if judgment_id else None,
         "added_node_ids": [str(n.pk) for n in added],
     })
-    AuditLog.objects.create(
+    write_audit_row(
         tenant_id=plan.tenant_id, action=AuditAction.UPDATE, resource="sentence_plan", resource_id=str(plan.pk),
         changes={"request": str(request_id) if request_id else None,
                  "judgment": str(judgment_id) if judgment_id else None,
@@ -808,7 +809,8 @@ def cancel(plan, *, reason, user):
     拒绝(什么都不写):理由为空;计划已结束;灵魂还有别的未结案审判(与正常完成一致 —— 未结案审判
     拦住回归与完成);灵魂不在能完成的状态。
     """
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.dispatch.models import DispatchRecord, DispatchStatus
     from apps.dispatch.services import DispatchService
     from apps.judgment.models import Judgment, JudgmentKind, open_judgments
@@ -871,7 +873,7 @@ def cancel(plan, *, reason, user):
             raise PlanChangeRefusedError(
                 f"The soul is {soul.current_state}; the plan cannot be closed from there", "soul_state", status=409,
             )
-        AuditLog.objects.create(
+        write_audit_row(
             tenant_id=plan.tenant_id, user=user if getattr(user, "is_authenticated", False) else None,
             action=AuditAction.UPDATE, resource="sentence_plan", resource_id=str(plan.pk),
             changes={"status": ["IN_PROGRESS", "CANCELLED"], "reason": reason},

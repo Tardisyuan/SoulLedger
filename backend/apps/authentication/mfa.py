@@ -29,7 +29,8 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import Token
 
-from apps.audit.models import AuditAction, AuditLog
+from apps.audit.models import AuditAction
+from apps.audit.signals import write_audit_row
 from apps.core.client_ip import get_client_ip
 
 from .models import MfaRecoveryCode, MfaRememberedDevice, OfficerMfa, UserRole
@@ -186,7 +187,7 @@ def status_of(user) -> dict:
 
 
 def audit(action, user, description, *, actor=None, request=None, changes=None):
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=getattr(user, "tenant", None),
         user=actor if actor is not None else user,
         action=action,

@@ -113,7 +113,8 @@ def preview(source, target, tenant_id, actor=None) -> dict:
 
 
 def commit(source, target, tenant_id, *, actor, request=None) -> dict:
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.core.client_ip import get_client_ip
 
     _assert_people(source, target, tenant_id)  # 预览可以没有接手人,提交不行
@@ -157,7 +158,7 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
             moved["letters"].append(str(conversation.pk))
 
         _log_per_soul(source, target, actor, moved)
-        AuditLog.objects.create(
+        write_audit_row(
             tenant_id=tenant_id, user=actor, action=AuditAction.EXECUTE, resource="officer_handover",
             resource_id=str(source.pk), description=f"officer handover {source.username} -> {target.username}",
             changes={"from": source.pk, "to": target.pk, **moved},

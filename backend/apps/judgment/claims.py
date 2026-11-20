@@ -179,10 +179,11 @@ def assert_may_edit(judgment: Judgment, request, what: str) -> None:
         return
     if not may_edit(judgment, user):
         raise NotClaimantError(judgment)
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.core.client_ip import get_client_ip
 
-    AuditLog.objects.create(
+    write_audit_row(
         tenant_id=judgment.tenant_id, user=user, action=AuditAction.UPDATE, resource="judgment.claim_override",
         resource_id=str(judgment.pk),
         description=f"越过认领人编辑:{judgment.case_number} {what}"[:500],

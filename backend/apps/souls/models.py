@@ -629,8 +629,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         from django.db import transaction
 
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
         from apps.audit.retention import SOUL_PURGE_RESOURCE
+        from apps.audit.signals import write_audit_row
         from apps.events.models import SoulEvent
 
         if user is None:
@@ -647,7 +648,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 _, cascaded = Soul.all_objects.filter(pk=soul.pk).delete()
             total = Counter(events) + Counter(cascaded) + via_bare_ids
             manifest = {label: n for label, n in sorted(total.items()) if n}
-            AuditLog.objects.create(
+            write_audit_row(
                 tenant_id=soul.tenant_id,
                 user=user if getattr(user, "is_authenticated", False) else None,
                 action=AuditAction.DELETE,

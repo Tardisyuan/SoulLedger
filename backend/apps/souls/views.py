@@ -421,7 +421,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         422 with the preview body when any row has an error (nothing written). On success
         one `IMPORT` audit row names the batch; each soul also gets its ordinary CREATE row.
         """
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
         from apps.core.client_ip import get_client_ip
 
         try:
@@ -433,7 +434,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             with transaction.atomic():
                 batch = importer.create_souls(results, tenant)
-                AuditLog.objects.create(
+                write_audit_row(
                     tenant=tenant,
                     user=request.user,
                     action=AuditAction.IMPORT,
@@ -505,7 +506,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         file). Each changed soul gets its ordinary UPDATE audit row; one BATCH_UPDATE row names the file.
         Re-running the same file changes nothing and writes no audit row.
         """
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
         from apps.core.client_ip import get_client_ip
 
         try:
@@ -516,7 +518,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 updated, unchanged = summary["changed_count"], summary["unchanged_count"]
                 skipped = [r.as_dict() for r in rows if r.status in region_update.ERRORS]
                 if updated:
-                    AuditLog.objects.create(
+                    write_audit_row(
                         tenant=request.tenant,
                         user=request.user,
                         action=AuditAction.BATCH_UPDATE,

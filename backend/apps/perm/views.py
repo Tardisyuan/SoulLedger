@@ -471,9 +471,10 @@ def assign_role_permissions(request):
         transaction.on_commit(lambda: invalidate_role_permissions(role_name))
 
         if codenames_before != codenames_after:
-            from apps.audit.models import AuditAction, AuditLog
+            from apps.audit.models import AuditAction
+            from apps.audit.signals import write_audit_row
 
-            AuditLog.objects.create(
+            write_audit_row(
                 tenant=getattr(request, "tenant", None),
                 user=request.user if request.user.is_authenticated else None,
                 action=AuditAction.PERMISSION_CHANGE,
@@ -724,9 +725,10 @@ def copy_role(request, pk):
 
         scope_config = role_config(source)
         copy_role_rows(source, role)
-        from apps.audit.models import AuditAction, AuditLog
+        from apps.audit.models import AuditAction
+        from apps.audit.signals import write_audit_row
 
-        AuditLog.objects.create(
+        write_audit_row(
             tenant=getattr(request, "tenant", None),
             user=request.user,
             action=AuditAction.PERMISSION_CHANGE,
@@ -865,12 +867,13 @@ def export_permissions(request):
 
 def _audit_import(request, overwrite, stats):
     """One summary row: who, when (created_at), mode, and how many entries it added, updated and removed."""
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.perm.export import SECTIONS
 
     created = {s: stats[s]['created'] for s in SECTIONS}
     mode = 'overwrite' if overwrite else 'merge'
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=getattr(request, "tenant", None),
         user=request.user,
         action=AuditAction.IMPORT,

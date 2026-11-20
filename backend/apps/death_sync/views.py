@@ -79,7 +79,8 @@ def _escalate_failed_retry(request, record):
     this tenant's ADMINs. Only the error code travels -- the payload is
     encrypted personal data, and `error_message` can quote it (a serializer
     error echoes the value it refused, `str(e)` may too)."""
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.authentication.models import User
     from apps.core.client_ip import get_client_ip
     from apps.notifications.messages import DEFAULT_LOCALE, render
@@ -90,7 +91,7 @@ def _escalate_failed_retry(request, record):
         "death registration retry failed: registration=%s tenant=%s reason=%s retry_count=%s/%s",
         record.pk, tenant.code, record.error_code, record.retry_count, record.max_retries,
     )
-    AuditLog.objects.create(
+    write_audit_row(
         tenant=tenant,
         user=request.user,
         action=AuditAction.EXECUTE,

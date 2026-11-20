@@ -3,8 +3,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.audit.models import AuditLog
-from apps.audit.signals import explicit_audit_for
+from apps.audit.signals import explicit_audit_for, write_audit_row
 from apps.core.client_ip import get_client_ip
 from apps.core.permissions import (
     IsAdminPermission,
@@ -59,7 +58,7 @@ def audit_hall_change(request, tenant, before, what):
     changes = {k: [before[k], after[k]] for k in before if before[k] != after[k]}
     if not changes:
         return None
-    return AuditLog.objects.create(
+    return write_audit_row(
         tenant=tenant, user=request.user, action="UPDATE", resource="tenant", resource_id=tenant.code,
         description=f"{what} {tenant.code}"[:500], changes=changes,
         ip_address=get_client_ip(request), user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
@@ -118,7 +117,7 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
             with explicit_audit_for(tenant):
                 tenant.is_active = active
                 tenant.save(update_fields=["is_active"])
-            AuditLog.objects.create(
+            write_audit_row(
                 tenant=tenant, user=request.user, action="UPDATE", resource="tenant", resource_id=tenant.code,
                 description=f"hall {'activated' if active else 'deactivated'} {tenant.code}",
                 changes={"is_active": [not active, active]},

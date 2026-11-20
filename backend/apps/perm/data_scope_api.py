@@ -167,7 +167,8 @@ def role_data_scope(request, pk):
                        "ADMIN always sees everything; its data scope is fixed.")
     serializer = RoleDataScopeConfigSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    from apps.audit.models import AuditAction, AuditLog
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
 
     with transaction.atomic():
         before = role_config(role)
@@ -175,7 +176,7 @@ def role_data_scope(request, pk):
         after = role_config(role)
         # `default_configured` 在比较里:只多 / 少一行默认 ALL 的保存(没配 ↔ 全部)显示一样,权限不一样,也要记。
         if after != before:
-            AuditLog.objects.create(
+            write_audit_row(
                 tenant=getattr(request, "tenant", None),
                 user=request.user,
                 action=AuditAction.PERMISSION_CHANGE,

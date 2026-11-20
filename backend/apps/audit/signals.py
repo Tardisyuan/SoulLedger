@@ -273,9 +273,28 @@ def _write_row(alias, *, written_on=frozenset(), **row):
                 obj.save(force_insert=True, using=alias)
 
         transaction.on_commit(write, using=host)
-        return
+        return obj
     with transaction.mark_for_rollback_on_error(using=alias), transaction.atomic(using=alias):
         obj.save(force_insert=True, using=alias)
+    return obj
+
+
+def write_audit_row(*, using=None, written_on=frozenset(), **row):
+    """The one way code outside this module writes an audit row (`tests/test_audit_rows_have_one_entry.py`): the
+    fields of `AuditLog.objects.create(...)`, written by `_write_row` on the master of the hall the row names.
+
+    `tenant=` / `user=` are taken as their ids before the row exists: assigning an instance to a row with no
+    database asks the router (NoShardContext for SYSTEM_ADMIN while civilizations are write-cut). `using` names
+    the database when the caller already holds the row's own (a command writing on an alias it chose).
+    """
+    from apps.audit.models import AuditLog
+
+    if "tenant" in row:
+        row["tenant_id"] = getattr(row.pop("tenant"), "pk", None)
+    if "user" in row:
+        row["user_id"] = getattr(row.pop("user"), "pk", None)
+    alias = using or router.db_for_write(AuditLog, instance=AuditLog(tenant_id=row.get("tenant_id")))
+    return _write_row(alias, written_on=written_on, **row)
 
 
 def _transaction_aliases():

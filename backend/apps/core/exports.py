@@ -84,10 +84,9 @@ def record_export(request, *, resource, rows):
     audit log, ledger stats and journal), so all of them write the same row. Tenant is the
     request's, else the caller's own (`force_authenticate` skips the middleware).
     """
-    from django.db import router
 
-    from apps.audit.models import AuditAction, AuditLog
-    from apps.audit.signals import _write_row
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import write_audit_row
     from apps.authentication.impersonation import is_impersonation, refuse
     from apps.core.client_ip import get_client_ip
 
@@ -99,8 +98,7 @@ def record_export(request, *, resource, rows):
     # The audit signals' own write: the master of the hall the row names, asked with the hall id alone.
     # `AuditLog.objects.create(user=...)` asked the router on the User assignment -- NoShardContext for SYSTEM_ADMIN
     # while civilizations write to their shards, so an export was a 500.
-    _write_row(
-        router.db_for_write(AuditLog, instance=AuditLog(tenant_id=tenant_id)),
+    write_audit_row(
         tenant_id=tenant_id,
         user_id=getattr(user, "pk", None),
         action=AuditAction.EXPORT,
