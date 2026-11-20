@@ -227,7 +227,7 @@ def purged_control_needs_shards(app_configs=None, databases=None, **kwargs):
     database may be touched (tests: the 2026-11-21 full gate failed three this way). Celery's own worker and beat
     start ask it in config/celery.py. No table yet (a first `migrate`) is no record; a database that cannot be
     reached is left to the command that needs it -- nothing can be served from it either."""
-    if databases is not None and "default" not in databases:
+    if not databases or "default" not in databases:  # Django calls database checks with databases=None outside migrate / check --database
         return []
     if settings.SHARDED:
         return []

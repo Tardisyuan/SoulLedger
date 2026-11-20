@@ -202,19 +202,20 @@ def test_a_purged_control_refuses_to_start_unless_sharded(settings):
     from config.celery import refuse_purged_control_without_shards
 
     settings.SHARDED = False
-    assert purged_control_needs_shards() == []
+    assert purged_control_needs_shards(databases=["default"]) == []
     call_command("check", "--database", "default", stdout=io.StringIO())
     refuse_purged_control_without_shards()
 
     GlobalCode.objects.using("default").create(kind=PURGED, value="GREEK")
-    assert [e.id for e in purged_control_needs_shards()] == ["sharding.E001"]
+    assert [e.id for e in purged_control_needs_shards(databases=["default"])] == ["sharding.E001"]
+    assert purged_control_needs_shards() == []  # outside migrate / check --database: not asked
     with pytest.raises(SystemCheckError, match=r"\['GREEK'\] were purged"):
         call_command("check", "--database", "default", stdout=io.StringIO())
     with pytest.raises(SystemExit, match="sharding.E001"):
         refuse_purged_control_without_shards()
 
     settings.SHARDED = True
-    assert purged_control_needs_shards() == []
+    assert purged_control_needs_shards(databases=["default"]) == []
     refuse_purged_control_without_shards()
 
 

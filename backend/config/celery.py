@@ -25,6 +25,6 @@ def refuse_purged_control_without_shards(**_kwargs):
     receiver's exception and starts anyway."""
     from apps.core.shard_sync import purged_control_needs_shards
 
-    errors = purged_control_needs_shards()
+    errors = purged_control_needs_shards(databases=["default"])
     if errors:
         raise SystemExit("; ".join(f"{e.id}: {e.msg}" for e in errors))
