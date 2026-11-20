@@ -127,14 +127,6 @@ jobs:
           name: count-backend
           path: ${{ runner.temp }}/backend.xml
           retention-days: 7
-      # Sharding stage 2: the four civilization shards exist only under settings_sharded; `sharded` tests skip
-      # anywhere else, so the suite above skips them (review C21, 2026-10-31). Same PostgreSQL and Redis.
-      # It replaced the multi-database guard (G3/G7 now run on the shards). `run-gates.sh --real-pg --full`
-      # runs it too. Under xdist (2026-11-16): one world per worker, cases spread over the runner's CPUs.
-      - name: Sharded group
-        run: |
-          cd backend
-          python -m pytest --tb=short -q --no-cov -n auto --dist worksteal --durations=30 --durations-min=5 --ds=config.settings_sharded -m sharded
       # ruff's version comes from requirements-dev.txt — the same pin the local
       # backend/.venv and the pre-push hook use. This used to install ruff
       # unpinned, i.e. whatever was newest on the day of the run. Installed above.
@@ -163,6 +155,53 @@ jobs:
           cd backend
           pip install pip-audit
           pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip
+
+  # Sharding stage 2: the four civilization shards exist only under settings_sharded; `sharded` tests skip
+  # anywhere else, so the backend suite skips them (review C21, 2026-10-31). It replaced the multi-database guard
+  # (G3/G7 now run on the shards). `run-gates.sh --real-pg --full` runs it too, beside the suite. Under xdist
+  # (2026-11-16): one world per worker, cases spread over the runner's CPUs. Its own job since 2026-11-21
+  # (docs/audit/ci-timing-2026-11-20.md §5.2): in the backend job it ran after the 1.5-hour suite, adding
+  # 760–910 s to the daily wall clock. pytest-django creates its own test databases, so no `migrate` first.
+  backend-sharded:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    env:
+      SECRET_KEY: ci-test-key-not-for-production-32-bytes-min
+      DEBUG: 'true'
+      DATABASE_URL: postgres://soulledger:soulledger@localhost:5432/soulledger_test
+      REDIS_URL: redis://localhost:6379/0
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: soulledger_test
+          POSTGRES_USER: soulledger
+          POSTGRES_PASSWORD: soulledger
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U soulledger"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install --no-deps -r requirements.lock -r requirements-dev.txt
+      - name: Sharded group
+        run: |
+          cd backend
+          python -m pytest --tb=short -q --no-cov -n auto --dist worksteal --durations=30 --durations-min=5 --ds=config.settings_sharded -m sharded
 
   frontend:
     runs-on: ubuntu-latest
@@ -511,7 +550,7 @@ jobs:
   stats:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [backend, frontend, mobile, officer, synapse, e2e, e2e-demo]
+    needs: [backend, backend-sharded, frontend, mobile, officer, synapse, e2e, e2e-demo]
     if: github.ref == 'refs/heads/main'
     # The only job with write access, for the one commit below.
     permissions:

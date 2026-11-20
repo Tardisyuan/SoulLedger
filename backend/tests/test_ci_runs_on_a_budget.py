@@ -119,11 +119,19 @@ def _runs(job):
     return [step.get("run", "") for step in data["jobs"][job]["steps"]]
 
 
-def test_the_sharded_group_runs_in_the_backend_job():
+def test_the_sharded_group_runs_in_its_own_job_on_postgresql():
     """Sharding stage 2: a `sharded` test skips unless the four civilization shards exist, and they exist only
     under config.settings_sharded. The command runs the whole group, not a file list that a new test misses.
-    It replaced the multi-database guard (review C21, 2026-10-31), whose settings are gone."""
-    (command,) = [ln.strip() for r in _runs("backend") for ln in r.splitlines()
+    It replaced the multi-database guard (review C21, 2026-10-31), whose settings are gone. Its own job beside
+    the suite since 2026-11-21 (it ran after it, docs/audit/ci-timing-2026-11-20.md §5.2), on the same
+    PostgreSQL image, and a green run still needs it (`stats`)."""
+    data, _ = _load("ci.yml")
+    job = data["jobs"]["backend-sharded"]
+    assert job["services"]["postgres"]["image"] == data["jobs"]["backend"]["services"]["postgres"]["image"]
+    assert job["env"]["DATABASE_URL"].startswith("postgres://"), job["env"]
+    assert "backend-sharded" in data["jobs"]["stats"]["needs"]
+    assert not [ln for r in _runs("backend") for ln in r.splitlines() if "settings_sharded" in ln]
+    (command,) = [ln.strip() for r in _runs("backend-sharded") for ln in r.splitlines()
                   if ln.strip().startswith("python -m pytest") and "--ds=config.settings_sharded" in ln]
     args = command.split()
     assert args[args.index("-m", 2) + 1] == "sharded", command
