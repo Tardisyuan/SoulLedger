@@ -37,6 +37,7 @@ import {
 } from "../rules";
 import { useSession } from "../session";
 import { OutlineSeal } from "../seal";
+import { entranceStyle, headerSeal } from "../entrance";
 import { radius, sealedTheme, type CivKey } from "../theme";
 import {
   Block,
@@ -83,6 +84,11 @@ import { useLiveProgress } from "../liveProgress";
 import { soulRoute, type RouteStep, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 
 /** 「刑期」 in 十殿, 「停留期」 in 天界, 「涤罪期」 in 炼狱 (v4 batch 12 §1.4): the place is the disposition's realm. */
+/** The header seal, for the welcome's hand-off (entrance.ts). */
+const registerHeaderSeal = (view: View | null) => {
+  headerSeal.current = view;
+};
+
 const placeKeyOf = (t: (key: string) => string, key: string, realmCode: string | null | undefined, greekAccount?: string) => {
   const { civ, type } = realmPlace(realmCode);
   return civKey(t, key, civ, type, greekAccount);
@@ -478,7 +484,10 @@ function LifeBand({ me, place, compact, onAccount }: { me: MeProfile; place?: st
           </Txt>
         )}
         <View style={styles.bandRow}>
-          <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={t.plaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          {/* 第六十二批: the welcome's seal shrinks into this one (`headerSeal`) — only while the band is full. */}
+          <View collapsable={false} ref={small ? undefined : registerHeaderSeal}>
+            <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={t.plaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          </View>
           <View testID="band-text" onLayout={(e) => measure("textX")(e.nativeEvent.layout.x)} style={styles.bandText}>
             <View testID="name-row" onLayout={(e) => measure("name")(e.nativeEvent.layout.width)} style={styles.nameRow}>
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on, fontFamily: titleFamily(me.name) }]}>
@@ -1098,7 +1107,8 @@ export function MyLifeScreen() {
   };
 
   return (
-    <View testID="life" style={[styles.fill, { backgroundColor: theme.s0 }]}>
+    // 第六十二批: after sign-in the page rises 8 into place (`lifeEntrance`, driven by welcome.tsx); otherwise still.
+    <Animated.View testID="life" style={[styles.fill, { backgroundColor: theme.s0 }, entranceStyle]}>
       <LifeBand me={me} place={route?.place} compact={compact} onAccount={() => navigation.navigate("Settings")} />
       <Screen
         refreshing={life.loading && !!life.data}
@@ -1192,7 +1202,7 @@ export function MyLifeScreen() {
         </View>
       </Screen>
       <AskButton />
-    </View>
+    </Animated.View>
   );
 }
 

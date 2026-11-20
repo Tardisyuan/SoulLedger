@@ -151,9 +151,10 @@ export const motion = {
   toastInfoHold: 6000,
   // 文明气质 1h: the Loader's breath (not a loading line: those run `loadingLine`).
   breath: 1600,
-  welcomeIn: 600,
-  welcomeHold: 1200,
-  welcomeOut: 240,
+  // 第六十二批 §二: the welcome's entrance 360, a still hold 900, the hand-off 320 (welcome.tsx `WELCOME`).
+  welcomeIn: 360,
+  welcomeHold: 900,
+  welcomeOut: 320,
   coldStartDraw: 600,
   coldStartHold: 300,
   coldStartInteractive: 480,
