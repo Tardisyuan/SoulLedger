@@ -1,6 +1,6 @@
 # Architecture decision records
 
-Six decisions that shape SoulLedger, each with the context, the choice, what it costs, and where to check it in the code.
+Seven decisions that shape SoulLedger, each with the context, the choice, what it costs, and where to check it in the code.
 Written 2026-11-12 from the project's own design notes and test comments; every path below exists in this repository.
 
 | # | Decision |
@@ -11,5 +11,6 @@ Written 2026-11-12 from the project's own design notes and test comments; every 
 | [0004](0004-split-by-domain-not-by-tenant.md) | Split by business domain, not by tenant; database-per-tenant is deferred until measured |
 | [0005](0005-demo-site-is-a-frontend-only-replay.md) | The public demo is a front end replaying recorded API answers, with no backend |
 | [0006](0006-row-level-security-verified-not-rolled-out.md) | Row-level security is verified on two tables as PG-only tests, not rolled out |
+| [0007](0007-ask-data-read-only-role-and-table-rls.md) | 问数 runs on a read-only role behind row-level security on four tables, set up outside migrations |
 
 Format: Status, Context, Decision, Consequences (including the cost), Evidence.

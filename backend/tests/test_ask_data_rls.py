@@ -206,17 +206,20 @@ def test_a_long_result_is_cut_at_max_rows_and_flagged(wall):
 
 @PG_ONLY
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "Known gap (ADR 0007, doc §8): app.tenant_id is a custom setting any role may change, and psycopg2 sends "
-    "the text as one simple query, so a second statement runs too. Only the gate stops these "
-    "(forbidden_function for set_config, multiple_statements). Strict: a fix turns this XPASS, i.e. red."))
 @pytest.mark.parametrize("forge", [
     "SELECT set_config('app.tenant_id', '{b}', true); SELECT id FROM judgment_judgment",
     "SET LOCAL app.tenant_id = '{b}'; SELECT id FROM judgment_judgment",
 ])
 def test_a_statement_that_sets_another_hall_still_sees_only_its_own(wall, forge):
-    (a, a_rows), b = wall["A"], wall["B"][0]
-    assert _rows(forge.format(b=b.pk), a, wall["alias"]) == [[a_rows[Judgment].pk]]
+    (a, a_rows), (b, b_rows) = wall["A"], wall["B"]
+    rows = _rows(forge.format(b=b.pk), a, wall["alias"])
+    if rows == [[b_rows[Judgment].pk]]:
+        # Exactly this outcome and no other: anything else (an error, A's and B's rows) fails below. A fix makes
+        # the test pass outright; then delete this branch.
+        pytest.xfail("Known gap (ADR 0007, doc §8): app.tenant_id is a custom setting any role may change, and "
+                     "psycopg2 sends the text as one simple query, so a second statement runs as well. Only the "
+                     "gate stops these (forbidden_function for set_config, multiple_statements).")
+    assert rows == [[a_rows[Judgment].pk]]
 
 
 SPEC = yaml.safe_load(setup.SCHEMA.read_text(encoding="utf-8"))["tables"]
