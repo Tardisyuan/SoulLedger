@@ -185,3 +185,43 @@ def test_a_sharded_test_skips_without_shards_and_a_partial_set_stops_the_run():
     partial = _collect_control_boundary(**{f"{ENV_PREFIX}GREEK": PG.format("greek")})
     assert partial.returncode != 0 and "needs every civilization's shard" in partial.stdout + partial.stderr, \
         (partial.stdout + partial.stderr)[-2000:]
+
+
+# --- a purged control database refuses to start not sharded -----------------------------------------------
+
+@pytest.mark.django_db
+def test_a_purged_control_refuses_to_start_unless_sharded(settings):
+    """GlobalCode SHARD_PURGED on control and no shard URLs: the process would serve the purged civilizations as empty,
+    and only the sync refused it. The system check (runserver, migrate, check) and Celery's worker / beat start refuse;
+    no record, or sharded, starts. Mutations: the check unregistered -> `check` passes; `settings.SHARDED` not asked ->
+    the sharded process is refused; Celery's receiver raising an exception instead of SystemExit -> Celery starts."""
+    from django.core.management.base import SystemCheckError
+
+    from apps.core.shard_sync import PURGED, purged_control_needs_shards
+    from apps.tenants.models import GlobalCode
+    from config.celery import refuse_purged_control_without_shards
+
+    settings.SHARDED = False
+    assert purged_control_needs_shards() == []
+    call_command("check", stdout=io.StringIO())
+    refuse_purged_control_without_shards()
+
+    GlobalCode.objects.using("default").create(kind=PURGED, value="GREEK")
+    assert [e.id for e in purged_control_needs_shards()] == ["sharding.E001"]
+    with pytest.raises(SystemCheckError, match=r"\['GREEK'\] were purged"):
+        call_command("check", stdout=io.StringIO())
+    with pytest.raises(SystemExit, match="sharding.E001"):
+        refuse_purged_control_without_shards()
+
+    settings.SHARDED = True
+    assert purged_control_needs_shards() == []
+    refuse_purged_control_without_shards()
+
+
+def test_a_database_with_no_tables_yet_passes_the_purge_check():
+    """A first `migrate` runs the system checks before any table exists (here: a fresh in-memory SQLite): no GlobalCode
+    table is no record. Mutation: `purge_records` without its table check and the check without `except DatabaseError`
+    -> "no such table" and a non-zero exit (either one alone keeps it green)."""
+    proc = subprocess.run([sys.executable, "manage.py", "check"], cwd=BACKEND, env=_env(),
+                          capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr[-2000:]

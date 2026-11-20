@@ -39,8 +39,9 @@ from dataclasses import dataclass
 
 from django.apps import apps
 from django.conf import settings
+from django.core import checks
 from django.core.cache import cache
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.db.models import Q
 from django.db.models.signals import m2m_changed, post_delete, post_save
 
@@ -215,6 +216,26 @@ def check_purge_records():
     from apps.core.sharding import check_shard_settings
 
     check_shard_settings(recorded=purge_records())
+
+
+@checks.register("sharding")
+def purged_control_needs_shards(app_configs=None, **kwargs):
+    """Django system check, so `runserver`, `migrate` (the web container runs it before daphne) and `check` refuse a
+    process that is not sharded over a control database whose civilizations were purged: it would serve their rows as
+    empty, and only the sync refused it (`check_purge_records`). Celery runs no system checks: config/celery.py asks
+    this at worker and beat start. No table yet (a first `migrate`) is no record; a database that cannot be reached
+    is left to the command that needs it -- nothing can be served from it either."""
+    if settings.SHARDED:
+        return []
+    try:
+        recorded = purge_records()
+    except DatabaseError:
+        return []
+    if not recorded:
+        return []
+    return [checks.Error(
+        f"{sorted(recorded)} were purged (GlobalCode {PURGED}): control no longer holds their rows, so this database "
+        f"runs sharded only", hint="Set SHARD_DATABASE_URL_<CIV> for every civilization.", id="sharding.E001")]
 
 
 def _sides(model, shard, halls, recorded=()):
