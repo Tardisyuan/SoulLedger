@@ -43,6 +43,13 @@ def test_triggers_stay_on_the_budget(name):
         assert isinstance(job.get("timeout-minutes"), int), f"{name}: {job_name} has no timeout-minutes"
 
 
+def test_a_manual_run_does_not_cancel_the_daily_one():
+    """docs/audit/ci-timing-2026-11-20.md §5.3: `ci-${{ github.ref }}` alone put a manual run on main in the
+    daily run's group, and `cancel-in-progress` threw away two ~2-hour daily runs (11-15, 11-16)."""
+    data, _ = _load("ci.yml")
+    assert "github.event_name" in data["concurrency"]["group"], data["concurrency"]
+
+
 def test_the_pr_workflow_is_cheap_and_cannot_touch_secrets():
     """The one workflow a pull request starts. It must stay the cheap one (static checks and a named smoke set,
     never the whole suite) and safe for a fork's code: `pull_request` gives a read-only token and no secrets,

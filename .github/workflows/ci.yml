@@ -29,8 +29,11 @@ on:
   push:
     tags: ['v*']
 
+# One group per ref *and event* (2026-11-21, docs/audit/ci-timing-2026-11-20.md §5.3): with the ref alone, a
+# manual run on main cancelled the daily run already in progress on main — 11-15 and 11-16 were cancelled after
+# ~6200 s and ~7150 s. A newer run of the same kind still supersedes an older one.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 # Least privilege for the job token (audit IS-19, 2026-09-14). Nothing here
