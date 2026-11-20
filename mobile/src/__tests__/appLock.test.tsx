@@ -312,6 +312,23 @@ describe("the lock", () => {
     await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
   });
 
+  // State-machine audit 2026-11-20: leaving while LOCKED used to turn the lock into the brief-switch cover and stamp
+  // a fresh time away, so coming back within five minutes took it down -- the face never asked.
+  it("a lock that is up stays up through a brief trip to the background, the face still unasked", async () => {
+    phone({ lock: true });
+    rememberAccount(PROFILE.soul_code, PROFILE.name);
+    spendAutoPrompt();
+    await coldStartUnlocked();
+    bioMod.__state.recognised = false;
+    await background();
+    await foreground(6);
+    await screen.findByTestId("app-lock-failed");
+    await background();
+    await foreground(1);
+    expect(screen.getByTestId("app-lock")).toBeTruthy();
+    expect(screen.queryByTestId("app-lock-bio")).toBeTruthy();
+  });
+
   it("「输入密码」 leaves the lock for the sign-in page's password path", async () => {
     phone({ lock: true });
     rememberAccount(PROFILE.soul_code, PROFILE.name);
