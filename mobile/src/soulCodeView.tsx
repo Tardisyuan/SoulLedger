@@ -244,7 +244,9 @@ const styles = StyleSheet.create({
   // on top of the groups (Medium_Phone emulator, 2026-10-11). So: transparent text on iOS, alpha 0 on Android.
   hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, color: "transparent", fontSize: 24, opacity: Platform.OS === "android" ? 0 : 1 },
   email: { flex: 1, height: 56, fontFamily: family.ui[500], fontSize: 20 },
-  switch: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center" },
+  // The link keeps its 44 pt target, but the 12 pt above and below its words overlap their neighbours: 12 under the
+  // hint (not 20), and 密码 24 below the link like every other field, not 36 (iPhone 17, 2026-11-21: 「太空」).
+  switch: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", marginTop: -8, marginBottom: -12 },
   switchText: { textDecorationLine: "underline" },
   scan: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderLeftWidth: 1 },
   scanText: { letterSpacing: 0 },
