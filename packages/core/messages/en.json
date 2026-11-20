@@ -7118,6 +7118,18 @@
     "officer_handover_received": {
       "title": "Work handed over to you",
       "body": "{{by}} handed {{from}}’s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} City Gods, {{letters}} letters."
+    },
+    "rebirth_status_exception": {
+      "title": "Rebirth application update",
+      "body": "The review of your rebirth application is paused."
+    },
+    "rebirth_status_reconsidering": {
+      "title": "Rebirth application update",
+      "body": "Your rebirth application is being looked at again."
+    },
+    "rebirth_status_terminated": {
+      "title": "Rebirth application update",
+      "body": "Your rebirth application was ended by the hall."
     }
   },
   "social_moderation": {

@@ -7080,6 +7080,18 @@
     "push_device_claimed": {
       "title": "Medjat Sedjem: Aq Ky Sesh-N",
       "body": "Medjat Sedjem Pen: Aq Ky Sesh-N. Medjat Pen: Nen Sedjem Sep Min. Nen Semawy Djes Medjat? Hab Er Sab Hery."
+    },
+    "rebirth_status_exception": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Wedja Smen-N."
+    },
+    "rebirth_status_reconsidering": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Em Wehem Wedja."
+    },
+    "rebirth_status_terminated": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Khetem-N Em Wesekhet."
     }
   },
   "social_moderation": {

@@ -7118,6 +7118,18 @@
     "officer_handover_received": {
       "title": "官员交接",
       "body": "{{by}} 把 {{from}} 手上的事交给了你：审判 {{judgments}} 件、申诉 {{appeals}} 件、城隍 {{city_gods}} 位、书信 {{letters}} 封。"
+    },
+    "rebirth_status_exception": {
+      "title": "转生申请状态更新",
+      "body": "你的转生申请状态：暂停审理。"
+    },
+    "rebirth_status_reconsidering": {
+      "title": "转生申请状态更新",
+      "body": "你的转生申请状态：复议中。"
+    },
+    "rebirth_status_terminated": {
+      "title": "转生申请状态更新",
+      "body": "你的转生申请状态：已终止。"
     }
   },
   "social_moderation": {
