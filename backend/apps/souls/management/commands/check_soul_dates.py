@@ -152,8 +152,12 @@ class Command(BaseCommand):
             # never reaches it, because it iterates souls. Counting only
             # is_deleted records would report 0 skipped while quietly passing
             # over every record the deleted souls carry.
+            # The deleted souls' ids first, then the records by id: `soul__is_deleted` joins through a crossing key
+            # (SoulRecord.soul), which a shard refuses (CrossShardJoin) once civilizations are write-cut.
+            # ponytail: every deleted soul id in memory; batch it if that list outgrows one query.
+            deleted_ids = list(Soul.all_objects.filter(is_deleted=True).values_list("pk", flat=True))
             skipped_records = SoulRecord._base_manager.filter(
-                Q(is_deleted=True) | Q(soul__is_deleted=True)
+                Q(is_deleted=True) | Q(soul_id__in=deleted_ids)
             )
             if options["tenant"]:
                 skipped_souls = skipped_souls.filter(tenant__code=options["tenant"])

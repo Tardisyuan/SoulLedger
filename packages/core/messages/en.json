@@ -6922,6 +6922,16 @@
         "cn": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."
       }
     },
+    "sentence_request_not_filed": {
+      "title": "Amendment’s plan change not filed",
+      "body": "{{tenant}} concluded an amendment judgment of soul {{soul}} asking to change its placement plan, but the plan then had a request pending or took no more changes. The change was not filed; ask again if it is still needed.",
+      "title_by_civ": {
+        "cn": "Amendment’s plan change not filed"
+      },
+      "body_by_civ": {
+        "cn": "{{tenant}} concluded an amendment judgment of soul {{soul}} asking to change its sentence plan, but the plan then had a request pending or took no more changes. The change was not filed; ask again if it is still needed."
+      }
+    },
     "sentence_request_decided": {
       "title": "Placement plan request decided",
       "body": "The original judge has decided this hall’s request on the placement plan of soul {{soul}}. Open it to see.",

@@ -19,6 +19,10 @@ back (tests/test_sharded_reads_equal_single_db.py holds that the row counts of e
 Nothing leaves the process (`shadow_reads.isolated`): the caches are this run's own (not the backend's Redis),
 a task a GET hands to Celery is recorded and listed here instead of sent (`GET /me/chat/session/` does), the
 Matrix client finds Synapse unreachable on both sides (tests/test_shadow_read_diff_leaves_no_trace.py).
+
+Retired by stage 5: "before" is control's answer, and once a civilization's control rows are purged (SHARD_PURGED_CIVS,
+or a GlobalCode SHARD_PURGED record) control no longer holds them, so every difference would be the purge's. The
+command refuses then (VERIFY-stage5 3); tests/test_sharded_reads_survive_the_mirror_purge.py is the check after it.
 """
 import random
 
@@ -47,6 +51,12 @@ class Command(BaseCommand):
                             help="list the N endpoints slowest once cut over (default 10; 0 = none)")
 
     def handle(self, *args, **options):
+        from apps.core.shard_sync import purge_records
+
+        purged = sorted(set(settings.SHARD_PURGED_CIVS) | purge_records())
+        if purged:
+            raise CommandError(f"control's rows of {purged} are purged: it is no baseline to compare with any more "
+                               f"(stage 5 retired this command)")
         with shadow.isolated() as held_back:
             try:
                 self._compare(**options)

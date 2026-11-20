@@ -722,12 +722,17 @@ def file_amendment_request(judgment, plan, changes, reason):
         subject=f"advance:{judgment.soul_id}")
 
 
+@handler(PLAN_REQUEST)
 def _amendment_request(payload):
-    """On the plan's master, as the plan's hall, under the soul's and the plan's locks; the plan checked again (a
-    request filed meanwhile refuses this one)."""
+    """On the plan's master, as the plan's hall, under the soul's and the plan's locks; the plan checked again. A plan
+    that will not take it now (a request filed between the conclusion's check and this delivery, the plan closed or
+    held meanwhile) keeps the verdict and leaves its changes unasked: recorded here, as `record_blocked_return` does --
+    SENTENCE_REQUEST_NOT_FILED on the soul's timeline (the plan's hall) and a notice to that hall's judges, the
+    message DONE. It was one log line (VERIFY-stage5 3, REPORT-all-stages §3 item 4)."""
+    from apps.events.models import EventType
     from apps.sentence_plan import requests
     from apps.sentence_plan.models import SentenceRequestKind
-    from apps.sentence_plan.services import _lock_plan
+    from apps.sentence_plan.services import _lock_plan, hall_params, notify_judges, record_event, soul_params
 
     soul = _soul_model().lock(payload["soul_id"])
     plan = _lock_plan(payload["plan_id"])
@@ -737,19 +742,13 @@ def _amendment_request(payload):
                                  kind=SentenceRequestKind.AMEND, changes=payload["changes"], reason=payload["reason"],
                                  user=None, judgment_id=payload["judgment_id"])
     except requests.PlanChangeRefusedError as e:
-        raise Refused(str(e)) from None
-
-
-def _amendment_request_refused(payload):
-    import logging
-
-    # ponytail: a request filed in the window between the conclusion's check and this delivery; the verdict stands
-    # and its changes are not asked -- logged only. Record it on the case when that window is seen.
-    logging.getLogger(__name__).warning("amendment %s: plan %s refused its request", payload["judgment_id"],
-                                        payload["plan_id"])
-
-
-handler(PLAN_REQUEST, refused=_amendment_request_refused)(_amendment_request)
+        record_event(soul, EventType.STATE_CHANGED, {
+            "action": "SENTENCE_REQUEST_NOT_FILED", "code": e.code, "sentence_plan_id": str(plan.pk),
+            "judgment_id": payload["judgment_id"], "from_tenant": payload["from_tenant_code"],
+        }, tenant_id=plan.tenant_id)
+        notify_judges({plan.tenant_id}, "sentence_request_pending", {
+            **soul_params(soul), **hall_params([payload["from_tenant_code"]]), "kind": "sentence_request_not_filed"},
+            plan.pk)
 
 
 # ---- a cross-civilization rebirth (迁籍) ----------------------------------------------------------------------

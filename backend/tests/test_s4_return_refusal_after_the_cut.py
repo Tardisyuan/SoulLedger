@@ -11,6 +11,8 @@ an amendment case -- on a world built AFTER both civilizations are write-cut, ov
   N-4  a residence without a plan (a dispatch by hand), its disposition executed there: the soul comes home and moves
        on (REINCARNATING / SETTLED, F-DISP-07) -- across masters it stopped at "DISPOSED, no plan".
   §3.4 the residence concludes an amendment case with plan changes: the request is the home hall's row, on its master.
+       A request the plan no longer takes when it arrives (the home filed one meanwhile) is recorded at home: an event
+       on the soul's timeline and a notice to the home's judges (VERIFY-stage5 3).
 
     scripts/run-gates.sh --tests --ds=config.settings_sharded -m sharded tests/test_s4_return_refusal_after_the_cut.py
 """
@@ -268,3 +270,51 @@ def test_the_residence_concluding_an_amendment_files_the_request_on_the_home_hal
                                  format="json")
         assert r.status_code == 200, (where, r.status_code, r.content[:2000])
         _quiet(where)
+
+
+@sharded
+@pytest.mark.parametrize("pair", PAIRS, ids=lambda p: f"{p[0]}-{p[1]}")
+def test_an_amendment_request_the_plan_no_longer_takes_is_recorded_at_home(pair, django_capture_on_commit_callbacks):
+    """The race the conclusion cannot see: it checked the home's plan, then the home hall filed its own request before
+    the relay delivered the amendment's. The plan refuses a second pending request; that was one log line. Now the
+    message ends DONE with SENTENCE_REQUEST_NOT_FILED on the soul's timeline (the plan's hall) and a notice to the home
+    hall's judges; the home's own request stands alone, nothing written at the residence."""
+    from apps.dispatch import transfer
+    from apps.events.models import SoulEvent
+    from apps.notifications.models import UserNotification
+    from apps.sentence_plan.models import SentencePlanRequest, SentenceRequestKind
+    from apps.tenants.models import ShardMessageState, ShardOutbox
+
+    x = _halls(pair)
+    where = x["where"]
+    with cut(*pair):
+        _abroad_after_the_cut(x, f"q{pair[0][:2]}")
+        case = _open_case_at_the_residence(x)
+        r = x["res_admin"].post(f"/api/v1/judgment/{case}/conclude/", {
+            "verdict": "FAILED", "notes": "当地加刑",
+            "plan_changes": {"add": [{"realm_code": x["code"], "sentence_years": 3}]}}, format="json")
+        assert r.status_code == 200, (where, r.status_code, r.content[:2000])
+        [filed] = _pending(transfer.PLAN_REQUEST)
+        # Before the relay delivers it, the home hall files its own request on the plan.
+        r = x["home_admin"].post(_plan_url("file_request", pk=x["plan"].pk), {"kind": "REOPEN", "reason": "重审"},
+                                 format="json")
+        assert r.status_code == 201, (where, r.status_code, r.content[:2000])
+        with _after_commits(django_capture_on_commit_callbacks):  # the notice goes out after the relay's commit
+            _quiet(where)
+        [state] = [m.state for a in settings.DATABASES for m in ShardOutbox._base_manager.using(a).filter(pk=filed.pk)]
+        assert state == ShardMessageState.DONE, f"{where}: the amendment's request message is {state}"
+        reqs = list(SentencePlanRequest._base_manager.using(_master(x["home"])).filter(plan_id=x["plan"].pk))
+        assert [q.kind for q in reqs] == [SentenceRequestKind.REOPEN], (where, [(q.kind, q.from_tenant_code) for q in reqs])
+        assert not SentencePlanRequest._base_manager.using(_master(x["res"])).filter(plan_id=x["plan"].pk).exists()
+        events = {e.pk: (a, e) for a in settings.DATABASES for e in SoulEvent._base_manager.using(a).filter(
+            soul_id=x["soul"].pk, payload__action="SENTENCE_REQUEST_NOT_FILED")}
+        assert len(events) == 1, (where, events)
+        [(alias, event)] = events.values()
+        assert (alias, event.tenant_id) == (_master(x["home"]), x["home"].pk), (where, alias, event.tenant_id)
+        assert (event.payload["code"], event.payload["judgment_id"], event.payload["from_tenant"]) == (
+            "request_pending", case, x["res"].code), (where, event.payload)
+        notices = list(UserNotification._base_manager.using("default").filter(  # a control table
+            notification_type="SENTENCE_REQUEST_PENDING", params__kind="sentence_request_not_filed"))
+        assert notices and {n.user.tenant_id for n in notices} == {x["home"].pk}, \
+            (where, [n.user.tenant_id for n in notices])
+        assert "没有提交" in notices[0].message, notices[0].message
