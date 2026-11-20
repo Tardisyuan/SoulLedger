@@ -7,7 +7,7 @@
 # nothing in it is executed); without, the current process environment is used.
 # One line per check: PASS / FAIL / WARN. Exit 1 if any FAIL (WARN never fails).
 # Secret values are never printed -- only names and lengths.
-# Why each variable matters, and what breaks without it: docs/DEPLOY.md.
+# Why each variable matters, and what breaks without it: docs/DEPLOYMENT.md「上线清单」.
 set -u
 
 FILE="${1:-}"

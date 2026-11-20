@@ -241,8 +241,8 @@ migrations and seeds all four civilizations on boot.
 
 The production stack (nginx, first TLS issuance and renewal, backup and restore, off-site
 copy and alerts, restore drill, RPO/RTO, rollback, `/metrics/` and log format, retention, key
-rotation) is in [`docs/DEPLOYMENT.md`](DEPLOYMENT.md); the go-live checklist is
-[`docs/DEPLOY.md`](DEPLOY.md).
+rotation) is in [`docs/DEPLOYMENT.md`](DEPLOYMENT.md), whose first section is the go-live
+checklist.
 
 ### Seed data
 

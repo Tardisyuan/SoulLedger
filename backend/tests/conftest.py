@@ -15,7 +15,8 @@ def _clear_tenant_context():
     """Reset TenantManager context variable before and after every test.
 
     Prevents contextvar leakage between tests that causes stale tenant
-    filters on class-level querysets.  See docs/tenant-contextvar-investigation.md.
+    filters on class-level querysets.  See docs/tenant-contextvar-investigation.md
+    (on the archive/docs branch since 2026-11-21).
     """
     from apps.tenants.managers import clear_current_tenant
     clear_current_tenant()

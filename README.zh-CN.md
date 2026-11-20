@@ -40,7 +40,7 @@
    所以先按业务域拆。分库没有取消：等量到触发条件再做，新代码已经按分库的约束写
    （[ADR 0004](docs/adr/0004-split-by-domain-not-by-tenant.md)、[设计稿](docs/ARCHITECTURE-soul-app-and-domain-split.md)）。
 2. **不信「已完成」。**2026-05-30，仓库里一份报告宣称「Production Ready」。2026-08-07，对同一份代码的审计
-   找出 4 个严重的租户隔离缺口。那份报告还留着，标了「已作废」（[`PRODUCTION_READINESS_REPORT.md`](docs/PRODUCTION_READINESS_REPORT.md)）。那次审计是我发起的：我没有采信那份报告，而是让 AI 按租户逐个视图去查。
+   找出 4 个严重的租户隔离缺口。那份报告还留着，标了「已作废」（`docs/PRODUCTION_READINESS_REPORT.md`,现在在 `archive/docs` 分支）。那次审计是我发起的：我没有采信那份报告，而是让 AI 按租户逐个视图去查。
 3. **把教训变成会变红的检查。**
    - 2026-08-14，租户过滤收口成一个函数，并用契约测试逐个检查 ViewSet（[ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)）。
    - 测试同时跑真 PostgreSQL 和 SQLite（[ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)）。

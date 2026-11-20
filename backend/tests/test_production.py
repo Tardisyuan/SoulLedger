@@ -231,7 +231,7 @@ class TestDockerConfiguration:
         assert re.search(r'add_header\s+X-Frame-Options\s+\$fallback_xfo\s+always;', content)
 
     def test_nginx_admin_is_allow_listed_and_rate_limited(self):
-        """/admin/ was open to the internet with no throttle (DEPLOY.md, 2026-10-09). It must
+        """/admin/ was open to the internet with no throttle (docs/DEPLOYMENT.md「上线清单」, 2026-10-09). It must
         include the allow-list, which must end in `deny all`, and compose must mount that file
         (a missing bind-mount source becomes a directory and nginx dies, as for nginx.conf)."""
         content = _read(NGINX_CONF)

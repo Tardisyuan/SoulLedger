@@ -455,6 +455,6 @@ SoulLedger/
 它们早已交付并改名：内置角色有六个（`apps/authentication/models.py` 的 `UserRole`：
 ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL，另可有 `perm.Role` 里的自定义角色），
 `karma/` 现在是 `ledger/`，`RouteGuard.tsx` / `useAuth.ts` 不存在 —— 已整段删除，免得被当成现状读。
-现状以代码和提交历史为准；里程碑见 `docs/MILESTONES.md`（同样落后于代码），变更见 `CHANGELOG.md`。
+现状以代码和提交历史为准；里程碑文档已于 2026-11-21 移到 `archive/docs` 分支（同样落后于代码），变更见 `CHANGELOG.md`。
 
 门禁、解释器与提交格式的唯一权威是 `CLAUDE.md`（含 `scripts/run-gates.sh`）。

@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 /**
- * 登录交付单的装饰(Design 第二十四批第二稿,`docs/design-handoff/v3-pages/soul-login/DeliverySlipCiv.dc.html`):
+ * 登录交付单的装饰(Design 第二十四批第二稿,`docs/design-handoff/v3-pages/soul-login/DeliverySlipCiv.dc.html`,在 archive/docs 分支):
  * 外框 + 匾额带 + 带上的纹样,与正文分隔线。坐标原样取自画稿(746 × 376 的框,左上角距纸边 24)。
  *
  * 颜色:线与实心块取 `currentColor`,由外层的 `data-slip-ink`(`app/print-slip-ink.css`)决定是纯黑还是文明色;

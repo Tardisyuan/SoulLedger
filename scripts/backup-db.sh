@@ -106,7 +106,7 @@ MANIFEST="${BACKUP_DIR}/soulledger_manifest_${TIMESTAMP}.txt"
 # soulledger_civ_<civ>_<timestamp>.sql.gz with the control dump's timestamp, and soulledger_manifest_<timestamp>.txt
 # lists what one run wrote (alias + file; never the URL, it carries the password). These are pg_dumps taken one
 # after another, NOT one snapshot across databases: for a point-in-time-consistent set while all of them live on one
-# server, take a physical backup of the instance (pg_basebackup / a volume snapshot) -- docs/DEPLOY.md「备份」.
+# server, take a physical backup of the instance (pg_basebackup / a volume snapshot) -- docs/DEPLOYMENT.md「上线清单」§8「备份」.
 SHARDS=$(env | sed -n 's/^SHARD_DATABASE_URL_\([A-Z][A-Z_]*\)=..*$/\1/p' | sort)
 
 if [ "${BACKUP_DRY_RUN:-}" = 1 ]; then
