@@ -333,3 +333,23 @@ def test_the_scheduler_writes_the_status_the_line_reads(tmp_path):
     mid = seen[len(seen) // 2]
     assert len(mid["running"]) == 5 and mid["known"] is True and 0 < mid["left"] < len(sim.kinds)
     assert json.loads(path.read_text())["left"] == 0
+
+
+def _few_plain(plain, tx):
+    """`tests/test_ask_data_evals.py` (2026-11-21): one plain test among 73 no-database ones. With `-n 2` both
+    workers were clean, the plain test went to one, nothing went to the other, and neither was handed the
+    no-database tests, so xdist shut both down with 73 pending: `Unexpectedly no active workers available`."""
+    def shape(rng):
+        kinds = ["db"] * plain + ["tx"] * tx + [None] * 73
+        return kinds, [rng.uniform(0.1, 2) for _ in kinds], set()
+    return shape
+
+
+@pytest.mark.parametrize("plain", [1, 2, 3, 5, 7])
+@pytest.mark.parametrize("tx", [0, 1, 4])
+@pytest.mark.parametrize("workers", [2, 3, 5])
+@pytest.mark.parametrize("history", ["exact", "none"])
+def test_a_handful_of_plain_tests_does_not_strand_the_rest(plain, tx, workers, history):
+    sim = _Sim(TxLastWorkStealing, 0, _few_plain(plain, tx), workers, history).run()
+    assert sorted(i for w in sim.workers for i in w.ran) == list(range(len(sim.kinds)))
+    assert sim.plain_after_tx() == []
