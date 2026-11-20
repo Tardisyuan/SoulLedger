@@ -2433,7 +2433,8 @@
         "mine": "Mine",
         "unclaimed": "Unclaimed",
         "others": "Claimed by others",
-        "deferred": "Deferred"
+        "deferred": "Deferred",
+        "held": "Held · {{n}}"
       },
       "hints": {
         "unclaimed": "Longest waiting first",
@@ -2532,7 +2533,11 @@
       "unferried": "This judgment can’t be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron.",
       "not_yours_readonly": "{{name}} has claimed this case; only they can change it. You can read it.",
       "override_recorded": "You are not the claimant ({{name}} has claimed this case); what you change here is recorded.",
-      "release_for_hint": "It goes back to Unclaimed; {{name}} will see this reason."
+      "release_for_hint": "It goes back to Unclaimed; {{name}} will see this reason.",
+      "held_from": "Not claimable yet · from {{date}}",
+      "held_reason": {
+        "wangsi": "Waiting in the City of the Wrongfully Dead"
+      }
     },
     "admission": {
       "title": "Evidence · admission",
@@ -4317,7 +4322,10 @@
       "REJECTED": "Rejected",
       "APPEALING": "Under appeal",
       "APPEAL_REJECTED": "Appeal rejected",
-      "APPROVED": "Approved"
+      "APPROVED": "Approved",
+      "EXCEPTION": "Exception being handled",
+      "RECONSIDERING": "Being reconsidered",
+      "TERMINATED": "Terminated"
     },
     "origin": {
       "DEATH_SYNC": "Opened by death sync",
@@ -5381,6 +5389,12 @@
         "DISPOSED": "Your disposition has been carried out, but you have not entered the cycle of rebirth yet. You can apply once the hall moves you into it.",
         "LOST": "Your record is marked lost, so you cannot apply for now. Please write to the hall.",
         "SETTLED": "This life is settled; no new rebirth application can be made."
+      },
+      "state_note": {
+        "EXCEPTION": "Review ran into a problem that needs a person to sort out, so your application is paused at this step. You don't need to do anything; review picks up again once it's fixed, and you'll be told.",
+        "RECONSIDERING": "Someone in the review objected to one step, and that step is being decided again. This is not an appeal of yours; you don't need to do anything.",
+        "TERMINATED": "The hall has ended this application: it won't be reviewed further and can't be appealed. You can apply again.",
+        "TERMINATED_COOLDOWN": "The hall has ended this application: it won't be reviewed further and can't be appealed. The cooling-off period runs until {{date}}; you can apply again after that."
       }
     },
     "status": {
@@ -5388,7 +5402,10 @@
       "REJECTED": "Rejected",
       "APPEALING": "Appeal under review",
       "APPEAL_REJECTED": "Appeal rejected",
-      "APPROVED": "Approved"
+      "APPROVED": "Approved",
+      "EXCEPTION": "Review paused",
+      "RECONSIDERING": "Being looked at again",
+      "TERMINATED": "Ended by the hall"
     },
     "detail": {
       "title": "Application",
@@ -5503,7 +5520,8 @@
       "appeal_review": "Appeal under review",
       "no_time": "no timestamp",
       "decision": "Decision",
-      "pending": "Not judged yet"
+      "pending": "Not judged yet",
+      "reconsidered": "Looked at again"
     },
     "soul_states": {
       "ALIVE": "Alive",
@@ -5580,7 +5598,8 @@
       "push_warning": "Hall warnings",
       "locked": "Can’t be turned off",
       "email_nudge_title": "Add a contact email",
-      "email_nudge_body": "If you forget your password, the code goes to your contact email. Without one, only the hall’s counter can reset it."
+      "email_nudge_body": "If you forget your password, the code goes to your contact email. Without one, only the hall’s counter can reset it.",
+      "push_unregistered": "Not registered · notifications won't arrive"
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -5596,7 +5615,8 @@
       "yes": "Yes, notify me",
       "no": "Not now",
       "live_hint_title": "No progress on the lock screen",
-      "live_hint_body": "Notifications are off for SoulLedger. Turn them on in system settings to see on the lock screen which station you have reached."
+      "live_hint_body": "Notifications are off for SoulLedger. Turn them on in system settings to see on the lock screen which station you have reached.",
+      "register_failed": "Your phone allows notifications, but registering it didn't go through, so nothing will arrive yet."
     },
     "original": {
       "tag": "Original",
@@ -6530,6 +6550,13 @@
       "forget_body": "Only this phone stops remembering the number; the account itself is not affected. {{bio}} sign-in for it is turned off too.",
       "forgotten": "Forgot {{id}}",
       "bio_here": "{{bio}} sign-in is on for this number"
+    },
+    "data_export": {
+      "failed_network": "Couldn't reach the server, so nothing was exported. Your face was recognised; no password needed.",
+      "failed_server": "Something went wrong on the server, so nothing was exported. Your face was recognised; no password needed."
+    },
+    "stale": {
+      "line": "Showing what was here at {{time}} · couldn't refresh"
     }
   },
   "soul_push": {
@@ -7387,7 +7414,8 @@
         "app": "Something is wrong with the app",
         "other": "Other"
       }
-    }
+    },
+    "draft_load_failed": "Couldn't fetch the saved draft. Editing is off until it loads, so it isn't overwritten."
   },
   "sentence_plan": {
     "panel_title": "Placement plan",
@@ -10595,6 +10623,10 @@
     }
   },
   "errors": {
-    "cross_civilization": "Not saved: the selected item belongs to another civilization and can’t be linked. Choose again, or refresh and try again."
+    "cross_civilization": "Not saved: the selected item belongs to another civilization and can’t be linked. Choose again, or refresh and try again.",
+    "permissions_load": {
+      "title": "Couldn't load permissions",
+      "body": "This is not a refusal: the permissions just didn't arrive from the server this time. Reload; if it still fails, come back a little later."
+    }
   }
 }
