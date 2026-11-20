@@ -23,7 +23,7 @@ bench, and the origin side's writes to a soul that resides elsewhere (D6) -- go 
               and one that fails -- or is FAILED -- holds back the later ones of its subject, never anything else.
   in transit  while a move of a soul is open (PENDING or FAILED), its rows are read-only. Step 1 copied the source
               row into the message, step 2 writes that copy on the target and step 3 retires the source row, so a
-              write to the soul in between would be lost; it is refused instead (`SoulInTransit`, 423 `locked`) by
+              write to the soul in between would be lost; it is refused instead (`SoulInTransit`, 423 `soul_in_transit`) by
               the save / delete signals and `SoulQuerySet.update` (`refuse_in_transit`). The move's own steps are
               exempt. Refusing is the fix rather than re-reading the source at step 2 (a write between steps 2 and 3
               would still be lost) or forwarding later writes (it would need a merge rule against what the arrival
@@ -62,10 +62,10 @@ class Refused(Exception):  # noqa: N818 -- a refusal, not a failure
 
 
 class SoulInTransit(Problem):
-    """A write to a soul whose move between masters is open (module doc, "in transit"): refused, 423 `locked`."""
+    """A write to a soul whose move between masters is open (module doc, "in transit"): refused, 423 `soul_in_transit`."""
 
     def __init__(self, soul_ids):
-        super().__init__(423, "locked", "This soul is moving between civilizations (a dispatch, a return home or a "
+        super().__init__(423, "soul_in_transit", "This soul is moving between civilizations (a dispatch, a return home or a "
                          "rebirth in flight) and cannot be changed until the move completes. Try again shortly.",
                          soul_ids=sorted(map(str, soul_ids)))
 

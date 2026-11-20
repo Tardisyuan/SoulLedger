@@ -726,6 +726,20 @@ def _save(rows, fields):
     PushDelivery.objects.bulk_update(rows, [*fields, "updated_at"])
 
 
+def _save_claimed(rows, fields):
+    """`_save` for rows this worker claimed: only those still its claim. The claim token is `attempts` (each claim
+    adds one); a row stuck SENDING past STALE_SENDING is put back QUEUED by the sweep and claimed again, and this
+    worker's late result must not overwrite the second claim's (another ticket, another error), nor be lost when no
+    one has claimed it again yet (QUEUED, same attempts: the send happened, so it is SENT and not sent twice)."""
+    if not rows:
+        return
+    with transaction.atomic():
+        ours = set(PushDelivery.objects.select_for_update().filter(
+            Q(*[Q(pk=row.pk, attempts=row.attempts) for row in rows], _connector=Q.OR),
+            status__in=[PushStatus.SENDING, PushStatus.QUEUED]).values_list("pk", flat=True))
+        _save([row for row in rows if row.pk in ours], fields)
+
+
 def send_deliveries(delivery_ids, sender=None):
     """发送这些投递中仍 QUEUED 的。可重试的失败抛 `PushRetryError`(由任务转成 celery retry)。"""
     claimed = _claim(delivery_ids)
@@ -743,12 +757,12 @@ def send_deliveries(delivery_ids, sender=None):
         except Exception as exc:  # noqa: BLE001 — PushRequestError 及意外:记下,不让一批拖垮其余批
             for row in chunk:
                 row.status, row.error = PushStatus.FAILED, f"{type(exc).__name__}: {exc}"[:200]
-            _save(chunk, fields)
+            _save_claimed(chunk, fields)
             continue
         now = timezone.now()
         for row, ticket in zip(chunk, tickets, strict=True):
             _apply_ticket(row, ticket, now)
-        _save(chunk, fields)
+        _save_claimed(chunk, fields)
     return len(claimed)
 
 
@@ -766,7 +780,7 @@ def _defer(rows, error):
     for row in retry:
         # 记下退避到期时刻:celery 的 retry 丢了,sweep 也按这个时刻而不是提前重发。
         row.next_attempt_at = timezone.now() + timedelta(seconds=countdown)
-    _save(rows, ["status", "error", "next_attempt_at"])
+    _save_claimed(rows, ["status", "error", "next_attempt_at"])
     if retry:
         raise PushRetryError([str(row.pk) for row in retry], countdown)
 

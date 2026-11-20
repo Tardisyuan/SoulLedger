@@ -485,7 +485,7 @@ def test_a_refused_flow_is_not_reheard_in_the_home_hall_while_its_soul_resides_o
 def test_a_soul_in_transit_refuses_writes_from_the_target_the_home_hall_and_system_admin(who, move, monkeypatch):
     """The first review's in-transit test wrote from the source hall only. The same writes (`_writes`: an officer's
     PATCH over HTTP, a service save, a contact save, a ledger recalculation, a bulk update, a soul code) from the
-    target hall, the home hall and SYSTEM_ADMIN: each refused 423 `locked` with every row unchanged, or kept on the
+    target hall, the home hall and SYSTEM_ADMIN: each refused 423 `soul_in_transit` with every row unchanged, or kept on the
     primary -- never lost."""
     from apps.authentication.models import User
     from apps.core.shard_reads import CONTROL_ALIAS, read_context
@@ -512,7 +512,7 @@ def test_a_soul_in_transit_refuses_writes_from_the_target_the_home_hall_and_syst
 
             r = sign_in(APIClient(), hardening._officer(hall)).patch(route(pk), {"name": mark}, format="json")
             if r.status_code == 423:
-                assert r.json()["code"] == "locked", r.content
+                assert r.json()["code"] == "soul_in_transit", r.content
             if r.status_code in (404, 423):
                 raise SoulInTransit([pk])
             assert r.status_code == 200, (r.status_code, r.content)

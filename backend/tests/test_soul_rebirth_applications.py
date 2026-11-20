@@ -45,6 +45,25 @@ def _submit(client, capture, form="HUMAN"):
     return response
 
 
+def test_the_application_and_its_appeal_start_their_first_nodes_clock(cn_tenant, judge_user,
+                                                                       django_capture_on_commit_callbacks):
+    """State-machines audit §4-8: `_create_workflow` set `current_node` by hand, so `activated_at` (what timeouts,
+    the overdue filter and the officer's to-do order read) stayed empty. It now goes through `_make_current`."""
+    capture = django_capture_on_commit_callbacks
+    _, client = rebirth_ready_soul(cn_tenant)
+    before = timezone.now()
+    application = RebirthApplication.objects.get(pk=_submit(client, capture).data["id"])
+    first = application.workflow.current_node
+    assert first.node_order == 1 and first.activated_at is not None and first.activated_at >= before
+    _decide(judge_user, application, "FAILED", capture=capture)
+    with capture(execute=True):
+        assert client.post(f"{APPLY}{application.pk}/appeal/", {"statement": "再议"},
+                           format="json").status_code == 200
+    application.refresh_from_db()
+    appeal_first = application.appeal_workflow.current_node
+    assert appeal_first.node_order == 1 and appeal_first.activated_at is not None
+
+
 def test_submit_creates_a_rebirth_workflow_and_shows_only_the_role(cn_tenant, judge_user,
                                                                   django_capture_on_commit_callbacks):
     account, client = rebirth_ready_soul(cn_tenant)

@@ -619,6 +619,50 @@ def test_sweep_requeues_stuck_rows_but_respects_backoff(cn_tenant, push_on, enqu
     assert keys == {"judgment:old", "judgment:stuck-sending", "judgment:fresh"}
 
 
+def _stuck_then_requeued(row_id):
+    """The sweep's view of a worker that has held the row SENDING for longer than STALE_SENDING."""
+    PushDelivery.objects.filter(pk=row_id).update(updated_at=timezone.now() - timedelta(minutes=30))
+    services.requeue_stale()
+    assert PushDelivery.objects.get(pk=row_id).status == PushStatus.QUEUED
+
+
+def test_a_stuck_worker_reporting_after_its_row_was_claimed_again_does_not_overwrite_that_claim(
+        cn_tenant, push_on, enqueued):  # noqa: F811
+    """#15: worker A claims, hangs past STALE_SENDING; the sweep re-queues, worker B claims and sends. A's late
+    ticket must not overwrite B's (the post-send write is conditional on A's claim: SENDING/QUEUED, same attempts)."""
+    account, _ = _soul_with_device(cn_tenant)
+    _judgment(account.soul)
+    (row_id,) = _ids()
+
+    def a_hangs(messages):
+        _stuck_then_requeued(row_id)
+        assert services.send_deliveries([row_id]) == 1  # worker B: a fresh claim, its own ticket
+        return [{"status": "ok", "id": "ticket-of-a"}]
+    FakeSender.script = [a_hangs]
+    assert services.send_deliveries([row_id]) == 1  # worker A
+    row = PushDelivery.objects.get(pk=row_id)
+    assert (row.status, row.attempts) == (PushStatus.SENT, 2)
+    assert row.ticket_id == "ticket-2-0" and row.ticket_id != "ticket-of-a", row.ticket_id
+
+
+def test_a_stuck_worker_reporting_before_anyone_claimed_again_is_kept_and_not_sent_twice(
+        cn_tenant, push_on, enqueued):  # noqa: F811
+    """Re-queued but not yet claimed again: A's send happened, so its result lands (SENT) and the re-queued row
+    is not sent a second time."""
+    account, _ = _soul_with_device(cn_tenant)
+    _judgment(account.soul)
+    (row_id,) = _ids()
+
+    def a_hangs(messages):
+        _stuck_then_requeued(row_id)
+        return [{"status": "ok", "id": "ticket-of-a"}]
+    FakeSender.script = [a_hangs]
+    assert services.send_deliveries([row_id]) == 1
+    row = PushDelivery.objects.get(pk=row_id)
+    assert (row.status, row.ticket_id) == (PushStatus.SENT, "ticket-of-a")
+    assert services.send_deliveries([row_id]) == 0 and len(FakeSender.batches) == 1
+
+
 def test_receipts_mark_delivered_failed_and_invalidate_unregistered_devices(cn_tenant, push_on,  # noqa: F811
                                                                             enqueued):  # noqa: F811
     account, _ = _soul_with_device(cn_tenant)

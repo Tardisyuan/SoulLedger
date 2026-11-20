@@ -2,7 +2,7 @@
 apps/tenants/shard_saga.py, apps/dispatch/transfer.py, apps/tenants/global_codes.py):
 
   in transit    a write to a soul while its move is open -- a dispatch, a return home, a rebirth; after step 1 or
-                between steps 2 and 3 -- is refused with 423 `locked` (never a 500), or kept: never silently lost.
+                between steps 2 and 3 -- is refused with 423 `soul_in_transit` (never a 500), or kept: never silently lost.
                 Every kind of soul write the services make is tried, by the service itself.
   dead letter   a message whose delivery keeps failing counts its attempts and last error, is FAILED after
                 MAX_ATTEMPTS, and `check_soul_ownership` / `relay_outbox` exit non-zero until it is retried.
@@ -132,7 +132,7 @@ def _writes():
     def officer_edit(pk, hall, mark):  # PATCH /souls/{id}/ by the hall's ADMIN
         r = sign_in(APIClient(), _officer(hall)).patch(route(pk), {"name": mark}, format="json")
         if r.status_code == 423:
-            assert r.json()["code"] == "locked" and str(pk) in r.json()["soul_ids"], r.content
+            assert r.json()["code"] == "soul_in_transit" and str(pk) in r.json()["soul_ids"], r.content
             raise SoulInTransit([pk])
         assert r.status_code == 200, (r.status_code, r.content)
         return mark
@@ -180,7 +180,7 @@ def _attempt(writes, pk, hall, phase):
         try:
             out[name] = ("written", do(pk, hall, f"{name[:6]}{phase}"))
         except SoulInTransit as e:
-            assert e.status_code == 423 and e.problem_code == "locked", e
+            assert e.status_code == 423 and e.problem_code == "soul_in_transit", e
             out[name] = ("refused", None)
     return out
 

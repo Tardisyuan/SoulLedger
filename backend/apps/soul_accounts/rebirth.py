@@ -185,8 +185,7 @@ def _create_workflow(soul, nodes, *, name, name_en="", original=None):
         )
         for order, (node_name, node_type, role) in enumerate(nodes, start=1)
     ]
-    workflow.current_node = created[0]
-    workflow.status = ApprovalWorkflowStatus.IN_PROGRESS
+    workflow._make_current(created[0], timezone.now())  # the one way a node becomes current: starts its clock
     workflow.save(update_fields=["current_node", "status"])
     return workflow
 
