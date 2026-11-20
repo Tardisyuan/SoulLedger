@@ -119,6 +119,16 @@ def test_every_category_is_reached_by_the_cases_above():
     assert {expected[0] for *_, expected in CLASSIFY_CASES} == set(evals.CATEGORIES)
 
 
+def test_a_join_is_compared_by_table_not_by_column_name():
+    """`d.soul_id = s.id` 与 `j.soul_id = s.id` 去掉限定后一模一样;别名换回表名才分得开。"""
+    gold_sql = ("SELECT count(*) FROM judgment_judgment j JOIN disposition_disposition d ON d.judgment_id = j.id "
+                "JOIN souls_soul s ON d.soul_id = s.id")
+    sql = ("SELECT count(*) FROM judgment_judgment AS jj JOIN disposition_disposition AS dd ON dd.judgment_id = jj.id "
+           "JOIN souls_soul AS ss ON jj.soul_id = ss.id")
+    assert evals.classify(sql, gate_code=None, got=_ok([(4,)]), gold=_ok([(5,)]), gold_sql=gold_sql,
+                          ordered=False) == ("wrong_join", None)
+
+
 def test_sql_is_extracted_from_a_fenced_reply_or_taken_whole():
     assert evals.extract_sql("好的:\n```sql\nSELECT 1\n```\n") == "SELECT 1"
     assert evals.extract_sql("  SELECT 1  ") == "SELECT 1"
