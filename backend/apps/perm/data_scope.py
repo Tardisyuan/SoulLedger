@@ -190,8 +190,25 @@ def _all_rules() -> dict:
     from apps.perm.models import RoleDataScope
 
     out = {}
-    for row in RoleDataScope.objects.filter(role__is_deleted=False).select_related("role").prefetch_related("orgs"):
-        out.setdefault(row.role.name, {})[row.resource] = Rule(row.scope, tuple(o.pk for o in row.orgs.all()))
+    rows = list(RoleDataScope.objects.filter(role__is_deleted=False).select_related("role"))
+    orgs = org_ids_of(rows)
+    for row in rows:
+        out.setdefault(row.role.name, {})[row.resource] = Rule(row.scope, tuple(orgs[row.pk]))
+    return out
+
+
+def org_ids_of(rows) -> dict:
+    """{RoleDataScope pk: [organization ids, sorted]}, read from the through table alone (CONTROL, like the rows).
+
+    Not `prefetch_related("orgs")`: that reads Organization -- a SHARD model -- joined to the through table, which no
+    shard has; with civilizations write-cut it is NoShardContext ("a read across every shard through a path that
+    cannot merge"), and `PUT roles/<pk>/data-scope/` was a 500 (tests/test_audit_rows_have_one_entry.py)."""
+    from apps.perm.models import RoleDataScopeOrg
+
+    out = {r.pk: [] for r in rows}
+    for scope_id, org_id in (RoleDataScopeOrg.objects.filter(roledatascope_id__in=list(out))
+                             .order_by("organization_id").values_list("roledatascope_id", "organization_id")):
+        out[scope_id].append(org_id)
     return out
 
 

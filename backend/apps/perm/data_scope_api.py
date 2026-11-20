@@ -107,8 +107,10 @@ def role_config(role):
     default = {"scope": data_scope.ALL, "orgs": []}
     configured = False
     overrides = []
-    for row in RoleDataScope.objects.filter(role=role).prefetch_related("orgs").order_by("resource"):
-        rule = {"scope": row.scope, "orgs": sorted(o.pk for o in row.orgs.all())}
+    rows = list(RoleDataScope.objects.filter(role=role).order_by("resource"))
+    orgs = data_scope.org_ids_of(rows)
+    for row in rows:
+        rule = {"scope": row.scope, "orgs": orgs[row.pk]}
         if row.resource:
             overrides.append({"resource": row.resource, **rule})
         else:
@@ -130,11 +132,12 @@ def replace_role_config(role, config):
 
 def copy_role_rows(source, role):
     """复制角色:逐行照抄。不经 `role_config` → `replace_role_config`,那样会把源角色的「没配」写成一行 ALL。"""
-    for row in RoleDataScope.objects.filter(role=source).prefetch_related("orgs"):
+    rows = list(RoleDataScope.objects.filter(role=source))
+    orgs = data_scope.org_ids_of(rows)
+    for row in rows:
         copy = RoleDataScope.objects.create(role=role, resource=row.resource, scope=row.scope)
-        orgs = list(row.orgs.all())
-        if orgs:
-            copy.orgs.set(orgs)
+        if orgs[row.pk]:
+            copy.orgs.set(orgs[row.pk])
 
 
 @extend_schema(request=None, responses={200: DataScopeResourceSerializer(many=True)})
