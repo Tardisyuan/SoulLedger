@@ -489,7 +489,7 @@ export function LoginScreen() {
               testID="login-password"
               inputRef={passwordRef}
               label={t("soul_app.login.password")}
-              labelAside={known ? undefined : forgot}
+              labelAside={known ? undefined : <View style={styles.forgotAside}>{forgot}</View>}
               value={password}
               onChangeText={setPassword}
               editable={!busy}
@@ -727,7 +727,9 @@ export function ChangePasswordScreen() {
 const styles = StyleSheet.create({
   ruleField: { gap: 8 },
   fill: { flex: 1 },
-  brand: { alignItems: "center", paddingTop: 48, paddingBottom: 32 },
+  // 16 / 20, not 48 / 32: on a 6.3" phone the language row fell below the fold (iPhone 17, 2026-11-21). The cold
+  // start's mark lands on this one, so `LOGIN_MARK` in coldStart.tsx reads these numbers.
+  brand: { alignItems: "center", paddingTop: 16, paddingBottom: 20 },
   appName: { marginTop: 24, letterSpacing: 1.6 },
   wordmark: { marginTop: 8, fontSize: 12, letterSpacing: 2.2 },
   login: { borderTopWidth: 1, marginHorizontal: 24, paddingTop: 24 },
@@ -737,10 +739,13 @@ const styles = StyleSheet.create({
   dimmed: { opacity: 0.6 },
   submit: { marginTop: 24 },
   forgot: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "flex-end" },
+  // Beside the 密码 label the link keeps its 44 pt target but takes no height: the row is the label's, so 密码 sits
+  // 24 under the field above like every other label, not 36 (iPhone 17, 2026-11-21: 「隔得太开」).
+  forgotAside: { marginVertical: -12 },
   underline: { textDecorationLine: "underline" },
   resetNotice: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
   resetTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
-  footer: { borderTopWidth: 1, marginHorizontal: 24, marginTop: 24, paddingTop: 24, paddingBottom: 32 },
+  footer: { borderTopWidth: 1, marginHorizontal: 24, marginTop: 24, paddingTop: 24, paddingBottom: 16 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
   language: { minWidth: 56, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
