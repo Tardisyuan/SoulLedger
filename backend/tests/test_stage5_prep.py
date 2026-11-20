@@ -539,7 +539,8 @@ def test_a_hall_less_reincarnation_follows_its_disposition_and_the_purge_no_long
 
     with cut(*CIVS):  # a disposition the shard lacks: its reincarnation cannot go there
         lone = Reincarnation._base_manager.using("default").create(
-            soul_id=rows["move"].soul_id, disposition_id=rows["move"].pk, target_realm="人道", tenant=None)
+            soul_id=rows["move"].soul_id, disposition_id=rows["move"].pk, target_realm="人道", cycle_count=2,
+            tenant=None)
         from apps.disposition.models import Disposition
 
         Disposition._base_manager.using(CN).filter(pk=rows["move"].pk)._raw_delete(CN)
