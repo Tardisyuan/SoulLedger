@@ -90,10 +90,14 @@ GRANT_SECTIONS = ('role_permissions', 'field_permissions', 'role_data_scopes')
 
 def _role_data_scope_rows():
     """``{(role, resource): (scope, [org codes, sorted])}`` for every live row of a live role."""
-    rows = {}
-    for row in RoleDataScope.objects.filter(role__is_deleted=False).select_related('role').prefetch_related('orgs'):
-        rows[(row.role.name, row.resource)] = (row.scope, sorted(o.code for o in row.orgs.all()))
-    return rows
+    from apps.org.models import Organization
+    from apps.perm.data_scope import org_ids_of
+
+    scopes = list(RoleDataScope.objects.filter(role__is_deleted=False).select_related('role'))
+    ids = org_ids_of(scopes)
+    codes = dict(Organization.objects.filter(pk__in={i for v in ids.values() for i in v}).values_list('pk', 'code'))
+    return {(row.role.name, row.resource): (row.scope, sorted(codes[i] for i in ids[row.pk] if i in codes))
+            for row in scopes}
 
 
 def _snapshot():

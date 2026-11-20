@@ -3,7 +3,6 @@
 每条都同时断言**有**与**没有**:被拒的写操作要看数据没变,被放行的读要看确实读到了被看者而不是管理员。
 """
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core import mail
@@ -132,15 +131,29 @@ def test_exports_are_refused(admin_user, target, url):
     assert AuditLog.objects.filter(action=AuditAction.EXPORT).count() == rows
 
 
-def test_record_export_itself_refuses_an_impersonation_token(target):
+def test_record_export_itself_refuses_an_impersonation_token(admin_user, target):
+    """The second guard, behind the auth layer's by-path refusal: `record_export` (every CSV export's audit row)
+    called with the real token of a viewing writes no EXPORT row; the same call with the target's own token writes
+    exactly one (the control: without it a refusal and a write that never happens look the same)."""
     from rest_framework.exceptions import PermissionDenied
+    from rest_framework.request import Request
+    from rest_framework.test import APIRequestFactory
 
     from apps.core.exports import record_export
 
-    request = MagicMock(auth={"imp_id": 1}, user=target)
-    with patch.object(AuditLog.objects, "create") as create, pytest.raises(PermissionDenied):
-        record_export(request, resource="soul", rows=1)
-    create.assert_not_called()
+    _, started = _viewing(admin_user, target)
+
+    def export_with(token):
+        request = Request(APIRequestFactory().get("/api/v1/souls/export/"))
+        request.user, request.auth = target, token
+        return record_export(request, resource="soul", rows=1)
+
+    exports = AuditLog.objects.filter(action=AuditAction.EXPORT, user_id=target.pk)
+    with pytest.raises(PermissionDenied):
+        export_with(AccessToken(started["access"]))
+    assert exports.count() == 0
+    export_with(AccessToken.for_user(target))
+    assert exports.count() == 1
 
 
 def test_reads_work_as_the_target_and_distinct_pages_are_counted(admin_user, target):
