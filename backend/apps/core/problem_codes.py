@@ -375,6 +375,7 @@ class ProblemCode(StrEnum):
     SOUL_OR_JUDGMENT = "soul_or_judgment"
     SOUL_RECYCLED = "soul_recycled"
     SOUL_RESIDING = "soul_residing"
+    SOUL_SETTLED = "soul_settled"
     SOUL_STATE = "soul_state"
     SOUP_ALREADY_TAKEN = "soup_already_taken"
     SOUP_NOT_TAKEN = "soup_not_taken"

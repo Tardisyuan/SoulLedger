@@ -147,8 +147,9 @@ class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.
     @extend_schema(responses=MarkAllReadResultSerializer)
     @action(detail=False, methods=["post"])
     def mark_all_read(self, request):
-        """Mark all of the user's notifications as read."""
-        updated = self.get_queryset().update(is_read=True)
+        """Mark all of the user's notifications as read. `marked_read` counts rows that were still unread, as
+        `batch-read` does (state-machine audit 2026-11-20 #20); read -> unread through PATCH stays allowed."""
+        updated = self.get_queryset().filter(is_read=False).update(is_read=True)
         return Response({"marked_read": updated})
 
     @extend_schema(request=NotificationBatchSerializer, responses=MarkAllReadResultSerializer)

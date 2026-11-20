@@ -293,7 +293,31 @@ def test_the_reaper_closes_runs_stuck_past_max_runtime_and_never_picked_up(db, s
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("reap", ["max_runtime", "never_picked_up", "worker_ready"])
+def test_the_reaper_closes_a_retry_older_than_twice_its_own_max_runtime(db, monkeypatch):
+    """A RETRY whose retry message never arrives used to stay open forever (state-machine audit 2026-11-20 #5;
+    user decision 2026-11-21: older than 2 x that task's max_runtime -> LOST). Age counts from the first start."""
+    job = _job("tests.scheduler_ok")  # max_runtime 60
+    long_job = _job("tests.scheduler_boom")
+    monkeypatch.setitem(registry._BY_KEY, "tests.scheduler_boom", JobSpec("tests.scheduler_boom", GLOBAL, "* * * * *", max_runtime=600))
+    now = timezone.now()
+
+    def retry(j, tid, age):
+        return TaskRun.objects.create(job=j, task_name=j.job_key, celery_task_id=tid, status=RunStatus.RETRY,
+                                      started_at=now - timedelta(seconds=age))
+
+    retry(job, "stale", 121), retry(job, "young", 119), retry(long_job, "long", 121)
+    TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="ns", status=RunStatus.RETRY,
+                           queued_at=now - timedelta(seconds=121))
+
+    assert services.reap_stale_runs(now) == {"retry_lost": 2}
+    got = {r.celery_task_id: r for r in TaskRun.objects.all()}
+    assert got["stale"].status == got["ns"].status == RunStatus.LOST
+    assert "max_runtime=60s" in got["stale"].error
+    assert got["young"].status == got["long"].status == RunStatus.RETRY
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("reap", ["max_runtime", "never_picked_up", "worker_ready", "retry"])
 def test_the_reaper_never_overwrites_an_outcome_that_landed_after_it_looked(db, settings, monkeypatch, reap):
     """FINAL_STATUSES are never overwritten (models.py). The reaper reads RUNNING/PENDING, then writes LOST; a postrun
     committing SUCCESS between the two used to be overwritten by LOST (state-machine audit 2026-11-20)."""
@@ -303,6 +327,9 @@ def test_the_reaper_never_overwrites_an_outcome_that_landed_after_it_looked(db, 
     if reap == "never_picked_up":
         run = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="r", status=RunStatus.PENDING,
                                      queued_at=now - timedelta(seconds=901))
+    elif reap == "retry":
+        run = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="r", status=RunStatus.RETRY,
+                                     started_at=now - timedelta(seconds=121))
     else:
         run = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="r", status=RunStatus.RUNNING,
                                      worker_hostname="w1", started_at=now - timedelta(seconds=61))

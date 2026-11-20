@@ -663,6 +663,31 @@ class TestDeathRegistrationEncryptedJSONFieldDateFix:
         assert self.soul.current_state != SoulState.ALIVE
         assert record.source_payload["death_date"] == "2026-06-01"
 
+    def test_a_registration_is_pending_on_the_health_count_while_it_is_processed(self, monkeypatch):
+        """PENDING used to be written by nothing: the row was saved only with its outcome, so the health count of
+        pending registrations was always 0 (state-machine audit 2026-11-20 #6; user decision 2026-11-21: persist
+        PENDING before processing starts). What die() sees is what another reader sees mid-registration."""
+        seen = {}
+        real_die = Soul.die
+
+        def die_and_look(soul, *args, **kwargs):
+            seen["rows"] = list(DeathRegistrationRequest.objects.filter(tenant=self.tenant).values_list("status", flat=True))
+            seen["health"] = _api_key_client(self.raw_key).get("/api/v1/death-sync/health/").data["system"]
+            return real_die(soul, *args, **kwargs)
+
+        monkeypatch.setattr(Soul, "die", die_and_look)
+        resp = _api_key_client(self.raw_key).post(
+            "/api/v1/death-sync/register/",
+            {"soul_lookup": {"soul_id": str(self.soul.id)}, "death_date": "2026-06-01"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert seen["rows"] == [DeathRegistrationStatus.PENDING]
+        assert seen["health"]["pending_registrations_24h"] == 1
+        record = DeathRegistrationRequest.objects.get(id=resp.data["registration_id"])
+        assert record.status == DeathRegistrationStatus.PROCESSED
+        assert DeathRegistrationRequest.objects.filter(tenant=self.tenant).count() == 1
+
 
 @pytest.mark.django_db
 class TestDeathSyncHealthPermissionFix:

@@ -152,6 +152,11 @@ class DeathSyncService:
         try:
             # Its own atomic: the failure row `_process` writes after its work rolled back is what collides
             # with the key, and outside a savepoint that IntegrityError would break a caller's transaction.
+            # PENDING is written before the work starts (state-machine audit 2026-11-20 #6, user 2026-11-21), so a
+            # registration in flight is counted as pending (`health`); `_process` then saves its outcome on this row.
+            with transaction.atomic():
+                request_record.status = DeathRegistrationStatus.PENDING
+                request_record.save()
             with transaction.atomic():
                 return DeathSyncService._process(request_record, tenant, payload, start_time, souls)
         except IntegrityError:

@@ -766,20 +766,22 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         ).order_by("sequence")
         return Response(SoulPathEntrySerializer(entries, many=True).data)
 
-    @extend_schema(request=SoulStationMoveSerializer, responses={200: SoulSerializer, 409: SoulStationRefusalSerializer})
+    @extend_schema(request=SoulStationMoveSerializer,
+                   responses={200: SoulSerializer, 400: SoulStationRefusalSerializer, 409: SoulStationRefusalSerializer})
     @action(detail=True, methods=["post"])
     def station(self, request, pk=None):
-        """挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世的灵魂;
-        可以往回挪。拒绝:`not_diyu` / `alive`(409)。"""
+        """挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世、未终局的灵魂;
+        可以往回挪,要带 `reason`。拒绝:`not_diyu` / `alive` / `soul_settled`(409)、`reason_required`(400)。"""
         from apps.souls import stations
 
         body = SoulStationMoveSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         soul = self.get_object()
         try:
-            soul = stations.move(soul, body.validated_data["station"], request.user)
+            soul = stations.move(soul, body.validated_data["station"], request.user, body.validated_data["reason"])
         except stations.StationRefusedError as exc:
-            return problem(status.HTTP_409_CONFLICT, exc.code, exc.detail)
+            code = status.HTTP_400_BAD_REQUEST if exc.code == "reason_required" else status.HTTP_409_CONFLICT
+            return problem(code, exc.code, exc.detail)
         return Response(SoulSerializer(soul, context=self.get_serializer_context()).data)
 
     @extend_schema(

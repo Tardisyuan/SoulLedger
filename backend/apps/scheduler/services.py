@@ -454,7 +454,7 @@ def mark_lost_for_worker(hostname: str) -> int:
 
 
 def reap_stale_runs(now=None) -> dict:
-    """RUNNING past max_runtime → LOST; PENDING never picked up → LOST.
+    """RUNNING past max_runtime → LOST; PENDING never picked up → LOST; RETRY older than 2 × max_runtime → LOST.
 
     A SIGKILLed worker sends no signal at all, so worker_ready alone cannot
     cover a worker that never comes back — this pass is the floor. Per-job
@@ -468,6 +468,15 @@ def reap_stale_runs(now=None) -> dict:
             if run.finish(RunStatus.LOST, error=f"still RUNNING after max_runtime={limit}s; presumed dead",
                           only_from=RunStatus.RUNNING):
                 stats["running_lost"] += 1
+    # A RETRY whose retry message never comes back (broker lost it, worker died before re-queueing) used to stay open
+    # forever (state-machine audit 2026-11-20 #5). User 2026-11-21: older than twice the task's own max_runtime,
+    # counted from its first start (prerun keeps it), is lost. A late retry that does run gets its outcome after all.
+    for run in TaskRun.objects.filter(status=RunStatus.RETRY).select_related("job"):
+        limit = 2 * (run.job.max_runtime if run.job else 600)
+        if now - (run.started_at or run.queued_at) > timedelta(seconds=limit):
+            if run.finish(RunStatus.LOST, error=f"still RETRY after 2 x max_runtime={limit // 2}s; presumed dropped",
+                          only_from=RunStatus.RETRY):
+                stats["retry_lost"] += 1
     grace = timedelta(seconds=_setting("SCHEDULER_PENDING_GRACE_SECONDS", 900))
     for run in TaskRun.objects.filter(status=RunStatus.PENDING, queued_at__lt=now - grace):
         if run.finish(RunStatus.LOST, error=f"never picked up by a worker within {grace.total_seconds():.0f}s",
