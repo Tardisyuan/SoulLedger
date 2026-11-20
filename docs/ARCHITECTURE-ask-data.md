@@ -1,10 +1,9 @@
-# 官员端「问数」(Text-to-SQL)—— 需求说明
+# 官员端「问数」(Text-to-SQL)—— 讲解稿
 
-> **状态(2026-11-21):需求已定,待实现。** §9 的五个问题已由用户拍板(均取推荐项)。本文是交给实现者的说明:
-> 每部分有验收标准(§3–§7 各节末尾),§10 是实现顺序与并行分工,§11 是合并与门禁。
-> 实现完成后本文改成讲解稿:每节补「代码在哪、实测结果」,没做的留在 §8。
-> 本项目是个人项目,没有真实用户;文档和提交信息里不要写成已上线或有用户。
-> 代码出处标文件:行;没有实跑过的推断标「未核实」。
+> **状态(2026-11-21):第 0–2 步已在功能分支 `feat/ask-data` 上实现,未推送、未合进 main。** 本文原是需求说明,
+> 现改成讲解稿:每节先说做了什么,再给「代码在哪」与「实测结果」。没做的在 §8。§9 是用户拍板的决定,原样保留。
+> 本项目是个人项目,没有真实用户;下文的「官员」「殿」都是系统里的角色,不是真实使用者。
+> 代码出处标 文件:行(行号是本文写成时的,随代码移动);没有实跑过的推断标「未核实」。
 
 官员用一句话问本殿的案件数据(「今年第一殿结了多少案」「冤魂申诉还有几件没判」),模型写一条 SQL,
 过闸门后在**只读角色**的连接上执行,返回结果表和所用的 SQL。
@@ -13,195 +12,186 @@
 
 最近的先例是审计日志的自然语言查询 `apps/audit/nl_query.py`:模型只出参数、过白名单、评测集在
 `apps/soul_assist/evalsets/audit_query.json`、离线用「照字面听话的桩模型」证明校验在起作用(`tests/test_ai_audit_query.py`)。
-问数照这个路子走,区别是模型这次真的写 SQL,所以要多三道:SQL 闸门、只读角色、库里的租户墙。
+问数照这个路子走,区别是模型这次真的写 SQL,所以多了三道:SQL 闸门、执行器自己的单语句检查、库里的只读角色与租户墙。
 
 | 部件 | 复用 | 新写 |
 |---|---|---|
-| 模型调用 | `soul_assist.features.complete`(开关、并发名额、备用与断路器、用量记账),新 feature `ask_data` 加进 `soul_assist/models.py` 的 `FEATURES`(choices 变了,要一条迁移) | — |
+| 模型调用 | `soul_assist.features.complete`(开关、并发名额、备用与断路器、用量记账);feature `ask_data` 在 `soul_assist/models.py` 的 `FEATURES`,迁移 `0022_ask_data_feature` | — |
 | 问题包成数据块 | `soul_assist.redact.data_block` | — |
-| 租户墙 | ADR 0006 的策略形状与 `set_config('app.tenant_id', …, true)` 写法(`tests/test_row_level_security_probe.py`) | 落到问数用到的四张表上,只对只读角色生效 |
-| 召回 | `soul_assist.vectors` 的 `embed` / `nearest` / 降级规矩 | 召回对象从帮助条目换成表与字段说明 |
-| 评测 | `nl_query.evaluate` 的形状(json 用例集 + 离线桩) | 按执行结果比对 + 错误分类 |
+| 租户墙 | ADR 0006 的策略形状与 `set_config('app.tenant_id', …, true)` 写法 | 落到四张白名单表上,只对问数角色生效(ADR 0007) |
+| 召回 | `soul_assist.vectors` 的 `embed` / `cosine` / `warm_up` 与降级规矩 | 召回对象是表说明;向量放 Django cache(§5) |
+| 评测 | `nl_query.evaluate` 的形状(json 用例集 + 离线桩) | 按执行结果比对 + 错误分类(§7) |
 
-**不送数据给模型(沿用 `docs/ARCHITECTURE-officer-assist.md` §2.2)。** 模型只看到问题、召回到的表结构与说明、今天的日期。
-查询结果只回给官员,不回给模型 —— v1 没有「模型看了结果再总结一句」。
+**不送数据给模型(沿用 `docs/ARCHITECTURE-officer-assist.md` §2.2)。** 模型只看到问题、召回到的表说明(只含授权列)与今天的日期。
+查询结果只回给官员,不回给模型 —— 没有「模型看了结果再总结一句」。
 
 ## 2. 执行路径与范围
 
 ```
-POST /api/v1/ask-data/ {"question": "…"}            官员令牌(OfficerJWTAuthentication),权限码 judgment.read
+POST /api/v1/ask-data/ {"question": "…"}            官员令牌,TenantPermission + CodenamePermission(judgment.read)
+  → 没有 request.tenant → 403 no_tenant              不调模型
+  → 没有 ask_data 别名  → 503 ask_data_not_configured 不调模型(先于模型:没有库就不花模型的钱)
   → schema.recall(question)                         召回表说明(§5)
-  → features.complete("ask_data", …)                模型出一条 SQL
-  → gate.check(sql) → 拒绝:{"code": "...", "sql"}   §3,稳定错误码,HTTP 400
-  → executor.run(sql, tenant_id)                    §4,只读角色 + RLS + 超时 + 行数上限
+  → features.complete("ask_data", …)                模型出一条 SQL(取 ```sql 围栏里的,没有围栏取整段)
+  → gate.check(sql) → 拒绝:400 {"code", "sql"}      §3
+  → executor.run(sql, request.tenant.pk)            §4;拒绝:400 {"code", "sql"},分库切读的殿 409
   → 200 {"sql", "columns", "rows", "truncated", "elapsed_ms"}
 ```
 
-演示用管理命令:`manage.py ask_data "问题" --tenant CN_DIYU [--sql "…"]`(`--sql` 跳过模型,直接把给定 SQL 送进闸门和执行器;
-没配模型时也能演示闸门与 RLS)。输出 SQL、结果表或错误码。
+演示命令:`manage.py ask_data "问题" --tenant CN_DIYU [--sql "…"]`。`--sql` 跳过召回与模型,直接把给定 SQL 送进闸门和执行器,
+没配模型也能演示闸门与 RLS。输出 SQL、结果表(制表符分隔)与行数,出错时命令以错误码失败。
 
-代码放 `backend/apps/soul_assist/ask_data/`:`gate.py`、`executor.py`、`setup.py`(建角色与策略的 SQL)、`schema.py`、`schema.yaml`、
-`evals.py`、`service.py`(把四步串起来,视图与命令共用)、`views.py`;命令放 `soul_assist/management/commands/`。
-不开新 app:它和 audit_query 一样是助手的一个接入点,开关、用量、配置都在 soul_assist 里。
+**代码在哪:**
+- 四步串联:`backend/apps/soul_assist/ask_data/service.py:66`(`ask`),后半段 `run_sql`(`:44`)由接口与 `--sql` 共用,
+  `generate`(`:57`)由接口、演示命令与 `ask_data_eval --live` 共用;给模型的规则 `SYSTEM`(`:21`);执行器码到 HTTP 状态 `_STATUS`(`:31`)。
+- 视图:`backend/apps/soul_assist/ask_data/views.py:34`(`AskDataView`,`get_required_permissions` 返回 `judgment.read`);
+  路由 `backend/apps/soul_assist/urls.py:24`,挂在 `backend/config/urls.py:117`。
+- 演示命令:`backend/apps/soul_assist/management/commands/ask_data.py`。
+- 新错误码登记在 `backend/apps/core/problem_codes.py`(末尾「问数」一段);OpenAPI 已重新生成
+  (`packages/core/openapi/schema.yml`、`packages/core/src/api/generated/schema.ts`)。
+- 视图不碰 ORM,所以 `tests/test_tenant_scoping_contract.py` 没有它要查的 queryset;两个命令按殿码取 `Tenant` 的那一行
+  登记在 `tests/tenancy_unscoped_sites.py`(理由:殿码全局唯一,该殿的行之后只经只读角色与 RLS 读)。
 
-**范围(已定):**
-- 只做后端接口 + 演示命令。不做 Web 页面、不做官员 App(§9 Q1)。
-- **没绑殿的 ADMIN 不开放**:`request.tenant` 为空 → 403 `no_tenant`,不执行任何 SQL(§9 Q2)。
-- 白名单四张表,见 §6(§9 Q3)。
+**实测结果:**`backend/tests/test_ask_data_api.py`,§2 验收逐条一格:200 的完整形状与「殿来自令牌」、无 `judgment.read`
+(GUARDIAN)403、SYSTEM_ADMIN 与没绑殿的 ADMIN 都是 403 `no_tenant`、殿没开助手 503 `assistant_not_configured`、
+没有别名 503 `ask_data_not_configured`、五种被闸门拒的回复(多语句、非白名单表、`SELECT *`、非 SQL 文本、空回复)400 带码与 SQL、
+执行器的三种码、空问题与超长问题 400。这些在 SQLite 上把执行器换成记录调用的替身。
+PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_only_its_own` 走真闸门、真执行器、只读角色:
+模型的 SQL 不写租户过滤,CN 殿只数到自己的 1 件(库里同名殿名下共 3 件);演示命令对同一条
+`SELECT count(*) FROM judgment_judgment` 在 CN 殿得 1、EU 殿得 2,`; DROP TABLE souls_soul` 以 `multiple_statements` 失败。
+这条就是 §11 第 3 条的本地演示,跑在 unRAID 的一次性测试库上,不是本机 PG(本机没有 `psql`,也没有起本地 PG)。
+运行与计数见 §11。
 
-**验收:**
-- 接口:有殿的官员 + 合法问题(桩模型)→ 200 且字段齐;无 `judgment.read` → 403;没绑殿的 ADMIN → 403 `no_tenant`;
-  模型未配置 → 503 `assistant_not_configured`(与 audit_query 同一路径);`ASK_DATA_DATABASE_URL` 未配置 → 503 `ask_data_not_configured`;
-  闸门拒绝 → 400 带错误码与原 SQL。
-- 命令:`--sql` 模式在没有模型 key 的本地环境能跑出结果(本地演示的验收方式)。
-- 新视图过 `tests/test_tenant_scoping_contract.py`;如果视图里有不经 `scope_to_tenant` 的查询,登记进 `tests/tenancy_unscoped_sites.py` 并写明原因(租户由 RLS 与 `request.tenant` 保证)。
+**范围(已定,§9):** 只做后端接口 + 演示命令;没绑殿的 ADMIN 不开放;白名单四张表(§6)。
 
 ## 3. SQL 闸门(`gate.py`)
 
-纯函数:`check(sql: str) -> Verdict`(放行时带解析好的表集合;拒绝时带错误码)。用 sqlglot 按 `postgres` 方言解析成 AST,
-规则按 AST 判,不按字符串。错误码是对外契约,写成模块常量,测试按常量断言:
+纯函数 `check(sql) -> Verdict`:sqlglot 按 `postgres` 方言解析成 AST,规则按 AST 判,按下表顺序给第一条命中的错误码。
 
 | 规则 | 错误码 |
 |---|---|
 | 解析失败、空串 | `unparseable` |
-| 语句不是恰好一条(`SELECT 1; DROP TABLE …`) | `multiple_statements` |
-| 根不是查询,或树里有任何 Insert/Update/Delete/Merge/Create/Drop/Alter/Command/Copy/Set 节点(含 `WITH x AS (DELETE … RETURNING *)`) | `not_a_select` |
+| 语句不是恰好一条 | `multiple_statements` |
+| 根不是查询,或树里有 Insert/Update/Delete/Merge/Create/Drop/Alter/Command/Copy/Set/Into/TruncateTable | `not_a_select` |
 | `FOR UPDATE` / `FOR SHARE` 等锁子句 | `locking_clause` |
-| 黑名单函数:`pg_sleep*`、`dblink*`、`pg_read_file`、`pg_read_binary_file`、`pg_ls_dir`、`pg_stat_file`、`lo_*`、`set_config`、`current_setting`、`pg_terminate_backend`、`pg_cancel_backend`、`query_to_xml*`、`txid_*`、`pg_advisory*` | `forbidden_function` |
-| 函数不在放行清单里(sqlglot 解析成 `Anonymous` 的一律拒;放行一组聚合 / 日期 / 字符串 / 条件函数,清单写在模块里) | `unknown_function` |
-| 任何 `Table` 不在白名单(读 `schema.yaml`),或带 schema 前缀,或是 `information_schema` / `pg_catalog` 下的;CTE 名不算表 | `table_not_allowed` |
-| `SELECT *` 或 `t.*` | `star_not_allowed` |
+| 黑名单函数(`pg_sleep*`、`dblink*`、`pg_read_file`、`set_config`、`current_setting`、`lo_*`、`txid_*`、`pg_advisory*` …) | `forbidden_function` |
+| 函数不在放行清单(sqlglot 解析成 `Anonymous` 的一律拒) | `unknown_function` |
+| 表不在白名单、带 schema 前缀;CTE 名只在它的作用域里算 CTE | `table_not_allowed` |
+| `SELECT *` 或 `t.*`(`count(*)` 放行) | `star_not_allowed` |
 
-注释在解析时被丢掉:`SEL/**/ECT` 解析失败,`SELECT 1 -- ; DROP …` 被当成一条普通 SELECT。闸门是第一道,**不是唯一一道**,
-§4 的只读角色与 RLS 必须在闸门全失效时也挡得住。
+**代码在哪:** `backend/apps/soul_assist/ask_data/gate.py:136`(`check`);写节点 `:31`,黑名单 `:46`–`:58`,放行清单 `:62`,
+白名单 `allowed_tables`(`:100`,读 `schema.yaml`),CTE 按作用域收 `_visible_ctes`(`:123`)。`function_name`(`:110`)执行器也用。
 
-**验收(`tests/test_ask_data_gate.py`,SQLite 也跑,不碰库):**
-- 每条拒绝用例断言**错误码**,至少覆盖:注释绕过(`/* */` 拆关键字、`--` 截断后跟第二条语句)、多语句、`SELECT 1; DROP TABLE souls_soul`、
-  `; DROP` 带前导空白与大小写变体、CTE 藏 DELETE、`FOR UPDATE`、`pg_sleep(10)`、`dblink(…)`、`pg_read_file('/etc/passwd')`、`set_config(…)`、
-  `current_setting(…)`、未知函数、`information_schema.tables`、`pg_catalog.pg_roles`、`public.judgment_judgment`(schema 前缀)、非白名单表(`authentication_user`)、
-  子查询里的非白名单表、`SELECT *`、`t.*`、空串。
-- 放行用例:单表计数、两表 JOIN、CTE、`UNION`、带日期函数与 `CASE`、子查询 —— 断言放行且表集合正确(断言存在,也断言不多不少)。
-- 证明会红:临时去掉一条规则(如表白名单),对应用例变红;记在 PR 说明里,不留在代码里。
+**实测结果:** `backend/tests/test_ask_data_gate.py`(SQLite 也跑,不碰库),§3 列的全部拒绝用例按错误码常量断言,放行用例断言表集合
+不多不少。子代理 A 做过变异(去掉表白名单 → 对应用例红),记在它的提交说明里。闸门之后还有两道,见 §4。
+
+**待用户决定(未拍板,这里不替你定):** sqlglot 不建模的无害 PG 函数 —— `age()`、`make_date()`、`generate_series()` 等 —— 今天被判
+`unknown_function`。要不要放?放的话是逐个确认 sqlglot 把它解析成哪个类(多数是 `Anonymous`),再按名字放行;代价是放行清单从「按类」
+变成「按类 + 按名字」,名字放行要防同名的危险重载(未核实有没有)。
 
 ## 4. 只读执行与库里的墙(`setup.py`、`executor.py`)
 
-**角色与策略(`manage.py ask_data_setup`,幂等,按环境跑一次,需要 CREATEROLE):**
+**角色与策略。** `manage.py ask_data_setup`(幂等,按环境跑一次,要 CREATEROLE)调 `setup.apply`:建 LOGIN 角色
+(默认 `soulledger_ask_data`,`NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT`,密码只从 `ASK_DATA_DB_PASSWORD` 读);
+`GRANT USAGE ON SCHEMA public`;四张表先 `REVOKE ALL` 再按 `schema.yaml` 的 `granted: true` 做**列级** `GRANT SELECT`;
+`ENABLE`(不 FORCE)RLS,`CREATE POLICY ask_data_tenant … FOR SELECT TO <角色> USING (tenant_id = nullif(current_setting('app.tenant_id', true), '')::bigint AND NOT is_deleted)`。
+不放迁移、不 FORCE 的理由与代价在 ADR 0007。
 
-- 建 LOGIN 角色(默认名 `soulledger_ask_data`,可用参数改):`NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT`,
-  密码从环境变量 `ASK_DATA_DB_PASSWORD` 读,不从命令行读。
-- `GRANT USAGE ON SCHEMA public`;只对白名单表的白名单列 `GRANT SELECT (列…)`(**列级授权**,清单读 `schema.yaml`)。
-  重跑时先 `REVOKE ALL` 这几张表再授,保证清单删了列权限也跟着收回。
-- 白名单表 `ENABLE ROW LEVEL SECURITY`(**不 FORCE**),`DROP POLICY IF EXISTS` 后
-  `CREATE POLICY ask_data_tenant ON <表> FOR SELECT TO <角色> USING (tenant_id = nullif(current_setting('app.tenant_id', true), '')::bigint [AND NOT is_deleted])`
-  (有软删列的表加后半句)。
-- SQL 写在 `setup.py` 的一个函数里,命令和测试调用同一个函数。不放迁移:建角色是集群级操作、要密码、要 CREATEROLE,
-  不该随每次 `migrate` 跑;策略引用角色,角色不在时建不了。代价是这几条 DDL 不在迁移历史里 —— 写进 ADR 0007。
+**执行。** 别名 `ask_data` 读 `ASK_DATA_DATABASE_URL`(未设 = 没有这个别名,答 503),不迁移、测试里镜像 `default`。每次一个事务:
+`SET TRANSACTION READ ONLY` → `set_config('statement_timeout', ASK_DATA_TIMEOUT_MS, true)` 与 `set_config('app.tenant_id', 殿, true)` →
+SQL → `fetchmany(ASK_DATA_MAX_ROWS + 1)` → COMMIT。殿只来自调用方;没有殿不执行;殿的文明在 `SHARD_READ_CIVS` 里 → `not_on_this_database`。
+库错按 SQLSTATE 归成 `timeout`(57014)、`permission_denied`(42501)、`read_only`(25006),其余 `execution_error`(原文进日志)。
 
-为什么不 FORCE、为什么策略只 `TO` 这个角色:生产的 `soulledger` 是表的 owner(`docker-compose.production.yml` 同一个用户跑 migrate),
-owner 在不 FORCE 时绕过 RLS —— **现有业务一行不受影响**,墙只对问数角色存在。代价:哪天业务改成非 owner 角色连库,
-它会在这四张表上读到零行(没有适用策略 = 默认拒绝)。写进 ADR 0007。
+**执行器自己的单语句检查(第 2 步加的,纵深防御)。** 库墙信任 `app.tenant_id`,而这是任何角色都能写的设置;psycopg2 用简单查询协议,
+一段文本里的每条语句都会执行。子代理 B 记下的缺口:绕过闸门时,`SELECT set_config('app.tenant_id','<B>',true); SELECT …` 读到 B 殿,
+`COMMIT; SELECT …` 跑到只读事务之外。现在 `executor._one_statement` 在**发送任何东西之前**用 sqlglot 解析并拒绝:
+不是恰好一条(`multiple_statements`)、根不是查询或 DML(`not_a_select`,白名单:sqlglot 把 `START TRANSACTION`、`ABORT`、
+`SAVEPOINT x`、`DISCARD ALL` 读成列或别名,黑名单会漏)、树里任何 `set_config` 调用(`forbidden_function`,也挡住单条语句里
+「物化 CTE 先改殿再扫表」的写法)。DML 照样发出去,让角色与 READ ONLY 在库里拒 —— 墙的测试要的就是这个。
 
-**连接与执行。** 新数据库别名 `ask_data`,读 `ASK_DATA_DATABASE_URL`(未配置时不加这个别名,功能答 503)。别名要排除在迁移、
-`migrate_shards`、分库路由与测试库创建之外(实现时查 `config/` 下的路由与 `testdb.py`)。每次执行一个事务:
+**代码在哪:** `backend/apps/soul_assist/ask_data/setup.py:50`(`apply`),策略表达式 `:25`、`:46`;
+`backend/apps/soul_assist/ask_data/executor.py:96`(`run`),单语句检查 `:79`、白名单 `:76`,殿检查 `:59`;
+命令 `backend/apps/soul_assist/management/commands/ask_data_setup.py`;设置 `backend/config/settings.py:236`–`:250`;
+不迁移 `backend/config/sharding.py:91`;测试用的角色与别名 `backend/tests/ask_data_wall.py`(RLS、评测、接口三处共用)。
 
-```sql
-BEGIN READ ONLY;
-SET LOCAL statement_timeout = '3s';                       -- 比全局 60 s 短(config/settings.py:253),设置项 ASK_DATA_TIMEOUT_MS
-SELECT set_config('app.tenant_id', '<request.tenant.pk>', true);   -- SET LOCAL,COMMIT 即失效,适配 pgbouncer 事务池
-<闸门放行的 SQL>                                          -- fetchmany(MAX_ROWS + 1);多出的一行只用来标 truncated
-COMMIT;
-```
-
-- 殿只来自 `request.tenant`,不来自问题,不来自模型。`tenant_id` 为空 → 不执行(fail closed)。
-- `MAX_ROWS` 默认 200(设置项 `ASK_DATA_MAX_ROWS`)。执行器不改写 SQL 加 LIMIT,只按 fetchmany 截断。
-- 错误码:超时 `timeout`;权限错(未授权列 / 表)`permission_denied`;只读事务里的写 `read_only`;其余库错 `execution_error`
-  (原文进日志,不回给前端)。
-- **分库**:官员所在殿的文明在 `SHARD_READ_CIVS` 里 → `not_on_this_database`,不执行。
-
-**验收(`tests/test_ask_data_rls.py`,PG-only,登记进 `tests/test_concurrency.py::test_the_postgres_only_set_is_the_set_we_think_it_is` 的名单;
-fixture 建的角色名带随机后缀、测试后删除,与 `test_row_level_security_probe.py` 同一套清理写法):**
-- 跨租户:两个殿各有案件与灵魂;以殿 A 执行一条**没写租户过滤**的 `SELECT count(*) FROM judgment_judgment` 只数到 A 的;
-  `WHERE id = <B 的案件>` 返回空;JOIN `souls_soul` 也只有 A 的行。四张表各至少一条。
-- 软删的行不可见。
-- 不设殿 → 零行;同一连接 COMMIT 后再查 → `current_setting` 为空且零行(pgbouncer 泄漏那条)。
-- **绕过闸门**直接交给执行器:`UPDATE …` → `read_only`(或权限错);`SELECT pg_sleep(10)` → `timeout`,且用时 < 5 s;
-  读未授权的列(`confession`)→ `permission_denied`;读未授权的表(`authentication_user`)→ `permission_denied`;
-  `SELECT set_config('app.tenant_id', '<B>', true)` 之后再查 —— 断言仍只见 A(若做不到,记为已知缺口写进 §8,并确认闸门挡住它)。
-- 超大结果:`generate_series` 或多行数据 → 返回 `MAX_ROWS` 行且 `truncated = true`。
-- `ask_data_setup` 跑两次结果一样(幂等);跑完后 owner 角色在这四张表上照常读写(不 FORCE 的证明),`relforcerowsecurity` 为假。
-- 证明会红:去掉策略(或改成 FORCE 以外的错误形状),跨租户用例变红。
+**实测结果:** `backend/tests/test_ask_data_rls.py`。PG-only 的九条(已登记进 `tests/test_concurrency.py` 的名单)在 unRAID 的真 PG 上
+全过:跨殿(四张表、按 id 查 B、JOIN)、软删不可见、没设殿零行且 COMMIT 后同一连接上殿与超时都已失效、绕过闸门的
+UPDATE / DELETE / 未授权列 / 未授权表全被库拒且什么都没写、`pg_sleep(10)` 在 5 秒内以 `timeout` 结束、500 行截成 200 行且标 truncated、
+`ask_data_setup` 跑两次结果一样且表主照常读写、`relforcerowsecurity` 为假。原 xfail 的伪造殿测试改成普通测试(三种写法,都被执行器拒,
+同一连接上下一问仍只见 A);另加 `test_the_executor_sends_one_statement_and_never_a_setting`,十四种写法,每个引擎都跑。
+**变异:** 去掉 `run` 里对 `_one_statement` 的调用,这十七格全红(三格 PG 测试 `DID NOT RAISE`,即请求真的发了出去;十四格在拒绝之前就碰了库),
+还原后全绿(命令与计数见 §11)。B 的三处变异(策略 `USING (true)`、不开 RLS、整表 `GRANT SELECT`)记在 ADR 0007。
 
 ## 5. Schema 召回(`schema.py`、`schema.yaml`)
 
-`schema.yaml` 是唯一来源:每张表一段说明、每列一行(列名、类型、中文业务叫法、同义词、枚举值的含义,
-如 `verdict` 的取值、「结案」= `is_final`、「申诉」= `grievance_status`),以及该列是否授权给只读角色。它同时喂给:
-闸门的表白名单、`ask_data_setup` 的列授权、召回语料、给模型的表结构。四处读同一份,不抄。
+`schema.yaml` 是唯一来源:每张表一段说明、每列一行(类型、是否授权、中文叫法、同义词、枚举值含义)。读它的有四处:闸门的表白名单、
+`ask_data_setup` 的列授权、召回语料、给模型的表结构(`table_text` 只写授权列)。
 
-召回:每张表一个文本块,用 `vectors.embed` 取向量、`vectors.nearest` 取最近 k 张(k 默认 3)。降级照 `vectors.retrieve` 的规矩:
-向量服务不通、超时、库里没有向量、相似度低于下限 → 返回全部白名单表(只有四张,整份不长),`mode` 标 `fallback*`。
-向量存哪:复用 `HelpChunk`(用一个专门的 `audience` 值)还是另起一张小表,实现时取改动小的一种,写进讲解稿。
+召回:每张表一个文本块,查询加 qwen3-embedding 的指令前缀,余弦取最近 k=3 张。**向量放在 Django cache 里**(键是模型 / 维度 / 四段说明全文
+的哈希,说明或模型一变就换键,没有重建命令),没命中时与问题同一次 `embed` 请求取。没复用 `HelpChunk`:`vectors.sync` 会删掉帮助语料里
+没有的行。降级:向量服务不通、超时、维度对不上 → `fallback`,最近一张低于 `ASSISTANT_RETRIEVAL_MIN_SIMILARITY` → `fallback_low_similarity`,
+两种都返回全部四张表。
 
-**验收(`tests/test_ask_data_schema.py`):**
-- `schema.yaml` 里每张表、每个授权列在模型里真实存在(读 `_meta`,改了模型这条会红);未授权列至少包括 §6 列出的那些。
-- 闸门白名单 == `schema.yaml` 的表集合 == `ask_data_setup` 授权的表集合(断言三者相等)。
-- 召回:装假的 embed(根 conftest 默认让出网失败),「申诉」类问题把 `judgment_judgment` 排第一;embed 失败 → `fallback` 且返回全部表。
-- 每列的同义词至少覆盖评测集里出现的业务叫法(用评测集反查,缺了就红)。
+**代码在哪:** `backend/apps/soul_assist/ask_data/schema.py:79`(`recall`),`table_text` `:52`;`backend/apps/soul_assist/ask_data/schema.yaml`。
+
+**实测结果:** `backend/tests/test_ask_data_schema.py`:yaml 的表与列逐列等于模型的具体列(按字段顺序)、§6 的私密列与全部 `text` 列都不授、
+策略要的 `tenant_id` / `is_deleted` 都授;**三方相等**(第 2 步加):`gate.allowed_tables() == schema.tables() == setup.tables()`;
+**同义词覆盖评测集**(第 2 步加):每道非反例题的 gold_sql 用到的每一列,问题里都要出现 yaml 给它的某个叫法 —— 第一次跑查出六列缺词
+(`is_final` 的「没结」、`concluded_at` 的「结了多少案」「结案的」、`created_at` 的「立了几件案」、`grievance_filed_at`、`death_year` 的「以后死的」、
+`executed_at`),已补进 yaml;变异:删掉「没结」,`open-cases` 那格红。召回用二元组替身,四个问题排第一的表正确;没有灵魂表的一格,
+理由写在测试里(替身是字面重合,灵魂类问题的字面四段说明里都有)。真嵌入模型上的排序未核实。
 
 ## 6. 白名单表(已定)
 
 | 表 | 用途 | 不授的列(至少) |
 |---|---|---|
 | `judgment_judgment` | 案件:判决、结案、申诉、时间 | `confession`、`notes`、`summary`、`grievance_plea`、`grievance_note`、`evidence_json`、`fail_reason_note` |
-| `souls_soul` | 灵魂:状态、文明、功过分 | 姓名与其他身份信息、自由文本(实现时逐列定,写进 `schema.yaml`) |
-| `disposition_disposition` | 去向 / 处置 | 自由文本 |
-| `sentence_plan_sentenceplan` | 受刑计划 | 自由文本 |
+| `souls_soul` | 灵魂:状态、文明、功过分 | `name`、`birth_name`、`description`、`soul_code`、`contact_email`、`contact_phone`、`origin_location` 等 |
+| `disposition_disposition` | 去向 / 处置 | `notes` 等自由文本 |
+| `sentence_plan_sentenceplan` | 受刑计划 | `cancel_reason` 等自由文本 |
 
-表名以实现时 `Model._meta.db_table` 为准。策略一律 `tenant_id = 当前殿`(有软删列的加 `AND NOT is_deleted`),比 ADR 0006 探针里
-`souls_soul` 的「本籍殿也能读」更窄:问数只回答本殿的数据。
+逐列的授与不授在 `schema.yaml`,由 `tests/test_ask_data_schema.py` 与 `tests/test_ask_data_rls.py::test_setup_runs_twice_…`(真 PG 上逐列问
+`has_column_privilege`)核对。策略一律「本殿且未删」,比 ADR 0006 探针里 `souls_soul` 的「本籍殿也能读」更窄。
 
 ## 7. 评测(`evals.py`、`evalsets/ask_data.json`、`manage.py ask_data_eval`)
 
-**用例集:** 40 题(下限 30,上限 50)。每题:`id`、`question`、`gold_sql`(标准 SQL)、`naive_sql`(离线桩模型的输出)、
-`ordered`(题目要求排序时为真)、`expect`(`ok` 或期望的错误类型,用于反例题)。题目分布至少:单表计数 / 过滤 10 题、两表以上 JOIN 8 题、
-聚合与分组 8 题、时间范围 6 题、同义词与业务叫法 5 题、反例(注入、越权表、跨殿意图)5 题。四张表都要被用到。
+**用例集:** 42 题(单表 10+、JOIN 8+、聚合 8+、时间 6+、同义词 5+、反例 5),四张表都用到;每题 `gold_sql`、`naive_sql`(离线桩的回答)、
+`expect`、`offline`(在种子上应落的分类)。种子 `backend/tests/ask_data_eval_seed.py`:两个殿,时间钉死,`today` = 2026-11-15。
 
-**固定种子数据:** 评测与其单元测试用同一份种子(两个殿,各几十条案件 / 灵魂 / 处置 / 计划,时间钉死,`today` 写在用例集头里)。
+**比对与分类:** 执行结果按行的多重集合比(不比列名列序;`ordered` 时比行序;小数 6 位;日期 ISO;截断不判对);分类按
+`no_sql → gate_rejected → timeout → permission_denied → execution_error → truncated → ok → wrong_table → wrong_join → wrong_filter → wrong_aggregate → other`
+取第一个命中的。
 
-**比对口径(执行结果比对):**
-- `gold_sql` 与模型 SQL 都在**同一殿、同一种子**上经执行器跑;期望结果不手写,由 `gold_sql` 跑出。
-- 两边结果都转成行的多重集合比较:不比列名,不比列序(每行按值排序后比);`ordered` 为真时才比行序。
-- 数值:整数精确比,小数四舍五入到 6 位;`NULL` 与 `NULL` 相等;日期时间统一成 ISO 字符串。
-- 任一边被截断(`truncated`)→ 该题不判对,分类 `truncated`。
-- 执行准确率 = `ok` 题数 / 非反例题数;反例题单独算「拒绝率」(期望被拒且被拒的比例)。
+**两种跑法(`manage.py ask_data_eval`):** `--offline` 用每题的 `naive_sql`,`--live` 走 `service.generate`(召回 + 生效配置的模型)。
+都经真闸门与真执行器(`service.eval_hooks`),在 `--tenant`(默认用例集的殿)上跑。用例集记下的离线分数只在评测种子上成立。
 
-**错误分类**(每题落且只落一个,按顺序判第一个命中的):
-`no_sql`(模型没给出可提取的 SQL)→ `gate_rejected`(带闸门错误码)→ `timeout` → `permission_denied` → `execution_error` →
-`truncated` → `ok` → `wrong_table`(用到的表集合与 gold 不同)→ `wrong_join`(表集合相同、JOIN 条件不同)→
-`wrong_filter`(JOIN 相同、WHERE 不同)→ `wrong_aggregate`(GROUP BY / 聚合函数不同)→ `other`。
-AST 差异判不出的落 `other`;分类是帮人看,不是精确诊断。
+**代码在哪:** `backend/apps/soul_assist/ask_data/evals.py`(`classify` `:113`,`evaluate` `:131`,`summarize` `:151`);
+`backend/apps/soul_assist/management/commands/ask_data_eval.py`;`backend/apps/soul_assist/ask_data/service.py:79`(`eval_hooks`)。
 
-**两种跑法:**
-- `--offline`:桩供应商直接返回 `naive_sql`。naive 里有的题是对的、有的故意忘了租户过滤(结果应与 gold 相同 —— RLS 兜住了)、
-  有的故意错表 / 错 JOIN / 错过滤、有的写 `; DROP`。离线跑证明的是闸门、执行器、RLS、比对与分类本身,**不证明任何模型的准确率**。
-  需要真 PostgreSQL(RLS 只在 PG 上有)。
-- `--live`:走 `features.complete`,要配模型。跑出的才是执行准确率。没跑过 `--live` 之前,文档与简历都不写准确率数字。
-- 输出:总分、按分类计数、每题一行(id、分类、错误码)。
+**实测结果:** `backend/tests/test_ask_data_evals.py`。比对、分类(每个分类至少一格)、用例集自检每个引擎都跑;第 2 步把自检里的结构闸门替身换成
+真 `gate.check`:每条 gold_sql 过闸门、每条反例题的 naive_sql 被拒。离线整套(PG-only,已登记)换成真闸门 + 以只读角色过 RLS 的真执行器后,
+**分数与分类计数和替身时一样**:准确率 27/37、反例拒绝 5/5,`ok` 27、`gate_rejected` 5、`wrong_filter` 2,`execution_error` /
+`no_sql` / `other` / `permission_denied` / `truncated` / `wrong_aggregate` / `wrong_join` / `wrong_table` 各 1。读未授权列的那题从替身的
+42703(列不存在)变成 42501(无权限),两者都记 `permission_denied`。「忘了租户过滤」的题判 `ok`,且同一条 SQL 不经 RLS 会数进别殿(测试核对)
+—— 这是 RLS 兜住的证明。**这是离线桩模型的分数,不是任何模型的准确率。** `--live` 没有跑过。
 
-**验收(`tests/test_ask_data_evals.py`):**
-- 比对:列序不同算对、行序在 `ordered=False` 时不算错而 `ordered=True` 时算错、NULL、小数、截断各一条。
-- 分类器:每个分类至少一条构造用例命中。
-- 用例集自检:条数在 30–50;每条 `gold_sql` 过闸门;四张表都被用到;反例题 `expect` 不是 `ok`。
-- 离线整套(PG-only,登记进 PG-only 名单):在种子上跑 `--offline`,断言得到用例集里记下的固定分数与分类计数;
-  「忘了租户过滤」的那几题判 `ok`(证明 RLS 兜住)。
+## 8. 没做 / 这一版不做 / 已知缺口
 
-## 8. 没做 / 这一版不做
-
-- 不是全库 RLS,ADR 0006 的 rollout 条件一条没动;业务连接仍只有视图层一道墙。
+- **真模型的准确率**只有 `ask_data_eval --live` 才有,一次都没跑过;文档与简历都不写准确率数字。
+- **不是全库 RLS**,ADR 0006 的 rollout 条件一条没动;业务连接仍只有视图层一道墙。
+- **殿的设置仍可被写**:执行器挡住了它能看见的写法(§4),但它信任 sqlglot 与 PG 的词法器对「几条语句」的判断一致;试过的几类(反斜杠、`E''`、
+  美元引号、嵌套注释)一致,没试过的分歧会让一段同时骗过闸门的文本重新打开这个缺口。根治要让策略依赖角色写不了的东西(ADR 0007)。
+- **就绪探针**:`apps/core/health.py:23` 会 ping 每个别名,所以先设了 `ASK_DATA_DATABASE_URL`、还没跑 `ask_data_setup` 时,就绪检查失败。先跑命令再设变量。
+- **向量在 Django cache 里**:缓存清空或换后端就在下一问时重嵌四段说明(多一次 embed 请求),没有持久化;相似度下限沿用帮助台的设置项,
+  在这里的取值是否合适未核实。
+- **截断只截返回的部分**:psycopg2 的普通游标在 `execute` 时把整份结果取到客户端,`fetchmany` 只决定回给官员多少行。大结果由 3 s 超时兜着,
+  内存上限未量过。
+- **没有留痕**:接口不写 `AIDraft`,也不写审计日志;只有 `AssistUsage` 记一行用量。谁在什么时候跑了哪条 SQL,现在只在执行器出错时进日志。
+- **离线分数只在种子上成立**:`ask_data_eval --offline` 在别的库上会得到别的数字;种子只由测试加载,没有加载命令。
+- **`not_on_this_database` 答 409**:这是实现时定的状态码(需求里没写),分库上的问数本身不做。
 - 分库上的问数(`SHARD_READ_CIVS`);ADMIN 跨殿问数;多轮追问;模型看结果再总结;图表;Web 页面与官员 App。
 - pgbouncer 本身没在测试里:和 ADR 0006 一样,用同一连接 COMMIT 后复查来代替。
-- 真模型的准确率只有跑了 `--live` 才有数字。
-
-实现时补一份 ADR 0007(问数的只读角色与表级 RLS、为什么不放迁移、不 FORCE 的代价,与 ADR 0006 的关系)。
+- **sqlglot 不认的无害函数**(`age()`、`make_date()`、`generate_series()`)今天被拒,要不要放等用户定(§3)。
 
 ## 9. 已拍板(2026-11-21,均取推荐项)
 
@@ -213,36 +203,28 @@ AST 差异判不出的落 `other`;分类是帮人看,不是精确诊断。
 - **Q5 提交**:在功能分支 `feat/ask-data` 上分几次提交,跑 `scripts/run-gates.sh` 与 `scripts/run-gates.sh --real-pg`(远端 unRAID),
   **不推送**,等用户看过再推。
 
-## 10. 实现顺序与并行分工
+## 10. 实现顺序(已完成)
 
-**第 0 步(串行,主会话,先于一切):** 建分支 `feat/ask-data`;加 sqlglot 依赖(requirements 两个文件);写 `ask_data/schema.yaml`
-的初版(四张表、列、授权与否、说明);加 `FEATURES` 里的 `ask_data` 与迁移;建空的 `ask_data/__init__.py`。提交。
-这一步是后面所有子代理的共同基础:表白名单、列授权、依赖都从这里来。
+- **第 0 步**(主会话):分支、sqlglot 依赖、`schema.yaml` 初版、`FEATURES` 的 `ask_data` 与迁移 `0022`。
+- **第 1 步**(四个子代理,各自分支):A 闸门(`feat/ask-data-gate`)、B 执行器与墙 + ADR 0007(`feat/ask-data-exec`)、
+  C 召回(`feat/ask-data-schema`)、D 评测(`feat/ask-data-evals`)。
+- **第 2 步**:先合 main(带 `config/worksteal.py` 的修复),再按 A → B → C → D 合入(无冲突);补 `service.py`、`views.py` 与路由、
+  两个命令、接口测试、三方相等与同义词覆盖、D 的离线整套换成真闸门与真执行器、两条新 PG-only 登记;在执行器里堵上伪造殿与 `COMMIT` 逃逸。
 
-**第 1 步(四个子代理并行,各自一个 worktree,都从第 0 步的提交开分支):**
+## 11. 门禁与运行记录
 
-| 子代理 | 文件 | 依赖 | 交付 |
+2026-11-21,合入后的分支(`feat/ask-data-step2`,即将快进成 `feat/ask-data`)。后端改到 `apps/core/problem_codes.py`,
+选择器因此判后端全量。按约定的分法:JS 一侧跑门禁,后端一侧走真 PostgreSQL,ruff 与 makemigrations 在本机。
+
+| 命令 | 在哪 | 退出码 | 计数 |
 |---|---|---|---|
-| A 闸门 | `ask_data/gate.py`、`tests/test_ask_data_gate.py` | 只读 `schema.yaml` 的表集合 | §3 全部验收 |
-| B 执行器与墙 | `ask_data/setup.py`、`ask_data/executor.py`、`ask_data_setup` 命令、`ask_data` 数据库别名与设置项、`tests/test_ask_data_rls.py`、PG-only 名单登记、ADR 0007 | `schema.yaml` 的列授权 | §4 全部验收(真 PG) |
-| C 召回 | `ask_data/schema.py`、`tests/test_ask_data_schema.py` | `schema.yaml`、`vectors` | §5 验收里召回与 yaml 对模型的部分 |
-| D 评测 | `ask_data/evals.py`、`evalsets/ask_data.json`、种子 fixture、`ask_data_eval` 命令、`tests/test_ask_data_evals.py` | 写比对与分类时不依赖 A/B;离线整套要 A + B | §7 的比对、分类、用例集自检;离线整套留到第 2 步 |
+| `backend/.venv/bin/ruff check .` | 本机 | 0 | — |
+| `manage.py makemigrations --check --dry-run`(SQLite) | 本机 | 0 | — |
+| `GATES_SIDES=js scripts/run-gates.sh --base main` | unRAID | 0 | core vitest 37 文件 / 372;web jest 425 套 / 7164;灵魂端 78 套 / 1424;官员端 60 套 / 1338;四处 tsc 与 eslint 绿 |
+| `scripts/run-gates.sh --real-pg --base main` | win-wsl | 0 | 11636 passed / 1212 skipped / 47 subtests,1730 s(后端全量 + 迁移往返) |
+| `scripts/run-gates.sh --real-pg --tests`(五个 ask_data 测试文件 + 未登记查询守卫) | unRAID | 0 | 291 passed / 0 skipped |
+| `scripts/run-gates.sh --tests`(SQLite:ask_data 五个文件、PG-only 名单、租户契约、未登记查询、OpenAPI、problem 信封、`apps/perm`) | unRAID | 1 → 修后见上 | 第一次 1 failed / 756 passed:两个命令按殿码取 `Tenant` 没登记,已补进 `tests/tenancy_unscoped_sites.py` |
+| 变异:去掉 `_one_statement` 调用、删掉「没结」同义词(`--real-pg --tests test_ask_data_rls.py test_ask_data_schema.py`) | unRAID | 1(预期) | 18 failed / 91 passed:17 格单语句检查 + 1 格同义词;还原后上面那行全绿 |
 
-- 互不重叠的文件,四路可以同时写。共同改动的文件(`config/settings.py`、`test_concurrency.py` 的 PG-only 名单)只归 B;
-  D 需要登记的 PG-only 测试在第 2 步由主会话加。
-- 每个子代理的 prompt 照 `CLAUDE.md`「Agent Comms」:动手前 `git log --oneline -1` 确认在分支尖端;报告写在最终回复里;
-  报的「N passed」只算它跑的那部分。worktree 里没有 `.venv`,用主 checkout 的 `backend/.venv` 绝对路径。
-- 子代理只在 worktree 里提交到自己的分支,不合并、不推送。
-
-**第 2 步(串行,主会话):** 按 A → B → C → D 合进 `feat/ask-data`;写 `ask_data/service.py`(召回 → 模型 → 闸门 → 执行)、
-`views.py` 与路由、`ask_data` 演示命令、接口测试(§2 验收)、D 的离线整套测试并登记 PG-only 名单;
-补 §5 验收里「闸门白名单 == yaml == 授权表集合」的三方相等测试(需要 A、B、C 都在)。
-
-## 11. 合并后的门禁与收尾
-
-1. 工作区干净(先提交)后跑 `scripts/run-gates.sh`(依赖改了,会被强制全量,输出会写明规则);要求后端与 JS 两侧都绿,读退出码。
-2. 跑 `scripts/run-gates.sh --real-pg`(远端 unRAID,含全部 PG-only 测试:§4 的 RLS 用例与 §7 的离线整套)。
-3. 本地演示:对本地 PG 跑 `ask_data_setup`,再 `manage.py ask_data "…" --tenant CN_DIYU --sql "SELECT count(*) FROM judgment_judgment"`,
-   换另一个殿再跑一遍,数字不同;再跑一条 `; DROP` 看到错误码。命令与输出贴进讲解稿。
-4. `ask_data_eval --offline` 的分数与分类计数贴进讲解稿,标明「离线,桩模型,不是模型准确率」。
-5. 本文改成讲解稿(每节补代码位置与实测结果,§8 照实更新),ADR 0007 定稿。提交。**不推送**,等用户看过。
+JS 第一次跑红过一次:`creditsOssDrift.test.ts`,第 0 步加了 sqlglot 却没进「致谢」的开源清单;已补(`packages/core/src/config/creditsOss.json`)。
+两次门禁都因工作区里有未提交的本文而没记账(门禁只在干净工作区记账);本文提交之后没有再跑。
