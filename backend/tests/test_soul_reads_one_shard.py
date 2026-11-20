@@ -289,5 +289,5 @@ def test_a_soul_of_no_known_civilization_or_no_hall_reads_every_leg(world):
         assert soul_read_context(User.objects.get(pk=account.user_id)) == FANOUT
         account, _client = world["souls"]["soul of GREEK"]
         assert soul_read_context(User.objects.get(pk=account.user_id)) == "civ_greek"
-        Soul._base_manager.using("default").filter(pk=account.soul_id).update(tenant=None)
+        Soul._base_manager.using("civ_greek").filter(pk=account.soul_id).update(tenant=None)  # its primary row
         assert soul_read_context(User.objects.get(pk=account.user_id)) == FANOUT

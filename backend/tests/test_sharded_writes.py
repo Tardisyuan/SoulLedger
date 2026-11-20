@@ -340,7 +340,10 @@ def test_a_direct_write_on_control_of_a_halls_row_is_refused():
 
     halls = _halls()
     greek = Soul._base_manager.using("default").create(name="greek mirror", tenant=halls["GREEK"])
-    hall_less = Soul._base_manager.using("default").create(name="no hall (D2)", tenant=None)
+    from apps.audit.models import AuditAction, AuditLog
+
+    hall_less = AuditLog._base_manager.using("default").create(tenant=None, action=AuditAction.READ, resource="d2",
+                                                                resource_id="no hall")
     _assign("GREEK")
     with cut():
         mirror = Soul._base_manager.using("default")
@@ -350,7 +353,7 @@ def test_a_direct_write_on_control_of_a_halls_row_is_refused():
                       lambda: mirror.bulk_create([Soul(name="new mirror", tenant=halls["GREEK"])])):
             with pytest.raises(ControlMirrorWrite):
                 write()
-        assert mirror.filter(pk=hall_less.pk).update(name="still control's") == 1
+        assert AuditLog._base_manager.using("default").filter(pk=hall_less.pk).update(resource_id="still control's") == 1
         with control_mirror_writes():
             assert mirror.filter(pk=greek.pk).update(name="allowed") == 1
 

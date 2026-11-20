@@ -514,9 +514,11 @@ def test_a_same_civilization_dispatch_sends_nothing_and_writes_what_one_database
     _sync()
     _assign(*CIVS)
     runs = {}
+    from django.test import override_settings
+
     for civs in ([], ["GREEK"]):
         points = _savepoints()
-        with cut():
+        with override_settings(SHARDED=bool(civs)):
             writes = _writes_during(lambda: DispatchService.execute(DispatchRecord.all_objects.get(pk=record.pk),
                                                                      "executor"))
             runs[tuple(civs)] = [t for _, t in writes]

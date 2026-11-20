@@ -1673,8 +1673,8 @@ class WriteOutsideTransaction(Exception):  # noqa: N818
 
 
 class ControlMirrorWrite(Exception):  # noqa: N818
-    """A direct write on control of a SHARD row whose civilization writes to its shard. Control is only a mirror of
-    that row now: the next shard-to-control sync deletes or overwrites the write without a word."""
+    """A direct write on control of a SHARD row of a hall, sharded. Control holds none of those rows (stage 5 purged
+    them): nothing would ever read the write."""
 
 
 _mirror_writes = ContextVar("shard_control_mirror_writes", default=False)
@@ -1724,7 +1724,7 @@ def _refuse_on_control(model, rows):
         hit = any(write_alias_of(r) != CONTROL_ALIAS for r in rows)
     if hit:
         raise ControlMirrorWrite(f"{model._meta.label}: a direct write on control of a row of {write_cut()}, whose "
-                                 "writes go to their shards; the next shard-to-control sync would undo it")
+                                 "writes go to their shards; nothing reads such a row on control")
 
 
 def pre_save_signal():
