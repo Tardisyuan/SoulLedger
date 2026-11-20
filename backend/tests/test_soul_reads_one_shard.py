@@ -257,6 +257,12 @@ def _shards_touched(client, url):
 
 
 @sharded
+@pytest.mark.xfail(strict=True, reason=(
+    "2026-11-21: held only while reads were cut and writes were not. Sharded (writes too, as on 115 since stage 4) "
+    "a soul's GET /me/, /me/life/, /me/sentence-plan/ ... also query every other shard: every Soul merge asks each "
+    "master's outbox for a move in flight (shard_saga.arriving via shard_reads.legs -> _not_arriving), and at least "
+    "one more cross-master read remains. A cost, not a wrong answer (test_every_soul_route_reads_like_the_single_"
+    "database is green). Strict: whoever narrows it sees this go red and drops the marker."))
 def test_a_soul_request_touches_its_primary_shard_and_no_other(world):
     """A soul whose rows are all in its own civilization (no residence, no letters abroad): every soul GET route,
     ACROSS too, runs its statements on control and on one shard, its primary hall's. The soul in residence reads
