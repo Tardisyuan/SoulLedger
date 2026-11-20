@@ -5312,6 +5312,7 @@
         "truthful": "如实",
         "untruthful": "不实",
         "unheard": "未记",
+        "none": "还没有记",
         "partial": "已记 {{recorded}} / {{total}} 条，其余还没有记。",
         "complete": "{{total}} 条都已记下。",
         "strip_aria": "如实 {{truthful}}，不实 {{untruthful}}，未记 {{unheard}}，共 {{total}} 条"
