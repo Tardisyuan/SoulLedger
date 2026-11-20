@@ -13,6 +13,7 @@ MESSAGES = {
         "sentence_plan_cancelled": {"title": "去处计划已撤销", "body": "灵魂「{{soul}}」的去处计划已撤销，余下各站免去，按计划走完处理。", "title_by_civ": {"cn": "受刑计划已撤销"}, "body_by_civ": {"cn": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"}},
         "sentence_plan_amended": {"title": "去处计划变更", "body": "灵魂「{{soul}}」的去处计划已变更，涉及 {{tenant}}。", "title_by_civ": {"cn": "受刑计划变更"}, "body_by_civ": {"cn": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"}},
         "sentence_request_pending": {"title": "去处计划请求待决", "body": "{{tenant}} 就灵魂「{{soul}}」的去处计划提出了请求，等待原判官决定。", "title_by_civ": {"cn": "受刑计划请求待决"}, "body_by_civ": {"cn": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原判官决定。"}},
+        "sentence_request_not_filed": {"title": "修正审判的计划变更未提交", "body": "{{tenant}} 审结灵魂「{{soul}}」的修正审判时要求变更去处计划，但计划那时已有待决请求或不再接受变更，这项变更没有提交；需要时请重新提出。", "title_by_civ": {"cn": "修正审判的计划变更未提交"}, "body_by_civ": {"cn": "{{tenant}} 审结灵魂「{{soul}}」的修正审判时要求变更受刑计划，但计划那时已有待决请求或不再接受变更，这项变更没有提交；需要时请重新提出。"}},
         "sentence_request_decided": {"title": "去处计划请求已决定", "body": "本殿就灵魂「{{soul}}」去处计划提出的请求，原判官已经决定，打开查看。", "title_by_civ": {"cn": "受刑计划请求已决定"}, "body_by_civ": {"cn": "本殿就灵魂「{{soul}}」受刑计划提出的请求，原判官已经决定，打开查看。"}},
         "sentence_node_active": {"title": "去处节点开始", "body": "灵魂「{{soul}}」已到达，去处计划第 {{order}} 站在 {{tenant}} 开始执行。", "title_by_civ": {"cn": "受刑节点开始"}, "body_by_civ": {"cn": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。"}},
         "sentence_node_done": {"title": "去处节点结束", "body": "灵魂「{{soul}}」去处计划第 {{order}} 站（{{tenant}}）已结束。", "title_by_civ": {"cn": "受刑节点结束"}, "body_by_civ": {"cn": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。"}},
@@ -77,6 +78,7 @@ MESSAGES = {
         "sentence_plan_cancelled": {"title": "Placement plan cancelled", "body": "The placement plan of soul {{soul}} was cancelled. The remaining stops are waived and the plan counts as complete.", "title_by_civ": {"cn": "Sentence plan cancelled"}, "body_by_civ": {"cn": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."}},
         "sentence_plan_amended": {"title": "Placement plan changed", "body": "The placement plan of soul {{soul}} has changed, involving {{tenant}}.", "title_by_civ": {"cn": "Sentence plan changed"}, "body_by_civ": {"cn": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."}},
         "sentence_request_pending": {"title": "Placement plan request pending", "body": "{{tenant}} has filed a request on the placement plan of soul {{soul}}. It awaits the original judge.", "title_by_civ": {"cn": "Sentence plan request pending"}, "body_by_civ": {"cn": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."}},
+        "sentence_request_not_filed": {"title": "Amendment's plan change not filed", "body": "{{tenant}} concluded an amendment judgment of soul {{soul}} asking to change its placement plan, but the plan then had a request pending or took no more changes. The change was not filed; ask again if it is still needed.", "title_by_civ": {"cn": "Amendment's plan change not filed"}, "body_by_civ": {"cn": "{{tenant}} concluded an amendment judgment of soul {{soul}} asking to change its sentence plan, but the plan then had a request pending or took no more changes. The change was not filed; ask again if it is still needed."}},
         "sentence_request_decided": {"title": "Placement plan request decided", "body": "The original judge has decided this hall’s request on the placement plan of soul {{soul}}. Open it to see.", "title_by_civ": {"cn": "Sentence plan request decided"}, "body_by_civ": {"cn": "The original judge has decided this hall’s request on the sentence plan of soul {{soul}}. Open it to see."}},
         "sentence_node_active": {"title": "Placement stop begun", "body": "Soul {{soul}} has arrived. Stop {{order}} of its placement plan begins in {{tenant}}.", "title_by_civ": {"cn": "Sentence stop begun"}, "body_by_civ": {"cn": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."}},
         "sentence_node_done": {"title": "Placement stop ended", "body": "Stop {{order}} ({{tenant}}) of the placement plan of soul {{soul}} has ended.", "title_by_civ": {"cn": "Sentence stop ended"}, "body_by_civ": {"cn": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."}},
@@ -266,6 +268,8 @@ VARIANTS = {
     "password_help_requested": {"password_help_requested_moderator"},
     # 驳回没写理由时用无理由的句子(没有「理由：」后面空着的一行)。
     "dispatch_rejected": {"dispatch_rejected_bare"},
+    # 暂居地结修正审判时要的计划变更,计划那时不收(已有待决请求等):原属殿判官收这一句(apps/dispatch/transfer.py)。
+    "sentence_request_pending": {"sentence_request_not_filed"},
     # 请求改派带了理由(手机端必填)就用带「理由」的句子;网页不带理由,旧通知也没有,仍是原句。
     "judgment_reassign_requested": {"judgment_reassign_requested_with_reason"},
     # 同一个 WORKFLOW_ASSIGNED 还用于知会节点经过、超时提醒 / 转交(`params["category"]` 另管通知类别)。

@@ -1,4 +1,6 @@
-"""Every scheduled job runs with all four civilizations write-cut (115's state: SHARD_WRITE_CIVS = all, GREEK purged).
+"""Every scheduled job runs with all four civilizations write-cut and purged (115's state since stage 5: SHARD_WRITE_CIVS =
+SHARD_PURGED_CIVS = all; control holds none of their SHARD rows -- the world is never synced back, and what stage 3
+synced to control is deleted as the purge does).
 
 On 115 one run of each job raised: `chat.cleanup_unsent_images`, `soul_accounts.prune_data_exports` and
 `soul_assist.purge_history` NoShardContext ("a write naming no row and no single civilization"), and
@@ -22,6 +24,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from tests.test_control_locks_in_a_write_cut_hall import _soul_account
+from tests.test_s5_tooling_and_sockets_after_the_purge import purge_control
 from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall
 from tests.test_stage5_prep import purged
@@ -85,10 +88,11 @@ class World:
         self.halls = _halls()
         _assign(*CIVS)
         self.accounts, self.souls = {}, {}
-        with purged("GREEK"):
+        with purged(*CIVS):
             for civ, hall in self.halls.items():
-                account = _soul_account(hall, f"job-{civ}", mirror=civ != "GREEK")
+                account = _soul_account(hall, f"job-{civ}", mirror=False)
                 self.accounts[civ], self.souls[civ] = account, account.soul_id
+            purge_control()  # what stage 3 synced to control (each hall's root unit) gone, as on 115
 
 
 @pytest.fixture
@@ -126,7 +130,7 @@ def _images(world):
 def test_unsent_images_are_cleared_on_every_shard(world, how):
     from apps.chat.models import ChatImage
 
-    with purged("GREEK"):
+    with purged(*CIVS):
         made = _images(world)
         assert _run("chat.cleanup_unsent_images", how) == {"deleted": len(CIVS)}
     for civ, (stale, sent, fresh) in made.items():
@@ -160,7 +164,7 @@ def _exports(world):
 def test_expired_and_stuck_exports_are_settled_on_every_shard(world, how):
     from apps.soul_accounts.models import DataExportStatus, SoulDataExport
 
-    with purged("GREEK"), mock.patch("apps.soul_accounts.data_export.enqueue"):
+    with purged(*CIVS), mock.patch("apps.soul_accounts.data_export.enqueue"):
         made = _exports(world)
         assert _run("soul_accounts.prune_data_exports", how) == {"expired": 4, "requeued": 0, "failed": 4}
     for civ, (expired, ready, stuck) in made.items():
@@ -207,7 +211,7 @@ def _assist(world):
 def test_assistant_history_is_purged_on_every_shard_and_on_control(world, how):
     from apps.soul_assist.models import AssistConversation, AssistMessage
 
-    with purged("GREEK"):
+    with purged(*CIVS):
         made, on_control = _assist(world)
         assert _where(AssistConversation, on_control[False].pk) == ["default"]  # hall-less: control's (D2)
         result = _run("soul_assist.purge_history", how)
@@ -249,7 +253,7 @@ def test_every_room_of_every_shard_gets_its_speaking_levels(world, synapse, how)
     from apps.chat.models import Conversation
     from apps.chat.services import SILENT, SPEAK
 
-    with purged("GREEK"):
+    with purged(*CIVS):
         made = _rooms(world)
         assert _run("chat.sync_all_rooms", how) == {"synced": 2 * len(CIVS)}
     for civ, (open_room, closed_room, identity) in made.items():
@@ -288,7 +292,7 @@ def test_retention_purges_every_master_in_batches(world, how):
     from apps.audit.models import AuditLog
     from apps.soul_assist.models import AssistUsage
 
-    with purged("GREEK"):
+    with purged(*CIVS):
         usage, audit = _retained(world)
         assert _run("audit.prune_retained_data", how)["assist_usage"] == len(CIVS) + 1
         assert _run("audit.prune_untenanted_logs", how)["audit_deleted"] == 1
@@ -310,7 +314,7 @@ def test_every_registered_job_runs_under_an_all_civilization_write_cut(world, sy
     from apps.scheduler.registry import _BY_KEY, TENANT
 
     failed = {}
-    with purged("GREEK"), mock.patch("apps.soul_accounts.data_export.enqueue"):
+    with purged(*CIVS), mock.patch("apps.soul_accounts.data_export.enqueue"):
         _images(world), _exports(world), _assist(world), _rooms(world), _retained(world)
         for key, spec in sorted(_BY_KEY.items()):
             for hall in (world.halls.values() if spec.scope == TENANT else [None]):

@@ -352,7 +352,7 @@ SITES = [
     ('apps/soul_push/services.py', 'DispatchRecord._base_manager', 1, 'PK', 'CONTEXT', 'dispatch looked up by the pk carried in the push dedupe key'),
     ('apps/souls/admin.py', 'Soul.all_objects', 1, 'PK', 'CONTEXT', 'Django admin (superuser); reads the old email of the row being saved'),
     ('apps/souls/importer.py', 'Soul.all_objects', 1, 'FILTERED', 'CONTEXT', 'explicit tenant=tenant'),
-    ('apps/souls/management/commands/check_soul_dates.py', 'Soul.all_objects', 2, 'CLI', 'CONTEXT', 'operator audit command over every tenant; optional soft-deleted rows'),
+    ('apps/souls/management/commands/check_soul_dates.py', 'Soul.all_objects', 3, 'CLI', 'CONTEXT', "operator audit command over every tenant; optional soft-deleted rows; the deleted souls' ids for the records skipped (read by id: SoulRecord.soul crosses shards)"),
     ('apps/souls/management/commands/check_soul_dates.py', 'SoulRecord._base_manager', 2, 'CLI', 'CONTEXT', 'operator audit command over every tenant; optional soft-deleted rows'),
     ('apps/souls/management/commands/purge_soul.py', 'Soul.all_objects', 2, 'CLI', 'CONTEXT', "purge_soul: one soul by id or soul_code (soft-deleted rows included: only a binned soul may be purged), then refused unless its tenant is --tenant"),
     ('apps/souls/management/commands/purge_soul.py', 'SoulEvent.all_objects', 1, 'CLI', 'CONTEXT', "purge_soul: counts the events of the one soul it resolved, for the dry-run line"),
