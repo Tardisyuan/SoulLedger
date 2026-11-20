@@ -981,11 +981,13 @@ class DispositionService:
 
     @staticmethod
     def _move_on(disposition, soul, reason) -> bool:
-        """没有计划节点的处置服完:可转世的文明 → REINCARNATING,否则(或永久刑期)→ SETTLED。"""
+        """没有计划节点的处置服完:可转世的文明 → REINCARNATING,否则(或永久刑期)→ SETTLED。
+        `disposition` None:暂居结束、回到原属之后(`move_on_once_home`),只有非永久的才会回来。"""
         from apps.souls.models import SoulState
 
         # 永久刑期 = 不转生(2026-09-29 用户决定;与 `SentencePlanService._complete` 同一条)。
-        if soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and not disposition.is_eternal:
+        eternal = disposition is not None and disposition.is_eternal
+        if soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and not eternal:
             return soul.transition_to(SoulState.REINCARNATING, reason)
         return soul.transition_to(SoulState.SETTLED, f"{reason}; this cosmology has no next life")
 
@@ -1179,8 +1181,6 @@ class DispositionService:
     def _return_home(soul, locked, disposition, how):
         """无计划暂居的处置了结:回原属地;被未结案审判拦下就记 `DISPATCH_RETURN_BLOCKED`。"""
         from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
-        from apps.sentence_plan.services import in_progress_plan
-        from apps.souls.models import Soul, SoulState
 
         try:
             DispatchService.end_residence(
@@ -1190,8 +1190,17 @@ class DispositionService:
         except ResidenceReturnBlockedError as blocked:
             DispatchService.record_blocked_return(locked, blocked, disposition)
             return
-        # 回到原属后直接往下走(F-DISP-07,用户 2026-11-12):可转世的原属文明 → 候转世(可申请转生),终局的 → 安息。
-        # 此前停在「已处置、无计划」:开不了案、申请不了转生、没有待办,只能原属殿手建一份处置再执行。
-        home = Soul.lock(soul.pk)
+        DispositionService.move_on_once_home(soul.pk, f"Residence ended; disposition {disposition.pk} {how}")
+
+    @staticmethod
+    def move_on_once_home(soul_id, reason):
+        """回到原属后直接往下走(F-DISP-07,用户 2026-11-12):可转世的原属文明 → 候转世(可申请转生),终局的 → 安息。
+        此前停在「已处置、无计划」:开不了案、申请不了转生、没有待办,只能原属殿手建一份处置再执行。
+        还在暂居(跨库时回归要等中继走完)就什么都不做:到家时原属库上的 RETURN_SETTLED 再调一次
+        (`transfer._return_settled`,VERIFY-stage4-r3 N-4)。"""
+        from apps.sentence_plan.services import in_progress_plan
+        from apps.souls.models import Soul, SoulState
+
+        home = Soul.lock(soul_id)
         if home.current_state == SoulState.DISPOSED and not home.is_residing and in_progress_plan(home) is None:
-            DispositionService._move_on(disposition, home, f"Residence ended; disposition {disposition.pk} {how}")
+            DispositionService._move_on(None, home, reason)

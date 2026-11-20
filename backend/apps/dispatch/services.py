@@ -921,7 +921,9 @@ class DispatchService:
                 "action": "DISPATCH_RETURN_BLOCKED",
                 "code": blocked.code,
                 "open_judgment_ids": blocked.judgment_ids,
-                "disposition_id": str(disposition.pk),
+                # None: a return the home hall asked for (a cancel, an appeal) refused at the residence after the
+                # home's request found no open judgment there (`transfer._return_requested`).
+                "disposition_id": str(disposition.pk) if disposition is not None else None,
                 "dispatch_id": dispatch_id,
             }, None)
             if not already_told:
