@@ -201,13 +201,21 @@ def file_request(plan, tenant, *, kind, changes, reason, user):
 
 def request_from_amendment(judgment, plan_changes, reason):
     """情况 1:AMENDMENT 审判结案 → 一条 AMEND 请求(Q2)。没有改动 = 本地审判没改什么,不生成请求。
-    调用方(`JudgmentConclusionService.conclude_judgment`)持有事务;拒绝时整个结案回滚。"""
+    调用方(`JudgmentConclusionService.conclude_judgment`)持有事务;拒绝时整个结案回滚。
+
+    计划在另一个库(暂居地结案,两边都切写):在这里只读计划、照样检查,请求由计划所在的殿在提交后写
+    (`transfer.file_amendment_request`),返回 None。"""
+    from apps.dispatch import transfer
+
     soul = Soul.lock(judgment.soul_id)
-    plan = _lock_plan(judgment.amends_plan_id)
+    elsewhere = transfer.plan_elsewhere(judgment.amends_plan_id)
+    plan = elsewhere or _lock_plan(judgment.amends_plan_id)
     if not plan_changes:
         return None
     _assert_open_for(plan, SentenceRequestKind.AMEND)
     normalized = normalize_changes(plan, judgment.tenant.code, plan_changes, SentenceRequestKind.AMEND)
+    if elsewhere is not None:
+        return transfer.file_amendment_request(judgment, plan, normalized, reason)
     return _create_request(plan, soul, from_tenant_code=judgment.tenant.code, kind=SentenceRequestKind.AMEND,
                            changes=normalized, reason=reason, user=None, judgment_id=judgment.pk)
 

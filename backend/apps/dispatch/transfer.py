@@ -365,12 +365,15 @@ def _settle_plan_stops(locked, residence):
 RETURN_REQUESTED = "dispatch.return_requested"
 
 
+@handler(RETURN_REQUESTED)
 def _return_requested(payload):
     """Step 1 deferred from the home hall's transaction (`end_residence`): run on the residence's master. A soul no
     longer residing there (it came home or moved on meanwhile) has nothing to end here. A residence that will not
-    let it go (an open judgment there) refuses: the home's rows stand (the plan's stops closed), the soul stays, and
-    the same action asked again sends it once the judgment is closed."""
-    from apps.dispatch.services import ResidenceReturnBlockedError
+    let it go (a judgment opened there after the home's request found none) keeps it: the home's rows stand (the
+    plan's stops closed), the soul stays, and the same action asked again sends it once the judgment is closed. The
+    refusal is recorded here, where the judgment is: DISPATCH_RETURN_BLOCKED on the soul's timeline and the notice to
+    both halls' officers, as a blocked automatic return on one database -- it was one log line (VERIFY-stage4-r3 N-2)."""
+    from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
     from apps.tenants.managers import get_current_tenant
 
     residence = get_current_tenant()
@@ -385,8 +388,8 @@ def _return_requested(payload):
         return
     try:
         _leave(locked, residence, {k: payload[k] for k in ("trigger", "reason", "actor", "actor_id", "then_advance")})
-    except ResidenceReturnBlockedError as e:
-        raise Refused(str(e)) from None
+    except ResidenceReturnBlockedError as blocked:
+        DispatchService.record_blocked_return(locked, blocked, None)
 
 
 def _advance_once_home(payload, residence, row):
@@ -402,16 +405,6 @@ def _advance_once_home(payload, residence, row):
     saga.send(RETURN_SETTLED, residence, _hall(home_id), {
         "soul_id": payload["soul_id"], "home_id": home_id, "dispatch_id": None, "trigger": payload["trigger"],
         "then_advance": True, "at": timezone.now().isoformat()}, subject=f"soul:{payload['soul_id']}")
-
-
-def _return_not_requested(payload):
-    import logging
-
-    logging.getLogger(__name__).warning("soul %s: residence refused the return (%s); it stays abroad",
-                                        payload["soul_id"], payload["trigger"])
-
-
-handler(RETURN_REQUESTED, refused=_return_not_requested)(_return_requested)
 
 
 def _come_home(payload):
@@ -450,7 +443,7 @@ def _left_residence(payload):
         saga.send(RETURN_SETTLED, residence, home, {
             "soul_id": values["id"], "home_id": home.pk, "dispatch_id": payload["dispatch_id"],
             "trigger": payload["trigger"], "then_advance": payload.get("then_advance", False),
-            "at": timezone.now().isoformat()}, subject=subject)
+            "reason": payload.get("reason", ""), "at": timezone.now().isoformat()}, subject=subject)
 
 
 handler(RETURN, done=_left_residence, moves=True)(_come_home)
@@ -460,7 +453,9 @@ RETURN_SETTLED = "dispatch.return_settled"
 
 @handler(RETURN_SETTLED)
 def _return_settled(payload):
-    """The home's rows of a return: the record RETURNED (on its own master), a manual return's plan moved on."""
+    """The home's rows of a return: the record RETURNED (on its own master), a manual return's plan moved on, and a
+    residence without a plan ended by its disposition moved on at home -- what the single-database `_return_home`
+    does once `end_residence` returns; across masters the soul is not home until now (VERIFY-stage4-r3 N-4)."""
     from apps.dispatch.services import DispatchService
 
     home = _hall(payload["home_id"])
@@ -480,6 +475,10 @@ def _return_settled(payload):
             DispatchService.advance_plan_after_manual_return(soul, record)
         else:  # the rest of the caller's `advance` / cancel, now that the soul is home (`end_residence`)
             SentencePlanService.advance(soul)
+    elif payload["trigger"] == DispatchService.RETURN_ON_DISPOSITION:
+        from apps.disposition.services import DispositionService
+
+        DispositionService.move_on_once_home(payload["soul_id"], f"Residence ended; {payload.get('reason', '')}")
 
 
 RECORD_RETURNED = "dispatch.record_returned"
@@ -692,6 +691,65 @@ def _plan_advance(payload):
     from apps.sentence_plan.services import SentencePlanService
 
     SentencePlanService.advance(_soul_model().lock(payload["soul_id"]))
+
+
+# ---- an amendment concluded where the soul serves (REPORT-all-stages §3 item 4) ---------------------------------------
+
+PLAN_REQUEST = "sentence_plan.amendment_request"
+
+
+def plan_elsewhere(plan_id):
+    """The plan, read only, when the code's transaction does not hold its master (the residence concludes an
+    amendment of a home plan written on another database), else None: lock and write it here."""
+    from django.conf import settings
+
+    from apps.sentence_plan.models import SentencePlan
+
+    if not settings.SHARD_WRITE_CIVS:
+        return None
+    plan = SentencePlan.all_objects.get(pk=plan_id)
+    return None if saga.joins(_hall(plan.tenant_id)) else plan
+
+
+def file_amendment_request(judgment, plan, changes, reason):
+    """`request_from_amendment` across masters: the conclusion checked the request (`_assert_open_for`, the changes
+    normalized) in the residence's transaction; the request is the plan's row, filed by its hall after the commit.
+    On the soul's advance subject, so it lands before the `advance` the same conclusion asks (`advance_elsewhere`):
+    a pending request keeps the soul at its stop (§4.2)."""
+    saga.send(PLAN_REQUEST, judgment.tenant, plan.tenant, {
+        "soul_id": str(judgment.soul_id), "plan_id": str(plan.pk), "from_tenant_code": judgment.tenant.code,
+        "changes": changes, "reason": reason or "", "judgment_id": str(judgment.pk)},
+        subject=f"advance:{judgment.soul_id}")
+
+
+def _amendment_request(payload):
+    """On the plan's master, as the plan's hall, under the soul's and the plan's locks; the plan checked again (a
+    request filed meanwhile refuses this one)."""
+    from apps.sentence_plan import requests
+    from apps.sentence_plan.models import SentenceRequestKind
+    from apps.sentence_plan.services import _lock_plan
+
+    soul = _soul_model().lock(payload["soul_id"])
+    plan = _lock_plan(payload["plan_id"])
+    try:
+        requests._assert_open_for(plan, SentenceRequestKind.AMEND)
+        requests._create_request(plan, soul, from_tenant_code=payload["from_tenant_code"],
+                                 kind=SentenceRequestKind.AMEND, changes=payload["changes"], reason=payload["reason"],
+                                 user=None, judgment_id=payload["judgment_id"])
+    except requests.PlanChangeRefusedError as e:
+        raise Refused(str(e)) from None
+
+
+def _amendment_request_refused(payload):
+    import logging
+
+    # ponytail: a request filed in the window between the conclusion's check and this delivery; the verdict stands
+    # and its changes are not asked -- logged only. Record it on the case when that window is seen.
+    logging.getLogger(__name__).warning("amendment %s: plan %s refused its request", payload["judgment_id"],
+                                        payload["plan_id"])
+
+
+handler(PLAN_REQUEST, refused=_amendment_request_refused)(_amendment_request)
 
 
 # ---- a cross-civilization rebirth (迁籍) ----------------------------------------------------------------------
