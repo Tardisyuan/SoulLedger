@@ -249,11 +249,22 @@ class MeVestibuleSerializer(serializers.Serializer):
     entered_at = serializers.DateTimeField()
 
 
+#: 一条否认的三态(`apps.judgment.confessions.items`):如实、不实、未记。
+NEGATIVE_CONFESSION_STATES = ("TRUTHFUL", "UNTRUTHFUL", "UNHEARD")
+
+
+class MeNegativeConfessionItemSerializer(serializers.Serializer):
+    n = serializers.IntegerField()
+    state = serializers.ChoiceField(choices=NEGATIVE_CONFESSION_STATES)
+
+
 class MeNegativeConfessionSerializer(serializers.Serializer):
     truthful = serializers.IntegerField()
     untruthful = serializers.IntegerField()
     unheard = serializers.IntegerField()
     total = serializers.IntegerField()
+    #: 每条一格,按条号排好(v4 第六十二批:App 的 42 格按条序固定位置)。
+    items = MeNegativeConfessionItemSerializer(many=True)
 
 
 class MeProfileSerializer(serializers.Serializer):
@@ -338,7 +349,7 @@ class MeProfileSerializer(serializers.Serializer):
                                                 judgment_method=JudgmentMethod.HEART_WEIGHING)
                     .exclude(kind=JudgmentKind.AMENDMENT).order_by("-created_at").first())
         tally = judgment and confessions.tally(judgment)
-        return MeNegativeConfessionSerializer(tally).data if tally else None
+        return MeNegativeConfessionSerializer({**tally, "items": confessions.items(judgment)}).data if tally else None
 
     @extend_schema_field(serializers.DateTimeField(allow_null=True))
     def get_wangsi_delivered_at(self, soul):

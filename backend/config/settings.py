@@ -852,6 +852,8 @@ SPECTACULAR_SETTINGS = {
         "CityGodBureauEnum": "apps.judgment.models.CityGodBureau.choices",
         # 站梯一站的 `state`:字段名太通用,钉住免得和下一个同名字段互相改名。
         "AppealLadderStateEnum": "apps.judgment.appeals.LADDER_STATES",
+        # `/me/` 四十二条否认每格的 `state`(v4 第六十二批):同上,钉住。
+        "NegativeConfessionStateEnum": "apps.soul_accounts.serializers.NEGATIVE_CONFESSION_STATES",
         "ActorRoleEnum": "apps.actors.models.ActorRole.choices",
         "UserRoleEnum": "apps.authentication.models.UserRole.choices",
         "PasswordResetRefusalCodeEnum": "apps.authentication.serializers.PASSWORD_RESET_REFUSAL_CODES",

@@ -15895,6 +15895,11 @@ export interface components {
             untruthful: number;
             unheard: number;
             total: number;
+            items: components["schemas"]["MeNegativeConfessionItem"][];
+        };
+        MeNegativeConfessionItem: {
+            n: number;
+            state: components["schemas"]["NegativeConfessionStateEnum"];
         };
         /** @description instance 是灵魂;本世账号经 context["account"] 传入。 */
         MeProfile: {
@@ -16451,6 +16456,13 @@ export interface components {
             /** Format: date-time */
             recorded_at: string | null;
         };
+        /**
+         * @description * `TRUTHFUL` - TRUTHFUL
+         *     * `UNTRUTHFUL` - UNTRUTHFUL
+         *     * `UNHEARD` - UNHEARD
+         * @enum {string}
+         */
+        NegativeConfessionStateEnum: "TRUTHFUL" | "UNTRUTHFUL" | "UNHEARD";
         NegativeConfessionTally: {
             truthful: number;
             untruthful: number;

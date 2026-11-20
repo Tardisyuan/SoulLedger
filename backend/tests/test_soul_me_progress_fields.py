@@ -112,9 +112,23 @@ def test_a_weighed_egyptian_case_shows_the_42_tally(admin_user):
     assert _me(account)["negative_confession"] is None
     case = Judgment.objects.create(soul=soul, tenant=tenant, civilization="EGYPTIAN", court="—",
                                    judgment_method=JudgmentMethod.HEART_WEIGHING)
+    shown = _me(account)["negative_confession"]
+    assert shown["unheard"] == 42 and [item["state"] for item in shown["items"]] == ["UNHEARD"] * 42
     confessions.record(case, 7, False)
     confessions.record(case, 8, True)
-    assert _me(account)["negative_confession"] == {"truthful": 1, "untruthful": 1, "unheard": 40, "total": 42}
+    shown = _me(account)["negative_confession"]
+    items = shown.pop("items")
+    assert shown == {"truthful": 1, "untruthful": 1, "unheard": 40, "total": 42}
+    # v4 第六十二批:每条一格,按条号排好;第 n 格就是第 n 位判官,不按状态排序。
+    assert [item["n"] for item in items] == list(range(1, 43))
+    assert items[6] == {"n": 7, "state": "UNTRUTHFUL"} and items[7] == {"n": 8, "state": "TRUTHFUL"}
+    assert {item["state"] for i, item in enumerate(items) if i not in (6, 7)} == {"UNHEARD"}
+
+
+def test_a_soul_whose_case_is_not_weighed_gets_no_confession_items(cn_tenant):
+    account, _ = ready_soul(cn_tenant)
+    Judgment.objects.create(soul=account.soul, civilization="CHINESE", tenant=cn_tenant, court="—")
+    assert _me(account)["negative_confession"] is None  # 不是埃及称心的案子:没有计数,也没有 items
 
 
 def test_wangsi_delivered_at_is_the_latest_delivery_of_this_life(cn_tenant):
