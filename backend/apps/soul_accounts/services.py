@@ -129,10 +129,16 @@ def _ensure_soul_code(soul):
 
     编号先在控制库的登记表里占号,再写灵魂行(分库阶段 4,`apps/tenants/global_codes.py`):行在控制库时
     两步同一个事务(写失败,占号一起回滚);行在分库时占号在控制库先提交,分库写失败留下空号,不复用。"""
+    from apps.core.shard_reads import _refuse_outside
     from apps.souls.models import Soul
     from apps.tenants import global_codes
 
     alias = global_codes.row_alias(soul)
+    # `atomic(using=alias)` inside a transaction not open on that master is a top-level transaction there: it would
+    # commit the code before the caller's transaction and survive its rollback (the home hall provisioning its soul
+    # residing abroad: 423 `write_elsewhere`, yet the code stayed on the residence's row -- real PG only).
+    if not soul.soul_code:
+        _refuse_outside(alias)
     while not soul.soul_code:
         code = _new_soul_code()
         try:
