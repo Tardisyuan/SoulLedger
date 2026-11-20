@@ -1469,6 +1469,17 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "tests/test_row_level_security_probe.py::"
         "test_no_setting_means_no_rows_and_the_setting_ends_with_its_transaction",
         "tests/test_row_level_security_probe.py::test_the_owner_bypasses_rls_unless_forced",
+        # 2026-11-21 问数的库内墙(ADR 0007,docs/ARCHITECTURE-ask-data.md §4):只读登录角色、列级授权、只对它生效的
+        # 租户策略(ENABLE 不 FORCE),执行器的只读事务、超时与行数上限。SQLite 没有 RLS、角色与列权限;同文件
+        # 不靠 RLS 的三条(没配别名、没有殿、殿已切读)每个引擎都跑。
+        "tests/test_ask_data_rls.py::test_a_hall_counts_only_its_own_rows_without_writing_a_filter",
+        "tests/test_ask_data_rls.py::test_soft_deleted_rows_are_invisible",
+        "tests/test_ask_data_rls.py::test_no_hall_set_reads_nothing_and_the_hall_ends_with_its_transaction",
+        "tests/test_ask_data_rls.py::test_what_the_gate_would_refuse_the_database_refuses_too",
+        "tests/test_ask_data_rls.py::test_a_slow_statement_is_cancelled_at_the_timeout",
+        "tests/test_ask_data_rls.py::test_a_long_result_is_cut_at_max_rows_and_flagged",
+        "tests/test_ask_data_rls.py::test_a_statement_that_sets_another_hall_still_sees_only_its_own",
+        "tests/test_ask_data_rls.py::test_setup_runs_twice_to_the_same_wall_and_the_owner_is_untouched",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
