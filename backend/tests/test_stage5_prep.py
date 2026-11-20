@@ -469,3 +469,81 @@ def test_the_purge_deletes_controls_copy_only_and_a_rerun_deletes_nothing(tmp_pa
         assert f"{CN}: 0 row(s) differ" in _run("reconcile_shards", "--civ", "CHINESE")  # REFERENCE and Post, out
 
         assert "deleted total 0 row(s)" in confirm("--confirm", "CHINESE", manifest=manifest)
+
+
+@sharded
+def test_a_hall_less_reincarnation_follows_its_disposition_and_the_purge_no_longer_blocks_on_it(tmp_path):
+    """115, 2026-11-20: after step 0c the CHINESE purge dry run blocked on `Reincarnation.disposition` -- two hall-less
+    reincarnations naming dispositions that had moved. They now follow their disposition's hall (planned in the same
+    run, or already there): dry run MOVE and nothing written; --apply raw onto the shard and the mirror, one audit row
+    each, a rerun does nothing; one whose disposition stays stays; one whose disposition the shard lacks is BLOCKED.
+    Other shapes are named ORPHAN by the backfill, before the purge's dry run would."""
+    from apps.audit.models import AuditLog
+    from apps.core.shard_sync import sync
+    from apps.reincarnation.models import Reincarnation
+
+    halls, rows = _world()
+    cn = halls["CHINESE"]
+    reinc = {name: Reincarnation.objects.create(soul_id=rows[name].soul_id, disposition=rows[name], target_realm="人道",
+                                                tenant=cn) for name in ("move", "stay", "blocked")}
+    Reincarnation._base_manager.filter(pk__in=[r.pk for r in reinc.values()]).update(tenant=None)
+    AuditLog._base_manager.filter(description="").delete()
+    _sync()
+    case = rows["stay"].judgment_id
+    hall = ("--judgment-hall", f"{case}={cn.code}")
+
+    def where(name):
+        return {a: Reincarnation._base_manager.using(a).filter(pk=reinc[name].pk).values_list("tenant_id", flat=True)
+                .first() for a in ("default", CN)}
+
+    def audits(name):
+        return AuditLog._base_manager.using(CN).filter(resource="reincarnation", resource_id=str(reinc[name].pk)).count()
+
+    with cut(*CIVS):
+        out = _run("backfill_disposition_halls", "--dry-run")
+        line = _line(out, reinc["move"].pk)
+        assert line.startswith("MOVE") and "its disposition's hall" in line and f"master {CN}" in line
+        assert _line(out, reinc["stay"].pk).startswith("STAY")  # its disposition stays without --judgment-hall
+        assert _line(out, reinc["blocked"].pk).startswith("STAY")
+        assert "ORPHAN  judgment.Judgment.owner_org 1" in out and "ORPHAN  reincarnation" not in out
+
+        before = (_state(), where("move"), where("stay"))
+        out = _run("backfill_disposition_halls", "--dry-run", *hall)
+        assert _line(out, reinc["stay"].pk).startswith("MOVE")
+        assert (_state(), where("move"), where("stay")) == before
+        assert where("move") == {"default": None, CN: None}
+
+        _run("backfill_disposition_halls", "--apply", *hall)
+        connections[CN].check_constraints()
+        for name in ("move", "stay"):
+            assert where(name) == {"default": cn.pk, CN: cn.pk}, name
+            assert audits(name) == 1, name
+        assert where("blocked") == {"default": None, CN: None}
+        sync([CN])
+        assert f"{CN}: 0 row(s) differ" in _run("reconcile_shards", "--civ", "CHINESE", "--direction",
+                                                "shard-to-control")
+
+        again = _run("backfill_disposition_halls", "--apply", *hall)
+        assert str(reinc["move"].pk) not in again and str(reinc["stay"].pk) not in again
+        assert audits("move") == audits("stay") == 1
+        assert "ORPHAN  reincarnation" not in again and "ORPHAN  judgment.Judgment.owner_org" not in again
+        assert "ORPHAN  disposition.Disposition.judgment 1" in again  # "blocked": the user's to resolve
+
+    with purged("CHINESE"):
+        out = io.StringIO()
+        with pytest.raises(CommandError, match="failed: no blockers"):
+            call_command("purge_cut_over_tenant_rows", "--civ", "CHINESE", "--dry-run", "--dump", _stop(tmp_path),
+                         stdout=out)
+        assert "block reincarnation" not in out.getvalue()
+        assert "block disposition.Disposition.judgment 1 row(s)" in out.getvalue()
+
+    with cut(*CIVS):  # a disposition the shard lacks: its reincarnation cannot go there
+        lone = Reincarnation._base_manager.using("default").create(
+            soul_id=rows["move"].soul_id, disposition_id=rows["move"].pk, target_realm="人道", cycle_count=2,
+            tenant=None)
+        from apps.disposition.models import Disposition
+
+        Reincarnation._base_manager.using(CN).filter(disposition_id=rows["move"].pk)._raw_delete(CN)  # keys hold
+        Disposition._base_manager.using(CN).filter(pk=rows["move"].pk)._raw_delete(CN)
+        line = _line(_run("backfill_disposition_halls", "--dry-run"), lone.pk)
+        assert line.startswith("BLOCKED") and f"{CN} lacks its disposition" in line

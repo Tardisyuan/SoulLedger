@@ -16,8 +16,12 @@ its civilization's shard. Stage 5 deletes control's copy of that judgment; the r
 given the hall first -- only a judgment with no hall, only to its soul's hall or home hall, only when named (no rule
 sweeps other judgments) -- and its disposition then follows rule 1 (MOVE, flagged JUDGMENT_HALL_GIVEN). On a write-cut
 target the judgment, and whatever reaches its hall through it, is inserted on the shard (`_move_judgment`).
-A hall-less row with its own tenant column naming that judgment (a comment, a citation) stays D2; the purge dry run
-names it as a blocker.
+Then the rows filed under a disposition or judgment (FOLLOWS: a reincarnation under its disposition -- 115, 2026-11-20
+-- and the judgment's children) that have no hall take their parent's hall, whether the parent has one already or
+gets one in this run; same rules: dry run MOVE, --apply raw onto the shard with one audit row each (`_give_halls`),
+idempotent, BLOCKED when a key of theirs names a row the target shard lacks. Last, every other hall-less row on
+control with a constrained key into a row of a hall is printed as ORPHAN (the purge dry run's blocker shape, named
+before it).
 BLOCKED (never moved): the realm is of another civilization than the target hall, or the target is write-cut and
 the shard lacks the judgment / realm the row names (the insert would break a foreign key at commit).
 
@@ -150,16 +154,103 @@ def plan(judgment_halls=None):
     return moves, out, halls
 
 
-def _move_judgment(pk, hall):
-    """Give the hall-less judgment `pk` the hall `hall`: on control (its master until now) and, when `hall`'s
-    civilization is write-cut, the rows that change hands with it -- the judgment, and any row whose hall is reached
-    through it -- inserted raw on the shard, audited there once. The rows are found as control's rows of the
-    civilization that the shard lacks after the update and did not lack before it (shard-to-control `compare`, with
+#: Hall-less rows that take their parent's hall, by the key that names the parent: a record filed under it, "same hall
+#: by convention" (tests/tenancy_fk_inventory.py). The constrained-key shapes a hall-less row can hold into a row of a
+#: hall, beyond the disposition's own (judgment, destination_realm): the purge dry run on 115 found
+#: Reincarnation.disposition (2026-11-20); the judgment's children are the same shape under a --judgment-hall judgment.
+#: Any other shape is reported, not moved (`orphans`).
+FOLLOWS = {
+    "reincarnation.Reincarnation": "disposition",
+    **{label: "judgment" for label in (
+        "judgment.NegativeConfession", "judgment.EvidenceAdmission", "judgment.CaseAttachment",
+        "judgment.JudgmentComment", "judgment.JudgmentCitation", "judgment.JudgmentAppeal",
+        "death_sync.DeathRegistrationRequest", "dispatch.CaptureWarrant", "dispatch.CrossTenantJudgment",
+        "workflow.ApprovalWorkflow")},
+}
+
+
+def _shard_keys(model):
+    """The constrained keys of `model` to SHARD rows: on a shard the row they name must be there too."""
+    from apps.core.sharding import SHARD, placement
+
+    return [f for f in model._meta.concrete_fields
+            if f.is_relation and f.db_constraint and placement(f.related_model) == SHARD]
+
+
+def plan_followers(halls, planned):
+    """[(row, action, target hall pk, reason)] for the hall-less rows of FOLLOWS, by model label and pk. `planned`:
+    {(model, pk): hall pk} of the judgments and dispositions given a hall in this run. A row follows its parent's hall
+    (on control, or planned); BLOCKED when another constrained key names a row the target shard lacks and that no move
+    of this run brings there; STAY when the parent has no hall."""
+    from django.apps import apps
+
+    rows = {}
+    for label, key in FOLLOWS.items():
+        model = apps.get_model(label)
+        f = model._meta.get_field(key)
+        parent = f.related_model._meta.concrete_model
+        for row in model._base_manager.using(CONTROL_ALIAS).filter(
+                tenant__isnull=True, **{f"{f.attname}__isnull": False}).order_by("pk"):
+            pid = getattr(row, f.attname)
+            hall = planned.get((parent, pid)) or parent._base_manager.using(CONTROL_ALIAS).filter(pk=pid).values_list(
+                "tenant_id", flat=True).first()
+            rows[(model, row.pk)] = [row, MOVE if hall else STAY, hall,
+                                     f"its {key}'s hall" if hall else f"its {key} has no hall (D2)"]
+    changed = True
+    while changed:  # a row blocked can strand another row of this run that names it
+        changed = False
+        moving = {**planned, **{k: v[2] for k, v in rows.items() if v[1] == MOVE}}
+        for (model, _pk), entry in rows.items():
+            row, action, hall, _ = entry
+            if action != MOVE:
+                continue
+            alias = master_alias(halls[hall].civilization)
+            if alias == CONTROL_ALIAS:
+                continue  # control is the master: it holds every row the keys name
+            missing = [f.name for f in _shard_keys(model) if (value := getattr(row, f.attname)) is not None
+                       and moving.get((f.related_model._meta.concrete_model, value)) != hall
+                       and not f.related_model._base_manager.using(alias).filter(pk=value).exists()]
+            if missing:
+                entry[1], entry[3] = BLOCKED, f"{alias} lacks its {' and '.join(missing)}"
+                changed = True
+    return [tuple(v) for v in rows.values()]
+
+
+def orphans(planned):
+    """[(key label, n)]: hall-less rows of any SHARD model (not moved by this run) holding a constrained key to a row
+    that has a hall, or gets one in this run -- the shape the purge's blockers catch, named before the purge."""
+    from django.apps import apps
+    from django.db.models import Q
+
+    from apps.core.sharding import SHARD, placement, tenant_path
+
+    by_model = {}
+    for (model, pk) in planned:
+        by_model.setdefault(model, set()).add(pk)
+    out = []
+    for model in apps.get_models(include_auto_created=True):
+        if placement(model) != SHARD or model._meta.proxy or not model._meta.managed:
+            continue
+        hall_less = model._base_manager.using(CONTROL_ALIAS).filter(**{f"{tenant_path(model)}__isnull": True}).exclude(
+            pk__in=by_model.get(model, ()))
+        for f in _shard_keys(model):
+            target = f.related_model._meta.concrete_model
+            n = hall_less.filter(Q(**{f"{f.name}__{tenant_path(target)}__isnull": False})
+                                 | Q(**{f"{f.attname}__in": by_model.get(target, ())})).count()
+            if n:
+                out.append((f"{model._meta.label}.{f.name}", n))
+    return out
+
+
+def _give_halls(rows, hall, why):
+    """Give the hall-less rows `rows` [(model, pk)] the hall `hall`: on control (their master until now) and, when
+    `hall`'s civilization is write-cut, the rows that change hands with them -- these, and any row whose hall is
+    reached through one -- inserted raw on the shard, one audit row each there. The rows are found as control's rows of
+    the civilization that the shard lacks after the update and did not lack before it (shard-to-control `compare`, with
     the purge switch off), so a row the shard deleted and control still has is not resurrected. Shard first: a crash
-    between the two commits leaves the shard's rows and a hall-less control row, which a rerun completes."""
+    between the two commits leaves the shard's rows and hall-less control rows, which a rerun completes (no audit)."""
     from apps.audit.models import AuditAction, AuditLog
     from apps.core.shard_sync import CONTROL_TO_SHARD, SHARD_TO_CONTROL, apply_fix, compare
-    from apps.judgment.models import Judgment
 
     alias = master_alias(hall.civilization)
 
@@ -169,7 +260,9 @@ def _move_judgment(pk, hall):
 
     with control_mirror_writes(), transaction.atomic(using=CONTROL_ALIAS):
         before = only_on_control() if alias != CONTROL_ALIAS else {}
-        if not Judgment._base_manager.using(CONTROL_ALIAS).filter(pk=pk, tenant__isnull=True).update(tenant_id=hall.pk):
+        given = [(model, pk) for model, pk in rows if model._base_manager.using(CONTROL_ALIAS).filter(
+            pk=pk, tenant__isnull=True).update(tenant_id=hall.pk)]
+        if not given:
             return
         audit_on = CONTROL_ALIAS
         if alias != CONTROL_ALIAS:
@@ -183,10 +276,17 @@ def _move_judgment(pk, hall):
         with transaction.atomic(using=audit_on):
             if audit_on != CONTROL_ALIAS:
                 apply_fix(found, CONTROL_TO_SHARD)  # control's rows as read, onto the shard (its target)
-            AuditLog.objects.using(audit_on).create(
-                tenant=hall, action=AuditAction.UPDATE, resource="judgment", resource_id=str(pk),
-                changes={"tenant": [None, hall.code]},
-                description="backfill_disposition_halls --judgment-hall: hall-less judgment given its soul's hall")
+            for model, pk in given:
+                AuditLog.objects.using(audit_on).create(
+                    tenant=hall, action=AuditAction.UPDATE, resource=model._meta.model_name, resource_id=str(pk),
+                    changes={"tenant": [None, hall.code]},
+                    description=f"backfill_disposition_halls: hall-less {model._meta.model_name} given {why}")
+
+
+def _move_judgment(pk, hall):
+    from apps.judgment.models import Judgment
+
+    _give_halls([(Judgment, pk)], hall, "its soul's hall (--judgment-hall)")
 
 
 def _move(d, hall):
@@ -263,3 +363,30 @@ class Command(BaseCommand):
         self.stdout.write(f"{len(rows)} hall-less disposition(s): "
                           + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())) + f" ({mode}; "
                           f"SHARD_WRITE_CIVS={list(settings.SHARD_WRITE_CIVS)})")
+
+        from apps.disposition.models import Disposition
+        from apps.judgment.models import Judgment
+
+        planned = {**{(Judgment, pk): t for _j, pk, a, t, _w in moves if a == MOVE},
+                   **{(Disposition, d.pk): t for d, a, t, _w, _f in rows if a == MOVE}}
+        followers = plan_followers(halls, planned)
+        counts, batches = {}, {}
+        for row, action, target, why in followers:
+            label = type(row)._meta.label
+            hall = halls.get(target)
+            to = f"{hall.code} ({hall.civilization}, master {master_alias(hall.civilization)})" if hall else "control"
+            self.stdout.write(f"{action:7} {label} {row.pk} -> {to}: {why}")
+            if action == MOVE:
+                planned[(type(row), row.pk)] = target
+                batches.setdefault(target, []).append((type(row), row.pk))
+                if apply:
+                    action = DONE
+            counts[action] = counts.get(action, 0) + 1
+        if apply:
+            for target, batch in batches.items():
+                _give_halls(batch, halls[target], "its parent's hall")
+        self.stdout.write(f"{len(followers)} hall-less row(s) under a disposition or judgment: "
+                          + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())) + f" ({mode})")
+        for key, n in orphans(planned):
+            self.stdout.write(f"ORPHAN  {key} {n} hall-less row(s) name a row of a hall: not moved here, the purge "
+                              "will block on them")
