@@ -104,7 +104,7 @@ def _ast_category(sql, gold_sql):
         mine, gold = _signature(sql), _signature(gold_sql)
     except sqlglot.errors.SqlglotError:
         return "other"
-    for name, a, b in zip(("wrong_table", "wrong_join", "wrong_filter", "wrong_aggregate"), mine, gold):
+    for name, a, b in zip(("wrong_table", "wrong_join", "wrong_filter", "wrong_aggregate"), mine, gold, strict=True):
         if a != b:
             return name
     return "other"
