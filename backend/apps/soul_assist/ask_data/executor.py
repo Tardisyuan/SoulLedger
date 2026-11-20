@@ -5,16 +5,25 @@
 
 The hall comes from the caller (`request.tenant`), never from the question or the model; no hall = nothing
 runs. The SQL is not rewritten (no LIMIT added): a result longer than ASK_DATA_MAX_ROWS is cut and flagged.
-What stops a bad statement is, in order, the gate (gate.py), then this connection's role and the RLS policy
-(setup.py): column-level SELECT only, rows of the current hall only. Known gaps when the gate is bypassed
-are in ADR 0007.
+What stops a bad statement is, in order, the gate (gate.py), then `_one_statement` here, then this
+connection's role and the RLS policy (setup.py): column-level SELECT only, rows of the current hall only.
+
+`_one_statement` exists because the policy trusts `app.tenant_id`, a setting any role may write, and psycopg2
+sends a text through the simple query protocol, which runs every statement in it. So the executor itself,
+gate or no gate, sends exactly one statement, never one that ends or restarts the transaction, and never one
+that calls `set_config`: the hall setting is written by this module only (ADR 0007).
 """
 import logging
 import time
 from dataclasses import dataclass
 
+import sqlglot
 from django.conf import settings
 from django.db import DatabaseError, connections, transaction
+from sqlglot import exp
+from sqlglot.errors import SqlglotError
+
+from apps.soul_assist.ask_data import gate
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +70,34 @@ def _check_hall(tenant_id) -> None:
             raise ExecutionError(NOT_ON_THIS_DATABASE)
 
 
+#: Roots the executor sends on: a query, or a write the role and READ ONLY refuse in the database (the wall
+#: tests send those on purpose). An allow-list, because sqlglot reads `START TRANSACTION`, `ABORT`,
+#: `SAVEPOINT x` and `DISCARD ALL` as a column or an alias, and transaction control must never get through.
+_SENDABLE = (exp.Query, exp.Insert, exp.Update, exp.Delete, exp.Merge)
+
+
+def _one_statement(sql: str) -> None:
+    """Refuse, before anything is sent, what the database wall cannot refuse: a second statement (it would run
+    after a forged hall or after a COMMIT), transaction control, and any write of a setting. Codes are the
+    gate's."""
+    try:
+        statements = [s for s in sqlglot.parse(sql or "", read="postgres") if s is not None]
+    except (SqlglotError, RecursionError, ValueError):
+        raise ExecutionError(gate.UNPARSEABLE) from None
+    if len(statements) != 1:
+        raise ExecutionError(gate.MULTIPLE_STATEMENTS if statements else gate.UNPARSEABLE)
+    root = statements[0]
+    if not isinstance(root, _SENDABLE):
+        raise ExecutionError(gate.NOT_A_SELECT)
+    if any(gate.function_name(fn) == "set_config" for fn in root.find_all(exp.Func)):
+        raise ExecutionError(gate.FORBIDDEN_FUNCTION)
+
+
 def run(sql: str, tenant_id, *, using: str = ALIAS) -> Result:
     if using not in connections:
         raise ExecutionError(NOT_CONFIGURED)
     _check_hall(tenant_id)
+    _one_statement(sql)
     tenant = str(int(tenant_id))
     max_rows = settings.ASK_DATA_MAX_ROWS
     started = time.monotonic()

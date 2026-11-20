@@ -53,20 +53,30 @@ request and an explicit way to cross halls. None of that is done.
 - **These DDL statements are not in the migration history.** A database restored from a dump keeps them, but a
   database rebuilt from migrations does not have them until `ask_data_setup` runs again. A table renamed in a
   migration leaves its old grants and policy behind until the next run, and `schema.yaml` has to change with it.
-- **Known gap: the hall setting can be forged when the gate is bypassed.** `app.tenant_id` is a custom setting, and
-  any role can change it with `set_config` or `SET LOCAL`. psycopg2 sends the statement through the simple query
-  protocol, so a text holding several statements runs all of them. A statement that reaches the executor without the
-  gate can therefore set another hall's id and then read that hall's rows from the four tables. It still sees only
-  the granted columns, still cannot write, and is still subject to the timeout. The gate refuses both forms:
-  `set_config` and `current_setting` are `forbidden_function`, and more than one statement is
-  `multiple_statements`. `tests/test_ask_data_rls.py::test_a_statement_that_sets_another_hall_still_sees_only_its_own`
-  pins this gap: it xfails while the gap exists and passes once it is closed. A fix would make the policy depend
-  on something the role cannot write, for example a signed value checked by a `SECURITY DEFINER` function, or a role
-  per hall. That is not done in this version (doc §8).
-- **The same simple-protocol issue lets a gate-bypassing text run `COMMIT` and keep going** after the read-only
-  transaction has ended. What still holds there is what the role has: SELECT on the granted columns, no write
-  privilege, and RLS. The 3 s timeout does not hold, because it ended with that transaction. The connection-level
-  `statement_timeout` (`DB_STATEMENT_TIMEOUT_MS`) still applies.
+- **The hall setting is a value any role can write; the executor makes sure only it writes it.** `app.tenant_id`
+  is a custom setting: any role can change it with `set_config` or `SET`. psycopg2 sends a statement through the
+  simple query protocol, so a text holding several statements runs all of them. Until 2026-11-21 that was a known
+  gap whenever the gate was bypassed: `SELECT set_config('app.tenant_id', '<B>', true); SELECT …` read hall B,
+  and `COMMIT; SELECT …` ran the rest outside the read-only transaction and its 3 s timeout.
+  `tests/test_ask_data_rls.py::test_a_statement_that_sets_another_hall_still_sees_only_its_own` pinned it as an
+  xfail. It is closed in the executor itself, not only in the gate (defence in depth):
+  `executor._one_statement` parses the text with sqlglot before anything is sent and refuses
+  - anything that is not exactly one statement (`multiple_statements`; unparseable text is `unparseable`);
+  - a root that is not a query or a DML statement (`not_a_select`). This is an allow-list on purpose: sqlglot
+    reads `START TRANSACTION`, `ABORT`, `SAVEPOINT x` and `DISCARD ALL` as a column or an alias, so a deny-list
+    of transaction-control node types would let them through. `SET`, `RESET`, `COMMIT`, `BEGIN`, `DO` are
+    refused the same way. DML is still sent, so the role and `READ ONLY` are what refuse it, as the wall tests
+    require;
+  - any call of `set_config`, anywhere in the tree (`forbidden_function`), which also covers a single statement
+    that sets the hall in a materialised CTE before the table is scanned.
+  The codes are the gate's. The former xfail is now an ordinary test on PostgreSQL (three forms, through the
+  wall), and `test_the_executor_sends_one_statement_and_never_a_setting` checks fourteen forms on every engine.
+  Removing the call to `_one_statement` turns 17 of them red (checked 2026-11-21).
+  **What remains:** the check trusts sqlglot to split statements the way PostgreSQL's lexer does. The obvious
+  disagreements were tried (backslashes in standard and `E''` strings, dollar quoting, nested comments) and both
+  agree; a disagreement nobody tried would reopen the gap for a text that also gets past the gate. Closing it for
+  good would make the policy depend on something the role cannot write (a signed value checked by a
+  `SECURITY DEFINER` function, or a role per hall). Not done in this version (doc §8).
 - **The readiness probe checks this alias too.** `apps/core/health.py` pings every configured alias, so if
   `ASK_DATA_DATABASE_URL` is set before `ask_data_setup` has run, readiness fails. Run the command first.
 - **A dead run can leave a role behind.** The RLS tests create a cluster-wide role, `ask_data_t_<hex>`. To clean
@@ -80,16 +90,17 @@ request and an explicit way to cross halls. None of that is done.
     # then point the alias at the same database as that role
     ASK_DATA_DATABASE_URL=postgres://soulledger_ask_data:…@host:5432/soulledger
 
-The tests need real PostgreSQL. On SQLite only the three that do not depend on RLS run:
+The wall tests need real PostgreSQL. On SQLite only the ones that do not depend on RLS run (no alias, no hall, a cut-over hall, and the executor's refusals before sending):
 
-    BOTH_SIDES_OK=1 scripts/run-gates.sh --real-pg --tests tests/test_ask_data_rls.py
+    scripts/run-gates.sh --real-pg --tests tests/test_ask_data_rls.py
 
 ## Evidence
 
 - `backend/apps/soul_assist/ask_data/setup.py` (the role, grants and policy, one function)
-- `backend/apps/soul_assist/ask_data/executor.py` (the transaction, the limits, the error codes)
+- `backend/apps/soul_assist/ask_data/executor.py` (the transaction, the limits, the error codes, `_one_statement`)
 - `backend/apps/soul_assist/management/commands/ask_data_setup.py`
 - `backend/config/settings.py` (`ASK_DATA_DATABASE_URL`, `ASK_DATA_TIMEOUT_MS`, `ASK_DATA_MAX_ROWS`), `backend/config/sharding.py` (`allow_migrate`)
+- `backend/tests/ask_data_wall.py` (the test role and alias, shared by the RLS, eval and API tests)
 - `backend/tests/test_ask_data_rls.py`. Its PG-only tests are listed in
   `tests/test_concurrency.py::test_the_postgres_only_set_is_the_set_we_think_it_is`. Each guard was checked by
   breaking what it protects and watching it fail: a policy of `USING (true)`, RLS never enabled, and a

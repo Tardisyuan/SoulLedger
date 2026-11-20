@@ -26,6 +26,7 @@ from apps.sentence_plan.models import SentencePlan
 from apps.soul_assist.ask_data import executor, setup
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
+from tests import ask_data_wall
 
 SQLITE = connection.vendor == "sqlite"
 PG_ONLY = pytest.mark.skipif(SQLITE, reason="Row-level security exists only on PostgreSQL.")
@@ -87,31 +88,9 @@ def halls():
 
 @pytest.fixture
 def wall(halls):
-    """`setup.apply` as `ask_data_setup` runs it, and an alias that logs in as the new role."""
-    suffix = uuid.uuid4().hex[:12]
-    role, alias, password = f"ask_data_t_{suffix}", f"ask_data_t_{suffix}", uuid.uuid4().hex
-    try:
-        setup.apply(connection, role, password)
-        connections.settings[alias] = {**connection.settings_dict, "USER": role, "PASSWORD": password,
-                                       "CONN_MAX_AGE": 0}
-        # Log in now: Django's test case refuses to *open* a connection on an alias outside its `databases`,
-        # and this alias did not exist when the test case was set up. An open one it leaves alone.
-        connections[alias].connect()
+    """`setup.apply` as `ask_data_setup` runs it, and an alias that logs in as the new role (tests/ask_data_wall.py)."""
+    with ask_data_wall.wall() as (role, alias):
         yield {**halls, "role": role, "alias": alias}
-    finally:
-        # Gone before Django's own teardown, which walks every alias in `connections`.
-        if alias in connections.settings:
-            connections[alias].close()
-            del connections[alias]
-            del connections.settings[alias]
-        with connection.cursor() as cursor:  # committed DDL (transaction=True): undo by hand
-            for table in TABLES:
-                cursor.execute(f"DROP POLICY IF EXISTS {setup.POLICY} ON {table}")
-                cursor.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
-            cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", [role])
-            if cursor.fetchone():
-                cursor.execute(f"DROP OWNED BY {role}")
-                cursor.execute(f"DROP ROLE {role}")
 
 
 @PG_ONLY
@@ -204,22 +183,49 @@ def test_a_long_result_is_cut_at_max_rows_and_flagged(wall):
     assert (len(exact.rows), exact.truncated) == (200, False)
 
 
+FORGES = [
+    # (text, the code the executor refuses it with). Each would read hall B, or run outside the read-only
+    # transaction, if it reached the database: psycopg2 sends a text as one simple query, which runs every
+    # statement in it, and app.tenant_id is a setting any role may write (ADR 0007).
+    ("SELECT set_config('app.tenant_id', '{b}', true); SELECT id FROM judgment_judgment", "multiple_statements"),
+    ("SET LOCAL app.tenant_id = '{b}'; SELECT id FROM judgment_judgment", "multiple_statements"),
+    ("COMMIT; SELECT id FROM judgment_judgment", "multiple_statements"),
+    ("SELECT 1; DROP TABLE souls_soul", "multiple_statements"),
+    # One statement that writes the setting before the table is scanned.
+    ("WITH f AS MATERIALIZED (SELECT set_config('app.tenant_id', '{b}', true)) SELECT j.id FROM f, judgment_judgment j",
+     "forbidden_function"),
+    ("SELECT id FROM judgment_judgment WHERE pg_catalog.set_config('app.tenant_id', '{b}', true) IS NOT NULL",
+     "forbidden_function"),
+    ("SET LOCAL app.tenant_id = '{b}'", "not_a_select"),
+    ("RESET ALL", "not_a_select"),
+    ("COMMIT", "not_a_select"),
+    ("START TRANSACTION", "not_a_select"),  # sqlglot reads this as an alias: refused as "not on the allow-list"
+    ("ABORT", "not_a_select"),
+    ("DO $$ BEGIN PERFORM 1; END $$", "not_a_select"),
+    ("SEL/**/ECT 1", "unparseable"),
+    ("", "unparseable"),
+]
+
+
+@pytest.mark.parametrize(("forge", "code"), FORGES)
+def test_the_executor_sends_one_statement_and_never_a_setting(forge, code):
+    """No database needed: the refusal comes before a cursor is opened (SQLite runs this too)."""
+    with pytest.raises(executor.ExecutionError) as err:
+        executor.run(forge.format(b=2), 1, using="default")
+    assert err.value.code == code
+
+
 @PG_ONLY
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("forge", [
-    "SELECT set_config('app.tenant_id', '{b}', true); SELECT id FROM judgment_judgment",
-    "SET LOCAL app.tenant_id = '{b}'; SELECT id FROM judgment_judgment",
-])
+@pytest.mark.parametrize("forge", [f for f, _ in FORGES[:2]] + [FORGES[4][0]])
 def test_a_statement_that_sets_another_hall_still_sees_only_its_own(wall, forge):
-    (a, a_rows), (b, b_rows) = wall["A"], wall["B"]
-    rows = _rows(forge.format(b=b.pk), a, wall["alias"])
-    if rows == [[b_rows[Judgment].pk]]:
-        # Exactly this outcome and no other: anything else (an error, A's and B's rows) fails below. A fix makes
-        # the test pass outright; then delete this branch.
-        pytest.xfail("Known gap (ADR 0007, doc §8): app.tenant_id is a custom setting any role may change, and "
-                     "psycopg2 sends the text as one simple query, so a second statement runs as well. Only the "
-                     "gate stops these (forbidden_function for set_config, multiple_statements).")
-    assert rows == [[a_rows[Judgment].pk]]
+    """Was an xfail until 2026-11-21 (ADR 0007): through the wall, these read hall B. The executor now refuses
+    them before sending; the next question on the same connection still reads A only."""
+    (a, a_rows), (b, _b_rows) = wall["A"], wall["B"]
+    with pytest.raises(executor.ExecutionError) as err:
+        _rows(forge.format(b=b.pk), a, wall["alias"])
+    assert err.value.code in ("multiple_statements", "forbidden_function")
+    assert _rows("SELECT id FROM judgment_judgment", a, wall["alias"]) == [[a_rows[Judgment].pk]]
 
 
 SPEC = yaml.safe_load(setup.SCHEMA.read_text(encoding="utf-8"))["tables"]

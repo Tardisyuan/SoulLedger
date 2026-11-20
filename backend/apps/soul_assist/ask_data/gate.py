@@ -107,7 +107,7 @@ def _reject(code: str) -> Verdict:
     return Verdict(ok=False, code=code)
 
 
-def _function_name(fn: exp.Func) -> str:
+def function_name(fn: exp.Func) -> str:
     return (fn.name if isinstance(fn, exp.Anonymous) else fn.sql_name()).lower()
 
 
@@ -153,7 +153,7 @@ def check(sql: str) -> Verdict:
         return _reject(LOCKING_CLAUSE)
 
     functions = list(root.find_all(exp.Func))
-    if any(_is_forbidden(_function_name(fn)) for fn in functions):
+    if any(_is_forbidden(function_name(fn)) for fn in functions):
         return _reject(FORBIDDEN_FUNCTION)
     if any(type(fn) not in _ALLOWED_FUNCTIONS for fn in functions):
         return _reject(UNKNOWN_FUNCTION)
