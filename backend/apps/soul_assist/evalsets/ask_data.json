@@ -102,7 +102,7 @@
      "naive_sql": "SELECT count(*) FROM judgment_judgment WHERE concluded_at >= '2026-01-01' AND concluded_at < '2027-01-01'", "expect": "ok", "offline": "ok"},
     {"id": "opened-last-month", "category": "time", "question": "上个月立了几件新案?",
      "gold_sql": "SELECT count(*) FROM judgment_judgment WHERE created_at >= '2026-10-01' AND created_at < '2026-11-01'",
-     "naive_sql": "SELECT count(*) FROM judgment_judgment WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01'", "expect": "ok", "offline": "wrong_filter"},
+     "naive_sql": "SELECT count(*) FROM judgment_judgment WHERE created_at >= '2026-08-01' AND created_at < '2026-11-01'", "expect": "ok", "offline": "wrong_filter"},
     {"id": "concluded-last-30-days", "category": "time", "question": "最近 30 天结案的有几件?",
      "gold_sql": "SELECT count(*) FROM judgment_judgment WHERE concluded_at >= '2026-10-16'",
      "naive_sql": "SELECT count(*) FROM judgment_judgment WHERE concluded_at >= DATE '2026-10-16' AND is_final", "expect": "ok", "offline": "ok"},
