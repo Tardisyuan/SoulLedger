@@ -203,13 +203,13 @@ def test_a_purged_control_refuses_to_start_unless_sharded(settings):
 
     settings.SHARDED = False
     assert purged_control_needs_shards() == []
-    call_command("check", stdout=io.StringIO())
+    call_command("check", "--database", "default", stdout=io.StringIO())
     refuse_purged_control_without_shards()
 
     GlobalCode.objects.using("default").create(kind=PURGED, value="GREEK")
     assert [e.id for e in purged_control_needs_shards()] == ["sharding.E001"]
     with pytest.raises(SystemCheckError, match=r"\['GREEK'\] were purged"):
-        call_command("check", stdout=io.StringIO())
+        call_command("check", "--database", "default", stdout=io.StringIO())
     with pytest.raises(SystemExit, match="sharding.E001"):
         refuse_purged_control_without_shards()
 
@@ -222,6 +222,6 @@ def test_a_database_with_no_tables_yet_passes_the_purge_check():
     """A first `migrate` runs the system checks before any table exists (here: a fresh in-memory SQLite): no GlobalCode
     table is no record. Mutation: `purge_records` without its table check and the check without `except DatabaseError`
     -> "no such table" and a non-zero exit (either one alone keeps it green)."""
-    proc = subprocess.run([sys.executable, "manage.py", "check"], cwd=BACKEND, env=_env(),
+    proc = subprocess.run([sys.executable, "manage.py", "check", "--database", "default"], cwd=BACKEND, env=_env(),
                           capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stderr[-2000:]

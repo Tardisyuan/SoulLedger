@@ -218,13 +218,17 @@ def check_purge_records():
     check_shard_settings(recorded=purge_records())
 
 
-@checks.register("sharding")
-def purged_control_needs_shards(app_configs=None, **kwargs):
-    """Django system check, so `runserver`, `migrate` (the web container runs it before daphne) and `check` refuse a
-    process that is not sharded over a control database whose civilizations were purged: it would serve their rows as
-    empty, and only the sync refused it (`check_purge_records`). Celery runs no system checks: config/celery.py asks
-    this at worker and beat start. No table yet (a first `migrate`) is no record; a database that cannot be reached
-    is left to the command that needs it -- nothing can be served from it either."""
+@checks.register("sharding", checks.Tags.database)
+def purged_control_needs_shards(app_configs=None, databases=None, **kwargs):
+    """A database check (it reads control), so `migrate` (the web container runs it before daphne) and
+    `check --database default` refuse a process that is not sharded over a control database whose civilizations were
+    purged: it would serve their rows as empty, and only the sync refused it (`check_purge_records`). Not a default
+    check: plain `run_checks()` -- `manage.py check`, runserver's start, Celery's Django fixup -- may run where no
+    database may be touched (tests: the 2026-11-21 full gate failed three this way). Celery's own worker and beat
+    start ask it in config/celery.py. No table yet (a first `migrate`) is no record; a database that cannot be
+    reached is left to the command that needs it -- nothing can be served from it either."""
+    if databases is not None and "default" not in databases:
+        return []
     if settings.SHARDED:
         return []
     try:
