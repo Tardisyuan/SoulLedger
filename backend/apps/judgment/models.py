@@ -653,6 +653,13 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         )
 
     @property
+    def is_concluded(self) -> bool:
+        """A verdict is recorded or the case is sealed — the one spelling of "this case is no longer open"
+        (审计 2026-11-20 §4 #3). Soft-delete / archive are NOT part of it: call sites that also refuse those
+        say so beside it (`tests/test_judgment_open_check_has_one_spelling.py`)."""
+        return self.verdict is not None or self.is_final
+
+    @property
     def can_delete(self) -> bool:
         """False once a verdict has been recorded — see class docstring."""
         return self.verdict is None

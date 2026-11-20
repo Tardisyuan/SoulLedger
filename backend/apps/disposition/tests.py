@@ -329,6 +329,22 @@ class ExecuteTerminalStateTest(TestCase):
         self.assertTrue(disposition.is_executed)
         self.assertIsNotNone(disposition.executed_at)
 
+    def test_an_executed_disposition_is_not_executed_again(self):
+        """审计 2026-11-20 §4 #4:「已执行」只在视图里拦;服务层对已执行的处置照样再执行一遍 —— 重写执行时间、
+        再推灵魂一次。一份执行着、刑期没满(灵魂仍 DISPOSED)的处置就是这样。现在服务层答 False,什么都不写。"""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        soul = self._disposed_soul(Civilization.CHINESE)
+        then = timezone.now() - timedelta(days=3)
+        disposition = Disposition.objects.create(soul=soul, tenant=soul.tenant, is_executed=True, executed_at=then)
+        self.assertFalse(DispositionService.execute(disposition))
+        disposition.refresh_from_db()
+        soul.refresh_from_db()
+        self.assertEqual(disposition.executed_at, then)
+        self.assertEqual(soul.current_state, SoulState.DISPOSED)
+
     def test_soul_with_no_known_cosmology_does_not_reincarnate(self):
         """An unrecognised tenant code used to resolve to CHINESE and so
         earned the soul a next life. SETTLED is the wrong answer too, strictly

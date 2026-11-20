@@ -532,7 +532,7 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
         home_id = soul.home_tenant_id or soul.tenant_id
         if tenant is None or value.tenant_id != tenant.pk or home_id != tenant.pk:
             raise serializers.ValidationError("No such judgment in your tenant.")
-        if value.verdict is not None or value.is_final:
+        if value.is_concluded:
             raise serializers.ValidationError("This judgment is already concluded.")
         if value.kind != JudgmentKind.ORIGINAL:
             raise serializers.ValidationError("Only an original judgment opens a sentence plan.")

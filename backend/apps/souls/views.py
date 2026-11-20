@@ -622,8 +622,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # transition_to() call site in the codebase is gated by its own
         # narrower codename that does not run through this action at all —
         # JUDGING->DISPOSED moves through judgment.execute
-        # (apps/judgment/services.py), DISPOSED->{REINCARNATING,SETTLED,LOST}
-        # through disposition.execute (apps/disposition/services.py), and
+        # (apps/judgment/services.py), DISPOSED->{REINCARNATING,SETTLED}
+        # through disposition.execute (apps/disposition/services.py) and the
+        # sentence plan; DISPOSED<->LOST is by hand, through THIS action (see
+        # `lost_move` below — corrected 2026-11-20, it said disposition.execute); and
         # REINCARNATING->ALIVE through reincarnation.manage/.complete/.reborn
         # (apps/reincarnation/services.py, apps/reincarnation/views.py), none
         # of which call this action either. So this endpoint has no

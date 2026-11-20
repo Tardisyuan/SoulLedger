@@ -64,7 +64,7 @@ def record(judgment, ordinal: int, truthful, note: str = "") -> NegativeConfessi
     400 `not_weighed` on a case that is not weighed; 404 `unknown_clause` for an ordinal the hall has not seeded."""
     with transaction.atomic():
         locked = Judgment.all_objects.select_for_update(of=("self",)).get(pk=judgment.pk)
-        if locked.is_final or locked.verdict is not None:
+        if locked.is_concluded:
             raise ConfessionRefusedError("This judgment has been concluded; its confession is part of the record.",
                                          "concluded", status=409)
         if not weighing.applies(locked):

@@ -66,7 +66,7 @@ class JudgmentAIErrorSerializer(ProblemSerializer):
 def _open_case(view, request, what):
     judgment = view.get_object()
     claims.assert_may_edit(judgment, request, what)
-    if judgment.is_final or judgment.verdict is not None:
+    if judgment.is_concluded:
         return judgment, problem(status.HTTP_409_CONFLICT, "concluded", "This judgment has been concluded.")
     return judgment, None
 

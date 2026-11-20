@@ -923,6 +923,12 @@ class DispositionService:
             # method — the caller's contract is "returns False, and writes
             # nothing, when the soul cannot make that move".
             return False
+        if disposition.is_executed:
+            # Once (审计 2026-11-20 §4 #4). Only the view refused a second execution; the service re-ran it — a new
+            # `executed_at`, and the soul pushed on again when its term was still being served (DISPOSED). The view
+            # passes the row it locked (soul, then disposition), so this read is current there; no in-process caller
+            # executes a disposition twice.
+            return False
 
         # 原审的审批流程走完才执行(用户 2026-10-29;埃及是称心流程,docs/02 §5.1–5.2;apps/judgment/weighing.py)。
         from apps.judgment.weighing import unfinished_flow

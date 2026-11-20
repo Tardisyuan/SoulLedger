@@ -46,6 +46,24 @@ def test_a_second_conclusion_from_a_stale_copy_is_refused_and_writes_nothing(cn_
     assert Judgment.all_objects.get(pk=case.pk).notes == "原判"
 
 
+def test_a_conclusion_from_a_stale_copy_keeps_what_landed_meanwhile(cn_tenant):
+    """审计 2026-11-20 §4 #2:结案锁行重读(`locked`),却把调用方锁前那份整行 `save()` 回去 —— 其间落地的认领、
+    草稿保存被写回旧值。现在结案先把锁内读到的行抄进调用方那份,再改结案的字段。"""
+    from apps.judgment import claims
+
+    case = _case(cn_tenant)
+    judge = sp.officer("j1120", "ADMIN", cn_tenant)
+    stale = Judgment.all_objects.get(pk=case.pk)  # the view's get_object(), before anything below
+    claims.claim(case.pk, judge)
+    Judgment.all_objects.filter(pk=case.pk).update(draft_version=7)
+    JudgmentConclusionService.conclude_judgment(stale, Verdict.FAILED, "判", by=judge)
+    row = Judgment.all_objects.get(pk=case.pk)
+    assert row.verdict == Verdict.FAILED and row.is_final
+    assert row.claimed_by_id == judge.pk
+    assert row.draft_version == 7
+    assert stale.claimed_by_id == judge.pk and stale.verdict == Verdict.FAILED  # the caller's copy is the row
+
+
 def test_a_retry_concluded_twice_opens_one_retrial(cn_tenant):
     """RETRY(及埃及天平摇摆)在结案里另开一案:此前第二次结案照样再开一件。"""
     case = _case(cn_tenant)

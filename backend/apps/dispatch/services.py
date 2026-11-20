@@ -414,11 +414,17 @@ class DispatchService:
                 raise ValueError("A dispatch needs a soul and a target civilization")
             DispatchService._check_proposable(locked.source_tenant, locked.target_tenant, Soul.lock(locked.soul_id),
                                               manual=True, actor=dispatcher)
-            locked.status = DispatchStatus.PROPOSED
-            locked.proposed_at = timezone.now()
-            locked.save()
+            # Through the state machine like every other status write (审计 2026-11-20 §4 #12); `save_draft` above
+            # already refused anything but a live DRAFT under the same row lock, so this is the edge, not a recheck.
+            if not locked.transition_to(DispatchStatus.PROPOSED, proposed_at=timezone.now()):
+                raise ValueError(f"Only a draft can be submitted; this dispatch is {locked.status}")
             DispatchService._announce_proposal(locked, dispatcher)
         return locked
+
+    @staticmethod
+    def lock_record(record):
+        """The record's row, locked: the caller reached it through its scoped queryset. In a transaction."""
+        return DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=record.pk)
 
     @staticmethod
     def _announce_proposal(dispatch_record, dispatcher):

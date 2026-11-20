@@ -149,6 +149,25 @@ class TestDispatchRecordCRUD:
         rec.refresh_from_db()
         assert rec.is_deleted is False
 
+    def test_delete_rechecks_the_draft_under_the_row_lock(self):
+        """审计 2026-11-20 §4 #12:放弃草稿看的是锁外读到的状态。同一时刻提交(DRAFT → PROPOSED,行锁内)先落地,
+        删除仍按它早先读到的 DRAFT 把一条已提交的移交软删了。这里让删除拿到提交前的那份,模拟那次读。"""
+        from unittest.mock import patch
+
+        from apps.dispatch.views import DispatchRecordViewSet
+
+        rec = DispatchRecord.objects.create(
+            source_tenant=self.tenant_a, target_tenant=self.tenant_b, status=DispatchStatus.DRAFT,
+            soul=self.soul, dispatched_by=self.user, reason="Del", tenant=self.tenant_a,
+        )
+        stale = DispatchRecord.all_objects.get(pk=rec.pk)
+        DispatchRecord.all_objects.filter(pk=rec.pk).update(status=DispatchStatus.PROPOSED)
+        with patch.object(DispatchRecordViewSet, "get_object", return_value=stale):
+            resp = self.client.delete(f"{BASE}/records/{rec.pk}/")
+        assert resp.status_code == status.HTTP_409_CONFLICT and resp.data["code"] == "not_a_draft"
+        rec.refresh_from_db()
+        assert rec.is_deleted is False and rec.status == DispatchStatus.PROPOSED
+
 
 # ---------------------------------------------------------------------------
 # DispatchRecord actions (proposed, history, approve, reject, execute)

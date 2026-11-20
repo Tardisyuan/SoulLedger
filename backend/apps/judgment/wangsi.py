@@ -43,7 +43,7 @@ def is_held(judgment: Judgment) -> bool:
 
 def _assert_held(judgment: Judgment) -> None:
     # 与 `claims._assert_pending` 同一组列:已归档的案子也不再接申诉(2026-10-29 审查)。
-    if judgment.verdict is not None or judgment.is_final or judgment.is_deleted or judgment.is_archived:
+    if judgment.is_concluded or judgment.is_deleted or judgment.is_archived:
         raise WangsiRefusedError("This judgment is no longer pending.", "not_pending")
     if not is_held(judgment):
         raise WangsiRefusedError("This soul is not held in 枉死城.", "not_in_wangsi")
@@ -136,7 +136,7 @@ def decide_grievance(pk, user, *, upheld: bool, note: str, deliver: bool = False
             raise WangsiRefusedError(
                 "Only the city god's officers, or a hall administrator, can review this grievance.",
                 "not_city_god_officer", status=403)
-        held = judgment.verdict is None and not judgment.is_final and is_held(judgment)
+        held = not judgment.is_concluded and is_held(judgment)
         if deliver and not upheld:
             raise WangsiRefusedError("Only an upheld grievance can deliver the soul.", "deliver_needs_upheld",
                                      status=400)

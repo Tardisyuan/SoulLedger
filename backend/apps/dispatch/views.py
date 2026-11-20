@@ -1,7 +1,7 @@
 """
 REST views for dispatch app.
 """
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -122,10 +122,12 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     #
     # DispatchRecordSerializer now marks `status` and `dispatched_by`
     # read-only and its validate() turns an attempted PATCH of either into an
-    # explicit 400 — see its docstring. Status can now only move through
-    # approve()/reject()/execute() below, so the target-tenant and
-    # transition_to() checks in those three methods are the only write path
-    # for status there is; nothing has to duplicate them onto the model.
+    # explicit 400 — see its docstring. Status moves only through the actions
+    # (submit / approve / reject / execute / cancel / return-home) and the
+    # services behind them (sentence-plan dispatch, the cross-civilization
+    # saga in apps/dispatch/transfer.py), all by `DispatchRecord.transition_to`;
+    # the target-tenant check is the actions' own. (Corrected 2026-11-20: this
+    # said approve/reject/execute were the only write path.)
     #
     # See backend/tests/test_perm_write_snapshot_outside_matrix.py, "THE
     # DENIAL THAT CAN BE WALKED AROUND (dispatch)", for how this was
@@ -297,10 +299,15 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         DELETE 也是 204 并被删掉(2026-10-11 复现),绕过了状态机 —— 一条已批准 / 已执行的移交不该能这样消失;
         要结束一次移交,走 `cancel` / `reject` / `return-home`。"""
         instance = self.get_object()
-        if instance.status != DispatchStatus.DRAFT:
-            return problem(status.HTTP_409_CONFLICT, "not_a_draft",
-                           f"Only a draft can be deleted; this dispatch is {instance.status}")
-        return super().destroy(request, *args, **kwargs)
+        # Asked again under the row lock (审计 2026-11-20 §4 #12): `submit` moves DRAFT → PROPOSED under that lock,
+        # and a delete that read DRAFT before it committed soft-deleted a proposal.
+        with transaction.atomic():
+            instance = DispatchService.lock_record(instance)
+            if instance.status != DispatchStatus.DRAFT or instance.is_deleted:
+                return problem(status.HTTP_409_CONFLICT, "not_a_draft",
+                               f"Only a draft can be deleted; this dispatch is {instance.status}")
+            self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # CRUD 更新只剩 `reason` 能改(其余字段 `validate()` 拦),而理由是发起方写的:
     # 目标方能进 `get_object()` 是为了批 / 驳 / 执行,不是为了改对方的理由(此前目标方 PATCH 也是 200)。
