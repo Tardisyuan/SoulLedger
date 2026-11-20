@@ -67,7 +67,7 @@ tables:
         synonyms: [判决, 判了什么, 结果]
         values: {PASSED: 通过 / 得救, FAILED: 不过 / 定罪, PURGATORY: 炼狱 / 中间状态, RETRY: 重审 / 再议}
       - {name: notes, type: text, granted: false, label: 判官备注(自由文本)}
-      - {name: is_final, type: boolean, granted: true, label: 已结案, synonyms: [结案, 已结, 结了, 定案]}
+      - {name: is_final, type: boolean, granted: true, label: 已结案, synonyms: [结案, 已结, 结了, 定案, 没结, 未结]}
       - {name: untimely, type: boolean, granted: true, label: 横死(早于命定死期而死,先在枉死城候审), synonyms: [横死, 枉死]}
       - {name: held_until, type: date, granted: true, label: 横死者候审到这一天(之前不能认领)}
       - name: wrongful_death_cause
@@ -90,7 +90,7 @@ tables:
       - {name: grievance_plea, type: text, granted: false, label: 申诉陈词(自由文本)}
       - {name: grievance_note, type: text, granted: false, label: 申诉裁定说明(自由文本)}
       - {name: grievance_decided_at, type: timestamptz, granted: true, label: 申诉裁定时间}
-      - {name: grievance_filed_at, type: timestamptz, granted: true, label: 申诉提出时间}
+      - {name: grievance_filed_at, type: timestamptz, granted: true, label: 申诉提出时间, synonyms: [申诉提出, 提出的申诉, 提出的冤魂申诉]}
       - name: offence
         type: varchar
         granted: true
@@ -102,8 +102,8 @@ tables:
         granted: true
         label: 杜阿特旅程阶段(埃及;空 = 不涉及)
         values: {EMBALMING: 木乃伊制作中, EARLY_DEATH: 早夭 · 直入芦苇原, NAMELESS: 无名者 · 不入冥界, IMPROPER_BURIAL: 葬仪不当 · 旅程未竟}
-      - {name: created_at, type: timestamptz, granted: true, label: 立案时间, synonyms: [立案, 收案, 新案]}
-      - {name: concluded_at, type: timestamptz, granted: true, label: 结案时间, synonyms: [结案时间, 什么时候结的]}
+      - {name: created_at, type: timestamptz, granted: true, label: 立案时间, synonyms: [立案, 收案, 新案, 立了几件案]}
+      - {name: concluded_at, type: timestamptz, granted: true, label: 结案时间, synonyms: [结案时间, 什么时候结的, 结了多少案, 结案的]}
       - {name: concluded_balance, type: integer, granted: true, label: 结案时的功过余额(功 − 过;旧案可为空), synonyms: [功过, 余额]}
       - name: weighing_result
         type: varchar
@@ -187,7 +187,7 @@ tables:
       - {name: birth_year, type: integer, granted: true, label: 出生年, synonyms: [出生年份]}
       - {name: birth_month, type: smallint, granted: false, label: 出生月(与年日合成生日,身份信息)}
       - {name: birth_day, type: smallint, granted: false, label: 出生日(身份信息)}
-      - {name: death_year, type: integer, granted: true, label: 死亡年, synonyms: [死亡年份, 哪年死的, 亡故]}
+      - {name: death_year, type: integer, granted: true, label: 死亡年, synonyms: [死亡年份, 哪年死的, 亡故, 以后死的, 以前死的]}
       - {name: death_month, type: smallint, granted: true, label: 死亡月}
       - {name: death_day, type: smallint, granted: true, label: 死亡日}
       - {name: fated_death_year, type: integer, granted: false, label: 命定死年(生死簿)}
@@ -276,7 +276,7 @@ tables:
       - {name: term_start_month, type: smallint, granted: true, label: 刑期起算月}
       - {name: term_start_day, type: smallint, granted: true, label: 刑期起算日}
       - {name: is_executed, type: boolean, granted: true, label: 已执行(已发落入刑), synonyms: [执行, 已发落]}
-      - {name: executed_at, type: timestamptz, granted: true, label: 执行时间}
+      - {name: executed_at, type: timestamptz, granted: true, label: 执行时间, synonyms: [执行的, 什么时候执行, 发落时间]}
       - {name: expired_at, type: timestamptz, granted: true, label: 刑满时间(空 = 未满), synonyms: [刑满, 期满, 出狱]}
       - {name: lost_since, type: timestamptz, granted: true, label: 失踪起(空 = 未失踪;失踪期间刑期不走)}
       - {name: lost_days, type: integer, granted: true, label: 累计失踪天数}

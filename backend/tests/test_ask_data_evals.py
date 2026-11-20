@@ -3,9 +3,10 @@
 - 比对与分类是 `apps/soul_assist/ask_data/evals.py` 里的纯函数,SQLite 也跑,不碰库;
 - 用例集自检读 `evalsets/ask_data.json` 与 `ask_data/schema.yaml`:条数、题型分布、四张表、gold 结构上能过闸门、
   gold 只读授权列、反例题不期望 ok、`offline_summary` 与每题的 `offline` 自洽;
-- 最后一条只在真 PostgreSQL 上跑:种子 + 两个**替身**(下面的 `_stand_in_gate` 与 `_stand_in_executor`)跑一遍
-  `--offline`,每题落在用例集记下的分类上。替身只是为了第一步就能核对用例集与种子;第二步换成真的闸门与执行器
-  (§10),记下的数字应当不变 —— 变了就是替身与真东西的差别,要查。
+- 闸门:每条 gold_sql 过真闸门(`gate.check`),每条反例题的 naive_sql 被它拒;
+- 最后一条只在真 PostgreSQL 上跑:种子 + 真闸门 + 真执行器(`service.eval_hooks`,以 tests/ask_data_wall.py 建的只读角色
+  登录、过 RLS)跑一遍 `--offline`,每题落在用例集记下的分类上。第一步用的是两个替身(临时视图挡在真表前、结构闸门);
+  2026-11-21 换成真东西后分数与分类计数没有变(读未授权列从「列不存在」42703 变成「无权限」42501,两者都记 permission_denied)。
 """
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -14,11 +15,11 @@ from pathlib import Path
 import pytest
 import sqlglot
 import yaml
-from django.db import DatabaseError, connection, transaction
+from django.db import connection, transaction
 from sqlglot import exp
 
 from apps.soul_assist import features
-from apps.soul_assist.ask_data import evals
+from apps.soul_assist.ask_data import evals, gate, service
 
 SQLITE = connection.vendor == "sqlite"
 EVAL = features.evalset("ask_data")
@@ -170,31 +171,9 @@ def test_adversarial_cases_expect_a_rejection_and_graded_cases_expect_ok():
         assert case["expect"] in evals.CATEGORIES and case["offline"] in evals.CATEGORIES, case["id"]
 
 
-def _stand_in_gate(sql):
-    """第一步的闸门替身:只判结构(一条查询、没有写、表在白名单、不带 schema、没有 `*`、几个危险函数)。
-    真闸门(§3,`ask_data/gate.py`)更严;第二步换上它。"""
-    try:
-        trees = [t for t in sqlglot.parse(sql, read="postgres") if t is not None]
-    except sqlglot.errors.SqlglotError:
-        return "unparseable"
-    if len(trees) != 1:
-        return "multiple_statements"
-    tree = trees[0]
-    if not isinstance(tree, exp.Query) or tree.find(exp.Insert, exp.Update, exp.Delete, exp.Create, exp.Drop,
-                                                     exp.Alter, exp.Command, exp.Merge):
-        return "not_a_select"
-    if any(t.db or t.catalog for t in tree.find_all(exp.Table)) or not evals.tables(tree) <= set(SCHEMA):
-        return "table_not_allowed"
-    if any(isinstance(s.parent, (exp.Select, exp.Column)) for s in tree.find_all(exp.Star)):
-        return "star_not_allowed"
-    if any(f.name.lower() in ("set_config", "current_setting", "pg_sleep") for f in tree.find_all(exp.Anonymous)):
-        return "forbidden_function"
-    return None
-
-
 @pytest.mark.parametrize("case", CASES, ids=[c["id"] for c in CASES])
-def test_gold_passes_the_structural_gate_and_reads_only_granted_columns(case):
-    assert _stand_in_gate(case["gold_sql"]) is None
+def test_gold_passes_the_gate_and_reads_only_granted_columns(case):
+    assert gate.check(case["gold_sql"]).ok, gate.check(case["gold_sql"])
     tree = sqlglot.parse_one(case["gold_sql"], read="postgres")
     granted = set().union(*(GRANTED[t] for t in evals.tables(tree)))
     aliases = {a.alias for a in tree.find_all(exp.Alias)}
@@ -202,10 +181,9 @@ def test_gold_passes_the_structural_gate_and_reads_only_granted_columns(case):
     assert read - aliases <= granted
 
 
-def test_adversarial_naive_sql_is_rejected_by_the_stand_in_gate():
-    for case in CASES:
-        if case["category"] == "adversarial":
-            assert _stand_in_gate(case["naive_sql"]) is not None, case["id"]
+def test_adversarial_naive_sql_is_rejected_by_the_gate():
+    adversarial = [c for c in CASES if c["category"] == "adversarial"]
+    assert adversarial and all(not gate.check(c["naive_sql"]).ok for c in adversarial)
 
 
 def test_the_recorded_offline_summary_matches_the_per_case_record():
@@ -215,58 +193,38 @@ def test_the_recorded_offline_summary_matches_the_per_case_record():
 
 # --- 种子上的离线试跑(真 PostgreSQL) ---
 
-UNGRANTED_AS = "permission_denied"
-
-
-def _stand_in_executor(tenant_id):
-    """执行器替身:临时视图挡在真表前面(pg_temp 在搜索路径最前),只露授权列、只露本殿未删的行 ——
-    RLS 与列级授权的样子。读未授权列在这里报「列不存在」(42703),真执行器报 42501;两者都记 permission_denied。"""
-    with connection.cursor() as cursor:
-        for table, columns in GRANTED.items():
-            cursor.execute(f"CREATE TEMP VIEW {table} AS SELECT {', '.join(columns)} FROM public.{table} "  # noqa: S608
-                           f"WHERE tenant_id = %s AND NOT is_deleted", [tenant_id])
-        cursor.execute("SET LOCAL statement_timeout = '3s'")
-
-    def execute(sql):
-        try:
-            with transaction.atomic(), connection.cursor() as cursor:
-                cursor.execute(sql)
-                rows = cursor.fetchmany(MAX_ROWS + 1)
-        except DatabaseError as error:
-            code = getattr(error.__cause__, "pgcode", None)
-            return {"code": {"57014": "timeout", "42501": UNGRANTED_AS, "42703": UNGRANTED_AS,
-                             "25006": "read_only"}.get(code, "execution_error")}
-        return _ok(rows[:MAX_ROWS], len(rows) > MAX_ROWS)
-
-    return execute
-
-
 def _unscoped(sql):
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute(sql.replace("FROM ", "FROM public.").replace("JOIN ", "JOIN public."))
         return cursor.fetchall()
 
 
-@pytest.mark.skipif(SQLITE, reason="The seed run reads through PostgreSQL temp views standing in for RLS.")
-@pytest.mark.django_db
+@pytest.mark.skipif(SQLITE, reason="The seed run reads through the read-only role and RLS: PostgreSQL only.")
+@pytest.mark.django_db(transaction=True)
 def test_the_offline_run_on_the_seed_lands_where_the_evalset_says():
     from apps.tenants.models import Tenant
     from tests.ask_data_eval_seed import HALLS, seed
+    from tests.ask_data_wall import wall
 
     tenants = {code: Tenant.objects.get_or_create(code=code, defaults={"display_name": code})[0] for code in HALLS}
     seed(tenants)
     home = tenants[EVAL["tenant"]]
-    execute = _stand_in_executor(home.pk)
+    with wall() as (_role, alias):
+        _run_offline(home, alias)
+
+
+def _run_offline(home, alias):
+    check, execute = service.eval_hooks(home.pk, using=alias)
 
     for case in CASES:  # gold 跑得通,而且不是空的(除非本来就该空)
         rows = execute(case["gold_sql"])["rows"]
-        meaningful = bool(rows) and rows != [(0,)] and rows != [(None,)]
+        meaningful = rows not in ([], [[0]], [[None]])  # the executor gives rows as lists
         assert meaningful != bool(case.get("empty_ok")), (case["id"], rows)
     for case in CASES:  # 不经 RLS 会数进别殿:判 ok 才说明是墙兜住的
         if case.get("forgets_tenant"):
             assert not evals.same_result(execute(case["naive_sql"])["rows"], _unscoped(case["naive_sql"]),
                                          ordered=False), case["id"]
 
-    results = evals.evaluate(CASES, generate=lambda c: c["naive_sql"], check=_stand_in_gate, execute=execute)
+    results = evals.evaluate(CASES, generate=lambda c: c["naive_sql"], check=check, execute=execute)
     assert {r["id"]: r["category"] for r in results} == {c["id"]: c["offline"] for c in CASES}
     assert evals.summarize(results) == EVAL["offline_summary"]

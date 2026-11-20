@@ -4,16 +4,19 @@
 所以「哪张表最近」由 schema.yaml 的说明文字决定,不由替身写死。根 conftest 默认让 `_post` 像主机不通一样失败,
 那就是降级路径。
 
-「闸门白名单 == yaml == 授权表集合」的三方相等测试与「同义词覆盖评测集」在第 2 步(§10),不在这里。
+第 2 步(§10)补上:「闸门白名单 == yaml == 授权表集合」的三方相等,与「同义词覆盖评测集」(用评测集反查)。
 """
 import hashlib
+import re
 
 import pytest
+import sqlglot
 from django.apps import apps
 from django.core.cache import cache
+from sqlglot import exp
 
-from apps.soul_assist import vectors
-from apps.soul_assist.ask_data import schema
+from apps.soul_assist import features, vectors
+from apps.soul_assist.ask_data import gate, schema, setup
 
 pytestmark = pytest.mark.django_db
 
@@ -88,6 +91,46 @@ def test_the_text_given_to_the_model_holds_granted_columns_only():
     assert "grievance_status" in text and "申诉" in text and "FILED=" in text
     for name in MUST_NOT_GRANT["judgment_judgment"]:
         assert f"- {name} " not in text
+
+
+def test_the_gate_the_yaml_and_the_grants_name_the_same_tables():
+    """§5:四处读同一份 schema.yaml。三者相等,且每张授权的表至少授出一列(GRANT SELECT () 是语法错)。"""
+    assert gate.allowed_tables() == set(schema.tables()) == set(setup.tables())
+    assert all(spec["columns"] for spec in setup.tables().values())
+
+
+#: 只是连接用的键,不是业务叫法。
+_KEYS = {"id", "soul_id", "judgment_id", "origin_judgment_id"}
+
+
+def _vocabulary(table, column):
+    """一列在 yaml 里的全部叫法:同义词、说明(去掉括号里的补充)、枚举值的每个含义。"""
+    spec = next(c for c in TABLES[table]["columns"] if c["name"] == column)
+    words = [*(spec.get("synonyms") or []), re.split(r"[(（]", spec["label"])[0]]
+    for meaning in (spec.get("values") or {}).values():
+        words += [w.strip() for w in re.split(r"[/·]", meaning)]
+    return [w for w in words if w]
+
+
+def _gold_columns(case):
+    tree = sqlglot.parse_one(case["gold_sql"], read="postgres")
+    aliases = {t.alias_or_name: t.name for t in tree.find_all(exp.Table)}
+    for col in tree.find_all(exp.Column):
+        if col.name in _KEYS:
+            continue
+        owners = [aliases[col.table]] if col.table else [
+            t for t in set(aliases.values()) if any(c["name"] == col.name for c in TABLES[t]["columns"])]
+        if owners:  # 没有主人的是 SELECT 里起的别名(`AS n`)
+            yield owners[0], col.name
+
+
+@pytest.mark.parametrize("case", [c for c in features.evalset("ask_data")["cases"] if c["category"] != "adversarial"],
+                         ids=lambda c: c["id"])
+def test_every_column_a_question_needs_is_named_in_the_question_by_one_of_its_words(case):
+    """§5:用评测集反查。gold_sql 用到的每一列,问题里都要出现它在 yaml 里的某个叫法 —— 不然召回与模型看到的
+    表说明里没有官员的这句话。缺了就往那一列的 synonyms 里补。"""
+    missing = [(t, c) for t, c in _gold_columns(case) if not any(w in case["question"] for w in _vocabulary(t, c))]
+    assert missing == [], (case["question"], missing)
 
 
 # ── 召回 ────────────────────────────────────────────────────────────────
