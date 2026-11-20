@@ -11,6 +11,12 @@
 
 export { MARK_HEIGHT, MARK_WIDTH, SHAPE, VIEWBOX } from "@soulledger/core/config/brandMark";
 
+/**
+ * Where the sign-in page sets the mark: `size` wide, `top` below the top safe-area inset, centred. The sign-in
+ * page (screens/auth.tsx `brand`) draws it from these, and the cold start lands its mark on exactly that spot.
+ */
+export const LOGIN_MARK = { top: 16, size: 66 } as const;
+
 /** [centre line, stroke width] */
 export const STROKES: readonly (readonly [string, number])[] = [
   ["M730 242H457C364 242 364 339 457 339H515Q584 339 612 376L306 682", 76], // the S, into the beam

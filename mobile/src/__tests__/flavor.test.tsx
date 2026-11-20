@@ -6,7 +6,7 @@
  * (chat / circle / residence).
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, ActivityIndicator, StyleSheet } from "react-native";
 
@@ -15,7 +15,7 @@ import { HERO } from "../emblems";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { LifeSections } from "../screens/life";
-import { themeFor, type CivKey } from "../theme";
+import { motion, themeFor, type CivKey } from "../theme";
 import { Button, Loader, ThemeContext } from "../ui";
 import { Welcome, welcomeFrom } from "../welcome";
 import { renderSoul } from "./harness";
@@ -185,12 +185,15 @@ describe("the welcome (1b)", () => {
       expect(writes(calls)).toEqual([expect.objectContaining({ method: "POST", body: { civilization: "CHINESE" } })]);
     });
 
-    it("skipped with a tap: written once, at the tap", async () => {
+    it("skipped with a tap: written once, at the tap; the hand-off still plays (not a cut)", async () => {
       const { calls } = play(P({ welcomed_civilizations: [] }));
       await act(async () => {});
       expect(writes(calls)).toEqual([]);
       fireEvent.press(screen.getByTestId("welcome-skip"));
       await act(async () => {});
+      expect(writes(calls)).toHaveLength(1);
+      expect(screen.getByTestId("welcome")).toBeTruthy();
+      await act(async () => void jest.advanceTimersByTime(motion.welcomeOut + 200));
       expect(screen.queryByTestId("welcome")).toBeNull();
       expect(writes(calls)).toHaveLength(1);
       await act(async () => void jest.advanceTimersByTime(5000));
@@ -203,6 +206,7 @@ describe("the welcome (1b)", () => {
     const { calls, view } = play(profile);
     await act(async () => {});
     fireEvent.press(screen.getByTestId("welcome-skip"));
+    await waitFor(() => expect(screen.queryByTestId("welcome")).toBeNull());
     view.rerender(tree(profile));
     await act(async () => {});
     expect(screen.queryByTestId("welcome")).toBeNull();
@@ -227,11 +231,13 @@ describe("the welcome (1b)", () => {
     expect(screen.getByTestId("welcome-eg-cn")).toBeTruthy();
   });
 
-  it("reduce-motion: nothing shown, and the record is written at once", async () => {
+  it("reduce-motion: a still frame is shown (第六十二批: no longer skipped), and written once it has been seen", async () => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
     const { calls } = play(P({ welcomed_civilizations: [] }));
     await act(async () => {});
-    expect(screen.queryByTestId("welcome")).toBeNull();
+    expect(screen.getByTestId("welcome")).toBeTruthy();
+    expect(writes(calls)).toEqual([]);
+    await waitFor(() => expect(screen.queryByTestId("welcome")).toBeNull(), { timeout: 3000 });
     expect(writes(calls)).toHaveLength(1);
   });
 
@@ -240,6 +246,7 @@ describe("the welcome (1b)", () => {
     const { calls, view } = play(profile, { status: 500 });
     await act(async () => {});
     fireEvent.press(screen.getByTestId("welcome-skip"));
+    await waitFor(() => expect(screen.queryByTestId("welcome")).toBeNull());
     await act(async () => {});
     view.rerender(tree(profile));
     await act(async () => {});

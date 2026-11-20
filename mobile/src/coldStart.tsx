@@ -4,8 +4,11 @@
  * C18 首次进入某个文明时 … 冷启动动画跳过). The native splash is that ground alone, light and dark (`app.json` →
  * expo-splash-screen, a blank image: the mark is written by JS, and HarmonyOS 4.2 drops the splash icon anyway).
  */
+import { useContext, useMemo } from "react";
 import { useColorScheme } from "react-native";
+import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 
+import { LOGIN_MARK } from "./brandMark";
 import { ColdStartView } from "./coldStartView";
 import type { SessionState } from "./session";
 import { splash } from "./theme";
@@ -23,5 +26,11 @@ export { coldStart } from "./coldStartView";
 export function ColdStart({ session }: { session: SessionState }) {
   const pair = splash[useColorScheme() === "dark" ? "dark" : "light"];
   const welcoming = session.status === "signedIn" && welcomeFrom(session.profile) !== null;
-  return <ColdStartView booting={session.status === "booting"} skip={welcoming} ground={pair.ground} mark={pair.mark} />;
+  // Signed out, the app lands on the sign-in page: the mark shrinks and moves onto that page's mark (user 2026-11-21).
+  // Read from the context, not `useSafeAreaInsets`, which throws with no provider; none means no inset.
+  const top = useContext(SafeAreaInsetsContext)?.top ?? 0;
+  const signedOut = session.status === "signedOut";
+  // One object per value: the cold start's deciding effect depends on it, and a new one each render would re-run it.
+  const land = useMemo(() => (signedOut ? { top: top + LOGIN_MARK.top, size: LOGIN_MARK.size } : undefined), [signedOut, top]);
+  return <ColdStartView booting={session.status === "booting"} skip={welcoming} ground={pair.ground} mark={pair.mark} land={land} />;
 }

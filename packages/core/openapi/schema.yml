@@ -35783,11 +35783,26 @@ components:
           type: integer
         total:
           type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeNegativeConfessionItem'
       required:
+      - items
       - total
       - truthful
       - unheard
       - untruthful
+    MeNegativeConfessionItem:
+      type: object
+      properties:
+        n:
+          type: integer
+        state:
+          $ref: '#/components/schemas/NegativeConfessionStateEnum'
+      required:
+      - n
+      - state
     MeProfile:
       type: object
       description: instance 是灵魂;本世账号经 context["account"] 传入。
@@ -37155,6 +37170,16 @@ components:
       - statute_id
       - text
       - truthful
+    NegativeConfessionStateEnum:
+      enum:
+      - TRUTHFUL
+      - UNTRUTHFUL
+      - UNHEARD
+      type: string
+      description: |-
+        * `TRUTHFUL` - TRUTHFUL
+        * `UNTRUTHFUL` - UNTRUTHFUL
+        * `UNHEARD` - UNHEARD
     NegativeConfessionTally:
       type: object
       properties:

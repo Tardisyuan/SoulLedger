@@ -42,7 +42,7 @@ import { useResidence } from "./residence";
 import { hasRebirth } from "./rules";
 import { preLoginTheme, themeFor, type ColorScheme } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext, useReducedMotionDurations } from "./ui";
-import { Welcome, welcomeFrom } from "./welcome";
+import { Welcome, useArrival, welcomeFrom } from "./welcome";
 import {
   ApplicationDetailScreen,
   ApplicationsScreen,
@@ -389,10 +389,13 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
  * left to show). Not due at all (not the first time): the sheet is asked at once. The 「锁屏上看不到进度」 hint
  * (Android 12-, notifications off) comes last: held until the face / finger question is settled.
  */
-function SignedInOverlays({ profile, scheme }: { profile: MeProfile; scheme: ColorScheme }) {
+function SignedInOverlays({ profile, scheme, signedInHere }: { profile: MeProfile; scheme: ColorScheme; signedInHere: boolean }) {
   const key = `${profile.soul_code}:${profile.civilization}`;
   const [settled, setSettled] = useState<string | null>(null);
   const onSettled = useCallback(() => setSettled(key), [key]);
+  // 第六十二批 §二.4: a sign-in with no welcome due brings the 本世 page in over 320, not a cut. A session restored at
+  // launch has the cold start for that.
+  useArrival(signedInHere && welcomeFrom(profile) === null);
   return (
     <>
       <Welcome profile={profile} scheme={scheme} onSettled={onSettled} />
@@ -406,6 +409,9 @@ function SignedInOverlays({ profile, scheme }: { profile: MeProfile; scheme: Col
 export function RootNavigator() {
   const { t } = useI18n();
   const { state, retryBoot, signOut } = useSession();
+  // The sign-in page was on screen in this process: the next signed-in tree arrived by signing in.
+  const [signedInHere, setSignedInHere] = useState(false);
+  if (state.status === "signedOut" && !signedInHere) setSignedInHere(true);
   const [ready, setReady] = useState(0);
   const scheme = useColorScheme() === "light" ? "light" : "dark";
   const theme = state.status === "signedIn" ? themeFor(state.profile.civilization, scheme) : preLoginTheme(scheme);
@@ -650,7 +656,7 @@ export function RootNavigator() {
           <PushBridge signedIn={state.status === "signedIn"} ready={ready} />
           {/* 文明气质 1b: over everything, the first time this soul enters its current civilization. */}
           {/* 第二十批 §一.4: 「下次用面容登录？」, once, with the password the soul has just typed -- after the welcome. */}
-          {state.status === "signedIn" ? <SignedInOverlays profile={state.profile} scheme={scheme} /> : null}
+          {state.status === "signedIn" ? <SignedInOverlays profile={state.profile} scheme={scheme} signedInHere={signedInHere} /> : null}
         </ChatProvider>
       );
     }

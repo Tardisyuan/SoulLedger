@@ -9,8 +9,10 @@ import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
+import { StyleSheet } from "react-native";
 import Svg, { Stop } from "react-native-svg";
 
+import { LOGIN_MARK } from "../brandMark";
 import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
@@ -177,6 +179,14 @@ describe("login", () => {
   it("the login page carries the S-and-L balance mark, not the old ledger emblem (2026-10-03)", async () => {
     renderApp();
     expect(await screen.findByTestId("login-mark", { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it("the login mark sits where the cold start lands its own: LOGIN_MARK wide, LOGIN_MARK.top under the inset (2026-11-21)", async () => {
+    renderApp();
+    const mark = await screen.findByTestId("login-mark", { includeHiddenElements: true });
+    // The cold start reads LOGIN_MARK; the page must draw from it too, or the landing misses by the difference.
+    expect(mark.findByType(Svg).props.width).toBe(LOGIN_MARK.size);
+    expect(StyleSheet.flatten(screen.getByTestId("login-brand").props.style)).toMatchObject({ paddingTop: LOGIN_MARK.top });
   });
 });
 

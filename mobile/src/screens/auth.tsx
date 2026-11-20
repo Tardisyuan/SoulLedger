@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import Svg, { G, Path } from "react-native-svg";
 
+import { LOGIN_MARK } from "../brandMark";
 import { BrandMark } from "../brandMarkView";
 import { useToast } from "../feedback";
 import { family } from "../fonts";
@@ -360,8 +361,8 @@ export function LoginScreen() {
   );
   return (
     <Screen edges={["top", "left", "right", "bottom"]}>
-      <View style={styles.brand}>
-        <BrandMark testID="login-mark" size={66} color={theme.ink} />
+      <View testID="login-brand" style={styles.brand}>
+        <BrandMark testID="login-mark" size={LOGIN_MARK.size} color={theme.ink} />
         <Txt variant="display" style={styles.appName}>
           {t("soul_app.app_name")}
         </Txt>
@@ -728,8 +729,8 @@ const styles = StyleSheet.create({
   ruleField: { gap: 8 },
   fill: { flex: 1 },
   // 16 / 20, not 48 / 32: on a 6.3" phone the language row fell below the fold (iPhone 17, 2026-11-21). The cold
-  // start's mark lands on this one, so `LOGIN_MARK` in coldStart.tsx reads these numbers.
-  brand: { alignItems: "center", paddingTop: 16, paddingBottom: 20 },
+  // start's mark lands on this one: its size and top come from `LOGIN_MARK` (brandMark.ts), which the cold start reads.
+  brand: { alignItems: "center", paddingTop: LOGIN_MARK.top, paddingBottom: 20 },
   appName: { marginTop: 24, letterSpacing: 1.6 },
   wordmark: { marginTop: 8, fontSize: 12, letterSpacing: 2.2 },
   login: { borderTopWidth: 1, marginHorizontal: 24, paddingTop: 24 },

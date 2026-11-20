@@ -5320,6 +5320,7 @@
         "truthful": "True",
         "untruthful": "False",
         "unheard": "Not recorded",
+        "none": "None recorded yet",
         "partial": "{{recorded}} of {{total}} recorded; the rest are not yet.",
         "complete": "All {{total}} are recorded.",
         "strip_aria": "{{truthful}} true, {{untruthful}} false, {{unheard}} not recorded, of {{total}}"

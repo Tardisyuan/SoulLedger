@@ -55,6 +55,17 @@ def tally(judgment) -> dict | None:
     return {"truthful": truthful, "untruthful": untruthful, "unheard": total - truthful - untruthful, "total": total}
 
 
+def items(judgment) -> list[dict]:
+    """[{"n", "state"}] for every clause of the hall, in assessor order — the soul App's 42-cell card
+    (v4 batch 62), where cell n is assessor n whether heard or not. `state` is TRUTHFUL / UNTRUTHFUL as recorded,
+    UNHEARD when nothing is (`soul_accounts.serializers.NEGATIVE_CONFESSION_STATES`)."""
+    seen = {statute_id: row.truthful for statute_id, row in heard(judgment).items()}
+    ordinals = (Statute.all_objects.filter(tenant_id=judgment.tenant_id, corpus=StatuteCorpus.NEGATIVE_CONFESSION,
+                                           is_deleted=False).order_by("ordinal", "code").values_list("pk", "ordinal"))
+    state = {True: "TRUTHFUL", False: "UNTRUTHFUL"}
+    return [{"n": n, "state": state.get(seen.get(pk), "UNHEARD")} for pk, n in ordinals]
+
+
 #: BD 125B: one denial before each of the 42 assessors.
 ASSESSORS = 42
 
