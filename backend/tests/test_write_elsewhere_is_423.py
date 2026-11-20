@@ -12,7 +12,7 @@ import pytest
 from django.conf import settings
 
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import _abroad, _client
-from tests.test_shard_sync import CIVS, sharded
+from tests.test_shard_sync import sharded
 from tests.test_sharded_writes import cut
 
 
@@ -50,7 +50,7 @@ def test_the_home_hall_opening_an_account_for_its_soul_abroad_gets_423_and_nothi
 
     before = rows()
     client = _client(x["home"], "w423_home")
-    with cut(*CIVS):
+    with cut():
         r = client.post("/api/v1/soul-accounts/accounts/provision/",
                         {"soul_id": str(soul.pk), "contact_email": "w423@abroad.test"}, format="json")
     assert r.status_code == 423 and r.json()["code"] == "write_elsewhere", (r.status_code, r.content[:500])

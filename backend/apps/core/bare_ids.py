@@ -223,13 +223,13 @@ def counting_cascades():
 
 
 def primary_alias(instance):
-    """The alias holding the authoritative row of `instance`: its civilization's shard once that
-    civilization's writes are cut over (settings.SHARD_WRITE_CIVS, stage 4), else the control database.
+    """The alias holding the authoritative row of `instance`: its civilization's shard while sharded
+    (settings.SHARDED), else the control database.
     CONTROL / REFERENCE rows, and SHARD rows with no hall (D2), are always on "default". The same answer as
     the write router's (`apps.core.shard_reads.write_alias_of`)."""
     from apps.core.sharding import SHARD, placement
 
-    if not settings.SHARD_WRITE_CIVS or placement(type(instance)) != SHARD:
+    if not settings.SHARDED or placement(type(instance)) != SHARD:
         return "default"
     from apps.core.shard_reads import write_alias_of
 

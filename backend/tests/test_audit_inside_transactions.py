@@ -221,7 +221,7 @@ def test_a_soul_on_a_civilization_shard_rolls_back_with_its_audit_row():
         with _in_hall(hall), transaction.atomic():
             Soul.objects.create(name="希腊审计", tenant=hall, current_state=SoulState.ALIVE)
 
-    with cut("GREEK"):
+    with cut():
         with failing_audit_insert(AuditAction.CREATE) as hits, pytest.raises(OperationalError, match="injected"):
             run()
         assert hits == [GREEK], hits  # the row's own master, not the context's default
@@ -253,7 +253,7 @@ def test_a_rolled_back_step_on_one_master_leaves_no_audit_row_on_another():
     halls = _halls()
     _assign("GREEK")
     egypt = halls["EGYPTIAN"]
-    with cut("GREEK"):
+    with cut():
         with _in_hall(egypt):  # control's: Egypt is not cut
             soul = Soul.objects.create(name="步骤前", tenant=egypt, current_state=SoulState.ALIVE)
         org = soul.owner_org  # the copy's keys must hold on the shard: Egypt's root unit goes with it
@@ -300,7 +300,7 @@ def test_a_row_written_beside_the_open_transaction_keeps_its_audit_row_when_that
     made = []
     # No hall of the context: the role's row names none, so it is control's (in a Greek hall's context it would
     # name that hall and go to civ_greek, inside the step -- see `_write_row`'s docstring).
-    with cut("GREEK"), pytest.raises(RuntimeError), transaction.atomic(using=GREEK):
+    with cut(), pytest.raises(RuntimeError), transaction.atomic(using=GREEK):
         made.append(Role.objects.create(name="BESIDE", display_name="B"))
         raise RuntimeError("the step fails after the control write")
     role = made[0]

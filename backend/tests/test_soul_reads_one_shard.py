@@ -150,7 +150,7 @@ def world(django_db_setup, django_db_blocker):
 # ---- asking -----------------------------------------------------------------------------------------------
 
 def _ask(client, url, civs):
-    with override_settings(SHARD_READ_CIVS=list(civs)):
+    with override_settings(SHARDED=bool(civs)):
         return shadow.fetch(client, url)
 
 
@@ -285,7 +285,7 @@ def test_a_soul_of_no_known_civilization_or_no_hall_reads_every_leg(world):
     from apps.souls.models import Soul
 
     account, _client = world["souls"]["soul of no known civilization"]
-    with override_settings(SHARD_READ_CIVS=list(CIVS)):
+    with override_settings(SHARDED=True):
         assert soul_read_context(User.objects.get(pk=account.user_id)) == FANOUT
         account, _client = world["souls"]["soul of GREEK"]
         assert soul_read_context(User.objects.get(pk=account.user_id)) == "civ_greek"

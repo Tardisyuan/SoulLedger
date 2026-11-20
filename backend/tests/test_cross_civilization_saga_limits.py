@@ -64,7 +64,7 @@ def world(request):
     w = _world(seed_of(seed), forced)
     halls = _halls()
     _assign(*CIVS)
-    with cut(*w["cut"]):
+    with cut():
         yield w, halls
 
 
@@ -316,7 +316,7 @@ def test_two_civilizations_opening_a_case_on_one_soul_at_once_open_exactly_one(m
     w = {"seed": seed, "src": src_civ, "tgt": tgt_civ, "cut": sorted({src_civ, tgt_civ}), "realm": False}
     halls = _halls()
     _assign(*CIVS)
-    with cut(*w["cut"]), read_context(CONTROL_ALIAS):
+    with cut(), read_context(CONTROL_ALIAS):
         soul = _residing(w, halls)
         barrier = threading.Barrier(2, timeout=30)
         original = global_codes.claim_open_case
@@ -386,7 +386,7 @@ def test_a_soul_moving_on_to_a_third_civilization_takes_its_home_copy_along(seed
     _assign(*CIVS)
     home, a, b = halls[t["home"]], halls[t["a"]], halls[t["b"]]
     where = f"seed {seed} {t}"
-    with cut(*t["cut"]):
+    with cut():
         soul, first = _approved({"seed": seed, "src": t["home"], "tgt": t["a"], "realm": False}, halls)
         account = _account(soul)
         _execute(first.pk)
@@ -508,7 +508,7 @@ def test_two_relays_at_once_deliver_each_message_once_and_fail_none(monkeypatch)
         return deliver(msg)
     monkeypatch.setattr(shard_saga, "deliver", together)
 
-    with cut(*w["cut"]), read_context(CONTROL_ALIAS):
+    with cut(), read_context(CONTROL_ALIAS):
         src, tgt = halls[w["src"]], halls[w["tgt"]]
         records = [_approved(w, halls)[1].pk]
         with _in_hall(src):

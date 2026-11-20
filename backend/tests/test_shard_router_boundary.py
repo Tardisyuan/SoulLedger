@@ -110,35 +110,38 @@ def test_a_control_model_hinted_from_a_shard_row_is_read_from_control():
                    "tenants.Tenant": ("civ_greek", "civ_greek")}
 
 
-@pytest.mark.parametrize("read,write,error", [
-    ([], [], None),
-    (["GREEK"], [], None),
-    (["GREEK", "EGYPTIAN"], ["GREEK"], None),
-    (["CHINA"], [], "SHARD_READ_CIVS names \\['CHINA'\\]"),
-    (["GREEK"], ["greek"], "SHARD_WRITE_CIVS names \\['greek'\\]"),
-    ([], ["GREEK"], "not in SHARD_READ_CIVS"),
-    (["GREEK", "CHINESE"], [], "needs DATABASES entries \\['civ_chinese'\\]"),
+ALL = ("civ_chinese", "civ_egyptian", "civ_european", "civ_greek")
+
+
+@pytest.mark.parametrize("aliases,sharded,recorded,error", [
+    ((), False, (), None),                                       # one database
+    (ALL, False, (), None),                                      # the test group before `cut()`
+    (ALL, True, (), None),                                       # sharded
+    (ALL, True, {"GREEK"}, None),                                # sharded, after stage 5's purge
+    (("civ_greek", "civ_egyptian"), True, (), "lacks \\['civ_chinese', 'civ_european'\\]"),
+    (("civ_greek", "civ_china"), False, (), "\\['civ_china'\\] name no civilization"),
+    ((), False, {"GREEK"}, "\\['GREEK'\\] were purged"),     # a purged database run as one database
 ])
-def test_the_cut_over_settings_name_real_civilizations_and_reads_go_first(read, write, error):
-    """D8: a typo or a missing shard database refuses to boot (apps/souls/apps.py) instead of failing
-    at the first fanout()."""
+def test_the_shard_settings_are_every_civilization_or_none(aliases, sharded, recorded, error):
+    """A typo, a missing shard database or a purged database run without its shards refuses to boot
+    (apps/souls/apps.py) or to sync (shard_sync.check_purge_records). There is no partial cut-over (2026-11-21)."""
     from django.core.exceptions import ImproperlyConfigured
 
-    from apps.core.sharding import check_cut_over_settings
+    from apps.core.sharding import check_shard_settings
 
-    databases = {"default": {}, "civ_greek": {}, "civ_egyptian": {}}
+    databases = {"default": {}, **dict.fromkeys(aliases, {})}
     if error is None:
-        check_cut_over_settings(read, write, databases)
+        check_shard_settings(databases, sharded, recorded)
     else:
         with pytest.raises(ImproperlyConfigured, match=error):
-            check_cut_over_settings(read, write, databases)
+            check_shard_settings(databases, sharded, recorded)
 
 
-def test_the_cut_over_check_reads_the_real_databases_setting_by_default():
+def test_the_shard_check_reads_the_real_settings_by_default():
     from django.core.exceptions import ImproperlyConfigured
 
-    from apps.core.sharding import check_cut_over_settings
+    from apps.core.sharding import check_shard_settings
 
-    check_cut_over_settings([], [])
+    check_shard_settings()
     with pytest.raises(ImproperlyConfigured, match="civ_egyptian"):
-        check_cut_over_settings(["EGYPTIAN"], [])  # no settings file here configures civ_egyptian
+        check_shard_settings(sharded=True)  # no settings file here configures civ_egyptian

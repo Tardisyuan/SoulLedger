@@ -34,14 +34,11 @@ class SoulsConfig(AppConfig):
         # Derive the placement table now (every model is loaded before any `ready()`): a tenant-path tie
         # raises here, at startup, instead of on the first request or migration that asks where a model lives
         # (VERIFY-stage0 open item 4). Cached, so the router's later lookups are free.
-        from django.conf import settings
-
         from apps.core import bare_ids
-        from apps.core.sharding import _by_label, check_cut_over_settings
+        from apps.core.sharding import _by_label, check_shard_settings
 
         _by_label()
-        check_cut_over_settings(settings.SHARD_READ_CIVS, settings.SHARD_WRITE_CIVS,
-                                purged=settings.SHARD_PURGED_CIVS)
+        check_shard_settings()
         # Stage 1B: the foreign keys across the control / shard boundary are bare ids; their delete rules
         # (CASCADE / SET_NULL / PROTECT as before) are applied by apps.core.bare_ids on every alias.
         bare_ids.connect()
@@ -49,15 +46,15 @@ class SoulsConfig(AppConfig):
         from apps.core import sharding
 
         sharding.connect()
-        # Stage 2: a commit that wrote a shard model queues one debounced shard sync (no-op without shards).
+        # A commit that wrote a control row a shard copies queues one debounced shard sync (no-op without shards).
         from apps.core import shard_sync
 
         shard_sync.connect()
-        # Stage 3: reads of a civilization in SHARD_READ_CIVS come from its shard; FANOUT reads merge every leg.
+        # Sharded: each civilization's reads come from its shard; FANOUT reads merge every leg.
         from apps.core import shard_reads
 
         shard_reads.install()
-        # Stage 4: writes of a civilization in SHARD_WRITE_CIVS go to its shard, in its own id range (gap 4a).
+        # Sharded: each civilization's writes go to its shard, in its own id range (gap 4a).
         from apps.core import shard_ids
 
         shard_ids.connect()

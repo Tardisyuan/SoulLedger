@@ -1,16 +1,17 @@
-"""Stage 4, part A: a cut-over civilization's writes go to its shard (docs/audit/2026-11-15-sharding/PLAN.md 阶段 4;
-apps/core/shard_reads.py `write_route`, apps/core/shard_sync.py `sync_direction`, apps/core/shard_ids.py).
+"""Sharded writes: each civilization's rows go to its shard (docs/audit/2026-11-15-sharding/PLAN.md 阶段 4;
+apps/core/shard_reads.py `write_route`, apps/core/shard_ids.py).
 
-  routing        a row of a civilization in SHARD_WRITE_CIVS is written on its shard, every other on control; a write
-                 naming no row and no single civilization raises NoShardContext; a write request, a transaction and a
-                 per-hall task read the shard they write (reads your writes); a global task / command reads every
+  routing        sharded, a row of a hall is written on its civilization's shard, a row with no hall (D2) on control; a
+                 write naming no row and no single civilization raises NoShardContext; a write request, a transaction
+                 and a per-hall task read the shard they write (reads your writes); a global task / command reads every
                  master (MASTER) and splits a queryset update / delete per master.
   transactions   `transaction.atomic()` holds on the shard too: select_for_update works there, a failure rolls the
                  shard back with control.
-  sync           a write-cut civilization syncs shard-to-control (control stays a full mirror), every other
-                 control-to-shard; a write on a write-cut shard queues the debounced sync.
+  sync           only control's rows are copied, control-to-shard; a shard's own rows are never overwritten.
   ids (4a)       each shard issues integer ids from its own range; the command is idempotent and refuses a foreign id.
-  inert          SHARD_WRITE_CIVS=[] routes every write exactly as stage 3 did.
+  one database   not sharded, every write routes as with no router at all.
+
+The group builds each world in the one-database form (settings_sharded keeps SHARDED False) and switches with `cut()`.
 
     cd backend && ... python -m pytest --ds=config.settings_sharded -m sharded tests/test_sharded_writes.py
 """
@@ -29,7 +30,7 @@ GREEK, EGYPT = "civ_greek", "civ_egyptian"
 
 def _halls():
     """One hall per civilization in control, synced to the shards (the hall, D4, and what control made for it:
-    its root unit) -- stage 3's state, before any write is cut over."""
+    its root unit), built in the one-database form before `cut()`."""
     from apps.org.ownership import tenant_root
     from apps.tenants.models import Tenant
     from tests.test_shard_sync import _sync
@@ -42,9 +43,10 @@ def _halls():
     return halls
 
 
-def cut(*civs):
-    """Reads and writes of `civs` cut over, their shards' id ranges assigned (gap 4a: before the first write)."""
-    return override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=list(civs))
+def cut():
+    """The sharded form (settings.SHARDED, config/settings.py): every civilization's reads and writes on its shard.
+    Assign the id ranges of the shards a test writes (`_assign`, gap 4a) before its first write there."""
+    return override_settings(SHARDED=True)
 
 
 def _assign(*civs):
@@ -72,12 +74,12 @@ def _where(model, pk):
 # ---- routing ---------------------------------------------------------------------------------------------------
 
 @sharded
-def test_a_cut_over_civilizations_rows_are_written_on_its_shard_and_the_others_on_control():
+def test_each_civilizations_rows_are_written_on_its_shard_and_a_hall_less_row_on_control():
     from apps.souls.models import Soul
 
     halls = _halls()
-    _assign("GREEK")
-    with cut("GREEK"):
+    _assign(*CIVS)
+    with cut():
         made = {}
         for civ, hall in halls.items():
             with _in_hall(hall):
@@ -85,9 +87,8 @@ def test_a_cut_over_civilizations_rows_are_written_on_its_shard_and_the_others_o
         from apps.audit.models import AuditAction, AuditLog
 
         nameless = AuditLog.objects.create(tenant=None, action=AuditAction.READ, resource="soul", resource_id="d2")
-    assert _where(Soul, made["GREEK"].pk) == [GREEK]
-    for civ in ("CHINESE", "EUROPEAN", "EGYPTIAN"):
-        assert _where(Soul, made[civ].pk) == ["default"], civ
+    for civ in CIVS:
+        assert _where(Soul, made[civ].pk) == [f"civ_{civ.lower()}"], civ
     assert _where(AuditLog, nameless.pk) == ["default"]  # D2: no hall, control
 
 
@@ -101,7 +102,7 @@ def test_saving_and_deleting_a_row_go_to_its_master_whatever_the_context():
 
     halls = _halls()
     _assign("GREEK", "EGYPTIAN")
-    with cut("GREEK", "EGYPTIAN"):
+    with cut():
         with _in_hall(halls["GREEK"]):
             soul = Soul.objects.create(name="moved about", tenant=halls["GREEK"])
         with _in_hall(halls["EGYPTIAN"]):
@@ -128,15 +129,14 @@ def _written_models():
 @pytest.mark.parametrize("label", [m._meta.label for m in _written_models()])
 def test_a_write_naming_no_row_and_no_civilization_is_refused(label):
     """No row, no request, no hall, no explicit context: a queryset delete / update of every SHARD model raises
-    NoShardContext once one civilization's writes are cut over -- never a quiet write to control -- and runs as
-    before while none is."""
+    NoShardContext sharded -- never a quiet write to control -- and runs as before in the one-database form."""
     model = apps.get_model(label)
-    with cut("GREEK"):
+    with cut():
         with pytest.raises(NoShardContext):
             model._base_manager.filter(pk__in=[]).delete()
         with pytest.raises(NoShardContext):
             model._base_manager.filter(pk__in=[]).update()
-    with override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=[]):
+    with override_settings(SHARDED=False):
         model._base_manager.filter(pk__in=[]).delete()
 
 
@@ -150,7 +150,7 @@ def test_a_write_request_reads_the_shard_it_writes():
 
     halls = _halls()
     _assign("GREEK")
-    with cut("GREEK"):
+    with cut():
         with _in_hall(halls["GREEK"]):
             soul = Soul.objects.create(name="unsynced write", tenant=halls["GREEK"])
         assert _where(Soul, soul.pk) == [GREEK]
@@ -173,9 +173,9 @@ def test_a_system_admin_write_request_reads_every_master_and_locks_where_the_row
     from apps.souls.models import Soul
 
     halls = _halls()
-    _assign("GREEK")
+    _assign("GREEK", "CHINESE")
     admin = User.objects.create_user(username="w4-sys", password="x", role=UserRole.SYSTEM_ADMIN)
-    with cut("GREEK"):
+    with cut():
         with _in_hall(halls["GREEK"]):
             greek = Soul.objects.create(name="greek master", tenant=halls["GREEK"])
         with _in_hall(halls["CHINESE"]):
@@ -188,14 +188,14 @@ def test_a_system_admin_write_request_reads_every_master_and_locks_where_the_row
                 "greek master", "chinese master"}
             with transaction.atomic():
                 assert Soul.lock(greek.pk)._state.db == GREEK
-                assert Soul.lock(chinese.pk)._state.db == "default"
+                assert Soul.lock(chinese.pk)._state.db == "civ_chinese"
                 with pytest.raises(NoShardContext):  # rows in two masters cannot be locked by one statement
                     Soul.lock_many([greek.pk, chinese.pk])
             assert Soul.objects.filter(pk__in=[greek.pk, chinese.pk]).update(merit_score=7) == 2
         finally:
             set_current_request(None)
     assert Soul._base_manager.using(GREEK).get(pk=greek.pk).merit_score == 7
-    assert Soul._base_manager.using("default").get(pk=chinese.pk).merit_score == 7
+    assert Soul._base_manager.using("civ_chinese").get(pk=chinese.pk).merit_score == 7
 
 
 @sharded
@@ -207,7 +207,7 @@ def test_a_per_hall_task_reads_and_writes_its_shard_and_a_global_one_every_maste
 
     halls = _halls()
     _assign("GREEK")
-    with cut("GREEK"):
+    with cut():
         token = shard_reads._celery_signal.set(True)
         try:
             with _in_hall(halls["GREEK"]):
@@ -250,7 +250,7 @@ def test_a_halls_transaction_holds_on_its_shard_and_on_control_and_rolls_back_as
         return (not Soul._base_manager.using(GREEK).filter(name=tag).exists()
                 and not AuditLog._base_manager.using("default").filter(resource_id=tag).exists())
 
-    with cut("GREEK"):
+    with cut():
         for hall in (halls["GREEK"], None):  # one civilization, then MASTER
             with _in_hall(hall) if hall else nullcontext():
                 with pytest.raises(RuntimeError), transaction.atomic():
@@ -295,7 +295,7 @@ def test_a_write_to_a_third_database_inside_a_transaction_is_refused():
     def log(name):
         return AuditLog.objects.create(tenant=halls["EGYPTIAN"], action=AuditAction.READ, resource="soul",
                                        resource_id=name)
-    with cut("GREEK", "EGYPTIAN"), _in_hall(halls["GREEK"]):
+    with cut(), _in_hall(halls["GREEK"]):
         with pytest.raises(WriteOutsideTransaction), transaction.atomic():
             log("egyptian inside a greek transaction")
         assert not AuditLog._base_manager.using(EGYPT).filter(resource_id="egyptian inside a greek transaction").exists()
@@ -316,7 +316,7 @@ def test_a_hall_may_write_again_the_code_its_rolled_back_shard_write_claimed():
 
     halls = _halls()
     _assign("GREEK", "EGYPTIAN")
-    with cut("GREEK", "EGYPTIAN"):
+    with cut():
         with _in_hall(halls["GREEK"]):
             root = tenant_root(halls["GREEK"])
             with pytest.raises(RuntimeError), transaction.atomic():
@@ -330,19 +330,19 @@ def test_a_hall_may_write_again_the_code_its_rolled_back_shard_write_claimed():
 
 
 @sharded
-def test_a_direct_write_on_control_of_a_write_cut_row_is_refused():
-    """Control only mirrors a write-cut civilization's rows; a write there (`.using("default")`, loaddata) would be
-    undone by the next shard-to-control sync. Refused for save, delete, queryset update / delete and bulk_create;
-    a row of a civilization not cut over is written as before; `control_mirror_writes()` lets bare-id deletes (and
-    a test) through. Mutation: the guard off -> the write lands and the sync silently reverts it."""
+def test_a_direct_write_on_control_of_a_halls_row_is_refused():
+    """Sharded, a hall's SHARD rows are its shard's; a write of one on control (`.using("default")`, loaddata) writes
+    a row nobody reads. Refused for save, delete, queryset update / delete and bulk_create; a row with no hall (D2)
+    is written as before; `control_mirror_writes()` lets bare-id deletes (and a test) through. Mutation: the guard
+    off -> the write lands on control."""
     from apps.core.shard_reads import ControlMirrorWrite, control_mirror_writes
     from apps.souls.models import Soul
 
     halls = _halls()
     greek = Soul._base_manager.using("default").create(name="greek mirror", tenant=halls["GREEK"])
-    chinese = Soul._base_manager.using("default").create(name="chinese master", tenant=halls["CHINESE"])
+    hall_less = Soul._base_manager.using("default").create(name="no hall (D2)", tenant=None)
     _assign("GREEK")
-    with cut("GREEK"):
+    with cut():
         mirror = Soul._base_manager.using("default")
         for write in (lambda: mirror.filter(pk=greek.pk).update(name="x"),
                       lambda: mirror.filter(pk=greek.pk).delete(),
@@ -350,62 +350,20 @@ def test_a_direct_write_on_control_of_a_write_cut_row_is_refused():
                       lambda: mirror.bulk_create([Soul(name="new mirror", tenant=halls["GREEK"])])):
             with pytest.raises(ControlMirrorWrite):
                 write()
-        assert mirror.filter(pk=chinese.pk).update(name="still control's") == 1
+        assert mirror.filter(pk=hall_less.pk).update(name="still control's") == 1
         with control_mirror_writes():
             assert mirror.filter(pk=greek.pk).update(name="allowed") == 1
 
 
-# ---- sync direction ------------------------------------------------------------------------------------------
+# ---- sync ------------------------------------------------------------------------------------------------------
 
 @sharded
-def test_a_write_cut_civilization_syncs_shard_to_control_and_the_others_control_to_shard():
-    """Mutation: the sync direction not flipped -> the shard's new row never reaches control and control's stale
-    Greek row is copied over the shard's."""
-    from apps.souls.models import Soul
-    from apps.tenants.tasks import sync_shards
-
-    halls = _halls()
-    _assign("GREEK")
-    with cut("GREEK"):
-        with _in_hall(halls["GREEK"]):
-            new = Soul.objects.create(name="shard-born", tenant=halls["GREEK"])
-        with _in_hall(halls["CHINESE"]):
-            chinese = Soul.objects.create(name="control-born", tenant=halls["CHINESE"])
-        stale = Soul(name="written to control by mistake", tenant=halls["GREEK"])
-        from apps.core.shard_reads import control_mirror_writes
-
-        with control_mirror_writes():  # what a write to control by mistake leaves (the guard refuses it otherwise)
-            Soul._base_manager.using("default").bulk_create([stale])
-        sync_shards()
-        assert Soul._base_manager.using("default").filter(pk=new.pk).exists()
-        assert not Soul._base_manager.using("default").filter(pk=stale.pk).exists()  # the shard is the master
-        assert Soul._base_manager.using("civ_chinese").filter(pk=chinese.pk).exists()
-        out_code = _reconcile_s2c("GREEK")
-    assert out_code == 0
-
-
-def _reconcile_s2c(civ):
-    import io
-
-    from django.core.management.base import CommandError
-
-    out = io.StringIO()
-    try:
-        call_command("reconcile_shards", "--civ", civ, "--direction", "shard-to-control", stdout=out)
-        return 0
-    except CommandError:
-        print(out.getvalue())
-        return 1
-
-
-@sharded
-@pytest.mark.parametrize("writes", [[], ["CHINESE"]], ids=["control-to-shard", "shard-to-control"])
-def test_a_sync_fix_tells_the_caches_built_from_the_rows_it_wrote(writes):
+def test_a_sync_fix_tells_the_caches_built_from_the_rows_it_wrote():
     """The sync writes raw (no signal), so a per-process copy built from those rows (apps/core/versioned.py: the data
     scope's org tree) would keep answering the old rows until its ttl. `apply_fix` bumps every memo watching a model it
-    fixed: the next read sees the new unit, in either direction. Mutation: no bump -> the stale tree is served."""
+    fixed: the next read sees the new unit. Mutation: no bump -> the stale tree is served."""
     from apps.core.shard_reads import control_mirror_writes, read_context
-    from apps.core.shard_sync import SHARD_TO_CONTROL, reconcile
+    from apps.core.shard_sync import reconcile
     from apps.org.models import Organization
     from apps.org.ownership import tenant_root
     from apps.perm.data_scope import _shared, _tree
@@ -414,8 +372,8 @@ def test_a_sync_fix_tells_the_caches_built_from_the_rows_it_wrote(writes):
     hall = halls["CHINESE"]
     root = tenant_root(hall)
     _assign("CHINESE")
-    source, target = ("civ_chinese", "default") if writes else ("default", "civ_chinese")
-    with override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=writes), read_context(target):
+    source, target = "default", "civ_chinese"
+    with override_settings(SHARDED=False), read_context(target):
         def tree():
             return _shared.get(("tree", hall.pk), lambda: _tree(hall.pk))
         before = tree()
@@ -423,13 +381,14 @@ def test_a_sync_fix_tells_the_caches_built_from_the_rows_it_wrote(writes):
             Organization._base_manager.using(source).bulk_create(
                 [Organization(tenant=hall, name="new unit", code="W4_CACHE", parent=root)])
         assert tree() == before  # nothing told the copy yet: the stale answer the sync must end
-        reconcile(["civ_chinese"], fix=True, direction=SHARD_TO_CONTROL if writes else "control-to-shard")
+        reconcile(["civ_chinese"], fix=True)
         new = Organization._base_manager.using(target).get(code="W4_CACHE").pk
         assert new in tree().get(root.pk, []), "a sync fix left the cached org tree stale"
 
 
 @sharded
-def test_a_write_on_a_write_cut_shard_queues_the_sync(monkeypatch, django_capture_on_commit_callbacks):
+def test_a_write_on_control_queues_the_sync_and_one_on_a_shard_does_not(monkeypatch,
+                                                                        django_capture_on_commit_callbacks):
     from django.core.cache import cache
 
     from apps.core import shard_sync
@@ -438,22 +397,20 @@ def test_a_write_on_a_write_cut_shard_queues_the_sync(monkeypatch, django_captur
 
     queued = []
     monkeypatch.setattr(tasks.sync_shards, "apply_async", lambda **kw: queued.append(kw))
-    for writes, expect in (([], 0), (["GREEK"], 1)):
+    for sharded_, alias, expect in ((False, GREEK, 0), (True, GREEK, 0), (True, "default", 1)):
         cache.delete(shard_sync.DEBOUNCE_KEY)
         queued.clear()
-        with override_settings(SHARD_READ_CIVS=list(CIVS), SHARD_WRITE_CIVS=writes), \
-                django_capture_on_commit_callbacks(using=GREEK, execute=True):
-            shard_sync._on_write(Realm, using=GREEK)
-        assert len(queued) == expect, writes
+        with override_settings(SHARDED=sharded_), django_capture_on_commit_callbacks(using=alias, execute=True):
+            shard_sync._on_write(Realm, using=alias)
+        assert len(queued) == expect, (sharded_, alias)
 
 
-# ---- inert while nothing is cut over -------------------------------------------------------------------------
+# ---- the one-database form -------------------------------------------------------------------------------------
 
 @sharded
-def test_with_no_write_cut_every_write_routes_as_in_stage_3():
-    """SHARD_WRITE_CIVS=[]: db_for_write answers what stage 3 did for every model, with and without a shard row
-    as the hint (control for a SHARD row read from a shard while reads are cut, Django's own answer otherwise),
-    and `transaction.atomic()` opens nothing on a shard."""
+def test_not_sharded_every_write_routes_as_with_no_router():
+    """SHARDED False: db_for_write answers "default" for every model, Django's own answer (the row's database) with a
+    row as the hint, and `transaction.atomic()` opens nothing on a shard."""
     from apps.core.shard_reads import _atomic_extra
     from apps.souls.models import Soul
 
@@ -461,16 +418,14 @@ def test_with_no_write_cut_every_write_routes_as_in_stage_3():
     soul = Soul.objects.create(name="stage 3", tenant=halls["GREEK"])
     on_shard = Soul._base_manager.using("default").get(pk=soul.pk)
     on_shard._state.db = GREEK
-    for reads in ([], list(CIVS)):
-        with override_settings(SHARD_READ_CIVS=reads, SHARD_WRITE_CIVS=[]):
-            for model in apps.get_models(include_auto_created=True):
-                assert router.db_for_write(model) == "default", model._meta.label
-            # reads not cut: Django's own answer (the row's database); reads cut: control (stage 3 write_route)
-            assert router.db_for_write(Soul, instance=on_shard) == ("default" if reads else GREEK)
-            with transaction.atomic():
-                assert _atomic_extra.get() and all(not held for _, held in _atomic_extra.get())
-                assert [a for a in connections if a != "default" and connections[a].in_atomic_block
-                        and any(not b._from_testcase for b in connections[a].atomic_blocks)] == []
+    with override_settings(SHARDED=False):
+        for model in apps.get_models(include_auto_created=True):
+            assert router.db_for_write(model) == "default", model._meta.label
+        assert router.db_for_write(Soul, instance=on_shard) == GREEK
+        with transaction.atomic():
+            assert _atomic_extra.get() and all(not held for _, held in _atomic_extra.get())
+            assert [a for a in connections if a != "default" and connections[a].in_atomic_block
+                    and any(not b._from_testcase for b in connections[a].atomic_blocks)] == []
 
 
 # ---- integer id ranges (gap 4a) --------------------------------------------------------------------------------
@@ -486,7 +441,7 @@ def test_two_civilizations_create_organizations_with_disjoint_ids_in_their_range
     halls = _halls()  # each hall's root unit exists (stage 3's state); the new units hang under it
     _assign("GREEK", "EGYPTIAN")
     made = {}
-    with cut("GREEK", "EGYPTIAN"):
+    with cut():
         for civ in ("GREEK", "EGYPTIAN"):
             with _in_hall(halls[civ]):
                 root = tenant_root(halls[civ])
@@ -509,7 +464,7 @@ def test_the_first_write_to_a_shard_without_its_range_is_refused():
     # A PostgreSQL sequence is not rolled back with the test: an earlier test on this database may have moved it
     # into the range already (gate 2026-11-16). Put it back below the range, as a shard that never had it assigned.
     _set_next(GREEK, AuditLog, 1)
-    with cut("GREEK"), _in_hall(halls["GREEK"]):
+    with cut(), _in_hall(halls["GREEK"]):
         # A soul's uuid pk needs no range, but its CREATE audit row (an integer pk, on the shard) goes in with it
         # since 2026-11-19: the create is refused too. Before, that row was an on-commit write, refused and swallowed.
         with pytest.raises(ImproperlyConfigured, match="assign_shard_id_ranges"):
@@ -552,8 +507,8 @@ def test_the_range_numbering_covers_every_civilization():
 # ---- found by the 2026-11-16 review (ADVICE-sharding-fable.md 1.1) and part B's caveats -------------------------
 
 @sharded
-def test_a_hall_created_after_its_civilizations_write_cut_over_is_seeded_on_its_shard():
-    """POST /tenants/ for a Greek hall with Greek writes cut over: the hall row is control's, its seed (realms,
+def test_a_hall_created_sharded_is_seeded_on_its_shard():
+    """POST /tenants/ for a Greek hall, sharded: the hall row is control's, its seed (realms,
     statutes, templates) goes to civ_greek, whose foreign keys to the hall must hold at that shard's commit -- so the
     hall is copied into every shard in the same request (`shard_sync._copy_hall`). 201, the seed on the shard and
     nowhere else, reconcile clean. Mutation: no copy -> the shard's commit fails (no hall there)."""
@@ -566,7 +521,7 @@ def test_a_hall_created_after_its_civilizations_write_cut_over_is_seeded_on_its_
     _halls()
     _assign("GREEK")
     admin = User.objects.create_user(username="w4-hall", password="x", role=UserRole.SYSTEM_ADMIN)  # only it builds halls
-    with cut("GREEK"):
+    with cut():
         res = officer_client(admin).post("/api/v1/tenants/", {"code": "GR_W4NEW", "display_name": "new",
                                                               "civilization": "GREEK"}, format="json")
         assert res.status_code == 201, res.data
@@ -578,8 +533,8 @@ def test_a_hall_created_after_its_civilizations_write_cut_over_is_seeded_on_its_
             assert not model._base_manager.using("default").filter(tenant=hall).exists(), model
         from apps.tenants.tasks import sync_shards
 
-        sync_shards()  # what beat / the debounce runs: shard-to-control for GREEK, control-to-shard for the rest
-        assert _reconcile_s2c("GREEK") == 0
+        sync_shards()  # what beat / the debounce runs
+        call_command("reconcile_shards", "--civ", "GREEK", verbosity=0)  # CommandError if anything differs
 
 
 @sharded
@@ -594,7 +549,7 @@ def test_a_case_number_is_spent_on_control_before_the_shard_row_and_never_reused
 
     halls = _halls()
     _assign("GREEK")
-    with cut("GREEK"), _in_hall(halls["GREEK"]):
+    with cut(), _in_hall(halls["GREEK"]):
         soul = Soul.objects.create(name="numbered", tenant=halls["GREEK"])
         counters = JudgmentCaseCounter.objects.using("default")
         with mock.patch.object(Judgment, "save_base", side_effect=RuntimeError("shard insert failed")), \
@@ -612,15 +567,14 @@ def test_a_case_number_is_spent_on_control_before_the_shard_row_and_never_reused
 
 
 @sharded
-def test_reconcile_fix_control_to_shard_never_overwrites_a_write_cut_shard():
-    """`reconcile_shards --civ GREEK --fix` in its default direction (control-to-shard) while Greek writes are cut
-    over: the shard is the master of its SHARD rows, so a row only the shard has stays (only REFERENCE and the
+def test_reconcile_fix_never_overwrites_a_shards_own_rows():
+    """`reconcile_shards --civ GREEK --fix` sharded: the shard is the master of its SHARD rows, so a row only the shard has stays (only REFERENCE and the
     control-mastered models are copied that way). Mutation: `_sides` compares them anyway -> the row is deleted."""
     from apps.souls.models import Soul
 
     halls = _halls()
     _assign("GREEK")
-    with cut("GREEK"):
+    with cut():
         with _in_hall(halls["GREEK"]):
             soul = Soul.objects.create(name="shard only", tenant=halls["GREEK"])
         call_command("reconcile_shards", "--civ", "GREEK", "--fix", verbosity=0)

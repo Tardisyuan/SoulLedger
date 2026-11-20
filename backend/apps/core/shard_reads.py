@@ -1,68 +1,59 @@
-"""Stage 3: a cut-over civilization's reads come from its shard; writes still go to control and are synced
-(docs/audit/2026-11-15-sharding/PLAN.md 阶段 3, D7, D8).
-
-Nothing here does anything while `settings.SHARD_READ_CIVS` is empty -- every entry point returns before
-looking at a context -- so production with no shard env, and a sharded run with nothing cut over, read
-exactly as before (tests/test_sharded_reads_equal_single_db.py holds both).
+"""Sharded reads and writes: each civilization's SHARD rows live on its own shard (docs/audit/2026-11-15-sharding/
+PLAN.md 阶段 3-5, D7, D8). Two forms only (2026-11-21, config/settings.py): sharded (`settings.SHARDED`: every
+SHARD_DATABASE_URL_<CIV> set; control holds REFERENCE, CONTROL, the control-mastered models and the rows with no hall)
+and the one database. Not sharded, every entry point returns before looking at a context, so the one database reads
+and writes exactly as with no router (tests/test_sharded_reads_equal_single_db.py and
+tests/test_sharded_writes_equal_single_db.py hold both forms to the same answers).
 
 Where a read of a SHARD model goes (`route`), first answer wins:
-  1. inside the code's own transaction,    -> control. The writes are there and nowhere else yet; a
-     anywhere in a write request, or in        check-then-act must not read a lagging shard (`reads_control`).
+  1. inside the code's own transaction,    -> where its writes are: the masters (`_acting_read`); a
+     anywhere in a write request, or in        check-then-act reads what it wrote (`reads_control`).
      Celery (below)
-     a model in CONTROL_READS                 its queries join a control table; listed with the reason.
+     a model in CONTROL_READS                 control: its queries join a control table; listed with the reason.
   2. the queryset says FANOUT_HINT          -> fan out (crossing keys, residence reads).
   3. an instance hint of a SHARD row        -> that row's database (Django's own rule).
      an instance hint of a hall (Tenant)    -> that hall's civilization.
   4. the read context                       -> one alias, or FANOUT.
   5. none of these                          -> `NoShardContext`. Never a silent fall back to control.
 
-The read context (`current_context`): an explicit `read_context(...)` (a management command reads control, below),
-else the request's hall (or the tenant contextvar a per-hall Celery task sets); else the user -- a
-civilization ADMIN reads its civilization, a soul account its soul's primary hall's (`soul_read_context`),
-SYSTEM_ADMIN and an anonymous caller (sign-in by soul code) read everywhere (FANOUT), a caller that reaches no hall reads control (scope_to_tenant answers it
-nothing anyway). A hall of UNKNOWN civilization, and a civilization not cut over, read control: that is where
-their rows live (D2). Outside a request, inside Celery -- a task's body, or a Celery signal's receivers
-(worker_ready, task_postrun, beat's before_task_publish) -- reads go where the task's writes go: control
-(`reads_control`), the hall's shard only once the hall's civilization writes there (stage 4, SHARD_WRITE_CIVS).
-Not FANOUT and not the hall's shard: stage 3 writes reach a shard only at the next sync, so a task handed the id
-of a row its request just committed must read control to find it (a FANOUT read excludes the cut-over halls
-from the control leg), and a sweep that reads, writes and reads again must read what it wrote (a per-hall
-purge that re-read its lagging shard got the deleted ids back and looped). Control holds every row in stage 3.
-A task that wants another answer says so: `read_context(FANOUT)` / `@fanout_reads` / `read_context(hall)`.
-A management command reads control for the same reason (`read_context("default")` around it: an operator's
-sweep reads, then writes to control). Outside a request,
-Celery and a command: an explicit context or the tenant contextvar, else NoShardContext.
+The read context (`current_context`): an explicit `read_context(...)`, else the request's hall (or the tenant
+contextvar a per-hall Celery task sets); else the user -- a civilization ADMIN reads its civilization, a soul account
+its soul's primary hall's (`soul_read_context`), SYSTEM_ADMIN and an anonymous caller (sign-in by soul code) read
+everywhere (FANOUT), a caller that reaches no hall reads control (scope_to_tenant answers it nothing anyway). A hall
+of UNKNOWN civilization reads control: that is where its rows live (D2). Inside Celery -- a task's body, or a Celery
+signal's receivers (worker_ready, task_postrun, beat's before_task_publish) -- and in a management command
+(`read_context("default")`), reads go where the writes go (`reads_control`): the hall's master, else every master
+(MASTER). A task that wants another answer says so: `read_context(FANOUT)` / `@fanout_reads` / `read_context(hall)`.
+Outside a request, Celery and a command: an explicit context or the tenant contextvar, else NoShardContext.
 
-FANOUT is not a database. A queryset evaluated under it visits every leg -- control with the cut-over
-civilizations' halls excluded, then each cut-over shard (a shard's soul copies of another civilization
-excluded, D6) -- and merges: each leg fetches its first offset+limit rows in the queryset's own order, the
-rows are merged in that order and the slice is taken from the merge. `count` / `exists` / `aggregate`
-combine per leg; `in_bulk` reads the merge. `install()` hooks those QuerySet methods; a path it does not
-cover (raw SQL, explain, a combined queryset) asks the router, which raises NoShardContext.
+FANOUT is not a database. A queryset evaluated under it visits every leg -- control (its rows with no hall, D2; the
+halls of the four civilizations excluded), then each shard (a shard's soul copies of another civilization excluded,
+D6) -- and merges: each leg fetches its first offset+limit rows in the queryset's own order, the rows are merged in
+that order and the slice is taken from the merge. `count` / `exists` / `aggregate` combine per leg; `in_bulk` reads
+the merge. `install()` hooks those QuerySet methods; a path it does not cover (raw SQL, explain, a combined
+queryset) asks the router, which raises NoShardContext.
 
-STAGE 4 (writes, `settings.SHARD_WRITE_CIVS`; nothing changes while it is empty -- every new branch returns
-first, tests/test_sharded_writes.py holds it). A civilization's MASTER is its shard once its writes are cut over,
-control before (`master_alias`); control stays a full mirror (shard-to-control sync) until stage 5.
+Writes. A civilization's MASTER is its shard (`master_alias`).
   writes      a row goes to its hall's master (`write_alias_of`: the row's hall, else the hall of the row a related
               manager hangs off), a row with no hall and every CONTROL row to control, a control-mastered model
               (the CONTROL_READS ones: their reads join control tables) to control. No row: the context's master
               (`acting_alias`). No single one (MASTER, no context): NoShardContext, except that a queryset
               update / delete is split per master (`_split`), a create / get_or_create / bulk_create asks its row
               first, and a read for a write (select_for_update) runs on the one master holding its rows (`_locate`).
-  acting      the reads `reads_control` names (in a transaction, a write request, Celery, a command) read where
-  reads       stage 3's control answered from, the masters: every master (MASTER: the merge above over the
-              write-cut civilizations), or -- asked about the rows of one row (a related manager, which Django
-              routes itself and which cannot merge) -- that row's hall's master. So a write request reads its own
-              writes and still finds another civilization's row its payload names, as the single database does.
+  acting      the reads `reads_control` names (in a transaction, a write request, Celery, a command) read the
+  reads       masters: every master (MASTER: the merge above), or -- asked about the rows of one row (a related
+              manager, which Django routes itself and which cannot merge) -- that row's hall's master. So a write
+              request reads its own writes and still finds another civilization's row its payload names, as the
+              single database does.
   atomic      `transaction.atomic()` with no `using` is control's transaction plus the context's master shard's
-              (every write-cut shard's where it has none), so a business transaction holds where its rows and its
-              locks are; the shards commit first (`_install_atomic`). A write to a shard outside the open transaction is refused (WriteOutsideTransaction).
-  mirror      control keeps a mirror of each write-cut civilization's rows (shard-to-control sync). A direct write
-              there (`.using("default")`, loaddata) is refused (ControlMirrorWrite): the sync would undo it.
-              RULE: no data migration that writes SHARD rows while any civilization is write-cut. Its historical
-              models have no guard (no receivers; `_hook` hands them Django's own QuerySet methods),
-              `placed_here` keeps it on control, and the next sync reverts what it did;
-              merge such a migration only after taking writes back (or once stage 5 runs them on the masters).
+              (every shard's where it has none), so a business transaction holds where its rows and its locks are;
+              the shards commit first (`_install_atomic`). A write to a shard outside the open transaction is
+              refused (WriteOutsideTransaction).
+  control     control holds none of a hall's SHARD rows (stage 5 purged them on 115). A direct write of one there
+              (`.using("default")`, loaddata) is refused (ControlMirrorWrite): nothing would ever read it.
+              RULE: a data migration that writes SHARD rows reaches control only (`placed_here`; its historical
+              models have no guard: `_hook` hands them Django's own QuerySet methods), which holds none of them
+              while sharded. Change such rows with a command that runs on every master instead.
 """
 import decimal
 import functools
@@ -82,7 +73,15 @@ from django.db.models.query import (
     ValuesListIterable,
 )
 
-from apps.core.sharding import REFERENCE, SHARD, NoShardContext, alias_for_civilization, placement, tenant_path
+from apps.core.sharding import (
+    REFERENCE,
+    SHARD,
+    NoShardContext,
+    alias_for_civilization,
+    cut_civilizations,
+    placement,
+    tenant_path,
+)
 
 FANOUT = "FANOUT"
 #: Stage 4: every civilization's master -- control without the halls whose writes are cut over, then each such
@@ -116,20 +115,21 @@ CONTROL_READS = {
 #: civilization's shard, and the join would drop the row (INNER) or blank it (LEFT) without a word. Such a read raises
 #: CrossShardJoin; the call site reads the other side by ids (`soul_ids`, or the rows' ids then the other rows by id).
 #: Until 2026-11-20 a listed key was answered from control instead -- control's copy of the write-cut civilizations'
-#: rows, the mirror stage 5 deletes (PREP-stage5 M3; tests/test_sharded_reads_survive_the_mirror_purge.py).
+#: rows, the mirror stage 5 deleted (PREP-stage5 M3).
 
 
 def cut_over():
-    return list(settings.SHARD_READ_CIVS)
+    """The civilizations read from their shards: all of them while sharded (`sharding.cut_civilizations`)."""
+    return cut_civilizations()
 
 
-def write_cut():
-    return list(settings.SHARD_WRITE_CIVS)
+#: Writes and reads are cut over together since 2026-11-21; two names because the call sites ask different questions.
+write_cut = cut_over
 
 
 def master_alias(civ):
     """Where a civilization's rows are written (stage 4): its shard once its writes are cut over, else control."""
-    return alias_for_civilization(civ) if civ and civ in settings.SHARD_WRITE_CIVS else CONTROL_ALIAS
+    return alias_for_civilization(civ) if civ and civ in write_cut() else CONTROL_ALIAS
 
 
 def control_mastered(model):
@@ -141,7 +141,7 @@ def control_mastered(model):
 
 def alias_for_reads(civ):
     """Where a civilization's rows are read: its shard once cut over, else control (also UNKNOWN / blank)."""
-    return alias_for_civilization(civ) if civ and civ in settings.SHARD_READ_CIVS else CONTROL_ALIAS
+    return alias_for_civilization(civ) if civ and civ in cut_over() else CONTROL_ALIAS
 
 
 @contextmanager
@@ -245,7 +245,7 @@ def _view_shows_rows_abroad():
 
 def _soul_state(user):
     """{soul, civ, primary, abroad} of a soul account, once per request (None while nothing is cut over: no query)."""
-    if not settings.SHARD_READ_CIVS:
+    if not settings.SHARDED:
         return None
     cached = getattr(user, _SOUL_CONTEXT_ATTR, None)
     if cached is None:
@@ -277,7 +277,7 @@ def _primary_soul(user):
     if soul_id is None:
         return None
     first = CONTROL_ALIAS
-    if settings.SHARD_WRITE_CIVS and getattr(user, "tenant_id", None) is not None:
+    if settings.SHARDED and getattr(user, "tenant_id", None) is not None:
         opened = Tenant._base_manager.using(CONTROL_ALIAS).filter(pk=user.tenant_id).first()
         first = master_alias(opened.civilization) if opened is not None else CONTROL_ALIAS
     with _over(write_cut()):
@@ -317,15 +317,15 @@ def _keys_to_soul():
 def in_write_transaction():
     """A transaction opened by the code (not the test case's wrapper) is open on control (or, stage 4, on a shard
     whose writes are cut over: `transaction.atomic()` opens one there too, `_install_atomic`)."""
-    aliases = [CONTROL_ALIAS, *(alias_for_civilization(c) for c in settings.SHARD_WRITE_CIVS)]
+    aliases = [CONTROL_ALIAS, *(alias_for_civilization(c) for c in write_cut())]
     return any(not a._from_testcase for alias in aliases if alias in connections
                for a in connections[alias].atomic_blocks)
 
 
 def reads_control():
-    """Stage 3 writes go to control, so a read that may act on what was just written reads control too: inside
-    the code's own transaction, anywhere in a write request (any method but GET / HEAD / OPTIONS), and in
-    Celery with no context of its own unless its hall writes to its shard (module header)."""
+    """A read that may act on what was just written reads where the writes go (`_acting_read`): inside the code's
+    own transaction, anywhere in a write request (any method but GET / HEAD / OPTIONS), in a command's control
+    context, and in Celery with no hall of a known civilization (module header)."""
     explicit = _context.get()
     if in_write_transaction() or explicit == CONTROL_ALIAS:  # or the code said so: read_context("default")
         return True
@@ -338,7 +338,7 @@ def reads_control():
         from apps.tenants.managers import get_current_tenant
 
         hall = get_current_tenant()
-        return hall is None or hall.civilization not in settings.SHARD_WRITE_CIVS
+        return hall is None or hall.civilization not in write_cut()
     return False
 
 
@@ -352,7 +352,7 @@ def acting_alias():
     """Stage 4: where this request / task writes a SHARD row that names no hall of its own, and where its reads that
     may act on those writes go: the master of its civilization (`master_alias`); MASTER where it has no single one
     (SYSTEM_ADMIN, a soul account, an anonymous caller, a global Celery task, a management command or an explicit
-    FANOUT / control context); None with no context at all. Only asked while SHARD_WRITE_CIVS names one. The control
+    FANOUT / control context); None with no context at all. Only asked while sharded. The control
     context a management command runs in (stage 3: "it writes to control") gives way to a hall the command's code
     names with the tenant contextvar (a per-hall job run by hand); with none, it is MASTER."""
     explicit = _context.get()
@@ -387,13 +387,13 @@ def acting_alias():
 
 
 def _acting_read(hints):
-    """A read that may act on what was just written (`reads_control`). Stage 3: control, which holds every row.
-    Stage 4: the row's own database when it came from a master, else every master (MASTER) -- the stage-3 answer
-    with each write-cut civilization's rows read where they are written. Not only the context's master: a write
+    """A read that may act on what was just written (`reads_control`). Not sharded: control, which holds every row.
+    Sharded: the row's own database when it came from a master, else every master (MASTER). Not only the context's
+    master: a write
     request of a Greek hall still reads the row of another civilization its payload names, to refuse it the way the
     single database does ("no such soul in this tenant", not "object does not exist";
     tests/test_sharded_writes_equal_single_db.py)."""
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return CONTROL_ALIAS
     if hints.get(FANOUT_HINT):
         return MASTER  # a crossing key: the row it names may be in any master
@@ -406,7 +406,7 @@ def _acting_read(hints):
         if civ is not None:
             return master_alias(civ) if civ else CONTROL_ALIAS
         db = instance._state.db  # a hop of its path not loaded (reading it here would ask this again): its database
-        return db if db and (db == CONTROL_ALIAS or _civ_of_alias(db) in settings.SHARD_WRITE_CIVS) else (
+        return db if db and (db == CONTROL_ALIAS or _civ_of_alias(db) in write_cut()) else (
             acting_alias() if acting_alias() not in (None, MASTER) else CONTROL_ALIAS)
     return MASTER
 
@@ -439,7 +439,7 @@ def _loaded_civilization(instance):
 def route(model, hints):
     """The alias a read of `model` goes to; None = Django's default answer; FANOUT / MASTER = every leg.
     Raises NoShardContext where nothing says which civilization."""
-    if not settings.SHARD_READ_CIVS or placement(model) != SHARD:
+    if not settings.SHARDED or placement(model) != SHARD:
         return None
     if model._meta.label in CONTROL_READS:
         return CONTROL_ALIAS
@@ -450,8 +450,8 @@ def route(model, hints):
     instance = hints.get("instance")
     if instance is not None:
         kind = placement(type(instance))
-        if kind == SHARD and (instance._state.db or not settings.SHARD_WRITE_CIVS):
-            return None  # the database the row came from (an unsaved row, stage 4: the context's)
+        if kind == SHARD and instance._state.db:
+            return None  # the database the row came from (an unsaved row: the context's)
         if kind == REFERENCE:
             return alias_for_reads(instance.civilization)
     ctx = current_context()
@@ -492,18 +492,13 @@ def write_alias_of(instance):
 
 
 def write_route(model, hints):
-    """Where a write of `model` goes. Stage 3 (writes not cut over): control -- a row read from a shard and saved
-    (or deleted, or given an m2m row) is written to control, not to the shard it came from, which the next sync
-    would overwrite. Stage 4 (SHARD_WRITE_CIVS): a SHARD row of a cut-over civilization on its shard, any other on
-    control (`write_alias_of`: the row's hall, or the hall of the row the write hangs off -- a related manager's
+    """Where a write of `model` goes. Not sharded: Django's own answer. Sharded: a SHARD row of a hall on its
+    civilization's shard, any other on control (`write_alias_of`: the row's hall, or the hall of the row the write hangs off -- a related manager's
     instance); with no row to ask, the context's master (`acting_alias`). No single answer (MASTER, no context)
     raises NoShardContext: a queryset update / delete over MASTER is split per master by `install()`'s hooks,
     and create / get_or_create / bulk_create ask their row first."""
     instance = hints.get("instance")
-    if not settings.SHARD_WRITE_CIVS:
-        if (settings.SHARD_READ_CIVS and instance is not None
-                and str(instance._state.db or "").startswith("civ_") and placement(model) == SHARD):
-            return CONTROL_ALIAS
+    if not settings.SHARDED:
         return None
     if placement(model) != SHARD:
         return None
@@ -538,14 +533,14 @@ def related_of(instance, name):
     """`instance.<name>` -- a forward key to a SHARD row -- read where that row is. A row with no hall (D2) lives on
     control while the row it names may be a hall's, written on that hall's shard once writes are cut over: Django's
     accessor reads the instance's own database, i.e. control's copy, a mirror stage 5 deletes (DoesNotExist after the
-    purge; tests/test_sharded_reads_survive_the_mirror_purge.py, verdict-document.pdf). For such a row the target is
+    purge; verdict-document.pdf). For such a row the target is
     read by id from every leg; any other row, and a target already loaded, as Django reads it. None for a null key or
     a row that is nowhere."""
     f = instance._meta.get_field(name)
     cached = f.get_cached_value(instance, None)
     if cached is not None or getattr(instance, f.attname) is None:
         return cached
-    if (not settings.SHARD_WRITE_CIVS or (instance._state.db or CONTROL_ALIAS) != CONTROL_ALIAS
+    if (not settings.SHARDED or (instance._state.db or CONTROL_ALIAS) != CONTROL_ALIAS
             or placement(f.related_model) != SHARD or _hall_of(instance) is not None):
         return getattr(instance, name)
     found = with_fanout(f.related_model._base_manager.filter(pk=getattr(instance, f.attname))).first()
@@ -558,8 +553,8 @@ def control_m2m(instance, name):
     """`instance.<name>.all()` for a SHARD row's many-to-many to a CONTROL model through a SHARD table (CityGod.officers,
     TudiGod.officers): the through rows read on the row's own database, the targets on control by id. Django's own
     manager reads the targets' database and joins the through table there -- on control, its copy of a write-cut
-    civilization's through rows: a mirror stage 5 deletes (PREP-stage5, found by
-    tests/test_sharded_reads_survive_the_mirror_purge.py). A queryset of the targets, for filtering further."""
+    civilization's through rows: a mirror stage 5 deleted (PREP-stage5). A queryset of the targets, for filtering
+    further."""
     f = instance._meta.get_field(name)
     through = f.remote_field.through
     ids = (through._base_manager.using(instance._state.db or CONTROL_ALIAS)
@@ -602,7 +597,7 @@ def fanout_reads(fn):
 
 def with_fanout(qs):
     """`qs`, evaluated on every leg (no-op while nothing is cut over)."""
-    if not settings.SHARD_READ_CIVS:
+    if not settings.SHARDED:
         return qs
     qs = qs._chain()
     qs._hints = {**qs._hints, FANOUT_HINT: True}
@@ -617,7 +612,7 @@ def _halls(civs):
     return [pk for civ in civs for pk in civilization_halls(civ).using(CONTROL_ALIAS).values_list("pk", flat=True)]
 
 
-#: The civilizations a merge visits: SHARD_READ_CIVS for a FANOUT read, SHARD_WRITE_CIVS for MASTER (`_wanted`).
+#: The civilizations a merge visits (`_wanted`): every one while sharded, for a FANOUT read and for MASTER alike.
 _merging = ContextVar("shard_merge_civs", default=None)
 
 
@@ -723,7 +718,7 @@ def strip_unreachable_joins(qs, alias):
     if not qs.query.select_related:
         return
     on_shard = alias.startswith("civ_")
-    if not on_shard and not (alias == CONTROL_ALIAS and settings.SHARD_WRITE_CIVS):
+    if not on_shard and not (alias == CONTROL_ALIAS and settings.SHARDED):
         return
     if qs.query.select_related is True:
         qs.query.select_related = False
@@ -843,7 +838,7 @@ def _strip_for_write(qs):
     """A read for a write (select_for_update, get_or_create's get) goes where `db_for_write` says, so `_guard_routed`
     never strips its select_related: on a shard a JOIN through a CONTROL row (a conversation's SoulAccount) raised
     "no such table", through a bare id it dropped the row. Strip them the same way; the accessor reads the row."""
-    if settings.SHARD_WRITE_CIVS and qs.query.select_related and placement(qs.model) == SHARD:
+    if settings.SHARDED and qs.query.select_related and placement(qs.model) == SHARD:
         strip_unreachable_joins(qs, qs.db)
 
 
@@ -858,12 +853,12 @@ def _guard_routed(qs, aggregates=None):
 
 def _wanted(qs):
     """The civilizations a merge of `qs` visits, or None: read where the router sends it."""
-    if qs._db is not None or qs._for_write or not settings.SHARD_READ_CIVS:
+    if qs._db is not None or qs._for_write or not settings.SHARDED:
         return None
     if placement(qs.model) != SHARD or qs.model._meta.label in CONTROL_READS:
         return None
     if reads_control():
-        return write_cut() if settings.SHARD_WRITE_CIVS and _acting_read(qs._hints) == MASTER else None
+        return write_cut() if settings.SHARDED and _acting_read(qs._hints) == MASTER else None
     if qs._hints.get(FANOUT_HINT):
         return cut_over()
     instance = qs._hints.get("instance")
@@ -1310,7 +1305,7 @@ def install():
             if self._result_cache is None and self._for_write:
                 _locate(self)
                 _strip_for_write(self)
-            if self._result_cache is None and settings.SHARD_READ_CIVS:
+            if self._result_cache is None and settings.SHARDED:
                 civs = _wanted(self)
                 if civs is not None:
                     with _over(civs):
@@ -1326,7 +1321,7 @@ def install():
             if self._for_write:
                 _locate(self)
                 _strip_for_write(self)
-            if settings.SHARD_READ_CIVS:
+            if settings.SHARDED:
                 civs = _wanted(self)
                 if civs is not None:
                     with _over(civs):
@@ -1338,7 +1333,7 @@ def install():
     def evaluating(fanned):
         def make(original):
             def method(self, *args, **kwargs):
-                if self._result_cache is None and settings.SHARD_READ_CIVS:
+                if self._result_cache is None and settings.SHARDED:
                     civs = _wanted(self)
                     if civs is not None:
                         with _over(civs):
@@ -1350,7 +1345,7 @@ def install():
 
     def aggregating(original):
         def _aggregate(self, *args, **kwargs):
-            if settings.SHARD_READ_CIVS:
+            if settings.SHARDED:
                 civs = _wanted(self)
                 if civs is not None:
                     with _over(civs):
@@ -1392,10 +1387,10 @@ def install():
 
 def _split(qs):
     """A queryset update / delete with no row and no single civilization (MASTER), once writes are cut over: one
-    queryset per master, each holding the rows that master owns (`legs` over SHARD_WRITE_CIVS); None when the
+    queryset per master, each holding the rows that master owns (`legs`); None when the
     router can answer it alone. A filter a shard cannot join (a crossing key) is refused: control's copy of the
     other side lags, and a write must not act on it."""
-    if (not settings.SHARD_WRITE_CIVS or qs._db is not None or placement(qs.model) != SHARD
+    if (not settings.SHARDED or qs._db is not None or placement(qs.model) != SHARD
             or control_mastered(qs.model) or qs._hints.get("instance") is not None or acting_alias() != MASTER):
         return None
     out = []
@@ -1421,7 +1416,7 @@ def _locate(qs):
     it runs on the one master holding its rows -- control's (D2, civilizations not cut over) or a write-cut
     shard's -- found by asking each master first. Rows in two masters cannot be locked in one statement:
     NoShardContext. No-op until writes are cut over, or where the router can answer alone."""
-    if (not settings.SHARD_WRITE_CIVS or qs._db is not None or placement(qs.model) != SHARD
+    if (not settings.SHARDED or qs._db is not None or placement(qs.model) != SHARD
             or control_mastered(qs.model) or qs._hints.get("instance") is not None
             or acting_alias() not in (None, MASTER)):
         return
@@ -1462,7 +1457,7 @@ def _hall_from_values(model, values):
 
 def _probe_alias(qs, values):
     """Where a get_or_create on `qs` goes when its values name a hall; None: ask the router."""
-    if not settings.SHARD_WRITE_CIVS or qs._db is not None or placement(qs.model) != SHARD:
+    if not settings.SHARDED or qs._db is not None or placement(qs.model) != SHARD:
         return None
     if qs._hints.get("instance") is not None or control_mastered(qs.model):
         return None
@@ -1472,7 +1467,7 @@ def _probe_alias(qs, values):
 
 def _install_writes():
     def _guard_bulk(qs, parts):
-        if not settings.SHARD_WRITE_CIVS or placement(qs.model) != SHARD:
+        if not settings.SHARDED or placement(qs.model) != SHARD:
             return
         for p in parts if parts is not None else [qs]:
             db = p._db or router.db_for_write(p.model, **p._hints)  # where the write goes, not a read's route
@@ -1507,7 +1502,7 @@ def _install_writes():
 
     def creating(original):
         def create(self, **kwargs):
-            if (not settings.SHARD_WRITE_CIVS or self._db is not None or placement(self.model) != SHARD
+            if (not settings.SHARDED or self._db is not None or placement(self.model) != SHARD
                     or self._hints.get("instance") is not None
                     or frozenset(kwargs) & self.model._meta._reverse_one_to_one_field_names):
                 return original(self, **kwargs)
@@ -1527,7 +1522,7 @@ def _install_writes():
 
     def bulk_creating(original):
         def bulk_create(self, objs, *args, **kwargs):
-            if not settings.SHARD_WRITE_CIVS or placement(self.model) != SHARD:
+            if not settings.SHARDED or placement(self.model) != SHARD:
                 return original(self, objs, *args, **kwargs)
             objs = list(objs)
             if self._db is not None:  # an explicit database: guarded, not regrouped
@@ -1551,7 +1546,7 @@ def _install_writes():
     def getting(original):
         def get(self, *args, **kwargs):
             # Django's get() asks `connections[clone.db]` before it evaluates a select_for_update: locate first.
-            if self._for_write and settings.SHARD_WRITE_CIVS and self._db is None:
+            if self._for_write and settings.SHARDED and self._db is None:
                 probe = self.filter(*args, **kwargs) if args or kwargs else self._chain()
                 _locate(probe)
                 if probe._db is not None:
@@ -1573,7 +1568,7 @@ _atomic_extra = ContextVar("shard_atomic_extra", default=())
 
 def _single_master():
     """The one write-cut shard this context writes to, or None (control, MASTER, no context, nothing cut)."""
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return None
     alias = acting_alias()
     return alias if alias not in (None, MASTER, CONTROL_ALIAS) else None
@@ -1582,7 +1577,7 @@ def _single_master():
 def _transaction_aliases():
     """The write-cut shards an `atomic()` with no `using` opens beside control's, in a context with no single
     civilization (MASTER, or none): every one of them, so a lock or a write on any of them is inside it."""
-    return [a for a in (alias_for_civilization(c) for c in settings.SHARD_WRITE_CIVS) if a in connections]
+    return [a for a in (alias_for_civilization(c) for c in write_cut()) if a in connections]
 
 
 def _install_atomic():
@@ -1618,7 +1613,7 @@ def _install_atomic():
     enter, leave, get_connection = Atomic.__enter__, Atomic.__exit__, tx.get_connection
 
     def routed_connection(using=None):
-        if using is None and settings.SHARD_WRITE_CIVS:
+        if using is None and settings.SHARDED:
             for kind, held in reversed(_atomic_extra.get()):
                 if kind == "one":
                     return get_connection(held[-1].using)
@@ -1641,7 +1636,7 @@ def _install_atomic():
             raise failed
 
     def entering(self):
-        if self.using is not None or not settings.SHARD_WRITE_CIVS:
+        if self.using is not None or not settings.SHARDED:
             enter(self)
             _atomic_extra.set((*_atomic_extra.get(), ("django", ())))
             return
@@ -1697,7 +1692,7 @@ def control_mirror_writes():
 
 
 def _code_transaction_open():
-    aliases = [CONTROL_ALIAS, *(alias_for_civilization(c) for c in settings.SHARD_WRITE_CIVS)]
+    aliases = [CONTROL_ALIAS, *(alias_for_civilization(c) for c in write_cut())]
     return any(not a._from_testcase for alias in aliases if alias in connections
                for a in connections[alias].atomic_blocks)
 
@@ -1739,7 +1734,7 @@ def pre_save_signal():
 
 
 def _guard_signal(sender, instance, using=None, **kwargs):
-    if not settings.SHARD_WRITE_CIVS or placement(sender) != SHARD:
+    if not settings.SHARDED or placement(sender) != SHARD:
         return
     if using == CONTROL_ALIAS:
         _refuse_on_control(sender, [instance])

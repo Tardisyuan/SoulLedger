@@ -726,7 +726,7 @@ def _seated_in(halls, lookup="participant_tenant__in"):
     from django.conf import settings
     from django.db.models import Q
 
-    if not settings.SHARD_READ_CIVS:
+    if not settings.SHARDED:
         return Q(**{f"participants__{lookup}": halls})
     return Q(pk__in=list(with_fanout(CrossTenantJudgmentParticipant._base_manager.filter(
         **{lookup: halls}).order_by()).values_list("judgment_id", flat=True)))

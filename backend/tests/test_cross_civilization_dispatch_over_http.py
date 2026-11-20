@@ -26,7 +26,7 @@ from tests.test_cross_civilization_saga import _ownership, _realm, _walk
 from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
-CUTS = ("none", "src", "tgt", "both")
+CUTS = ("both",)  # sharded: every civilization on its shard (the partial cut-overs are gone, 2026-11-21)
 
 
 def _seed():
@@ -53,10 +53,9 @@ def world(request):
     seed = _seed()
     rng = random.Random(seed)
     src, tgt = rng.sample(CIVS, 2)
-    which = {"none": [], "src": [src], "tgt": [tgt], "both": [src, tgt]}[request.param]
     halls = _halls()
     _assign(*CIVS)
-    with cut(*which):
+    with cut():
         yield {"seed": seed, "cut": request.param, "src": src, "tgt": tgt, "realm": rng.random() < 0.5}, halls
 
 
@@ -192,10 +191,10 @@ def test_another_civilizations_hall_files_and_withdraws_a_request_on_a_plan(cut_
     judge = plan.officer(f"judge_eg_{'_'.join(c[:2] for c in cut_civs)}", "JUDGE", eg)
     _sync()
     _assign(*CIVS)
-    with cut(*cut_civs), _in_hall(eg):
+    with cut(), _in_hall(eg):
         req = plan_requests.file_request(p, eg, kind="REOPEN", changes=None, reason="新证据", user=judge)
         plan_requests.withdraw(p, req.pk, tenant=eg, exempt=False, user=judge)
-    with cut(*cut_civs), read_context(CONTROL_ALIAS):
+    with cut(), read_context(CONTROL_ALIAS):
         assert SentencePlanRequest.all_objects.get(pk=req.pk).status == SentenceRequestStatus.WITHDRAWN, cut_civs
 
 
@@ -215,7 +214,7 @@ def test_a_target_realm_read_from_a_lagging_shadow_is_still_found_at_proposal(wh
     halls = _halls()
     _assign(*CIVS)
     src, tgt = halls[src_civ], halls[tgt_civ]
-    with cut(src_civ):
+    with cut():
         there = _realm(tgt, "DSP_LAG")  # on control only: no sync after it
         with _in_hall(src):
             soul = Soul.objects.create(name=f"客魂{seed}", tenant=src, current_state="DISPOSED")

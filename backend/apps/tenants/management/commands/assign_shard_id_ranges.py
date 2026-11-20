@@ -1,5 +1,5 @@
 """Move each civilization shard's integer-id sequences into its range (stage 4 gap 4a; apps/core/shard_ids.py).
-Run before a civilization joins SHARD_WRITE_CIVS (the first write to its shard refuses otherwise).
+Run once on every new shard before the process runs sharded (the first write to a shard refuses otherwise).
 
     manage.py assign_shard_id_ranges --civ GREEK
     manage.py assign_shard_id_ranges --all [--check]

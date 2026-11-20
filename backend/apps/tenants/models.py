@@ -181,9 +181,9 @@ class GlobalCode(models.Model):
     `tenant_id` is the claiming hall as a bare id with no foreign key, so the row has no path to a hall and stays
     in control (apps.core.sharding: CONTROL). It records who claimed; it is not part of the key.
 
-    One kind is not a code: `SHARD_SYNC_STOPPED` (apps/core/shard_sync.py), value = a civilization, claimed_at = when
-    SHARD_PURGED_CIVS first stopped its sync (stage 5: the purge wants a dump newer than that). Nor is `SHARD_PURGED`
-    (same module, `PURGED`): value = a civilization whose control rows were purged, never cleared by a setting."""
+    One kind is not a code: `SHARD_PURGED` (apps/core/shard_sync.py `PURGED`): value = a civilization whose control
+    rows stage 5 purged, never cleared; while one exists the database runs sharded only (`check_purge_records`). The
+    `SHARD_SYNC_STOPPED` rows on 115 are the retired purge tool's stamps (2026-11-21): nothing reads them."""
 
     kind = models.CharField(max_length=20)
     value = models.CharField(max_length=64)

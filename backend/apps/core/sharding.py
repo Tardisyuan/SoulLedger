@@ -183,52 +183,45 @@ def shard_aliases():
     return [alias for alias in civilization_aliases() if alias in settings.DATABASES]
 
 
-def check_cut_over_settings(read, write, databases=None, purged=(), recorded=()):
-    """SHARD_READ_CIVS / SHARD_WRITE_CIVS (D8) name civilizations that have a shard, each one's alias is
-    configured in DATABASES, a civilization's writes are cut over only after its reads, and its control rows are
-    purged (SHARD_PURGED_CIVS, stage 5) only after its writes. Raised at
-    startup (`apps/souls/apps.py`), so a typo such as `CHINA` or a missing `civ_greek` database refuses
-    to boot instead of surfacing at the first `fanout()`. `recorded`: the civilizations whose control rows were
-    purged (`shard_sync.purge_records`, read from the database, so checked by every sync rather than at startup): each
-    must stay in SHARD_WRITE_CIVS and SHARD_PURGED_CIVS for good (VERIFY-stage5 H1)."""
-    from django.core.exceptions import ImproperlyConfigured
-
+def cut_civilizations():
+    """The civilizations whose rows live on their own shard: every one while `settings.SHARDED`, none otherwise
+    (config/settings.py: the aliases decide; the per-civilization switches of stages 3-5 are gone)."""
     from apps.souls.models import Civilization
 
-    known = set(Civilization.values)
-    for name, civs in (("SHARD_READ_CIVS", read), ("SHARD_WRITE_CIVS", write)):
-        bad = sorted(set(civs) - known)
-        if bad:
-            raise ImproperlyConfigured(f"{name} names {bad}; a shard exists only for {sorted(known)}")
-    early = sorted(set(write) - set(read))
-    if early:
-        raise ImproperlyConfigured(f"SHARD_WRITE_CIVS {early} are not in SHARD_READ_CIVS: cut reads over first")
-    unwritten = sorted(set(purged) - set(write))
-    if unwritten:
-        raise ImproperlyConfigured(f"SHARD_PURGED_CIVS {unwritten} are not in SHARD_WRITE_CIVS: cut writes over first")
-    loose = sorted(set(recorded) - (set(write) & set(purged)))
-    if loose:
-        raise ImproperlyConfigured(
-            f"{loose} were purged (GlobalCode SHARD_PURGED): keep them in SHARD_WRITE_CIVS and SHARD_PURGED_CIVS. Control "
-            f"no longer holds their rows: off SHARD_WRITE_CIVS a sync would empty their shards, off SHARD_PURGED_CIVS it "
-            f"would copy the purged rows back")
+    return list(Civilization.values) if settings.SHARDED else []
+
+
+def check_shard_settings(databases=None, sharded=None, recorded=()):
+    """Raised at startup (`apps/souls/apps.py`) and by every sync (`shard_sync.check_purge_records`):
+      * a shard alias (`civ_*`, from SHARD_DATABASE_URL_<CIV>) that names no civilization is a typo such as
+        SHARD_DATABASE_URL_CHINA: refused rather than migrated and synced while nobody routes to it;
+      * SHARDED needs every civilization's alias: there is no partial cut-over any more;
+      * `recorded` -- the civilizations whose control rows were purged (`shard_sync.purge_records`, GlobalCode
+        SHARD_PURGED, read from the database) -- needs SHARDED: control no longer holds their rows, so the one-database
+        form would serve them empty and a control-to-shard sync would empty their shards (VERIFY-stage5 H1)."""
+    from django.core.exceptions import ImproperlyConfigured
+
     databases = settings.DATABASES if databases is None else databases
-    # A shard alias (`civ_*`, from SHARD_DATABASE_URL_<CIV>) that names no civilization is a typo such as
-    # SHARD_DATABASE_URL_CHINA: refuse it rather than migrate and sync a database nobody routes to.
+    sharded = settings.SHARDED if sharded is None else sharded
     from config.sharding import is_shard_alias
 
     stray = sorted(a for a in databases if is_shard_alias(a) and a not in civilization_aliases())
     if stray:
         raise ImproperlyConfigured(f"DATABASES {stray} name no civilization; shard aliases are {civilization_aliases()}")
-    missing = sorted(alias_for_civilization(c) for c in read if alias_for_civilization(c) not in databases)
-    if missing:
-        raise ImproperlyConfigured(f"SHARD_READ_CIVS needs DATABASES entries {missing}")
+    missing = sorted(a for a in civilization_aliases() if a not in databases)
+    if sharded and missing:
+        raise ImproperlyConfigured(f"sharded (some SHARD_DATABASE_URL_<CIV> is set) needs every civilization's shard: "
+                                   f"DATABASES lacks {missing}")
+    if recorded and not sharded:
+        raise ImproperlyConfigured(
+            f"{sorted(recorded)} were purged (GlobalCode SHARD_PURGED): control no longer holds their rows, so this "
+            f"database runs sharded only. Set SHARD_DATABASE_URL_<CIV> for every civilization")
 
 
 def fanout():
-    """Aliases a cross-civilization read must visit: control, then every civilization whose reads are
-    cut over (settings.SHARD_READ_CIVS). Stage 0: just ["default"]. No caller yet."""
-    return ["default", *(alias_for_civilization(c) for c in settings.SHARD_READ_CIVS)]
+    """Aliases a cross-civilization read must visit: control, then every civilization's shard while sharded.
+    Not sharded: just ["default"]."""
+    return ["default", *(alias_for_civilization(c) for c in cut_civilizations())]
 
 
 # ---- keys that must stay inside one civilization ---------------------------------------------------------

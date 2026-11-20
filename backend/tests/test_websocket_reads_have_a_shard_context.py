@@ -15,7 +15,7 @@ from django.test import override_settings
 from apps.authentication.models import User, UserRole
 from apps.core.shard_reads import FANOUT, current_context
 from apps.core.ws_tenant import TenantMiddleware
-from tests.test_shard_sync import CIVS, HAS_SHARDS
+from tests.test_shard_sync import HAS_SHARDS
 
 
 def _inner(seen):
@@ -35,7 +35,7 @@ async def test_a_hall_less_socket_reads_every_shard(role):
     user = await database_sync_to_async(User.objects.create_user)(
         username=f"ws-{role.lower()}", password="x", role=role, tenant=None)
     seen = {}
-    with override_settings(SHARD_READ_CIVS=list(CIVS)):
+    with override_settings(SHARDED=True):
         await TenantMiddleware(_inner(seen))({"type": "websocket", "user": user}, None, None)
     assert seen["context"] == FANOUT
     assert isinstance(seen["souls"], int)  # read across every leg, no NoShardContext
@@ -58,7 +58,7 @@ async def test_a_soul_socket_reads_its_souls_shard():
     (shard_reads.soul_read_context: a control query, run off the event loop)."""
     user = await database_sync_to_async(_greek_soul_user)()
     seen = {}
-    with override_settings(SHARD_READ_CIVS=list(CIVS)):
+    with override_settings(SHARDED=True):
         await TenantMiddleware(_inner(seen))({"type": "websocket", "user": user}, None, None)
     assert seen["context"] == "civ_greek"
     assert isinstance(seen["souls"], int)
