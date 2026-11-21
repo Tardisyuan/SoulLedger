@@ -5651,7 +5651,6 @@
         "hint": "Write to the hall; an officer replies in its name.",
         "title": "{{hall}} · Hall",
         "subtitle": "An officer replies in the hall’s name · not immediate",
-        "officer_byline": "{{hall}} · {{role}} {{name}}",
         "not_current": "You are no longer at {{hall}}. The old letters remain; nothing can be added.",
         "go_current": "Write to {{hall}}"
       },

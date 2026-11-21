@@ -5616,7 +5616,6 @@
         "hint": "Sesh Er Wesekhet. Sab Weshed Em Ren-Ef.",
         "title": "{{hall}} · Wesekhet",
         "subtitle": "Sab Weshed Em Ren Wesekhet · Nen Min",
-        "officer_byline": "{{hall}} · {{role}} {{name}}",
         "not_current": "Nen Em {{hall}} Djer. Medu Tepy Wenen; Nen Redi Djer.",
         "go_current": "Sesh Er {{hall}}"
       },

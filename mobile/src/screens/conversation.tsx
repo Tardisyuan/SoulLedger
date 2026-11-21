@@ -35,31 +35,33 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
 
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
 import { chatMode, type ChatMode, type ClosedReason } from "@soulledger/core/domain/soulChat";
+import { groupLetters, type LetterFacts, type LetterGroup } from "@soulledger/core/domain/letters";
+import { hhmm } from "@soulledger/core/domain/dates";
 import { bubbleStamp, dayOf } from "../chatRules";
 import { PlaqueFrame, usePageTheme } from "../chrome";
-import { CORNER, Icon } from "../emblems";
+import { Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
-import { radius, type CivKey } from "../theme";
+import { radius } from "../theme";
 import { useToast } from "../feedback";
 import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
-import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, PendingImage, ROW_HIT } from "./chatImages";
+import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, LetterPicture, PendingImage, ROW_HIT } from "./chatImages";
 import { compressWithSize, pickImages } from "./circleMedia";
 import { ANDROID, Glyph, Tag, hallOf, wash } from "./letters";
 
 type Line =
   | { kind: "day"; key: string; day: string }
   | { kind: "message"; key: string; m: ChatMessage; mine: boolean }
+  | { kind: "group"; key: string; group: LetterGroup<ChatMessage> }
   | { kind: "pending"; key: string; o: Outgoing };
 
 const lineKey = (line: Line) => line.key;
@@ -204,11 +206,30 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   // same rows. No "" in the set: a message without a txn id (theirs, history) must not match a send with no event id yet.
   const conversationId = c?.id;
   const { outbox, me } = chat;
+  const hallRoom = c?.kind === "OFFICER_INBOX";
   const { pending, rows } = useMemo(() => {
     const echoed = new Set(messages.flatMap((m) => (m.txnId ? [m.eventId, m.txnId] : [m.eventId])));
     const pending = outbox.filter((o) => o.conversationId === conversationId && !(o.eventId && echoed.has(o.eventId)) && !echoed.has(o.txnId));
     const lines: Line[] = [];
     let lastDay = "";
+    if (hallRoom) {
+      // 第六十四批: letters to the hall read as the officer app and the web read them -- one column, grouped by side
+      // (the hall is one author here: the soul never sees officers' names), the soul's own groups on the card2 panel.
+      const factsOf = (m: ChatMessage): LetterFacts => (m.sender === me ? { ts: m.ts, side: "soul", author: "me" } : { ts: m.ts, side: "hall", author: "hall" });
+      for (const row of groupLetters(messages, factsOf)) {
+        if (row.kind === "day") {
+          lines.push(row);
+          lastDay = row.day;
+        } else lines.push({ kind: "group", key: row.key, group: row });
+      }
+      for (const o of pending) {
+        const day = dayOf(o.ts);
+        if (day !== lastDay) lines.push({ kind: "day", key: `d${day}`, day });
+        lastDay = day;
+        lines.push({ kind: "pending", key: o.txnId, o });
+      }
+      return { pending, rows: lines.reverse() };
+    }
     for (const item of [...messages.map((m) => ({ ts: m.ts, m })), ...pending.map((o) => ({ ts: o.ts, o }))]) {
       const day = dayOf(item.ts);
       if (day !== lastDay) lines.push({ kind: "day", key: `d${day}`, day });
@@ -218,14 +239,12 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     }
     // Inverted list: newest first.
     return { pending, rows: lines.reverse() };
-  }, [messages, outbox, conversationId, me]);
+  }, [messages, outbox, conversationId, me, hallRoom]);
 
   // The viewer pages through every image in the thread, oldest first, and opens on the one tapped.
   const gallery = useMemo(() => messages.flatMap((m) => (m.image ? [m.image] : [])), [messages]);
   const landedOn = landed ? lastTheirs?.eventId : undefined;
-  const inboxRoom = c?.kind === "OFFICER_INBOX";
-  const hallTitle = c ? hallOf(c, locale) : "";
-  const hallSealed = mode?.kind === "hall_sealed";
+  const inboxRoom = hallRoom;
   const { progress, resend, dismiss } = chat;
   const draftBack = useRef<((text: string) => void) | null>(null);
   const composerOpen = !!mode && !["outgoing_locked", "muted", "closed", "hall_sealed"].includes(mode.kind);
@@ -248,14 +267,19 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const renderLine = useCallback(
     ({ item: line }: { item: Line }) => {
       const read = (m: ChatMessage) => !inboxRoom && Object.keys(room?.readUpTo ?? {}).some((u) => u !== me && hasRead(room, u, m));
+      const openImage = (imageId: string) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === imageId)));
       if (line.kind === "day") {
-        return (
+        return inboxRoom ? (
+          <HallDay day={line.day} />
+        ) : (
           <Txt variant="value" tone="subtle" style={styles.day}>
             {line.day}
           </Txt>
         );
       }
+      if (line.kind === "group") return <HallLetterGroup group={line.group} onOpenImage={openImage} />;
       if (line.kind === "pending") {
+        if (inboxRoom && !line.o.image) return <HallPendingLetter o={line.o} onResend={() => resend(line.o.txnId)} onDismiss={() => takeBack(line.o)} now={now} />;
         return line.o.image ? (
           <PendingImage o={line.o} progress={progress[line.o.txnId]} onResend={() => resend(line.o.txnId)} onDismiss={() => takeBack(line.o)} />
         ) : (
@@ -270,17 +294,18 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             mine={line.mine}
             ts={line.m.ts}
             now={now}
-            onOpen={() => setViewing(Math.max(0, gallery.findIndex((g) => g.id === image.id)))}
+            onOpen={() => openImage(image.id)}
             receipt={line.mine ? tr(read(line.m) ? "soul_app.chat.receipt.read" : "soul_app.chat.receipt.sent") : undefined}
           />
         );
       }
       if (line.mine) return <Bubble mine m={line.m} now={now} read={read(line.m)} />;
-      if (inboxRoom) return <OfficerBubble m={line.m} hall={hallTitle} sealed={hallSealed} now={now} />;
       return <Bubble m={line.m} now={now} landed={line.m.eventId === landedOn} />;
     },
-    [inboxRoom, room, me, progress, resend, takeBack, now, gallery, tr, hallTitle, hallSealed, landedOn]
+    [inboxRoom, room, me, progress, resend, takeBack, now, gallery, tr, landedOn]
   );
+  // 第六十四批: the hall's status line, right above the box. No wait time on the soul's side (it would read as a nudge).
+  const hallLast = pending.some((o) => o.state !== "failed") ? "soul" : messages.length ? (messages[messages.length - 1].sender === me ? "soul" : "hall") : null;
 
   const goHall = async () => {
     try {
@@ -494,6 +519,13 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         }
       />
       <ChatImageViewer images={gallery} index={viewing} onClose={() => setViewing(null)} />
+      {mode.kind === "hall" && hallLast ? (
+        <View style={styles.hallState}>
+          <Txt testID="hall-state" variant="body" tone="muted" style={styles.hallStateText}>
+            {tr(hallLast === "soul" ? "soul_app.chat.state.awaiting_hall" : "soul_app.chat.state.awaiting_me")}
+          </Txt>
+        </View>
+      ) : null}
       <Dock
         mode={mode}
         onSend={send}
@@ -842,58 +874,102 @@ function PendingBubble({ o, onResend, onDismiss, now }: { o: Outgoing; onResend:
   );
 }
 
-function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string; sealed: boolean; now: number }) {
+// ── letters to the hall (第六十四批) ────────────────────────────────────
+//
+// One full-width column, as the officer app and the web draw the same letters: the soul is "self" here, so the
+// soul's groups sit on the neutral card2 panel and the hall's replies are plain text on the canvas. No alignment,
+// no tail, no civilization colour or ornament (the paper corners of 文明气质 1f are gone with the bubble). The
+// group head says 「我」 / 「殿司」, never an officer's name.
+
+/** A new day: 11 faint on the left, a hairline to the right. */
+function HallDay({ day }: { day: string }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
-  const line = sealed ? t.hair2 : t.ink;
-  // Who replied and their position, as the backend stamped them on the event (either may be missing).
-  const byline = tr("soul_app.chat.hall.officer_byline", { hall, role: m.officerTitle ?? "", name: m.officer ?? "" }).replace(/\s+/g, " ").replace(/\s*·\s*$/, "").trim();
   return (
-    <View style={styles.bubbleRow}>
-      <View testID="officer-bubble" style={[styles.bubble, styles.officer, { borderColor: line, borderLeftWidth: 3, backgroundColor: t.s1 }]}>
-        <LetterCorners civ={t.civ} stroke={line} />
-        <View style={styles.byline}>
-          {sealed ? null : <Glyph text={tr("soul_app.chat.section.hall")} tone="ink" size={16} />}
-          <Txt style={[styles.bylineText, { color: sealed ? t.inkSubtle : t.ink }]}>{byline}</Txt>
-        </View>
-        <Txt style={[styles.officerBody, { fontFamily: quoteFamily(m.body), color: sealed ? t.inkMuted : t.ink }]}>{m.body}</Txt>
-        <OneLine variant="value" tone="subtle" style={[styles.metaTime, styles.officerTime]}>
-          {bubbleStamp(m.ts, now)}
-        </OneLine>
-      </View>
+    <View testID={`hall-day-${day}`} style={styles.hallDay}>
+      <Txt variant="label" tone="subtle" style={styles.hallDayText}>
+        {day}
+      </Txt>
+      <View style={[styles.fill, styles.hallDayRule, { borderTopColor: t.hair }]} />
     </View>
   );
 }
 
-/**
- * 文明气质 1f: the officer's letter as paper — four 14pt corners of the
- * civilization's ornament, 4 in from the edges, mirrored per corner. The body's
- * padding (22) keeps the text clear of them; nothing sits under the text.
- */
-const CORNERS = [
-  { key: "tl", at: { left: 4, top: 4 }, flip: [] },
-  { key: "tr", at: { right: 4, top: 4 }, flip: [{ scaleX: -1 }] },
-  { key: "bl", at: { left: 4, bottom: 4 }, flip: [{ scaleY: -1 }] },
-  { key: "br", at: { right: 4, bottom: 4 }, flip: [{ scaleX: -1 }, { scaleY: -1 }] },
-] as const;
+function HallHead({ own, ts }: { own: boolean; ts: number | null }) {
+  const { t: tr } = useI18n();
+  return (
+    <View style={styles.hallHead}>
+      <Txt variant="label" style={[styles.hallName, styles.fill]}>
+        {tr(own ? "soul_app.chat.side.me" : "soul_app.chat.side.hall")}
+      </Txt>
+      {ts !== null ? (
+        <Txt variant="label" tone="subtle" style={styles.hallTime}>
+          {hhmm(new Date(ts))}
+        </Txt>
+      ) : null}
+    </View>
+  );
+}
 
-function LetterCorners({ civ, stroke }: { civ: CivKey; stroke: string }) {
-  return CORNERS.map((c) => (
-    <Svg
-      key={c.key}
-      testID={`letter-corner-${c.key}`}
-      pointerEvents="none"
-      width={14}
-      height={14}
-      viewBox="0 0 14 14"
-      fill="none"
-      stroke={stroke}
-      strokeWidth={1}
-      style={[styles.corner, c.at, { transform: [...c.flip] }]}
-    >
-      <Path d={CORNER[civ]} />
-    </Svg>
-  ));
+/** One group: one head, the letters 16 apart; a letter 30+ minutes after the one before it gets its own small time. */
+const HallLetterGroup = memo(function HallLetterGroup({ group, onOpenImage }: { group: LetterGroup<ChatMessage>; onOpenImage: (id: string) => void }) {
+  const t = useTheme();
+  const own = group.side === "soul";
+  return (
+    <View testID={`hall-group-${own ? "me" : "hall"}`} style={[styles.hallGroup, own && { backgroundColor: t.s2, borderRadius: 6, padding: 12 }]}>
+      <HallHead own={own} ts={group.ts} />
+      {group.letters.map(({ item: m, stamp }) => (
+        <View key={m.eventId} testID={`hall-letter-${m.eventId}`} style={styles.hallLetter}>
+          {stamp ? (
+            <Txt variant="label" tone="subtle" style={[styles.hallTime, styles.hallStamp]}>
+              {hhmm(new Date(m.ts))}
+            </Txt>
+          ) : null}
+          {m.image ? <LetterPicture image={m.image} onOpen={() => onOpenImage(m.image!.id)} /> : <Body text={m.body} />}
+        </View>
+      ))}
+    </View>
+  );
+});
+
+/**
+ * A letter to the hall not yet confirmed: the soul's panel, unfilled, in a 1px dashed frame. 「◌ 待发出」 while it is
+ * on its way; 「没发出 · 重试」 (neg) when it failed, with 删除 to take the words back. Once it is echoed it is an
+ * ordinary panel in the group above; no animation either way.
+ */
+function HallPendingLetter({ o, onResend, onDismiss, now }: { o: Outgoing; onResend: () => void; onDismiss: () => void; now: number }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const failed = o.state === "failed";
+  const resendable = failed && (!o.refused || (o.refused.code === "request_throttled" && !!o.refused.retryAt && Date.parse(o.refused.retryAt) <= now));
+  return (
+    <View testID={`pending-${o.state}`} style={[styles.hallGroup, { borderWidth: 1, borderStyle: "dashed", borderColor: t.inkSubtle, borderRadius: 6, padding: 12 }]}>
+      <HallHead own ts={null} />
+      <Body text={o.body} />
+      {failed ? (
+        <View testID="pending-not-sent" style={styles.meta}>
+          <Txt variant="label" tone="neg" style={styles.metaText}>
+            {`${tr("letters.not_sent")} ·`}
+          </Txt>
+          {resendable ? (
+            <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
+              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+                {tr("common.retry")}
+              </Txt>
+            </Press>
+          ) : null}
+          <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
+            <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              {tr("soul_app.chat.receipt.delete")}
+            </Txt>
+          </Press>
+        </View>
+      ) : (
+        <Txt testID="pending-queued-line" variant="label" tone="muted" style={styles.metaText}>
+          {`◌ ${tr("letters.queued")}`}
+        </Txt>
+      )}
+    </View>
+  );
 }
 
 // ── the dock: composer, or what replaces it ────────────────────────────
@@ -1047,19 +1123,25 @@ const styles = StyleSheet.create({
   bubbleRow: { flexDirection: "row", marginBottom: 16 },
   mineRow: { justifyContent: "flex-end" },
   bubble: { maxWidth: "76%", borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
-  officer: { maxWidth: "82%", padding: 24 },
-  corner: { position: "absolute" },
   body: { fontSize: 16, lineHeight: 24 },
+  // 第六十四批: the hall thread. Groups 20 apart (as the officer app), letters in a group 16 apart.
+  hallGroup: { gap: 16, alignSelf: "stretch", marginBottom: 20 },
+  hallLetter: { gap: 8 },
+  hallHead: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  hallName: { fontSize: 13, lineHeight: 20, letterSpacing: 0 },
+  hallTime: { fontSize: 12, lineHeight: 16, letterSpacing: 0, fontVariant: ["tabular-nums"] },
+  hallStamp: { textAlign: "right" },
+  hallDay: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 20 },
+  hallDayText: { fontSize: 11, lineHeight: 16, letterSpacing: 0 },
+  hallDayRule: { borderTopWidth: StyleSheet.hairlineWidth },
+  hallState: { paddingHorizontal: 20, paddingBottom: 8 },
+  hallStateText: { fontSize: 13, lineHeight: 20 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   metaMine: { justifyContent: "flex-end" },
   metaTime: { fontSize: 12, lineHeight: 16 },
   metaText: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   newTagText: { fontFamily: family.ui[500], fontSize: 12, lineHeight: 16, letterSpacing: 1.1 },
-  byline: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bylineText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 16, letterSpacing: 1.1 },
-  officerBody: { fontSize: 16, lineHeight: 24, marginTop: 8 },
-  officerTime: { marginTop: 8 },
   rejected: { marginTop: 2 },
   dock: { paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1 },
   composer: { flexDirection: "row", gap: 12, alignItems: "flex-end" },

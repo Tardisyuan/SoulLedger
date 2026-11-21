@@ -5651,7 +5651,6 @@
         "hint": "写信给殿司，官员会以殿司名义回复。",
         "title": "{{hall}} · 殿司",
         "subtitle": "官员以殿司名义回复 · 非即时",
-        "officer_byline": "{{hall}} · {{role}} {{name}}",
         "not_current": "你已不在{{hall}}。旧信留着，不能再添。",
         "go_current": "写信给{{hall}} · 殿司"
       },
