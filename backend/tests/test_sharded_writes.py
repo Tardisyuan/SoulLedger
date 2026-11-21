@@ -608,3 +608,26 @@ def test_a_soul_creates_a_row_whose_first_key_is_a_control_row():
                 account=account, defaults={"soul": soul, "localpart": "soul_first", "matrix_user_id": "@soul_first:x"})
     assert made
     assert _where(ChatIdentity, identity.pk) == [GREEK]
+
+
+@sharded
+def test_a_souls_follow_lists_show_the_souls_it_follows():
+    """Follow edges live on the civilization's shard and users on control. The following / followers lists used a
+    Follow subquery inside the User query, which compiled on control and found no edge: both lists were empty
+    sharded, and so were the mutual marks (simulator 2026-11-21). Two Greek souls follow each other: each list
+    shows the other, both marks true."""
+    from apps.social.services import FollowService
+    from tests.soul_account_support import ready_soul
+
+    halls = _halls()
+    _assign("GREEK")
+    with cut():
+        with _in_hall(halls["GREEK"]):
+            a, client = ready_soul(halls["GREEK"], name="follows one")
+            b, _ = ready_soul(halls["GREEK"], name="is followed")
+            FollowService.follow(a.user, b.user, halls["GREEK"])
+            FollowService.follow(b.user, a.user, halls["GREEK"])
+        for path in ("/api/v1/me/social/following/", "/api/v1/me/social/followers/"):
+            body = client.get(path).json()
+            assert [(r["user_id"], r["is_following"], r["is_followed_by"]) for r in body["results"]] == [
+                (b.user_id, True, True)], (path, body)

@@ -9,7 +9,7 @@ test_every_me_route_is_a_soul_api_view` 走真实 URLconf 钉住这一点 ——
 `apps/social/soul_circle.py` 一处决定**,本模块只负责把它接成 HTTP。
 """
 from django.core.cache import cache
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.parsers import MultiPartParser
@@ -410,15 +410,25 @@ class MeSocialFollowingView(SoulSocialView):
     @extend_schema(operation_id="v1_me_social_following", responses={200: PaginatedSoulCards, **ERRORS})
     def get(self, request):
         tenant = circle.civilization_of(request.user)
-        ids = Follow.objects.filter(
-            **{"follower" if self.relation == "following" else "following": request.user}, tenant=tenant
-        ).values_list(f"{self.relation}_id", flat=True)
-        edges = Follow.objects.filter(tenant=tenant)
-        rows = circle.souls_in(tenant, include_retired=True).filter(pk__in=ids).annotate(
-            is_following=Exists(edges.filter(follower=request.user, following=OuterRef("pk"))),
-            is_followed_by=Exists(edges.filter(follower=OuterRef("pk"), following=request.user)),
-        )
-        return self.paginate(rows.select_related("soul_account").order_by("display_name", "pk"), SoulRelationCardSerializer)
+        me = request.user
+        # Follow edges are on the civilization's shard, users on control: ids, never a subquery, cross between them
+        # (a subquery compiles on the users' database, which has no edges -- the list was empty when sharded).
+        ids = list(Follow.objects.filter(
+            **{"follower" if self.relation == "following" else "following": me}, tenant=tenant
+        ).values_list(f"{self.relation}_id", flat=True))
+        rows = circle.souls_in(tenant, include_retired=True).filter(pk__in=ids)
+        paginator = TotalOrderPagination()
+        page = paginator.paginate_queryset(
+            rows.select_related("soul_account").order_by("display_name", "pk"), request, view=self)
+        on_page = [row.pk for row in page]
+        following = set(Follow.objects.filter(follower=me, tenant=tenant, following__in=on_page)
+                        .values_list("following_id", flat=True))
+        followed_by = set(Follow.objects.filter(following=me, tenant=tenant, follower__in=on_page)
+                          .values_list("follower_id", flat=True))
+        for row in page:
+            row.is_following, row.is_followed_by = row.pk in following, row.pk in followed_by
+        data = SoulRelationCardSerializer(page, many=True, context={"viewer": me}).data
+        return paginator.get_paginated_response(data)
 
 
 class MeSocialFollowersView(MeSocialFollowingView):
