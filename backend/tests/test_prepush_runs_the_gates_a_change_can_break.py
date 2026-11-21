@@ -1462,11 +1462,19 @@ class TestTheOfficerAppIsGated:
         assert named <= dirs | names, sorted(named - dirs - names)
 
 
+def _both_sides(stamp: Path, line: str) -> None:
+    """One ledger line into each side's ledger ($STAMP-backend, $STAMP-js): a pass of both sides."""
+    for side in ("backend", "js"):
+        Path(f"{stamp}-{side}").write_text(line)
+
+
 class TestATreeThatAlreadyPassedFull:
     """A push of a tree `run-gates.sh --full` already passed is let through (2026-10-19, user decision).
 
     The push to main runs the full set; running it again right after a full pass of the very same
     files cost ~22 minutes a push. Only an exact tree match skips — the second case is the guard.
+    A full pass is `*` in each side's ledger since 2026-11-15; the whole-tree ledger it used to be ($STAMP
+    itself) is no longer read (2026-11-21, user decision) — the third case.
     """
 
     def _push(self, hook, wt: Path, stamp: Path) -> subprocess.CompletedProcess:
@@ -1482,19 +1490,30 @@ class TestATreeThatAlreadyPassedFull:
     def test_the_same_tree_is_not_run_again(self, hook, checkouts, tmp_path):
         _, wt = checkouts
         stamp = tmp_path / "passed"
-        stamp.write_text(f"{self._tree(wt)}\t2026-10-19 12:00, abc1234\n")
+        _both_sides(stamp, f"{self._tree(wt)}\t2026-10-19 12:00, abc1234\t*\n")
         proc = self._push(hook, wt, stamp)
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        assert "already passed" in proc.stdout, proc.stdout
+        assert "already passed `scripts/run-gates.sh --full`" in proc.stdout, proc.stdout
         assert "classify:" not in proc.stdout, "the gates were classified (would have run) for a tree that passed"
 
     def test_a_different_tree_runs_as_before(self, hook, checkouts, tmp_path):
         _, wt = checkouts
         stamp = tmp_path / "passed"
-        stamp.write_text(f"{'f' * 40}\t2026-10-19 12:00, abc1234\n")
+        _both_sides(stamp, f"{'f' * 40}\t2026-10-19 12:00, abc1234\t*\n")
         proc = self._push(hook, wt, stamp)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "already passed" not in proc.stdout
+        assert re.search(r"^classify: ", proc.stdout, re.M), proc.stdout
+
+    def test_the_whole_tree_ledgers_from_before_the_sides_are_not_read(self, hook, checkouts, tmp_path):
+        """$STAMP itself (a --full pass) and $STAMP-selective, written until 2026-11-15, vouch for nothing now."""
+        _, wt = checkouts
+        stamp = tmp_path / "passed"
+        stamp.write_text(f"{self._tree(wt)}\t2026-10-19 12:00, abc1234\n")
+        (tmp_path / "passed-selective").write_text(f"{self._tree(wt)}\t2026-10-27 12:00, abc1234\tbackend/x.py\n")
+        proc = self._push(hook, wt, stamp)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "already passed" not in proc.stdout and "vouch" not in proc.stdout, proc.stdout
         assert re.search(r"^classify: ", proc.stdout, re.M), proc.stdout
 
 
@@ -1528,7 +1547,7 @@ class TestASelectivePassIsNotRunAgain:
         for side in ("backend", "js"):
             line = (tmp_path / f"passed-{side}").read_text()
             assert line.startswith(self._head(main, "HEAD^{tree}") + "\t") and line.rstrip().endswith("\tbackend/x.py"), line
-        assert not (tmp_path / "passed-selective").exists(), "the whole-tree ledger is read, no longer written"
+        assert not (tmp_path / "passed-selective").exists(), "the whole-tree ledger is neither written nor read any more"
         push = self._push(hook, main, stamp, ["backend/x.py"])
         assert push.returncode == 0, push.stdout + push.stderr
         assert "for these changes" in push.stdout, push.stdout
@@ -1536,8 +1555,7 @@ class TestASelectivePassIsNotRunAgain:
 
     def _stamp_for(self, main: Path, tmp_path: Path, files: str) -> Path:
         stamp = tmp_path / "passed"
-        (tmp_path / "passed-selective").write_text(
-            f"{self._head(main, 'HEAD^{tree}')}\t2026-10-27 12:00, abc1234\t{files}\n")
+        _both_sides(stamp, f"{self._head(main, 'HEAD^{tree}')}\t2026-10-27 12:00, abc1234\t{files}\n")
         return stamp
 
     def test_a_push_changing_a_file_the_run_did_not_cover_runs(self, hook, checkouts, tmp_path):
@@ -1555,7 +1573,7 @@ class TestASelectivePassIsNotRunAgain:
     def test_another_tree_runs(self, hook, checkouts, tmp_path):
         main, _ = checkouts
         stamp = tmp_path / "passed"
-        (tmp_path / "passed-selective").write_text(f"{'f' * 40}\t2026-10-27 12:00, abc1234\tbackend/a.py\n")
+        _both_sides(stamp, f"{'f' * 40}\t2026-10-27 12:00, abc1234\tbackend/a.py\n")
         assert "for these changes" not in self._push(hook, main, stamp, ["backend/a.py"]).stdout
 
     def test_gates_full_at_push_time_still_runs(self, hook, checkouts, tmp_path):
@@ -1596,7 +1614,7 @@ class TestTheBaseIsTheLastTreeThatPassed:
 
     def test_a_commit_whose_tree_passed_full_is_the_base(self, checkouts, tmp_path):
         main, sha = self._repo(checkouts)
-        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        _both_sides(tmp_path / "passed", f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\t*\n")
         out = self._gates(main, tmp_path)
         assert f"base: {sha['a'][:7]}" in out and "(last tree that passed, full) — 1 commits since" in out, out
         assert "merge-base with origin/main" not in out
@@ -1616,17 +1634,17 @@ class TestTheBaseIsTheLastTreeThatPassed:
     def test_a_selective_pass_counts_only_when_it_covered_its_commit(self, checkouts, tmp_path):
         main, sha = self._repo(checkouts)
         mig = "backend/apps/souls/migrations/0002_x.py"
-        sel = tmp_path / "passed-selective"
-        sel.write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py\n")
+        stamp = tmp_path / "passed"
+        _both_sides(stamp, f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py\n")
         out = self._gates(main, tmp_path)
         assert "merge-base with origin/main; none of the last 300" in out, out
-        sel.write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py|{mig}\n")
+        _both_sides(stamp, f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py|{mig}\n")
         out = self._gates(main, tmp_path)
         assert f"base: {sha['a'][:7]} (last tree that passed, selective)" in out, out
 
     def test_a_pass_on_that_base_records_the_whole_branch_as_covered(self, checkouts, fake_backend, tmp_path):
         main, sha = self._repo(checkouts)
-        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        _both_sides(tmp_path / "passed", f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\t*\n")
         run = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh")], cwd=main,
                              env=_clean_env(PYTHON_BIN=fake_backend, RUFF_BIN=shutil.which("true"),
                                             GATES_STAMP_FILE=str(tmp_path / "passed"),
@@ -1634,7 +1652,7 @@ class TestTheBaseIsTheLastTreeThatPassed:
                              capture_output=True, text=True, timeout=120)
         assert run.returncode == 0, run.stdout + run.stderr
         assert "recorded a selective pass (backend)" in run.stdout, run.stdout
-        line = (tmp_path / "passed-backend").read_text().rstrip().split("\t")
+        line = (tmp_path / "passed-backend").read_text().splitlines()[-1].split("\t")  # the line this run appended
         assert line[0] == self._tree(main, "HEAD"), line
         assert line[2].split("|") == sorted(["backend/apps/souls/migrations/0002_x.py", "backend/a.py",
                                              "backend/b.py"]), line
@@ -1647,7 +1665,7 @@ class TestTheBaseIsTheLastTreeThatPassed:
 
     def test_full_and_an_explicit_base_ignore_the_ledger(self, checkouts, tmp_path):
         main, sha = self._repo(checkouts)
-        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        _both_sides(tmp_path / "passed", f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\t*\n")
         assert "last tree that passed" not in self._gates(main, tmp_path, "--full")
         assert "last tree that passed" not in self._gates(main, tmp_path, "--base", sha["mig"])
 

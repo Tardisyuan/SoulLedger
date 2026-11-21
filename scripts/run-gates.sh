@@ -17,8 +17,9 @@
 #     with origin/main), else the merge-base. The first lines say which base each side took and why.
 #   - A push (the hook passes --prepush, and the pushed files in PREPUSH_CHANGED) is let through when both
 #     sides' ledgers vouch for the pushed tree and its files; when only one side's do, only the other side
-#     runs (2026-11-21). The older whole-tree ledgers (soulledger-gates-passed, ...-selective) are still
-#     read, for both sides. A green --real-pg run is recorded for the backend side too (record_side).
+#     runs (2026-11-21). A green --real-pg run is recorded for the backend side too (record_side).
+#     The whole-tree ledgers before 2026-11-15 (soulledger-gates-passed, ...-selective) are no longer read
+#     (2026-11-21, user decision): none of their trees was among HEAD's last 300 commits.
 #
 # WHAT RUNS. Each side decides from its own changed files (the diff from its base, plus untracked files).
 #   - backend: pytest by app (scripts/select-backend-tests.py) plus the tests listed in
@@ -213,30 +214,25 @@ tree_is_clean() {
 # The pass ledgers. GATES_STAMP_FILE is the test seam.
 #   $STAMP-backend, $STAMP-js   (2026-11-15) one per side, written by record_side at the end:
 #                               <tree> TAB <date, commit> TAB <covered files, |-separated, or * for --full>
-#   $STAMP, $STAMP-selective    the whole-tree ledgers before 2026-11-15 (a full pass; a selective pass and the
-#                               files it covered). No longer written; an entry still counts for both sides.
+#   $STAMP itself (no suffix) and $STAMP-selective were the whole-tree ledgers before 2026-11-15. Neither is
+#                               written or read any more (2026-11-21, user decision); $STAMP is only the prefix.
 #   $STAMP-e2e                  the browser suites' (--e2e), unchanged.
 STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}"
-SEL_STAMP="$STAMP-selective"
 E2E_STAMP="$STAMP-e2e"
 
 # side_proves <backend|js> <tree> <files, one per line | "-"> — do the ledgers vouch for this side on <tree>
-# for these changed files? A full pass always does (the old $STAMP, or `*` in the side's own); selective
-# passes do when the files they covered, all the tree's lines in $STAMP-selective and the side's ledger
-# united, include every one of <files>. "-" asks for a full pass only. Sets PROVEN_KIND (full / selective).
+# for these changed files? A full pass always does (`*` in the side's ledger); selective passes do when
+# the files they covered, all the tree's lines in the side's ledger united, include every one of <files>. "-" asks for a full pass only. Sets PROVEN_KIND (full / selective).
 side_proves() {
     PROVEN_KIND=""
-    grep -qs "^$2	" "$STAMP" && { PROVEN_KIND=full; return 0; }
-    local files=() f
-    for f in "$SEL_STAMP" "$STAMP-$1"; do [ -f "$f" ] && files+=("$f"); done
-    [ "${#files[@]}" -gt 0 ] || return 1
+    [ -f "$STAMP-$1" ] || return 1
     PROVEN_KIND="$(FILES="$3" awk -F'\t' -v t="$2" '
         BEGIN { n = split(ENVIRON["FILES"], want, "\n") }
         $1 == t { seen = 1; if ($3 == "*") all = 1; m = split($3, r, "|"); for (i = 1; i <= m; i++) have[r[i]] = 1 }
         END { if (all) { print "full"; exit }
               if (!seen || ENVIRON["FILES"] == "-") exit
               for (i = 1; i <= n; i++) if (want[i] != "" && !(want[i] in have)) exit
-              print "selective" }' "${files[@]}")"
+              print "selective" }' "$STAMP-$1")"
     [ -n "$PROVEN_KIND" ]
 }
 
@@ -268,9 +264,9 @@ side_proves() {
 side_base() {  # <backend|js> → SIDE_BASE (empty: none) and SIDE_WHY
     local sha tree
     SIDE_BASE=""; SIDE_WHY="; no pass recorded"
-    [ -f "$STAMP" ] || [ -f "$SEL_STAMP" ] || [ -f "$STAMP-$1" ] || return 0
+    [ -f "$STAMP-$1" ] || return 0
     while read -r sha tree; do
-        grep -qs "^$tree	" "$STAMP" "$SEL_STAMP" "$STAMP-$1" || continue
+        grep -qs "^$tree	" "$STAMP-$1" || continue
         if side_proves "$1" "$tree" "$(if [ -n "$MB" ]; then git diff --name-only --no-renames "$MB" "$sha"; else echo -; fi)"; then
             SIDE_BASE="$sha"; SIDE_WHY="last tree that passed, $PROVEN_KIND"; return 0
         fi
@@ -548,8 +544,7 @@ changed_since_base
 #     then pushed, and the hook ran the same tests a second time. A larger change set never selects less:
 #     each rule only adds tests or forces a full run.
 #   - 2026-11-15 (user decision): per side. The push passes when the backend's ledgers and the JS side's
-#     each vouch for the pushed tree (side_proves) — whether the two were green in one run or in two. The
-#     whole-tree ledgers written before that day count for both sides.
+#     each vouch for the pushed tree (side_proves) — whether the two were green in one run or in two.
 # --full / GATES_FULL=1 at push time accept only a full pass. Any change at all — one byte in any tracked
 # file — is a different tree and runs as before. The real-PostgreSQL run and E2E were never part of this.
 PUSHED_SHA=""
