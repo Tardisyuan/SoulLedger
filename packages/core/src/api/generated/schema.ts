@@ -15187,6 +15187,8 @@ export interface components {
             total: number;
             overdue: number;
             returned: number;
+            claimable_count: number;
+            held_count: number;
             sources: components["schemas"]["JudgmentQueueSourceCounts"];
             elsewhere: components["schemas"]["JudgmentElsewhereCounts"];
         };

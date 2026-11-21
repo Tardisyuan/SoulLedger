@@ -250,6 +250,29 @@ describe("the other tabs have the same four states", () => {
     expect(order).toEqual(["queue-row-j8", "desk-held-divider", "queue-row-j7"]);
     expect(within(screen.getByTestId("queue-row-j8")).getByText(/ · 枉死$/)).toBeTruthy();
     expect(screen.getByTestId("queue-claim-j8")).toBeTruthy();
+    // 第六十三批 二 f: no `claimable_count` from the server, so 待认领 has no number (not 0 − 1, not the rows loaded).
+    expect(screen.queryByTestId("desk-count-unclaimed")).toBeNull();
+  });
+
+  it("第六十三批 二 f: 待认领's heading is claimable_count and 候着的 · N is held_count, not the rows on screen", async () => {
+    mockCounts.mockResolvedValue({ data: { mine: 0, unclaimed: 9, others: 0, deferred: 0, claimable_count: 4, held_count: 5 } });
+    mockList.mockImplementation(
+      byGroup({
+        unclaimed: [
+          { id: "j1", case_number: "CN-1", soul_name: "海瑞", court: "十殿", is_final: false },
+          { id: "j2", case_number: "GR-2", soul_name: "Elpenor", court: "岔路", is_final: false, ferry_barred: "UNBURIED" },
+        ],
+      })
+    );
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    await screen.findByTestId("queue-row-j2");
+    await waitFor(() => expect(screen.getByTestId("desk-count-unclaimed")).toHaveTextContent("4"));
+    expect(screen.getByTestId("desk-count-unclaimed")).not.toHaveTextContent("9");
+    expect(within(screen.getByTestId("desk-held-divider")).getByText("候着的 · 5")).toBeTruthy();
+    expect(within(screen.getByTestId("desk-held-divider")).queryByText("候着的 · 1")).toBeNull();
+    // A case that cannot cross Acheron waits with the held ones, after the divider (the server refuses its claim).
+    const order = screen.getAllByTestId(/^(queue-row-j[12]|desk-held-divider)$/).map((el) => el.props.testID);
+    expect(order).toEqual(["queue-row-j1", "desk-held-divider", "queue-row-j2"]);
   });
 
   it("「加载更多」 that fails says so under the list, and 重试 asks again", async () => {

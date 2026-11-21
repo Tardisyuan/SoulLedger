@@ -587,8 +587,9 @@ def _ids(response):
 
 
 def _group_counts(data):
-    """`queue-counts/` 减去案卷台的 `sources` / `elsewhere`(那两样在 test_judgment_queue_sources.py 测)。"""
-    return {k: v for k, v in data.items() if k not in ("sources", "elsewhere")}
+    """`queue-counts/` 减去案卷台的 `sources` / `elsewhere`(那两样在 test_judgment_queue_sources.py 测)与「待认领」的
+    拆分 `claimable_count` / `held_count`(test_queue_claimable_count.py 测)。"""
+    return {k: v for k, v in data.items() if k not in ("sources", "elsewhere", "claimable_count", "held_count")}
 
 
 @pytest.mark.django_db

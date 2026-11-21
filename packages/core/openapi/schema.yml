@@ -34164,13 +34164,19 @@ components:
           type: integer
         returned:
           type: integer
+        claimable_count:
+          type: integer
+        held_count:
+          type: integer
         sources:
           $ref: '#/components/schemas/JudgmentQueueSourceCounts'
         elsewhere:
           $ref: '#/components/schemas/JudgmentElsewhereCounts'
       required:
+      - claimable_count
       - deferred
       - elsewhere
+      - held_count
       - mine
       - others
       - overdue

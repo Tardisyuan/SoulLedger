@@ -722,7 +722,9 @@ export function JudgmentClaimQueue({
           {shownGroups.map((group) => {
             const q = groupQueries[GROUPS.indexOf(group)];
             const rows = rowsOf(group);
-            const count = counts.data?.[group];
+            // 第六十三批 二 f:「待认领」组头读服务端的 `claimable_count`(只算能认领的);服务端没给就不写数,
+            // 不拿本页候着的行去减 —— 那个数随翻页变。undefined = 还在取(…),null = 不写。
+            const count = group !== "unclaimed" ? counts.data?.[group] : counts.data ? (counts.data.claimable_count ?? null) : undefined;
             const total = q.data?.count ?? 0;
             const heldRows = group === "unclaimed" ? rows.filter(onHold) : [];
             const renderRow = (j: Judgment, waiting: boolean) => {
@@ -959,11 +961,12 @@ export function JudgmentClaimQueue({
                 <tr data-group-head="" className="border-b border-[oklch(var(--color-line))]">
                   <th scope="rowgroup" colSpan={colSpan} className="px-2 pt-4 pb-1 text-left font-normal">
                     <span className="text-xs font-semibold text-[oklch(var(--color-ink))]">{t(`judgment.claim.groups.${group}`)}</span>
-                    <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]" data-testid={`group-count-${group}`}>
-                      {" · "}
-                      {/* 第六十一批 二:「待认领 · N」只算能认领的;候着的数写在组尾的分隔行上。 */}
-                      {count == null ? "…" : Math.max(0, count - heldRows.length)}
-                    </span>
+                    {count !== null && (
+                      <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]" data-testid={`group-count-${group}`}>
+                        {" · "}
+                        {count === undefined ? "…" : count}
+                      </span>
+                    )}
                     {/* 「等待最久在上」只在它为真时说:换成「最近入队」就不说了。 */}
                     {((group === "unclaimed" && ordering === "created_at") || group === "others") && (
                       <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t(`judgment.claim.hints.${group}`)}</span>
@@ -994,7 +997,7 @@ export function JudgmentClaimQueue({
                     {heldRows.length > 0 && (
                       <tr data-testid="queue-held-divider" className="border-t border-dashed border-[oklch(var(--color-line))]">
                         <td colSpan={colSpan} className="px-2 pt-3 pb-1 text-xs text-[oklch(var(--color-faint-text))]">
-                          {t("judgment.claim.groups.held", { n: String(heldRows.length) })}
+                          {t("judgment.claim.groups.held", { n: String(counts.data?.held_count ?? heldRows.length) })}
                         </td>
                       </tr>
                     )}

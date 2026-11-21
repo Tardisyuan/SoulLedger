@@ -87,8 +87,8 @@ export function rowNotes(t: (key: string, vars?: Record<string, string>) => stri
  * 第六十一批 二: the cases in 待认领 nobody can claim yet -- held until a day (枉死城, 木乃伊 70 天) or barred from the hall.
  * A held_until already past is claimable whatever the server's phase still says.
  */
-export function waitsBeforeClaim(row: Pick<Judgment, "held_until" | "duat_stage">): boolean {
-  return isHeldUntilFatedDate(row) || isDuatBarred(row);
+export function waitsBeforeClaim(row: Pick<Judgment, "held_until" | "duat_stage" | "ferry_barred">): boolean {
+  return isHeldUntilFatedDate(row) || isDuatBarred(row) || !!row.ferry_barred;
 }
 
 /** 「今日 7 件 · 超期 1 · 本月已结 22%」; 0 overdue reads 「无超期」, unmarked. Parts that did not load are left out. */
@@ -234,6 +234,10 @@ export function QueueTab({
 
   // 第六十一批 二: 待认领's held cases, in the order they came (rowsOf already puts them after the claimable ones).
   const heldOf = (group: DeskGroup, rows: Judgment[]) => (group === "unclaimed" ? rows.filter(waitsBeforeClaim) : []);
+  // 第六十三批 二 f: 待认领's heading is the server's `claimable_count` (counted without `source`, so only under 全部);
+  // without it the heading has no number -- never the loaded rows minus the held ones, which moves as pages load.
+  const headCount = (group: DeskGroup, rows: Judgment[]): number | null =>
+    group === "unclaimed" ? (source === "all" ? c?.claimable_count ?? null : null) : ((source === "all" ? c?.[group] : null) ?? rows.length);
 
   return (
     <Screen testID="tab-queue-screen" edges={["left", "right"]} refreshing={groups.some((g) => g.loading && g.rows !== null)} onRefresh={refresh}>
@@ -281,10 +285,11 @@ export function QueueTab({
                       <Txt variant="caption" style={{ color: offline ? theme.faint : theme.ink }}>{`${t("officer_app.queue.open_swipe")} ›`}</Txt>
                     </Press>
                   ) : null}
-                  <Txt variant="value" style={{ color: theme.faintText }}>
-                    {/* 第六十一批 二: 待认领's count is only the claimable ones; the held ones are counted on their own line. */}
-                    {String(Math.max(0, ((source === "all" ? c?.[group] : null) ?? rows.length) - heldOf(group, rows).length))}
-                  </Txt>
+                  {headCount(group, rows) === null ? null : (
+                    <Txt testID={`desk-count-${group}`} variant="value" style={{ color: theme.faintText }}>
+                      {String(headCount(group, rows))}
+                    </Txt>
+                  )}
                 </View>
               </View>
               {[...rows.filter((row) => !heldOf(group, rows).includes(row)), ...heldOf(group, rows)].map((row, i, all) => {
@@ -297,7 +302,7 @@ export function QueueTab({
                     // A dashed rule and 「候着的 · N」 at the end of 待认领 (第六十一批 二); no 「· 0」 when there are none.
                     <View testID="desk-held-divider" style={[styles.heldHead, { borderTopColor: theme.hair2 }]}>
                       <Txt variant="caption" style={{ color: theme.faintText }}>
-                        {t("judgment.claim.groups.held", { n: String(heldOf(group, rows).length) })}
+                        {t("judgment.claim.groups.held", { n: String((source === "all" ? c?.held_count : null) ?? heldOf(group, rows).length) })}
                       </Txt>
                     </View>
                   ) : null}

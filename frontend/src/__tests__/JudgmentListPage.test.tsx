@@ -126,13 +126,36 @@ describe("审判队列", () => {
     for (const group of ["mine", "unclaimed", "others", "deferred"]) {
       expect(judgmentApi.list).toHaveBeenCalledWith({ group, page: "1", ordering: "created_at" });
     }
-    await waitFor(() => expect(screen.getByTestId("group-count-unclaimed")).toHaveTextContent("5"));
-    expect(screen.getByTestId("group-count-mine")).toHaveTextContent("2");
+    await waitFor(() => expect(screen.getByTestId("group-count-mine")).toHaveTextContent("2"));
     expect(screen.getByTestId("group-count-others")).toHaveTextContent("4");
     expect(screen.getByTestId("group-count-deferred")).toHaveTextContent("1");
     expect(within(screen.getByTestId("queue-group-deferred")).getByText(tZh("judgment.claim.group_empty"))).toBeInTheDocument();
     // Nothing held on this page: no 「候着的 · 0」 (第六十一批 二).
     expect(screen.queryByTestId("queue-held-divider")).toBeNull();
+    // 第六十三批 二 f:服务端没给 `claimable_count` 时「待认领」不写数 —— 不是 `unclaimed` 的 5,也不是本页减出来的数。
+    const head = screen.getByTestId("queue-group-unclaimed").querySelector("[data-group-head]") as HTMLElement;
+    expect(head.textContent).toContain(tZh("judgment.claim.groups.unclaimed"));
+    expect(head.textContent).not.toMatch(/\d/);
+    expect(screen.queryByTestId("group-count-unclaimed")).toBeNull();
+  });
+
+  it("第六十三批 二 f:「待认领」组头读 claimable_count,组尾「候着的 · N」读 held_count,不随本页的行", async () => {
+    judgmentApi.queueCounts.mockResolvedValue({
+      data: { mine: 2, unclaimed: 10, others: 4, deferred: 1, total: 17, claimable_count: 3, held_count: 7 },
+    });
+    const unclaimed = GROUP_ROWS.unclaimed;
+    GROUP_ROWS.unclaimed = [row("ok", "海瑞"), row("nn", "Ren", { duat_stage: "NAMELESS", held_until: null })];
+    try {
+      renderPage();
+      await screen.findByText("Ren");
+      await waitFor(() => expect(screen.getByTestId("group-count-unclaimed")).toHaveTextContent("· 3"));
+      expect(screen.getByTestId("group-count-unclaimed")).not.toHaveTextContent("10");
+      expect(screen.getByTestId("group-count-unclaimed")).not.toHaveTextContent("9"); // 10 − 本页候着的 1
+      expect(screen.getByTestId("queue-held-divider")).toHaveTextContent(tZh("judgment.claim.groups.held", { n: "7" }));
+      expect(screen.getByTestId("queue-held-divider")).not.toHaveTextContent(tZh("judgment.claim.groups.held", { n: "1" }));
+    } finally {
+      GROUP_ROWS.unclaimed = unclaimed;
+    }
   });
 
   it("v4 S05:组序 我手上 → 待定 → 别人在审 → 待认领;期限一格;「已过期限」是列表与组头计数上的筛选", async () => {
@@ -983,7 +1006,8 @@ describe("埃及入殿前 (review P2-9)", () => {
 
     // 第六十一批 二:候着的两件在组尾「候着的 · 2」之下,组头只数能认领的那一件。
     expect(screen.getByTestId("queue-held-divider")).toHaveTextContent(tZh("judgment.claim.groups.held", { n: "2" }));
-    await waitFor(() => expect(screen.getByTestId("group-count-unclaimed")).toHaveTextContent("3")); // 5 on the server, 2 held
+    // 服务端没给 claimable_count:组头不写数(第六十三批 二 f),不是 5 − 2。
+    expect(screen.queryByTestId("group-count-unclaimed")).toBeNull();
     const embalmed = rowOf("Ka");
     expect(embalmed).toHaveAttribute("data-held", "held");
     expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.duat_stage.EMBALMING"));

@@ -4,6 +4,7 @@ REST views for Judgment app.
 import uuid
 
 from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.utils import timezone
 from django_filters import rest_framework as filters
 from django_filters.utils import translate_validation
 from drf_spectacular.types import OpenApiTypes
@@ -201,8 +202,12 @@ def queue_counts_of(queryset, user) -> dict:
         # v4 队列的两个标签(与 `?overdue=` / `?returned=` 同一谓词;与四个组不互斥)。
         overdue=Count("pk", filter=deadline.overdue_q(queryset)),
         returned=Count("pk", filter=RETURNED),
+        # 第六十三批 二 f:「待认领」里此刻谁都认领不了的(`claims.held_q`,与认领的拒绝同一条规则)。
+        # 组头读 `claimable_count`,组尾「候着的 · N」读 `held_count`;两者相加等于 `unclaimed`。
+        held_count=Count("pk", filter=group_q(QueueGroup.UNCLAIMED, user) & claims.held_q(timezone.localdate())),
         **_source_aggregates(),
     )
+    counts["claimable_count"] = counts[QueueGroup.UNCLAIMED] - counts["held_count"]
     counts["sources"] = _pop_sources(counts)
     return counts
 

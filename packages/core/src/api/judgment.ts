@@ -308,6 +308,10 @@ export interface JudgmentQueueCounts {
   /** v4:已过期限(待定中的不算)与退回重审(判 RETRY 另开的一件);与四组不互斥。 */
   overdue?: number;
   returned?: number;
+  /** 「待认领」里能认领的与候着的(候至未到、到不了殿、过不了阿刻戎),相加等于 `unclaimed`(第六十三批 二 f)。
+      组头读前者、组尾「候着的 · N」读后者;没有时组头不写数(不拿本页的行去减)。 */
+  claimable_count?: number;
+  held_count?: number;
   /** 三个来源各几件,相加等于不带 `source` 时的 `total`;不随 `source` 参数变。 */
   sources?: Record<JudgmentQueueSource, number>;
   elsewhere?: JudgmentElsewhereCounts;
