@@ -88,10 +88,14 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 | 语句不是恰好一条 | `multiple_statements` |
 | 根不是查询,或树里有 Insert/Update/Delete/Merge/Create/Drop/Alter/Command/Copy/Set/Into/TruncateTable | `not_a_select` |
 | `FOR UPDATE` / `FOR SHARE` 等锁子句 | `locking_clause` |
-| 黑名单函数(`pg_sleep*`、`dblink*`、`pg_read_file`、`set_config`、`current_setting`、`lo_*`、`txid_*`、`pg_advisory*` …) | `forbidden_function` |
-| 函数不在放行清单(按类;sqlglot 解析成 `Anonymous` 的只放 `age`、`make_date` 两个名字,且不带 schema 前缀) | `unknown_function` |
+| 黑名单函数(`pg_sleep*`、`dblink*`、`pg_read_file`、`set_config`、`current_setting`、`lo_*`、`txid_*`、`pg_advisory*` …);会话身份 `user` / `current_user` / `current_role` / `session_user`(不带引号、不带限定) | `forbidden_function` |
+| 函数不在放行清单(按类;sqlglot 解析成 `Anonymous` 的只放 `age`、`make_date` 两个名字,且不带 schema 前缀;数组字面量、`ANY` / `ALL`、下标、jsonb 的 `->` / `->>` / `#>` / `#>>` 放行,`unnest` 不放);属性调用 `j.to_jsonb`(限定名后面不是该来源的列) | `unknown_function` |
 | 表不在白名单、带 schema 前缀;CTE 名只在它的作用域里算 CTE | `table_not_allowed` |
-| `SELECT *` 或 `t.*`(`count(*)` 放行) | `star_not_allowed` |
+| `SELECT *` 或 `t.*`(`count(*)` 放行);不带限定的来源名(`SELECT j FROM judgment_judgment j`,取整行) | `star_not_allowed` |
+
+来源的列:白名单表读 `schema.yaml` 的全部列(授没授都算),子查询与 CTE 读输出列,`generate_series` 的别名本身也是列。来源名按全树收、同名取交集,
+所以别的作用域里同名的来源可能让合法写法被拒(宁可多拒);认不出列的来源(VALUES)不收,由列授权兜。代价:限定写法里拼错的列名报 `unknown_function`,
+不是 PG 的「列不存在」。
 
 **代码在哪:** `backend/apps/soul_assist/ask_data/gate.py:136`(`check`);写节点 `:31`,黑名单 `:46`–`:58`,放行清单 `:62`,
 白名单 `allowed_tables`(`:100`,读 `schema.yaml`),CTE 按作用域收 `_visible_ctes`(`:123`)。`function_name`(`:110`)执行器也用。

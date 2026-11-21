@@ -53,8 +53,13 @@ _FORBIDDEN_EXACT = frozenset(
         "current_setting",
         "pg_terminate_backend",
         "pg_cancel_backend",
+        # 会话身份:sqlglot 把 current_user / session_user 解析成函数类;`user`、`current_role` 读成列,见 _SPECIAL_IDENTIFIERS
+        "current_user",
+        "session_user",
     }
 )
+#: PG 的特殊标识符:不带引号、不带限定时是会话身份(真 PG 返回角色名),sqlglot 却读成列。带引号的 `"user"` 才是列名。
+_SPECIAL_IDENTIFIERS = frozenset({"user", "current_user", "current_role", "session_user"})
 _FORBIDDEN_PREFIXES = ("pg_sleep", "dblink", "lo_", "query_to_xml", "txid_", "pg_advisory")
 
 # 放行清单:sqlglot 认得并解析成具体类的函数。认不出的(`Anonymous`)默认拒,只有下面 `_ALLOWED_BY_NAME` 里按名字
@@ -90,6 +95,9 @@ _ALLOWED_FUNCTIONS = frozenset(
         exp.And, exp.Or, exp.Xor,
         # 数值
         exp.Abs, exp.Ceil, exp.Floor, exp.Round, exp.Sqrt, exp.Sign,
+        # 数组字面量(`= ANY(ARRAY[…])`;ANY 与下标 `a[1]` 不是 Func)与 jsonb 的 `->` / `->>` / `#>` / `#>>`。
+        # `unnest` 不在这里:FROM 里的表函数只放 generate_series。
+        exp.Array, exp.JSONExtract, exp.JSONExtractScalar, exp.JSONBExtract, exp.JSONBExtractScalar,
     }
 )  # fmt: skip
 
@@ -101,6 +109,8 @@ _ALLOWED_BY_NAME = frozenset({"age", "make_date"})
 #: FROM 里可以出现的表函数(`FROM generate_series(…) AS m`):sqlglot 把它放在 `Table.this`。
 _TABLE_FUNCTIONS = (exp.GenerateSeries, exp.ExplodingGenerateSeries)
 
+_COMPARISONS = (exp.EQ, exp.NEQ, exp.GT, exp.GTE, exp.LT, exp.LTE)
+
 
 @dataclass(frozen=True)
 class Verdict:
@@ -110,10 +120,15 @@ class Verdict:
 
 
 @cache
-def allowed_tables() -> frozenset[str]:
-    """白名单表:`schema.yaml` 的 `tables` 键。唯一来源,不在这里抄。"""
+def _table_columns() -> dict[str, frozenset[str]]:
+    """`schema.yaml`:表 → 它的全部列(授没授都算;授权是库里那道墙的事)。唯一来源,不在这里抄。"""
     data = yaml.safe_load(Path(__file__).with_name("schema.yaml").read_text(encoding="utf-8"))
-    return frozenset(data["tables"])
+    return {t: frozenset(c["name"] for c in spec["columns"]) for t, spec in data["tables"].items()}
+
+
+def allowed_tables() -> frozenset[str]:
+    """白名单表:`schema.yaml` 的 `tables` 键。"""
+    return frozenset(_table_columns())
 
 
 def _reject(code: str) -> Verdict:
@@ -131,8 +146,12 @@ def _is_forbidden(name: str) -> bool:
 def _is_allowed(fn: exp.Func) -> bool:
     if type(fn) in _ALLOWED_FUNCTIONS:
         return True
-    return (isinstance(fn, exp.Anonymous) and function_name(fn) in _ALLOWED_BY_NAME
-            and not isinstance(fn.parent, exp.Dot))
+    if not isinstance(fn, exp.Anonymous):
+        return False
+    # `x <> ALL(ARRAY[…])`:sqlglot 把数组上的 ALL 读成名叫 ALL 的 Anonymous,只认比较运算右边那个位置
+    if function_name(fn) == "all":
+        return isinstance(fn.parent, _COMPARISONS) and fn.parent.expression is fn
+    return function_name(fn) in _ALLOWED_BY_NAME and not isinstance(fn.parent, exp.Dot)
 
 
 def _folded(ident: exp.Identifier) -> str:
@@ -161,6 +180,46 @@ def _visible_ctes(table: exp.Table) -> set[str]:
     return names
 
 
+def _output_names(alias: exp.TableAlias | None, query: exp.Expression) -> frozenset[str]:
+    if alias is not None and alias.columns:
+        return frozenset(_folded(c) for c in alias.columns)
+    return frozenset(n.lower() for n in getattr(query, "named_selects", []))
+
+
+def _sources(root: exp.Expression, whitelist: frozenset[str]) -> dict[str, frozenset[str]]:
+    """FROM 里每个来源的名字(别名,和表名)→ 它的列名。按全树收,不按作用域:同名的来源取交集,宁可多拒。
+    认不出列的来源(VALUES 之类)不收,由库里的列授权兜。"""
+    ctes: dict[str, frozenset[str]] = {}
+    for cte in root.find_all(exp.CTE):
+        name, cols = _folded(cte.args["alias"].this), _output_names(cte.args["alias"], cte.this)
+        ctes[name] = ctes[name] & cols if name in ctes else cols
+    found: list[tuple[str, frozenset[str]]] = []
+    for table in root.find_all(exp.Table):
+        alias = table.args.get("alias")
+        alias_name = _folded(alias.this) if alias is not None and alias.this else None
+        if isinstance(table.this, _TABLE_FUNCTIONS):  # `FROM generate_series(…) AS m`:m 既是来源也是它的列
+            if alias_name:
+                found.append((alias_name, _output_names(alias, table) | {alias_name}))
+            continue
+        if not isinstance(table.this, exp.Identifier):
+            continue
+        name = _folded(table.this)
+        cols =_table_columns()[name] if name in whitelist else ctes.get(name)
+        if cols is None:
+            continue
+        found.append((name, cols))
+        if alias_name:
+            found.append((alias_name, cols))
+    for sub in root.find_all(exp.Subquery):
+        alias = sub.args.get("alias")
+        if alias is not None and alias.this:
+            found.append((_folded(alias.this), _output_names(alias, sub.this)))
+    sources: dict[str, frozenset[str]] = {}
+    for name, cols in found:
+        sources[name] = sources[name] & cols if name in sources else cols
+    return sources
+
+
 def check(sql: str) -> Verdict:
     if not sql or not sql.strip():
         return _reject(UNPARSEABLE)
@@ -181,12 +240,23 @@ def check(sql: str) -> Verdict:
         return _reject(LOCKING_CLAUSE)
 
     functions = list(root.find_all(exp.Func))
-    if any(_is_forbidden(function_name(fn)) for fn in functions):
+    columns = [c for c in root.find_all(exp.Column) if isinstance(c.this, exp.Identifier)]
+    if any(_is_forbidden(function_name(fn)) for fn in functions) or any(
+        not c.args.get("table") and not c.this.quoted and c.name.lower() in _SPECIAL_IDENTIFIERS for c in columns
+    ):
         return _reject(FORBIDDEN_FUNCTION)
     if not all(_is_allowed(fn) for fn in functions):
         return _reject(UNKNOWN_FUNCTION)
-
     whitelist = allowed_tables()
+    sources = _sources(root, whitelist)
+    # `j.to_jsonb` 是 PG 的属性调用写法,等于 `to_jsonb(j)`:限定名后面不是那个来源的列,就当函数
+    if any(
+        (q := c.args.get("table")) is not None and not c.args.get("db") and _folded(q) in sources
+        and _folded(c.this) not in sources[_folded(q)]
+        for c in columns
+    ):
+        return _reject(UNKNOWN_FUNCTION)
+
     tables: set[str] = set()
     for table in root.find_all(exp.Table):
         if isinstance(table.this, _TABLE_FUNCTIONS) and not table.args.get("db") and not table.args.get("catalog"):
@@ -202,6 +272,11 @@ def check(sql: str) -> Verdict:
 
     # `count(*)` 里的星号放行;`SELECT *`、`t.*` 不放。
     if any(not isinstance(star.parent, exp.Count) for star in root.find_all(exp.Star)):
+        return _reject(STAR_NOT_ALLOWED)
+    # 不带限定、名字是来源名而不是它的列:`SELECT j FROM judgment_judgment j` 取的是整行,等于 `j.*`
+    if any(
+        not c.args.get("table") and (n := _folded(c.this)) in sources and n not in sources[n] for c in columns
+    ):
         return _reject(STAR_NOT_ALLOWED)
 
     return Verdict(ok=True, tables=frozenset(tables))
