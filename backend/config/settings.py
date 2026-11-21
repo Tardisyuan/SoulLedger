@@ -347,7 +347,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.SearchFilter",
+        "apps.core.shard_search.ShardSearchFilter",  # DRF's SearchFilter; sharded, a crossing key read by ids
         "rest_framework.filters.OrderingFilter",
     ],
     "DEFAULT_RENDERER_CLASSES": [

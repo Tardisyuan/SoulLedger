@@ -12,7 +12,6 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ValidationError
-from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -26,6 +25,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problem_codes import ProblemCode
 from apps.core.problems import problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
+from apps.core.shard_search import ShardSearchFilter
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
@@ -1225,7 +1225,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             filterset = JudgmentFilter(params, queryset=self.get_queryset().filter(PENDING), request=request)
             if not filterset.is_valid():
                 raise translate_validation(filterset.errors)
-            return SearchFilter().filter_queryset(request, filterset.qs, self)
+            return ShardSearchFilter().filter_queryset(request, filterset.qs, self)
 
         counts = queue_counts_of(filtered(params), request.user)
         if "source" in params:

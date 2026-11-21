@@ -541,6 +541,49 @@ def soul_ids(**filters):
     return list(with_fanout(Soul._base_manager.filter(**filters)).values_list("pk", flat=True))
 
 
+def crossing_q(model, lookup, value):
+    """`Q(**{lookup: value})` on `model`, but a crossing key on the path is read by ids instead of joined (sharded;
+    not sharded, the plain Q). `soul__name__icontains="x"` on a judgment -> `soul_id__in=<the souls named x, every
+    leg>`; the reverse of one (`participants__participant_tenant=t` on a bench) -> `pk__in=<those seats' bench ids>`.
+    For the filters a caller passes through a crossing key: `?search=` (`ShardSearchFilter`), `?soul_name=`, a data
+    scope. A path that only compares the key's column (`soul`, `soul__in`, `soul__id`) is left as it is.
+    ponytail: the ids go into the SQL as a list -- a filter matching a whole hall's souls (`?civilization=`, a data
+    scope on a big organization) wants the column denormalized onto the row."""
+    from django.core.exceptions import FieldDoesNotExist
+    from django.db.models import Q
+
+    if not settings.SHARDED:
+        return Q(**{lookup: value})
+    parts, m, crossing = lookup.split("__"), model, set(crossing_keys())
+    for i, name in enumerate(parts):
+        try:
+            f = m._meta.pk if name == "pk" else m._meta.get_field(name)
+        except FieldDoesNotExist:
+            break
+        if not f.is_relation:
+            break
+        key, rest = (f if f.concrete else f.field), "__".join(parts[i + 1:])
+        nxt = parts[i + 1] if i + 1 < len(parts) else None
+        if key in crossing and nxt is not None:
+            prefix = "__".join(parts[:i] + [""])
+            other = f.related_model
+            if f.concrete:  # forward: our column names the other row
+                try:
+                    other._meta.get_field(nxt)
+                except FieldDoesNotExist:
+                    break  # `soul__in` / `soul__isnull`: the column alone
+                if nxt in ("pk", f.target_field.name):
+                    break
+                mine, theirs = f.attname, f.target_field.attname
+            else:  # reverse: the other row's column names ours
+                mine, theirs = key.target_field.attname, key.attname
+            ids = with_fanout(other._base_manager.filter(crossing_q(other, rest, value)).order_by()
+                              ).values_list(theirs, flat=True)
+            return Q(**{f"{prefix}{mine}__in": list(set(ids))})
+        m = f.related_model
+    return Q(**{lookup: value})
+
+
 def related_of(instance, name):
     """`instance.<name>` -- a forward key to a SHARD row -- read where that row is. A row with no hall (D2) lives on
     control while the row it names may be a hall's, written on that hall's shard once writes are cut over: Django's
