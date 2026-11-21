@@ -658,3 +658,30 @@ def test_a_subquery_over_the_other_side_of_the_control_shard_line_is_refused():
         assert list(User.objects.filter(pk__in=User.objects.filter(role="SOUL").values("pk"))) == []
         assert list(Follow.objects.filter(follower_id__in=Follow.objects.values("following_id"))) == []
         assert User.objects.filter(tenant__in=Tenant.objects.filter(pk=halls["GREEK"].pk)).count() == 0
+
+
+@sharded
+def test_the_moderation_queue_counts_open_reports_across_shard_and_control():
+    """Posts are control's, reports the shard's. The queue's open-report count was a Count("reports") join compiled
+    on control, which counted none sharded; it is read for the shown rows by ids now."""
+    from apps.authentication.models import User
+    from apps.social.models import Post, Report, ReportStatus, Visibility
+    from tests.soul_account_support import officer_client, ready_soul
+    from tests.test_shard_sync import _sync
+
+    halls = _halls()
+    hall = halls["GREEK"]
+    author, _ = ready_soul(hall, name="reported author")  # the one-database form, then synced (as _halls)
+    row = Post.objects.create(author=author.user, content="reported", visibility=Visibility.PUBLIC, tenant=hall)
+    admin = User.objects.create_user(username="gr-moderator", password="x", role="ADMIN", tenant=hall)
+    _sync()
+    _assign("GREEK")
+    with cut():
+        with _in_hall(hall):
+            Report.objects.create(post=row, tenant=hall, target_type="POST", target_user=author.user,
+                                  status=ReportStatus.OPEN)
+        status = Post.objects.get(pk=row.pk).moderation_status
+        res = officer_client(admin).get("/api/v1/social-moderation/posts/", {"moderation_status": status})
+        assert res.status_code == 200, res.content
+        rows = res.json()["results"] if isinstance(res.json(), dict) else res.json()
+        assert [(r["id"], r["open_report_count"]) for r in rows] == [(str(row.pk), 1)], rows

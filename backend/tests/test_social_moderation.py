@@ -410,3 +410,23 @@ def test_the_old_hall_cannot_mute_through_a_report_a_soul_that_has_moved_on(cn_t
     )
     assert res.status_code == 404, res.content
     assert not SocialMute.objects.filter(user=account.user).exists()
+
+
+def test_the_queue_counts_each_posts_open_reports(cn_tenant, cn_admin_user):
+    """The count is read for the rows on the page, by ids (reports are on the shard, posts on control: a join counted
+    none when sharded). One reported post shows 1, an unreported one 0, in the list and in the detail."""
+    author, _ = soul(cn_tenant, "作者")
+    reported = post(author, "被举报的", Visibility.PUBLIC)
+    quiet = post(author, "没人举报", Visibility.PUBLIC)
+    _, client = soul(cn_tenant, "举报人")
+    client.post(f"{SOCIAL}/reports/", {"target_type": "POST", "target_id": str(reported.pk), "reason": "SPAM"},
+                format="json")
+    officer = officer_client(cn_admin_user)
+
+    status = Post.objects.get(pk=reported.pk).moderation_status
+    res = officer.get(f"{MODERATION}/posts/", {"moderation_status": status})
+    assert res.status_code == 200, res.content
+    rows = res.json()["results"] if isinstance(res.json(), dict) else res.json()
+    counts = {r["id"]: r["open_report_count"] for r in rows}
+    assert counts[str(reported.pk)] == 1 and counts[str(quiet.pk)] == 0, counts
+    assert officer.get(f"{MODERATION}/posts/{reported.pk}/").json()["open_report_count"] == 1

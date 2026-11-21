@@ -192,12 +192,23 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
     #: `ModerationScore.kind` 里的名字。
     ai_kind = ""
 
+    def get_serializer(self, *args, **kwargs):
+        """Attach each row's open-report count before serializing. Reports are on the civilization's shard and posts /
+        comments on control, so a `Count("reports")` join compiled on control and counted none when sharded: the
+        counts are read for the rows being shown, by ids, in one query."""
+        if args and args[0] is not None:
+            rows = list(args[0]) if kwargs.get("many") else [args[0]]
+            key = next(f.name for f in Report._meta.fields if f.is_relation and f.related_model is self.queryset.model)
+            counts = dict(Report.objects.filter(**{f"{key}__in": [r.pk for r in rows]}, status=ReportStatus.OPEN)
+                          .values_list(key).annotate(n=Count("pk")).values_list(key, "n"))
+            for row in rows:
+                row.open_report_count = counts.get(row.pk, 0)
+            args = (rows if kwargs.get("many") else rows[0], *args[1:])
+        return super().get_serializer(*args, **kwargs)
+
     def get_queryset(self):
         qs = super().get_queryset().select_related("author")
-        qs = qs.annotate(
-            open_report_count=Count("reports", filter=Q(reports__status=ReportStatus.OPEN), distinct=True),
-            **ai_screen_annotations(self.ai_kind, qs),
-        )
+        qs = qs.annotate(**ai_screen_annotations(self.ai_kind, qs))
         # `?order=risk`:AI 预筛的分高的先看(没打过分的排最后)。只是排序,不筛掉任何一条。
         if self.request.query_params.get("order") == "risk":
             return qs.order_by(F("ai_score").desc(nulls_last=True), "-create_time")
