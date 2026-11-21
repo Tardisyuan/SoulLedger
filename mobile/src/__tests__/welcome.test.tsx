@@ -90,6 +90,26 @@ describe("第六十二批 · the welcome", () => {
     expect(screen.queryByTestId("welcome")).toBeNull();
   });
 
+  it("held under 「已锁定」: nothing shows and nothing is recorded; it plays once the lock is down", async () => {
+    const calls = stubApi({ "POST /me/welcomed/": { status: 200, data: { welcomed_civilizations: ["CHINESE"] } } });
+    const profile = P();
+    const settled = jest.fn();
+    const tree = (held: boolean) => (
+      <I18nProvider>
+        <Welcome profile={profile} scheme="light" onSettled={settled} held={held} />
+      </I18nProvider>
+    );
+    const { rerender } = render(tree(true));
+    await act(async () => {});
+    await advance(motion.welcomeIn + motion.welcomeHold + motion.welcomeOut + 200);
+    expect(screen.queryByTestId("welcome")).toBeNull();
+    expect(calls.filter((c) => c.url.includes("/me/welcomed/"))).toEqual([]);
+    expect(settled).not.toHaveBeenCalled();
+    rerender(tree(false));
+    await act(async () => {});
+    expect(screen.getByTestId("welcome")).toBeTruthy();
+  });
+
   it("a tap skips the hold, not the hand-off: the hand-off runs from the tap, and the sheet waits for its end", async () => {
     const settled = await play();
     await advance(100); // mid-entrance

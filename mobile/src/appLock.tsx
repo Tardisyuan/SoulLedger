@@ -27,12 +27,16 @@ export const LOCK_AFTER_MS = 5 * 60 * 1000;
 
 type Phase = "off" | "cover" | "locked";
 
-export function AppLock() {
+/**
+ * `coldStart`: the caller may decide it (the welcome waits on the same answer, so both read it at once); left out,
+ * the lock reads it here. `onLocked` hears each change of 「已锁定」 up or down.
+ */
+export function AppLock({ coldStart: given, onLocked }: { coldStart?: boolean; onLocked?: (locked: boolean) => void } = {}) {
   const theme = useTheme();
   const { t } = useI18n();
   const { signOut } = useSession();
   const bio = useBiometry();
-  const [coldStart] = useState(() => takeRestoredSession() && appLockOn());
+  const [coldStart] = useState(() => given ?? (takeRestoredSession() && appLockOn()));
   const [phase, setPhase] = useState<Phase>(coldStart ? "locked" : "off");
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,7 +44,8 @@ export function AppLock() {
   const phaseRef = useRef(phase);
   useEffect(() => {
     phaseRef.current = phase;
-  }, [phase]);
+    onLocked?.(phase === "locked");
+  }, [phase, onLocked]);
 
   const unlock = useCallback(async () => {
     setBusy(true);

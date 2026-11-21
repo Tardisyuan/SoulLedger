@@ -103,7 +103,11 @@ export function flightTo(from: Box | null, to: Box | null, screenHeight: number)
 /** How long the header seal may take to answer where it is before the seal just fades where it stands. */
 const MEASURE_WAIT = 100;
 
-export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; scheme: ColorScheme; onSettled?: () => void }) {
+/**
+ * `held`: the 「已锁定」 screen is up. The welcome waits under it and starts once it is down -- played under the lock it
+ * would be recorded as seen while nobody saw it (simulator, 2026-11-21: a restored session's welcome never showed).
+ */
+export function Welcome({ profile, scheme, onSettled, held = false }: { profile: MeProfile; scheme: ColorScheme; onSettled?: () => void; held?: boolean }) {
   const { t } = useI18n();
   const { height: screenHeight } = useWindowDimensions();
   const [shown, setShown] = useState<Shown | null>(null);
@@ -132,7 +136,7 @@ export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; sc
   const key = `${profile.soul_code}:${civilization}`;
 
   useEffect(() => {
-    if (from === null) return;
+    if (from === null || held) return;
     // Played before in this process: nothing to show, so whoever waits on the welcome need not.
     if (PLAYED.has(key)) return onSettled?.();
     PLAYED.add(key);
@@ -143,7 +147,7 @@ export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; sc
     return () => {
       alive = false;
     };
-  }, [key, from, civilization, onSettled]);
+  }, [key, from, civilization, onSettled, held]);
 
   /** Seen and handed over: the record, the overlay gone, the waiters told. */
   const finish = useCallback(

@@ -37,7 +37,7 @@ import { useI18n } from "./i18n";
 import { soulLinks } from "./links";
 import { navigationHeld, useNavigationHeld } from "./navLock";
 import { NetworkProvider } from "./network";
-import { useSession } from "./session";
+import { takeRestoredSession, useSession } from "./session";
 import { useResidence } from "./residence";
 import { hasRebirth } from "./rules";
 import { preLoginTheme, themeFor, type ColorScheme } from "./theme";
@@ -61,6 +61,7 @@ import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { NotificationHistoryScreen } from "./screens/notificationHistory";
 import { AppLock } from "./appLock";
+import { appLockOn } from "./deviceLogin";
 import { MyLifeScreen } from "./screens/life";
 import { SentenceScreen } from "./screens/sentence";
 import { CircleScreen, ComposePostScreen, PostScreen } from "./screens/circle";
@@ -393,13 +394,16 @@ function SignedInOverlays({ profile, scheme, signedInHere }: { profile: MeProfil
   const key = `${profile.soul_code}:${profile.civilization}`;
   const [settled, setSettled] = useState<string | null>(null);
   const onSettled = useCallback(() => setSettled(key), [key]);
+  // Read once here, not in AppLock: the welcome must be held from its first render, before AppLock's effects run.
+  const [coldLock] = useState(() => takeRestoredSession() && appLockOn());
+  const [locked, setLocked] = useState(coldLock);
   // 第六十二批 §二.4: a sign-in with no welcome due brings the 本世 page in over 320, not a cut. A session restored at
   // launch has the cold start for that.
   useArrival(signedInHere && welcomeFrom(profile) === null);
   return (
     <>
-      <Welcome profile={profile} scheme={scheme} onSettled={onSettled} />
-      <AppLock />
+      <Welcome profile={profile} scheme={scheme} onSettled={onSettled} held={locked} />
+      <AppLock coldStart={coldLock} onLocked={setLocked} />
       <BioAsk soulCode={profile.soul_code} welcomePending={welcomeFrom(profile) !== null && settled !== key} onSettled={setBioSettled} />
       <NotifySettingsHint />
     </>
