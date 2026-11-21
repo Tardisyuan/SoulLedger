@@ -244,7 +244,7 @@ def rows_elsewhere(node):
     (`apps.dispatch.transfer._settle_plan_stops`), which reads the node's status this transaction leaves."""
     from django.conf import settings
 
-    if node.is_home or not settings.SHARD_WRITE_CIVS:
+    if node.is_home or not settings.SHARDED:
         return False
     from apps.tenants.models import Tenant
 
@@ -263,7 +263,7 @@ def stop_dispositions(nodes):
     from apps.tenants.models import Tenant
 
     ids = [n.disposition_id for n in nodes if n.disposition_id]
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return {d.pk: d for d in Disposition.all_objects.select_for_update(of=("self",)).filter(pk__in=ids)}
     by_code = {}
     for n in nodes:

@@ -417,9 +417,11 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
       }
       return parts.join(" · ");
     }
-    case "DIYU_STATION_CHANGED":
-      // 「十三站换站 · 望乡台」:只写去处;从哪来在上一行。
-      return labels.station && typeof p.to === "string" && p.to ? `${event} · ${labels.station(p.to)}` : event;
+    case "DIYU_STATION_CHANGED": {
+      // 「十三站换站 · 望乡台」:只写去处;从哪来在上一行。往回挪时官员写的理由原样跟在后面(决定 #11)。
+      const line = labels.station && typeof p.to === "string" && p.to ? `${event} · ${labels.station(p.to)}` : event;
+      return typeof p.reason === "string" && p.reason ? `${line} · ${p.reason}` : line;
+    }
     case "CAPTURE_WARRANT_ISSUED":
     case "SOUL_CAPTURED":
     case "CAPTURE_HANDED_OVER":

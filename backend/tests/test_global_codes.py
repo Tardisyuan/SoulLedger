@@ -1,5 +1,5 @@
 """The control registry of global codes on ONE database (apps/tenants/global_codes.py; sharding stage 4).
-With no shard configured (SHARD_WRITE_CIVS = [], production today) every row is written to control, so the
+Not sharded (no shard configured: settings.SHARDED False) every row is written to control, so the
 claim / bump is part of the row's own transaction and behaves exactly as the UNIQUE index alone did: a failed
 write keeps nothing, a renamed or hard-deleted unit gives its code back. The WF number's no-gap rule on one
 database is tests/test_workflow_number.py::test_a_create_that_fails_gives_its_number_back.
@@ -30,7 +30,7 @@ def _claims(kind=global_codes.ORG_CODE):
 
 @pytest.mark.django_db
 def test_no_shard_settings_means_one_database(settings):
-    assert settings.SHARD_WRITE_CIVS == [] and not [a for a in settings.DATABASES if a.startswith("civ_")]
+    assert not settings.SHARDED and not [a for a in settings.DATABASES if a.startswith("civ_")]
 
 
 @pytest.mark.django_db

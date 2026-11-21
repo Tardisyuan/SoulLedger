@@ -559,7 +559,7 @@ def sentence_in_flight(judgment):
 
     from apps.dispatch.models import CrossTenantJudgmentParticipant
 
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return False
     seats = CrossTenantJudgmentParticipant._base_manager.filter(judgment_id=judgment.pk, is_deleted=False)
     return any(saga.in_flight(_sentence_subject(pk), _hall(hall_id))
@@ -611,7 +611,7 @@ def plan_hall_elsewhere(disposition):
     from apps.sentence_plan.models import SentencePlan
     from apps.sentence_plan.services import SentencePlanService
 
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return None
     found = SentencePlanService.node_for_disposition(disposition)
     if found is None:
@@ -675,7 +675,7 @@ def advance_elsewhere(soul):
     False, `advance` runs here."""
     from django.conf import settings
 
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return False
     from apps.core.request_local import get_current_request
     from apps.sentence_plan.services import in_progress_plan
@@ -711,7 +711,7 @@ def plan_elsewhere(plan_id):
 
     from apps.sentence_plan.models import SentencePlan
 
-    if not settings.SHARD_WRITE_CIVS:
+    if not settings.SHARDED:
         return None
     plan = SentencePlan.all_objects.get(pk=plan_id)
     return None if saga.joins(_hall(plan.tenant_id)) else plan

@@ -1,4 +1,4 @@
-"""Stage 4 core guard: cutting one civilization's writes over to its shard changes no outcome
+"""Core guard: the sharded form changes no outcome of a write
 (docs/audit/2026-11-15-sharding/PLAN.md 阶段 4). The single database is the baseline.
 
 The world is stage 3's (`tests/test_sharded_reads_equal_single_db.py::_build`: every civilization, crossing keys,
@@ -7,16 +7,17 @@ a SHARD model the URLconf has -- a viewset's `create` (POST to its list) and `pa
 one case each so xdist spreads them -- a Greek hall's ADMIN sends the same request twice, each inside its own
 savepoint on every database:
 
-  baseline   SHARD_READ_CIVS=[] SHARD_WRITE_CIVS=[]            (one database, as before stage 2)
-  cut over   all reads cut over, GREEK writes cut over         then `reconcile --fix shard-to-control` for GREEK
+  baseline   SHARDED=False      (one database)
+  sharded    SHARDED=True       (every civilization on its shard)
 
-and both must answer the same status and body, leave control in the same state, and in the cut-over run leave the
-other civilizations' shards exactly as they were (a write on one alias never moves another). The payload is the
+and both must answer the same status and body and change the same rows -- the baseline on control, the sharded run on
+control and civ_greek together (a REFERENCE copy on the shard is not counted twice) -- and the sharded run must leave
+the other civilizations' shards exactly as they were (a write on one alias never moves another). The payload is the
 detail of a row of that hall (a create sends it back as a new row; a PATCH sends it unchanged): every route gets a
 request its own serializer shaped. A 400 on both sides is an equal answer.
 
 Excluded from the comparison, by name: date and time columns and keys (each run writes its own `now`), and integer
-ids of SHARD models (a cut-over shard issues ids from its own range, apps/core/shard_ids.py: 4e15 + n where control
+ids of SHARD models (a shard issues ids from its own range, apps/core/shard_ids.py: 4e15 + n where control
 issued n) -- the integer pk columns and the keys to them, and integer `id` keys of a response. uuid4 and `random`
 are seeded the same for both runs, so every uuid pk and random code is the same on both sides.
 """
@@ -32,9 +33,9 @@ from django.apps import apps
 from django.db import connections, models, router, transaction
 from django.test import override_settings
 
-from apps.core import shadow_reads as shadow
 from apps.core.sharding import SHARD, placement
-from tests.test_shard_sync import CIVS, HAS_SHARDS, sharded
+from tests import endpoint_answers as shadow
+from tests.test_shard_sync import HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_WRITES_SEED") or random.SystemRandom().randrange(10 ** 6))
 GREEK = "civ_greek"
@@ -159,6 +160,32 @@ def _state(alias):
     return out
 
 
+def _changes(before, after):
+    """{model label: (rows gone, rows new)} between two `_state`s of one alias."""
+    from collections import Counter
+
+    out = {}
+    for label in set(before) | set(after):
+        x, y = Counter(before.get(label, [])), Counter(after.get(label, []))
+        if x != y:
+            out[label] = (sorted((x - y).elements()), sorted((y - x).elements()))
+    return out
+
+
+def _merged(per_alias):
+    """The changes of several aliases as one database's: a REFERENCE row's copies on a shard are not counted."""
+    from apps.core.sharding import REFERENCE
+
+    out = {}
+    for alias, changes in per_alias.items():
+        for label, (gone, new) in changes.items():
+            if alias != "default" and placement(apps.get_model(label)) == REFERENCE:
+                continue
+            was = out.get(label, ([], []))
+            out[label] = (sorted(was[0] + gone), sorted(was[1] + new))
+    return out
+
+
 def _state_diff(a, b):
     out = []
     for label in sorted(set(a) | set(b)):
@@ -220,7 +247,7 @@ def _payload(world, case):
     lst = shadow.list_route_of(reads, cls)
     if detail is None or lst is None:
         return None
-    with override_settings(SHARD_READ_CIVS=[], SHARD_WRITE_CIVS=[]):
+    with override_settings(SHARDED=False):
         rows = shadow.fetch(world["client"], reverse(lst), max_pages=1)
         urls = shadow.urls_for(reads, detail, rows, random.Random(f"{SEED}:{case}"), n=1)
         if not urls:
@@ -254,40 +281,32 @@ def _audit_rows_of_the_commit():
                 callback()
 
 
-def _run(world, case, payload, writes, monkeypatch):
+def _run(world, case, payload, sharded_, monkeypatch):
     url, body = payload
     method = case.rsplit(":", 1)[1]
-    reads = list(CIVS) if writes else []
-    with _Savepoint(), override_settings(SHARD_READ_CIVS=reads, SHARD_WRITE_CIVS=writes):
-        others = {a: _state(a) for a in ("civ_chinese", "civ_european", "civ_egyptian")} if writes else {}
-        if writes:
-            from apps.core.shard_ids import assign
-
-            assign(GREEK)
+    with _Savepoint(), override_settings(SHARDED=sharded_):
+        watched = {a: _state(a) for a in (("default", GREEK) if sharded_ else ("default",))}
+        others = {a: _state(a) for a in ("civ_chinese", "civ_european", "civ_egyptian")} if sharded_ else {}
         with _Seeded(monkeypatch, f"{SEED}:{case}"), _audit_rows_of_the_commit():
             res = getattr(world["client"], method)(url, body, format="json")
-        if writes:
-            from apps.core.shard_sync import SHARD_TO_CONTROL, reconcile
-
-            reconcile([GREEK], fix=True, direction=SHARD_TO_CONTROL)
-            left = reconcile([GREEK], direction=SHARD_TO_CONTROL)[GREEK]
-            assert not left, [d.line(GREEK, "default") for d in left[:5]]
+        changed = _merged({a: _changes(before, _state(a)) for a, before in watched.items()})
         moved = [f"{a}: {_state_diff(before, _state(a))[:3]}" for a, before in others.items() if _state(a) != before]
         answer = (res.status_code, _canon_body(res.json()) if res.content else None)
-        return answer, _state("default"), moved
+        return answer, changed, moved
 
 
 @sharded
 @pytest.mark.parametrize("case", sorted(ROUTES))
-def test_a_cut_over_write_leaves_control_as_the_single_database_does(world, case, monkeypatch):
+def test_a_sharded_write_changes_what_the_single_database_does(world, case, monkeypatch):
     payload = _payload(world, case)
     if payload is None:
         pytest.skip(f"{case}: no row of the Greek hall to shape a request from")
-    base, base_state, _ = _run(world, case, payload, [], monkeypatch)
-    cut, cut_state, moved = _run(world, case, payload, ["GREEK"], monkeypatch)
+    base, base_changed, _ = _run(world, case, payload, False, monkeypatch)
+    cut, cut_changed, moved = _run(world, case, payload, True, monkeypatch)
     assert base == cut, f"SHARDED_WRITES_SEED={SEED} {case}: {shadow.diff(base, cut)}"
     assert not moved, f"{case}: a Greek write changed another shard: {moved}"
-    differ = _state_diff(base_state, cut_state)
+    differ = [f"{label}: one database {base_changed.get(label)} | sharded {cut_changed.get(label)}"
+              for label in sorted(set(base_changed) | set(cut_changed)) if base_changed.get(label) != cut_changed.get(label)]
     assert not differ, f"SHARDED_WRITES_SEED={SEED} {case}:\n" + "\n".join(differ[:8])
     if base[0] >= 400:
         pytest.skip(f"{case}: refused alike on both sides ({base[0]})")

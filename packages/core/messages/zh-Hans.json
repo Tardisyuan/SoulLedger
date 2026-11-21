@@ -900,11 +900,14 @@
       "moved": "已挪到{{station}}",
       "error": {
         "not_diyu": "只有地府的亡魂走十三站。",
-        "alive": "在世的灵魂不在路上。"
+        "alive": "在世的灵魂不在路上。",
+        "reason_required": "往回挪要写理由。",
+        "soul_settled": "这个灵魂已经结案，不在路上了。"
       },
       "move_title": "挪站 · {{name}}",
       "move_current": "现在：第 {{n}} 站 · {{station}}",
       "move_to": "挪到",
+      "reason_label": "往回挪的理由",
       "move_body": "挪站只改记录的位置，会记进灵魂账页。",
       "not_on_road": "十三站 · 不在路上",
       "move_confirm": "挪站",

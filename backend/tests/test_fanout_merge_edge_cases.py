@@ -1,8 +1,7 @@
 """FANOUT merges that answer like the single database where the stage-3 review (VERIFY-stage3.md sections 2, 4, 6)
-found they did not, or found no test that would notice: sliced counts (M2), a row read from a shard and saved
-(M4), reverse() / last() / latest(), values().distinct().count(), a sliced exists(), in_bulk; and the
-CONTROL_READS set (M9). Each read is asked twice -- nothing cut over, then all four civilizations cut over and
-read in FANOUT -- and the answers must be equal.
+found they did not, or found no test that would notice: sliced counts (M2), reverse() / last() / latest(),
+values().distinct().count(), a sliced exists(), in_bulk; and the CONTROL_READS set (M9). Each read is asked
+twice -- in the one-database form, then sharded and read in FANOUT -- and the answers must be equal.
 """
 import re
 from pathlib import Path
@@ -12,7 +11,7 @@ from django.db.models import F
 from django.test import override_settings
 
 from apps.core.shard_reads import CONTROL_READS, FANOUT, read_context
-from apps.core.sharding import CONTROL, alias_for_civilization, placement
+from apps.core.sharding import CONTROL, placement
 from tests.test_shard_sync import CIVS, _sync, sharded
 
 
@@ -30,9 +29,9 @@ def _world(n=3):
 
 
 def both(read):
-    with override_settings(SHARD_READ_CIVS=[]):
+    with override_settings(SHARDED=False):
         base = read()
-    with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(FANOUT):
+    with override_settings(SHARDED=True), read_context(FANOUT):
         cut = read()
     return base, cut
 
@@ -92,24 +91,6 @@ def test_in_bulk_reads_the_merge():
         "by a unique field": lambda: sorted(souls.in_bulk([s.soul_code for s in souls.using("default")[:3]],
                                                           field_name="soul_code")),
     })
-
-
-@sharded
-def test_a_row_read_from_a_shard_and_saved_is_written_to_control():
-    """Stage 3 writes go to control: the shard keeps its copy until the next sync (and then takes control's).
-    Written to the shard instead, the change would be on no control row and the next sync would undo it."""
-    souls = _world(n=1)
-    greek = alias_for_civilization("GREEK")
-    pk = souls.using("default").filter(tenant__declared_civilization="GREEK").get().pk
-    with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context("GREEK"):
-        row = souls.get(pk=pk)
-        assert row._state.db == greek
-        row.name = "renamed"
-        row.save(update_fields=["name"])
-    assert souls.using("default").get(pk=pk).name == "renamed"
-    assert souls.using(greek).get(pk=pk).name != "renamed", "the save went to the shard"
-    _sync()
-    assert souls.using(greek).get(pk=pk).name == "renamed"
 
 
 # ---- CONTROL_READS ------------------------------------------------------------------------------------------

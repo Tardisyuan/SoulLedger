@@ -69,16 +69,16 @@ def _soul_row(account):
 # ---- M1 / M2: where a soul account reads -------------------------------------------------------------------------
 
 def _shards_touched(client, url):
-    """Shards a GET ran statements on. Left out: transaction statements, and the saga's open-move check
-    (`shard_saga.arriving`), which reads every master's outbox by design (a soul in mid-move)."""
+    """Shards a GET ran statements on, transaction statements left out. Until 2026-11-21 the saga's open-move check
+    (`shard_saga.arriving`, every master's outbox) was left out too; a soul's lookup asks control now
+    (`soul_directory`), so nothing is."""
     from contextlib import ExitStack
 
     touched = set()
 
     def record(alias):
         def wrapper(execute, sql, params, many, context):
-            if not sql.lstrip().upper().startswith(("SAVEPOINT", "RELEASE", "ROLLBACK", "BEGIN", "COMMIT")) \
-                    and "tenants_shardoutbox" not in sql:
+            if not sql.lstrip().upper().startswith(("SAVEPOINT", "RELEASE", "ROLLBACK", "BEGIN", "COMMIT")):
                 touched.add(alias)
             return execute(sql, params, many, context)
         return wrapper

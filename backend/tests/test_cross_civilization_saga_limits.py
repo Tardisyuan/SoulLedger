@@ -64,7 +64,7 @@ def world(request):
     w = _world(seed_of(seed), forced)
     halls = _halls()
     _assign(*CIVS)
-    with cut(*w["cut"]):
+    with cut():
         yield w, halls
 
 
@@ -132,14 +132,52 @@ def _rows_on_masters(pk):
             if alias == master_of(Tenant._base_manager.using("default").get(pk=t))}
 
 
+def _opened_in(pk, hall):
+    """A soul account of soul `pk` opened in `hall` (where `_primary_soul` looks first, absent a move)."""
+    from apps.authentication.models import User
+
+    account = _account(_soul()(pk=pk))
+    User.objects.filter(pk=account.user_id).update(tenant=hall)
+    return account.user_id
+
+
+def _account_reads(user_id):
+    """The alias the soul account's own requests read (`soul_primary_alias`), asked as a new request asks it."""
+    from apps.authentication.models import User
+    from apps.core.shard_reads import soul_primary_alias
+
+    return soul_primary_alias(User.objects.get(pk=user_id))
+
+
+def _moving(pk):
+    from apps.tenants.models import GlobalCode
+    from apps.tenants.soul_directory import MOVING
+
+    return list(GlobalCode.objects.using("default").filter(kind=MOVING, value=str(pk)).values_list("tenant_id", flat=True))
+
+
 def _window(monkeypatch, kind, pk, source, target, where):
-    """Stuck between step 2 and 3: both rows on their masters, reads see the source's only; then step 3."""
+    """Stuck between step 2 and 3: both rows on their masters, reads see the source's only; then step 3. The soul's
+    own account -- opened in the target hall, so absent the move its lookup starts on the master holding the
+    arriving row -- reads the source's master until step 3 (control's SOUL_MOVING row, `soul_directory`), then the
+    target's; the row goes with the move. Mutation: `_primary_soul` without `moving_from` -> the target's master in
+    the window."""
+    from apps.tenants.shard_saga import master_of
+
+    user_id = _opened_in(pk, target)
     _stuck_before_step_3(monkeypatch, kind)
     on_masters = _rows_on_masters(pk)
     assert {t for _, t in on_masters} == {source.pk, target.pk}, f"{where}: not in the window: {on_masters}"
     _one_primary(pk, source.pk, f"{where} between step 2 and step 3")
+    assert _moving(pk) == [source.pk], f"{where}: {_moving(pk)}"
+    assert _account_reads(user_id) == master_of(source), f"{where}: the account read the arriving row's master"
     _relay()
     _one_primary(pk, target.pk, f"{where} after step 3")
+    assert _moving(pk) == [], f"{where}: the move closed, its SOUL_MOVING row stayed"
+    from apps.tenants.soul_directory import whereabouts
+
+    assert whereabouts(pk) == (None, target.pk), f"{where}: SOUL_LIVES_IN {whereabouts(pk)}"
+    assert _account_reads(user_id) == master_of(target), f"{where} after step 3"
 
 
 @sharded
@@ -316,7 +354,7 @@ def test_two_civilizations_opening_a_case_on_one_soul_at_once_open_exactly_one(m
     w = {"seed": seed, "src": src_civ, "tgt": tgt_civ, "cut": sorted({src_civ, tgt_civ}), "realm": False}
     halls = _halls()
     _assign(*CIVS)
-    with cut(*w["cut"]), read_context(CONTROL_ALIAS):
+    with cut(), read_context(CONTROL_ALIAS):
         soul = _residing(w, halls)
         barrier = threading.Barrier(2, timeout=30)
         original = global_codes.claim_open_case
@@ -386,7 +424,7 @@ def test_a_soul_moving_on_to_a_third_civilization_takes_its_home_copy_along(seed
     _assign(*CIVS)
     home, a, b = halls[t["home"]], halls[t["a"]], halls[t["b"]]
     where = f"seed {seed} {t}"
-    with cut(*t["cut"]):
+    with cut():
         soul, first = _approved({"seed": seed, "src": t["home"], "tgt": t["a"], "realm": False}, halls)
         account = _account(soul)
         _execute(first.pk)
@@ -508,7 +546,7 @@ def test_two_relays_at_once_deliver_each_message_once_and_fail_none(monkeypatch)
         return deliver(msg)
     monkeypatch.setattr(shard_saga, "deliver", together)
 
-    with cut(*w["cut"]), read_context(CONTROL_ALIAS):
+    with cut(), read_context(CONTROL_ALIAS):
         src, tgt = halls[w["src"]], halls[w["tgt"]]
         records = [_approved(w, halls)[1].pk]
         with _in_hall(src):

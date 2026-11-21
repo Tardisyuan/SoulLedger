@@ -29,3 +29,8 @@ for _alias in SHARD_ALIASES:
     else:
         _shard["NAME"] = ":memory:"
     DATABASES[_alias] = _shard
+
+#: config/settings.py derives SHARDED from the aliases it saw (none here). Kept False on purpose: each test builds its
+#: world in the one-database form and switches to the sharded one with `cut()` (tests/test_sharded_writes.py), and the
+#: equivalence tests (tests/test_sharded_*_equal_single_db.py) ask the same question in both forms.
+SHARDED = False

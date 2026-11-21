@@ -16,6 +16,7 @@ from django.db.models import (
     Exists,
     ExpressionWrapper,
     F,
+    Func,
     IntegerField,
     OuterRef,
     Q,
@@ -23,7 +24,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import Cast, Coalesce, Concat
+from django.db.models.functions import Cast, Coalesce
 
 from apps.souls.dates import MAX_PLAUSIBLE_LIFESPAN_YEARS
 
@@ -55,6 +56,15 @@ def _one_if(q):
     return Case(When(q, then=Value(1)), default=Value(0), output_field=IntegerField())
 
 
+class _Joined(Func):
+    """``a || b || ...``: one flat chain. Django's ``Concat`` nests a ``COALESCE((... || COALESCE((...`` pair
+    per argument; eleven of them inside this filter's ``NOT IN (... EXISTS (...))`` overflowed SQLite's parser
+    stack (``?has_date_problem=false``, 2026-11-21). Every argument here is already non-NULL."""
+    template = "(%(expressions)s)"
+    arg_joiner = " || "
+    output_field = CharField()
+
+
 def _fingerprint(event_prefix, death):
     """SQL twin of ``dates.date_warning_fingerprint`` (None renders as "None")."""
     def part(expr):
@@ -62,8 +72,7 @@ def _fingerprint(event_prefix, death):
 
     ey, em, ed = (part(F(f"{event_prefix}_{p}")) for p in ("year", "month", "day"))
     dy, dm, dd = (part(x) for x in death)
-    return Concat(ey, Value("-"), em, Value("-"), ed, Value("|"), dy, Value("-"), dm, Value("-"), dd,
-                  output_field=CharField())
+    return _Joined(ey, Value("-"), em, Value("-"), ed, Value("|"), dy, Value("-"), dm, Value("-"), dd)
 
 
 def filter_has_date_problem(queryset, value):

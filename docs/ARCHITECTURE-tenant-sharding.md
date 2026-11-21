@@ -1,6 +1,14 @@
 # 租户分片方案 —— 规划稿
 
-> **状态:规划稿,不实施。** 用户 2026-10-09 决定「只出方案文档,不动代码」。
+> **2026-11-21 现状(以此为准,下文是 10-09 的规划稿,留作当时的推理):** 第 7 节的回答之后六个阶段已在测试环境做完,
+> 115 上四文明全切读写、控制库副本已清除(`GlobalCode` 记了 `SHARD_PURGED`)。过渡层随后删掉(用户 2026-11-21:
+> 「过渡期结束就删除,git 有相关留档就好」):逐文明的三个开关、影子读与 `shadow_read_diff`、清除工具、
+> `backfill_disposition_halls`、分库到控制库的反向同步。现在只有两种形态 —— 四个 `SHARD_DATABASE_URL_<CIV>` 都设 = 分库
+> (`settings.SHARDED`),都不设 = 单库(默认测试、开发、演示) —— 由 `tests/test_sharded_*_equal_single_db.py` 与
+> `tests/test_shard_router_is_neutral.py` 守着两者答案一致。4.3 的回滚表已不适用:清除之后回不到单库,
+> 有 `SHARD_PURGED` 记录时单库形态的同步直接拒绝(`apps/core/sharding.py::check_shard_settings`)。
+>
+> **状态(2026-10-09):规划稿,不实施。** 用户 2026-10-09 决定「只出方案文档,不动代码」。
 > 文中「现状」每条事实都在 `3db42177` 上查过:模型数用 Django 元数据实数(`apps.get_models()`,
 > 排除 auth / contenttypes / sessions / admin / celery-beat / token_blacklist),引用带 `文件:行`。
 > **没有量过的东西写「未量」**:这台机器上没有生产(见项目记忆 `shared-box-115`),仓库里没有任何

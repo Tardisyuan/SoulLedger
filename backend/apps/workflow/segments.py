@@ -932,7 +932,7 @@ def _segment_workflows(**lookup):
     from apps.core.shard_reads import with_fanout
 
     ids = WorkflowSegment.objects.filter(**lookup).values("workflow_id")
-    if not settings.SHARD_READ_CIVS:
+    if not settings.SHARDED:
         return ids
     return list(with_fanout(ids.order_by()).values_list("workflow_id", flat=True))
 

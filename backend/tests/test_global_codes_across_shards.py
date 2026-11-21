@@ -5,7 +5,7 @@ apps/tenants/global_codes.py). Runs in the `sharded` group:
       DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 .venv/bin/python -m pytest \\
       --ds=config.settings_sharded -m sharded --no-cov tests/test_global_codes_across_shards.py
 
-Until the stage-4 router (SHARD_WRITE_CIVS in db_for_write) lands, a "shard write" here is an explicit
+Written before the sharded router existed, a "shard write" here is an explicit
 `save(using=<alias>)`: the call sites pick their alias the way `Model.save` does (`global_codes.row_alias`),
 so the router changes nothing in them.
 """
@@ -257,23 +257,23 @@ def _ownership(settings):
     return out.getvalue(), True
 
 
-def test_a_cut_over_soul_with_its_control_mirror_and_shadow_passes(halls, settings):
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
+def test_a_sharded_soul_with_a_leftover_control_copy_passes(halls, settings):
+    settings.SHARDED = True
     _soul_rows(halls["GREEK"], halls["GREEK"], GREEK, CONTROL_ALIAS)
-    _soul_rows(halls["EGYPTIAN"], halls["EGYPTIAN"], CONTROL_ALIAS, EGYPTIAN)  # not cut over: control + shadow
+    _soul_rows(halls["EGYPTIAN"], halls["EGYPTIAN"], CONTROL_ALIAS, EGYPTIAN)  # its shard, and a copy left on control
     out, ok = _ownership(settings)
     assert ok, out
 
 
 def test_a_residence_copy_in_the_home_shard_is_justified(halls, settings):
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK", "EGYPTIAN"]
+    settings.SHARDED = True
     _soul_rows(halls["EGYPTIAN"], halls["GREEK"], EGYPTIAN, GREEK, CONTROL_ALIAS)  # resides in Egypt, home Greece
     out, ok = _ownership(settings)
     assert ok, out
 
 
 def test_a_copy_nothing_justifies_is_reported(halls, settings):
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
+    settings.SHARDED = True
     soul = _soul_rows(halls["GREEK"], halls["GREEK"], GREEK, CONTROL_ALIAS, EGYPTIAN)  # never left Greece
     out, ok = _ownership(settings)
     assert not ok and f"soul {soul.pk}: a copy on {EGYPTIAN} nothing justifies (primary on {GREEK})" in out
@@ -282,7 +282,7 @@ def test_a_copy_nothing_justifies_is_reported(halls, settings):
 def test_two_primary_rows_are_reported(halls, settings):
     from apps.souls.models import Soul
 
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK", "EGYPTIAN"]
+    settings.SHARDED = True
     soul = _soul_rows(halls["GREEK"], halls["GREEK"], GREEK)
     # A move half done: the Egyptian shard also holds it as its own, the home pointer says Greece.
     Soul._base_manager.using(EGYPTIAN).bulk_create([Soul(pk=soul.pk, name=soul.name, tenant_id=halls["EGYPTIAN"].pk,
@@ -291,8 +291,8 @@ def test_two_primary_rows_are_reported(halls, settings):
     assert not ok and f"soul {soul.pk}: 2 primary rows" in out
 
 
-def test_a_cut_over_soul_only_in_control_has_no_primary_row(halls, settings):
-    settings.SHARD_READ_CIVS = settings.SHARD_WRITE_CIVS = ["GREEK"]
+def test_a_sharded_soul_only_in_control_has_no_primary_row(halls, settings):
+    settings.SHARDED = True
     soul = _soul_rows(halls["GREEK"], halls["GREEK"], CONTROL_ALIAS)
     out, ok = _ownership(settings)
     assert not ok and f"soul {soul.pk}: no primary row (its civilization's writes are on {GREEK})" in out

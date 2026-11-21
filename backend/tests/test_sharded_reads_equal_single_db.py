@@ -1,16 +1,16 @@
-"""Stage 3 core guard: cutting every civilization's reads over to its shard changes no answer
+"""Core guard: the sharded form (every civilization's reads on its shard) changes no answer
 (docs/audit/2026-11-15-sharding/PLAN.md 阶段 3). The single database is the baseline.
 
 One random world per module (seed printed, `SHARDED_READS_SEED=<n>` replays it): rows in halls of all four
 civilizations, a hall of UNKNOWN civilization and no hall; every key that may cross civilizations pointed
 across on some row; a soul residing abroad, a soul back from residence with the rows its residence wrote,
 both with a soul account. It is synced to the shards and `reconcile_shards --all` must be clean (no row
-missing, none dangling) -- the precondition for cutting a civilization over.
+missing, none dangling) -- the precondition for the sharded form to answer like the one database.
 
 Then every URL pattern a GET reaches -- derived from the URLconf, one test case each so xdist spreads them --
 is asked by every caller: each hall role in some hall, every hall's ADMIN, each civilization's ADMIN,
-SYSTEM_ADMIN and two soul accounts. Once with `SHARD_READ_CIVS=[]` (the baseline), once with all four cut
-over; status and body must be equal (every page; volatile keys dropped, lists compared as multisets -- the
+SYSTEM_ADMIN and two soul accounts. Once with `SHARDED=False` (the baseline), once sharded; status and body
+must be equal (every page; volatile keys dropped, lists compared as multisets -- the
 order of a merge is held exactly by `test_fanout_slices_equal_the_single_database`). A case in which no
 caller had data on either side is a skip, so the summary line says how many endpoints compared nothing.
 
@@ -19,19 +19,21 @@ end (Django's setUpTestData shape); each case runs in a savepoint inside it.
 
     cd backend && ... python -m pytest --ds=config.settings_sharded -m sharded tests/test_sharded_reads_equal_single_db.py
 """
+import io
 import os
 import random
 
 import pytest
 from django.apps import apps
+from django.core.management import call_command
 from django.db import IntegrityError, connections, models, transaction
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.pagination import PageNumberPagination
 
-from apps.core import shadow_reads as shadow
 from apps.core.shard_reads import FANOUT, crossing_keys, read_context
 from apps.core.sharding import SHARD, NoShardContext, alias_for_civilization, placement, tenant_path
+from tests import endpoint_answers as shadow
 from tests.test_shard_sync import CIVS, HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_READS_SEED") or random.SystemRandom().randrange(10 ** 6))
@@ -288,6 +290,9 @@ def _build(rng):
     callers["SYSTEM_ADMIN"] = user("sys", UserRole.SYSTEM_ADMIN)
     callers["soul abroad"], callers["soul back home"] = (client for _, client in movers)
     _sync()
+    for civ in CIVS:  # gap 4a: a GET that writes (an export's audit row, a profile made on first read) writes a shard
+        call_command("assign_shard_id_ranges", "--civ", civ, verbosity=0)
+    call_command("note_soul_whereabouts", stdout=io.StringIO())  # deployed on a box whose shards hold rows already
     code, out = _reconcile("--all")
     assert code == 0 and "not copied" not in out and "dangling" not in out, f"SHARDED_READS_SEED={SEED}\n{out}"
     print(f"models the filler could not make in some hall: {sorted(unmade)}")
@@ -334,7 +339,7 @@ def _seed_in_report(request):
     request.node.add_report_section("setup", "seed", f"SHARDED_READS_SEED={SEED}")
 
 
-# ---- comparing (apps/core/shadow_reads.py) -------------------------------------------------------------------
+# ---- comparing (tests/endpoint_answers.py) -------------------------------------------------------------------
 
 def _fetch(client, url):
     return shadow.fetch(client, url, trace=bool(os.environ.get("SHARDED_READS_TRACE")))
@@ -344,7 +349,7 @@ def _urls(case, world):
     lst = shadow.list_route_of(ENDPOINTS, ENDPOINTS[case][2])
     answer = None
     if ENDPOINTS[case][1] and lst:
-        with override_settings(SHARD_READ_CIVS=[]):
+        with override_settings(SHARDED=False):
             answer = _fetch(world["callers"]["SYSTEM_ADMIN"], reverse(lst))
     return shadow.urls_for(ENDPOINTS, case, answer, random.Random(f"{SEED}:{case}"))
 
@@ -364,9 +369,9 @@ def test_cut_over_reads_answer_like_the_single_database(world, case):
     mismatches, with_data = [], 0
     for who, client in world["callers"].items():
         for url in urls:
-            with override_settings(SHARD_READ_CIVS=[]):
+            with override_settings(SHARDED=False):
                 base = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
-            with override_settings(SHARD_READ_CIVS=list(CIVS)):
+            with override_settings(SHARDED=True):
                 cut = shadow.drop(_fetch(client, url), shadow.WRITES_ON_READ.get(case, ()))
             if base != cut:
                 mismatches.append(f"{who} GET {url}: {shadow.diff(base, cut)}")
@@ -394,10 +399,10 @@ def test_fanout_slices_equal_the_single_database(world):
         for _ in range(3):
             low = rng.randrange(n)
             high = low + rng.randint(1, PAGE_SIZE)
-            with override_settings(SHARD_READ_CIVS=[]):
+            with override_settings(SHARDED=False):
                 base = list(model._base_manager.order_by(*ordering).values_list("pk", flat=True)[low:high])
                 total = model._base_manager.count()
-            with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(FANOUT):
+            with override_settings(SHARDED=True), read_context(FANOUT):
                 cut = [o.pk for o in model._base_manager.order_by(*ordering)[low:high]]
                 merged_total = model._base_manager.count()
             assert cut == base, (model._meta.label, ordering, low, high, f"SHARDED_READS_SEED={SEED}")
@@ -413,7 +418,7 @@ def test_each_shard_leg_holds_rows(world):
 
     for civ in CIVS:
         assert Soul._base_manager.using(alias_for_civilization(civ)).exists(), civ
-    with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(FANOUT):
+    with override_settings(SHARDED=True), read_context(FANOUT):
         from apps.audit.models import AuditLog
 
         assert AuditLog._base_manager.filter(tenant__isnull=True).exists(), "the control leg lost hall-less rows"
@@ -436,7 +441,7 @@ def test_the_world_has_what_115_had(world):
     assert len(civs(Conversation, kind=ConversationKind.OFFICER_INBOX)) >= 3  # residence halls and a home hall
     assert civs(SoulPathEntry, left_at__isnull=True, realm__isnull=False) >= set(CIVS)
     assert civs(Soul, create_time=TIED_AT) >= set(CIVS)
-    with override_settings(SHARD_READ_CIVS=[]):
+    with override_settings(SHARDED=False):
         named = {ref["template_id"] for ref in role_template_references().get("JUDGE", [])}
     assert len(named) >= len(CIVS), named
 
@@ -462,9 +467,9 @@ def test_a_disposition_with_no_hall_is_read_beside_its_judgment(world):
     mismatches, seen = [], []
     for name, client in who.items():
         for url in urls:
-            with override_settings(SHARD_READ_CIVS=[]):
+            with override_settings(SHARDED=False):
                 base = _fetch(client, url)
-            with override_settings(SHARD_READ_CIVS=list(CIVS)):
+            with override_settings(SHARDED=True):
                 cut = _fetch(client, url)
             if base != cut:
                 mismatches.append(f"{name} GET {url}: {shadow.diff(base, cut)}")
@@ -526,9 +531,9 @@ def test_fanout_aggregates_of_every_type_equal_the_single_database(world):
                 reads.append(("grouped", lambda qs, e=exprs, g=group: sorted(
                     qs.values(g).annotate(**e).order_by(), key=lambda r: str(r[g]))))
             for label, read in reads:
-                with override_settings(SHARD_READ_CIVS=[]):
+                with override_settings(SHARDED=False):
                     base = read(model._base_manager.all())
-                with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(FANOUT):
+                with override_settings(SHARDED=True), read_context(FANOUT):
                     cut = read(model._base_manager.all())
                 assert len(base) == len(cut), (model._meta.label, f.name, label)
                 for b, c in zip(base, cut, strict=True):
@@ -537,7 +542,7 @@ def test_fanout_aggregates_of_every_type_equal_the_single_database(world):
             checked.add(type(f).__name__)
     assert {"DateTimeField", "DateField", "IntegerField", "DurationField"} <= checked, checked
     for model, name in decimals[:1]:  # no SHARD model has a decimal column with values today
-        with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context(FANOUT), pytest.raises(NotImplementedError):
+        with override_settings(SHARDED=True), read_context(FANOUT), pytest.raises(NotImplementedError):
             model._base_manager.aggregate(a=Avg(name))
     from decimal import Decimal
 
@@ -549,10 +554,9 @@ def test_fanout_aggregates_of_every_type_equal_the_single_database(world):
 # ---- fail closed ------------------------------------------------------------------------------------------
 
 @sharded
-def test_a_read_with_no_context_is_refused_once_a_civilization_is_cut_over(world):
+def test_a_read_with_no_context_is_refused_once_sharded(world):
     """No instance hint, no request, no hall contextvar, no explicit context: every SHARD model's read raises
-    NoShardContext once any civilization is cut over -- never a quiet answer from control -- and reads as
-    before while none is."""
+    NoShardContext sharded -- never a quiet answer from control -- and reads as before in the one-database form."""
     from apps.core.request_local import get_current_request
     from apps.core.shard_reads import _context, current_context, in_celery
     from apps.tenants.managers import get_current_tenant
@@ -562,14 +566,13 @@ def test_a_read_with_no_context_is_refused_once_a_civilization_is_cut_over(world
     from apps.core.shard_reads import CONTROL_READS
 
     shard_models = [m for m in apps.get_models() if placement(m) == SHARD and m._meta.label not in CONTROL_READS]
-    for civ in CIVS:
-        with override_settings(SHARD_READ_CIVS=[civ]):
-            for model in shard_models:
-                for read in (lambda m: list(m._base_manager.all()[:1]), lambda m: m._base_manager.count(),
-                             lambda m: m._base_manager.exists()):
-                    with pytest.raises(NoShardContext):
-                        read(model)
-    with override_settings(SHARD_READ_CIVS=[]):
+    with override_settings(SHARDED=True):
+        for model in shard_models:
+            for read in (lambda m: list(m._base_manager.all()[:1]), lambda m: m._base_manager.count(),
+                         lambda m: m._base_manager.exists()):
+                with pytest.raises(NoShardContext):
+                    read(model)
+    with override_settings(SHARDED=False):
         for model in shard_models:
             model._base_manager.count()
 
@@ -590,7 +593,7 @@ def test_a_hall_job_service_refuses_without_its_hall_and_reads_its_shard_with_it
     fn = getattr(importlib.import_module(service[0]), service[1], None)
     assert fn is not None, f"{service} is gone; name another per-hall job's service"
     hall = Tenant.objects.filter(declared_civilization="GREEK").first()
-    with override_settings(SHARD_READ_CIVS=["GREEK"]):
+    with override_settings(SHARDED=True):
         with pytest.raises(NoShardContext):
             fn(hall)
         set_current_tenant(hall)
@@ -598,90 +601,3 @@ def test_a_hall_job_service_refuses_without_its_hall_and_reads_its_shard_with_it
             fn(hall)
         finally:
             clear_current_tenant()
-
-
-@sharded
-def test_a_transaction_on_control_reads_its_own_writes(world):
-    """Writes still go to control (stage 3): inside a transaction of the code, a read sees the row it just wrote,
-    which no shard has yet."""
-    from apps.souls.models import Soul, SoulState
-    from apps.tenants.models import Tenant
-
-    hall = Tenant.objects.filter(declared_civilization="GREEK").first()
-    with override_settings(SHARD_READ_CIVS=list(CIVS)), read_context("GREEK"):
-        with transaction.atomic():
-            soul = Soul.objects.create(name="fresh", tenant=hall, current_state=SoulState.JUDGING)
-            assert Soul.objects.filter(pk=soul.pk).exists()
-        assert not Soul.objects.filter(pk=soul.pk).exists(), "a cut-over read outside the transaction is the shard's"
-
-
-@sharded
-def test_a_write_request_reads_control_and_a_read_request_its_shard(world):
-    """A POST reads where it writes (control), so it sees a row written a moment ago that no shard has yet; a GET
-    of the same hall reads the hall's shard."""
-    from django.test import RequestFactory
-
-    from apps.core.request_local import set_current_request
-    from apps.souls.models import Soul, SoulState
-    from apps.tenants.models import Tenant
-
-    hall = Tenant.objects.filter(declared_civilization="EGYPTIAN").first()
-    soul = Soul.objects.create(name="unsynced", tenant=hall, current_state=SoulState.JUDGING)
-    with override_settings(SHARD_READ_CIVS=list(CIVS)):
-        for method, seen in (("post", True), ("get", False)):
-            request = getattr(RequestFactory(), method)("/")
-            request.tenant = hall
-            set_current_request(request)
-            try:
-                assert Soul.objects.filter(pk=soul.pk).exists() is seen, method
-            finally:
-                set_current_request(None)
-
-
-# ---- the 115 exit check: manage.py shadow_read_diff -------------------------------------------------------
-
-def _row_counts():
-    from django.db import router
-
-    return {(alias, m._meta.label): m._base_manager.using(alias).order_by().count()
-            for alias in connections for m in apps.get_models(include_auto_created=True)
-            if m._meta.managed and not m._meta.proxy and router.allow_migrate_model(alias, m)}
-
-
-def _shadow(*args):
-    import io
-
-    from django.core.management import call_command
-    from django.core.management.base import CommandError
-
-    out = io.StringIO()
-    try:
-        call_command("shadow_read_diff", *args, stdout=out)
-        return 0, out.getvalue()
-    except CommandError as e:
-        return 1, f"{out.getvalue()}\n{e}"
-
-
-@sharded
-def test_shadow_read_diff_is_clean_on_a_synced_world_and_writes_nothing(world):
-    """The command over the synced world: no difference, data compared, and not one row more or less on any
-    database afterwards (every request and the token minting are rolled back)."""
-    before = _row_counts()
-    code, out = _shadow("--all", "--endpoint", "soul", "--max-pages", "2")
-    assert code == 0, out
-    assert " 0 differ" in out and " 0 with data" not in out, out
-    assert _row_counts() == before
-
-
-@sharded
-def test_shadow_read_diff_reports_a_row_no_shard_has_yet(world):
-    """A soul written to control and not synced: cutting its civilization over changes the hall ADMIN's list,
-    and the command says so and exits non-zero."""
-    from apps.souls.models import Soul, SoulState
-    from apps.tenants.models import Tenant
-
-    hall = Tenant.objects.filter(declared_civilization="GREEK").order_by("code").first()
-    Soul._base_manager.using("default").create(name="unsynced-shadow", tenant=hall, current_state=SoulState.JUDGING)
-    code, out = _shadow("--civ", "GREEK", "--endpoint", "soul-list", "--max-pages", "50")
-    assert code == 1, out
-    assert "DIFFERS" in out and "unsynced-shadow" in out, out

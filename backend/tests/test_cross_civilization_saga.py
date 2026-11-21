@@ -129,7 +129,7 @@ def world(request):
     w = seed if isinstance(seed, dict) else _world(seed)
     halls = _halls()
     _assign(*CIVS)
-    with cut(*w["cut"]):
+    with cut():
         yield w, halls
 
 
@@ -384,7 +384,7 @@ def test_executing_a_sentence_plan_stop_across_civilizations_ends_at_the_start_o
     DispatchService.approve(record, "approver")
     _sync()
     _assign(*CIVS)
-    with cut(*cut_civs):
+    with cut():
         _every_step("execute_plan", lambda: DispatchService.execute(DispatchRecord.all_objects.get(pk=record.pk),
                                                                      "executor"), f"plan {cut_civs}")
         DispatchService.execute(DispatchRecord.all_objects.get(pk=record.pk), "executor")
@@ -514,9 +514,11 @@ def test_a_same_civilization_dispatch_sends_nothing_and_writes_what_one_database
     _sync()
     _assign(*CIVS)
     runs = {}
+    from django.test import override_settings
+
     for civs in ([], ["GREEK"]):
         points = _savepoints()
-        with cut(*civs):
+        with override_settings(SHARDED=bool(civs)):
             writes = _writes_during(lambda: DispatchService.execute(DispatchRecord.all_objects.get(pk=record.pk),
                                                                      "executor"))
             runs[tuple(civs)] = [t for _, t in writes]

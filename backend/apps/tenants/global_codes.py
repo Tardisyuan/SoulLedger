@@ -10,9 +10,9 @@ the control database that every shard asks first:
                    bumped by `next_workflow_number` BEFORE the row is written. The format is unchanged.
 
 Where the row goes decides the transaction, and the alias is the one `Model.save` would pick
-(`row_alias`), so the call sites follow stage 4's router (SHARD_WRITE_CIVS) without changing:
+(`row_alias`), so the call sites follow the router (settings.SHARDED) without changing:
 
-  row on control   (today, and any civilization not in SHARD_WRITE_CIVS) the claim / bump runs inside the
+  row on control   (the one database, and a row with no hall) the claim / bump runs inside the
                    row's own transaction (a savepoint). The row's rollback undoes it: no gap, nothing kept --
                    exactly the behaviour before the registry existed (tests/test_global_codes.py proves it).
   row on a shard   the claim / bump runs on the control connection, which is a different connection from the
@@ -237,7 +237,7 @@ def _release_on_close(sender, instance, using=None, **kwargs):
     write to their shards: before that no claim is taken)."""
     from django.conf import settings
 
-    if not settings.SHARD_WRITE_CIVS or (not instance.is_concluded and not instance.is_deleted):
+    if not settings.SHARDED or (not instance.is_concluded and not instance.is_deleted):
         return
     pk = instance.pk
     transaction.on_commit(lambda: release_open_case(pk), using=using)

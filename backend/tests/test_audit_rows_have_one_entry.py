@@ -84,7 +84,7 @@ def world():
     """One hall per civilization, every civilization write-cut (115's state since 2026-11-17)."""
     halls = _halls()
     _assign(*CIVS)
-    with cut(*CIVS):
+    with cut():
         yield halls
 
 

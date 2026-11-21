@@ -900,11 +900,14 @@
       "moved": "Moved to {{station}}",
       "error": {
         "not_diyu": "Only a soul of Diyu walks the thirteen stations.",
-        "alive": "A living soul is not on the road."
+        "alive": "A living soul is not on the road.",
+        "reason_required": "Moving back needs a reason.",
+        "soul_settled": "This soul’s account is closed; it is no longer on the road."
       },
       "move_title": "Move station · {{name}}",
       "move_current": "Now: station {{n}} · {{station}}",
       "move_to": "Move to",
+      "reason_label": "Reason for moving back",
       "move_body": "Moving changes only the recorded station; it goes into the soul ledger page.",
       "not_on_road": "Thirteen stations · not on the road",
       "move_confirm": "Move",

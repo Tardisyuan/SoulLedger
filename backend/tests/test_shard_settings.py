@@ -1,7 +1,8 @@
 """Sharding stage 2, part A: the shard aliases' settings and plumbing (docs/audit/2026-11-15-sharding/PLAN.md).
 
-  * `SHARD_DATABASE_URL_<CIV>` adds `civ_<civ>` on the shard engine; none set leaves production with
-    `default` alone (asked of a fresh process, not of this run's settings);
+  * `SHARD_DATABASE_URL_<CIV>` adds `civ_<civ>` on the shard engine; one for every civilization makes the process
+    SHARDED, none leaves production with `default` alone, some but not all refuse to start (asked of a fresh
+    process, not of this run's settings); the retired per-civilization switches are ignored;
   * a name that is no civilization is refused at startup;
   * `shard_aliases()` is what DATABASES has, not a list;
   * `manage.py migrate_shards` migrates every shard, and with none configured does nothing;
@@ -21,7 +22,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.db import connections
 
-from apps.core.sharding import check_cut_over_settings, civilization_aliases, shard_aliases
+from apps.core.sharding import check_shard_settings, civilization_aliases, shard_aliases
 from config.shard_db import ENV_PREFIX, databases_from_env
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -40,7 +41,8 @@ def _env(**extra):
 def _settings_in_a_fresh_process(**env):
     """DATABASES and DATABASE_ROUTERS as a new process with this environment builds them."""
     code = ("import json, django; from django.conf import settings; django.setup(); "
-            "print(json.dumps({'databases': settings.DATABASES, 'routers': settings.DATABASE_ROUTERS}, default=str))")
+            "print(json.dumps({'databases': settings.DATABASES, 'routers': settings.DATABASE_ROUTERS, "
+            "'sharded': settings.SHARDED}, default=str))")
     proc = subprocess.run([sys.executable, "-c", code], cwd=BACKEND, env=_env(**env),
                           capture_output=True, text=True, timeout=120)
     return proc, (json.loads(proc.stdout.strip().splitlines()[-1]) if proc.returncode == 0 else None)
@@ -48,32 +50,47 @@ def _settings_in_a_fresh_process(**env):
 
 # --- settings ---------------------------------------------------------------
 
-def test_without_the_env_production_has_default_alone():
-    proc, out = _settings_in_a_fresh_process()
+#: The switches of the per-civilization cut-over (stages 3-5), still in the test box's environment: ignored.
+RETIRED = {"SHARD_READ_CIVS": "GREEK", "SHARD_WRITE_CIVS": "GREEK", "SHARD_PURGED_CIVS": "GREEK"}
+
+
+def test_without_the_env_production_has_default_alone_and_is_not_sharded():
+    proc, out = _settings_in_a_fresh_process(**RETIRED)
     assert proc.returncode == 0, proc.stderr[-2000:]
     assert list(out["databases"]) == ["default"], out["databases"]
     assert out["routers"] == ["config.sharding.ShardRouter"]
+    assert out["sharded"] is False
 
 
-def test_one_url_adds_that_civilizations_alias_on_the_shard_engine():
-    proc, out = _settings_in_a_fresh_process(**{f"{ENV_PREFIX}GREEK": PG.format("greek")})
+def test_every_url_adds_its_alias_on_the_shard_engine_and_the_process_is_sharded():
+    """The rule since 2026-11-21: the aliases decide. A partial list in the retired switches changes nothing.
+    Mutation: SHARDED not derived from the aliases -> `sharded` is False here."""
+    proc, out = _settings_in_a_fresh_process(**ALL, **RETIRED)
     assert proc.returncode == 0, proc.stderr[-2000:]
-    assert sorted(out["databases"]) == ["civ_greek", "default"], out["databases"]
+    assert sorted(out["databases"]) == [*civilization_aliases(), "default"], out["databases"]
     greek = out["databases"]["civ_greek"]
     assert greek["ENGINE"] == "config.shard_db.postgresql" and greek["NAME"] == "soulledger_greek", greek
     assert greek["HOST"] == "db.example"
+    assert out["sharded"] is True
+
+
+def test_some_but_not_all_urls_refuse_to_start():
+    proc, _ = _settings_in_a_fresh_process(**{f"{ENV_PREFIX}GREEK": PG.format("greek")})
+    assert proc.returncode != 0 and "needs every civilization's shard" in proc.stderr, proc.stderr[-2000:]
+    assert "civ_chinese" in proc.stderr
 
 
 @pytest.mark.parametrize("value, want", [(None, 600), ("0", 0)])
 def test_db_conn_max_age_reaches_default_and_every_shard(value, want):
     """2026-11-16: a runserver test backend kept a connection per thread per alias for 600 s and filled the test
     server's 100 with the four shard aliases. DB_CONN_MAX_AGE=0 closes them at the end of each request."""
-    env = {f"{ENV_PREFIX}GREEK": PG.format("greek")}
+    env = dict(ALL)
     if value is not None:
         env["DB_CONN_MAX_AGE"] = value
     proc, out = _settings_in_a_fresh_process(**env)
     assert proc.returncode == 0, proc.stderr[-2000:]
-    assert {a: d["CONN_MAX_AGE"] for a, d in out["databases"].items()} == {"default": want, "civ_greek": want}
+    assert {a: d["CONN_MAX_AGE"] for a, d in out["databases"].items()} == dict.fromkeys(["default", *civilization_aliases()],
+                                                                                        want)
 
 
 def test_a_url_that_names_no_civilization_refuses_to_start():
@@ -97,9 +114,9 @@ def test_a_shard_url_that_is_not_postgresql_is_refused():
 
 
 def test_startup_check_refuses_a_stray_shard_alias_and_accepts_the_four():
-    check_cut_over_settings([], [], databases={"default": {}, **dict.fromkeys(civilization_aliases(), {})})
+    check_shard_settings(databases={"default": {}, **dict.fromkeys(civilization_aliases(), {})}, sharded=True)
     with pytest.raises(ImproperlyConfigured, match=r"\['civ_china'\] name no civilization"):
-        check_cut_over_settings([], [], databases={"default": {}, "civ_greek": {}, "civ_china": {}})
+        check_shard_settings(databases={"default": {}, "civ_greek": {}, "civ_china": {}}, sharded=False)
 
 
 def test_shard_aliases_are_what_databases_has(settings):
@@ -160,11 +177,52 @@ def _collect_control_boundary(**env):
 
 
 def test_a_sharded_test_skips_without_shards_and_a_partial_set_stops_the_run():
-    """Mutation: the conftest hook never skips -> the first run errors on a missing alias; it skips a partial
-    set instead of refusing -> the second run exits 0."""
+    """Mutation: the conftest hook never skips -> the first run errors on a missing alias. A partial set no longer
+    reaches the conftest: Django's startup check refuses it first (`check_shard_settings`)."""
     none = _collect_control_boundary()
     assert none.returncode == 0 and "6 skipped" in none.stdout and "needs --ds=config.settings_sharded" in none.stdout, \
         none.stdout[-2000:]
     partial = _collect_control_boundary(**{f"{ENV_PREFIX}GREEK": PG.format("greek")})
-    assert partial.returncode != 0 and "these settings have only ['civ_greek']" in partial.stdout + partial.stderr, \
+    assert partial.returncode != 0 and "needs every civilization's shard" in partial.stdout + partial.stderr, \
         (partial.stdout + partial.stderr)[-2000:]
+
+
+# --- a purged control database refuses to start not sharded -----------------------------------------------
+
+@pytest.mark.django_db
+def test_a_purged_control_refuses_to_start_unless_sharded(settings):
+    """GlobalCode SHARD_PURGED on control and no shard URLs: the process would serve the purged civilizations as empty,
+    and only the sync refused it. The system check (runserver, migrate, check) and Celery's worker / beat start refuse;
+    no record, or sharded, starts. Mutations: the check unregistered -> `check` passes; `settings.SHARDED` not asked ->
+    the sharded process is refused; Celery's receiver raising an exception instead of SystemExit -> Celery starts."""
+    from django.core.management.base import SystemCheckError
+
+    from apps.core.shard_sync import PURGED, purged_control_needs_shards
+    from apps.tenants.models import GlobalCode
+    from config.celery import refuse_purged_control_without_shards
+
+    settings.SHARDED = False
+    assert purged_control_needs_shards(databases=["default"]) == []
+    call_command("check", "--database", "default", stdout=io.StringIO())
+    refuse_purged_control_without_shards()
+
+    GlobalCode.objects.using("default").create(kind=PURGED, value="GREEK")
+    assert [e.id for e in purged_control_needs_shards(databases=["default"])] == ["sharding.E001"]
+    assert purged_control_needs_shards() == []  # outside migrate / check --database: not asked
+    with pytest.raises(SystemCheckError, match=r"\['GREEK'\] were purged"):
+        call_command("check", "--database", "default", stdout=io.StringIO())
+    with pytest.raises(SystemExit, match="sharding.E001"):
+        refuse_purged_control_without_shards()
+
+    settings.SHARDED = True
+    assert purged_control_needs_shards(databases=["default"]) == []
+    refuse_purged_control_without_shards()
+
+
+def test_a_database_with_no_tables_yet_passes_the_purge_check():
+    """A first `migrate` runs the system checks before any table exists (here: a fresh in-memory SQLite): no GlobalCode
+    table is no record. Mutation: `purge_records` without its table check and the check without `except DatabaseError`
+    -> "no such table" and a non-zero exit (either one alone keeps it green)."""
+    proc = subprocess.run([sys.executable, "manage.py", "check", "--database", "default"], cwd=BACKEND, env=_env(),
+                          capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr[-2000:]

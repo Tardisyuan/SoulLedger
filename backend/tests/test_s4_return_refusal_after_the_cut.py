@@ -125,7 +125,7 @@ def test_the_home_hall_cancelling_while_the_residence_has_an_open_case_is_409_an
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         node = _abroad_after_the_cut(x, f"p{pair[0][:2]}")
         case = _open_case_at_the_residence(x)
         sent = _outbox_count()
@@ -159,7 +159,7 @@ def test_a_case_opened_at_the_residence_after_the_cancel_answered_is_recorded_an
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         node = _abroad_after_the_cut(x, f"r{pair[0][:2]}")
         x["dispatch_ids"] = [str(node.dispatch_record_id)]
         r = _cancel(x, f"r1{pair[0]}")
@@ -213,7 +213,7 @@ def test_a_residence_without_a_plan_ended_by_its_disposition_moves_the_soul_on_a
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         soul, record = _approved({"seed": f"n4{pair[0][:2]}", "src": pair[0], "tgt": pair[1], "realm": False},
                                  {pair[0]: x["home"], pair[1]: x["res"]})
         res_admin = _client(x["res"], f"n4r_{pair[0][:2]}")
@@ -249,7 +249,7 @@ def test_the_residence_concluding_an_amendment_files_the_request_on_the_home_hal
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         _abroad_after_the_cut(x, f"a{pair[0][:2]}")
         case = _open_case_at_the_residence(x)
         assert _read(lambda: Judgment.all_objects.get(pk=case).kind) == "AMENDMENT", where
@@ -287,7 +287,7 @@ def test_an_amendment_request_the_plan_no_longer_takes_is_recorded_at_home(pair,
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         _abroad_after_the_cut(x, f"q{pair[0][:2]}")
         case = _open_case_at_the_residence(x)
         r = x["res_admin"].post(f"/api/v1/judgment/{case}/conclude/", {

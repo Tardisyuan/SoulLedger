@@ -221,12 +221,11 @@ DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = _env_bool(
     "DISABLE_SERVER_SIDE_CURSORS", "false"
 )
 
-# Per-civilization sharding (docs/ARCHITECTURE-tenant-sharding.md 4.2). Stage 0: the router routes
-# nothing; see config/sharding.py for what each later stage changes. Rollback = delete this line.
+# Per-civilization sharding (docs/ARCHITECTURE-tenant-sharding.md 4.2). Not SHARDED (below) the router routes
+# nothing; config/sharding.py says what it does sharded.
 DATABASE_ROUTERS = ["config.sharding.ShardRouter"]
-# Stage 2 (shadow shards): SHARD_DATABASE_URL_<CIV> adds the alias civ_<civ>. None set = `default` alone,
-# as before (tests/test_shard_settings.py). Migrated by `manage.py migrate_shards`; reads and writes stay on
-# default until SHARD_READ_CIVS / SHARD_WRITE_CIVS below name the civilization.
+# SHARD_DATABASE_URL_<CIV> adds the alias civ_<civ> (tests/test_shard_settings.py). Migrated by
+# `manage.py migrate_shards`; SHARDED below follows from them.
 from config.shard_db import databases_from_env  # noqa: E402
 
 DATABASES.update(databases_from_env(
@@ -268,17 +267,17 @@ def _apply_statement_timeout(databases: dict, ms: int) -> None:
 #: Milliseconds; applies to the control database and every shard alias alike.
 DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "60000") or 0)
 _apply_statement_timeout(DATABASES, DB_STATEMENT_TIMEOUT_MS)
-# Civilizations (apps.souls.models.Civilization values, comma list) whose reads / writes are cut over
-# to their own alias. Empty = none; tests use override_settings (plan D8).
-SHARD_READ_CIVS = [c.strip() for c in os.getenv("SHARD_READ_CIVS", "").split(",") if c.strip()]
-SHARD_WRITE_CIVS = [c.strip() for c in os.getenv("SHARD_WRITE_CIVS", "").split(",") if c.strip()]
-# Stage 5: write-cut civilizations whose rows on control are being, or have been, deleted (purge_cut_over_tenant_rows).
-# Their SHARD rows are no longer synced either way; REFERENCE and the control-mastered models keep control-to-shard
-# (apps/core/shard_sync.py `_sides`). Must be a subset of SHARD_WRITE_CIVS. Empty = none.
-SHARD_PURGED_CIVS = [c.strip() for c in os.getenv("SHARD_PURGED_CIVS", "").split(",") if c.strip()]
+# Sharded or not is decided by the aliases alone (2026-11-21: the per-civilization cut-over is over, so the old
+# SHARD_READ_CIVS / SHARD_WRITE_CIVS / SHARD_PURGED_CIVS are gone and ignored if still set). A SHARD_DATABASE_URL_<CIV>
+# for every civilization = SHARDED: each civilization's SHARD rows are read and written on its own shard and control
+# holds none of them (stage 5's state; the GlobalCode SHARD_PURGED records say so on the database). None = the one
+# database. Some but not all: refused at startup (apps.core.sharding.check_shard_settings). config/settings_sharded.py
+# adds its aliases after this line and leaves SHARDED False: its tests build a world in the one-database form and
+# switch to the sharded one with `cut()` (tests/test_sharded_writes.py).
+SHARDED = any(alias.startswith("civ_") for alias in DATABASES)
 # 冻结调拨(分库 PLAN 阶段 4.0 与回滚步骤「冻结调拨、联审先结」):开着时发起 / 批准 / 执行调拨与新建联审一律
 # 423 `dispatch_frozen`,不写任何东西;受刑计划的下一站记成「没发出去」(解冻后 `retry-dispatch` 重发)。
-# 反向同步(shard-to-control)期间不能有新的跨文明 saga 发出。`apps/dispatch/services.py::refuse_if_frozen`。
+# 当初为反向同步(shard-to-control,已删)期间不发新的跨文明 saga 而设;留作运维开关。`apps/dispatch/services.py::refuse_if_frozen`。
 DISPATCH_FROZEN = _env_bool("DISPATCH_FROZEN", "False")
 
 AUTH_USER_MODEL = "authentication.User"

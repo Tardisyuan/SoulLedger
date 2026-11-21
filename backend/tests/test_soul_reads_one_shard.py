@@ -15,18 +15,20 @@ civilizations (a DIRECT conversation lives in the initiator's hall).
   ACROSS included (control too: the account, the hall). The soul in residence reads beyond it on ACROSS routes
   only.
 """
+import io
 import json
 import random
 import uuid
 
 import pytest
+from django.core.management import call_command
 from django.db import connections
 from django.test import override_settings
 
-from apps.core import shadow_reads as shadow
 from apps.core.shard_reads import READS_SOUL_ROWS_ABROAD
 from apps.core.sharding import alias_for_civilization
 from apps.soul_accounts.authentication import SoulJWTAuthentication
+from tests import endpoint_answers as shadow
 from tests import test_sharded_reads_equal_single_db as world_of
 from tests.test_shard_sync import CIVS, HAS_SHARDS, _sync, sharded
 from tests.test_sharded_reads_equal_single_db import _chat_on, _seed_in_report, _small_pages  # noqa: F401 -- autouse
@@ -142,6 +144,7 @@ def world(django_db_setup, django_db_blocker):
             w = world_of._build(rng)
             w["souls"] = _souls(rng, w)
             _sync()
+            call_command("note_soul_whereabouts", stdout=io.StringIO())  # the pen pals' conversation, made above
             yield w
         finally:
             world_of._rollback(atomics)
@@ -150,7 +153,7 @@ def world(django_db_setup, django_db_blocker):
 # ---- asking -----------------------------------------------------------------------------------------------
 
 def _ask(client, url, civs):
-    with override_settings(SHARD_READ_CIVS=list(civs)):
+    with override_settings(SHARDED=bool(civs)):
         return shadow.fetch(client, url)
 
 
@@ -260,7 +263,14 @@ def _shards_touched(client, url):
 def test_a_soul_request_touches_its_primary_shard_and_no_other(world):
     """A soul whose rows are all in its own civilization (no residence, no letters abroad): every soul GET route,
     ACROSS too, runs its statements on control and on one shard, its primary hall's. The soul in residence reads
-    beyond its primary on an ACROSS route and only there: the other half of soul_read_context."""
+    beyond its primary on an ACROSS route and only there: the other half of soul_read_context.
+
+    Control is where the design needs it: the account, the hall, and what `soul_directory` keeps of the soul -- its
+    open move (SOUL_MOVING) and the shards holding rows that name it (SOUL_ROWS_IN). Until 2026-11-21 every request
+    also asked each other shard's outbox for a move in flight (`_primary_soul` through `legs` -> `_not_arriving`, 3
+    statements) and, on an ACROSS route, each other shard for rows naming the soul (`_rows_abroad`, 3 more).
+    Mutations: `_primary_soul` with `legs(Soul)` (hiding arriving souls by every outbox) -> every route reads every
+    shard; `_rows_abroad` asking the shards again -> every ACROSS route does."""
     rng = random.Random(f"{SEED}:counting")
     wrong = []
     for civ in CIVS:
@@ -285,9 +295,9 @@ def test_a_soul_of_no_known_civilization_or_no_hall_reads_every_leg(world):
     from apps.souls.models import Soul
 
     account, _client = world["souls"]["soul of no known civilization"]
-    with override_settings(SHARD_READ_CIVS=list(CIVS)):
+    with override_settings(SHARDED=True):
         assert soul_read_context(User.objects.get(pk=account.user_id)) == FANOUT
         account, _client = world["souls"]["soul of GREEK"]
         assert soul_read_context(User.objects.get(pk=account.user_id)) == "civ_greek"
-        Soul._base_manager.using("default").filter(pk=account.soul_id).update(tenant=None)
+        Soul._base_manager.using("civ_greek").filter(pk=account.soul_id).update(tenant=None)  # its primary row
         assert soul_read_context(User.objects.get(pk=account.user_id)) == FANOUT

@@ -1,5 +1,5 @@
-"""Stage 2 (shadow shards): `reconcile_shards` copies control's rows to the civilization shards and finds
-every row where the two disagree (docs/audit/2026-11-15-sharding/PLAN.md, D2 / D4 / D6).
+"""`reconcile_shards` copies control's rows to the civilization shards (the one-database form: how the test group
+builds a world) and finds every row where the two disagree (docs/audit/2026-11-15-sharding/PLAN.md, D2 / D4 / D6).
 
 A random world -- every SHARD and REFERENCE model gets rows, in halls of all four civilizations, in a
 hall of UNKNOWN civilization and with no hall -- is synced, then checked from the outside: each shard
@@ -679,47 +679,30 @@ def test_dropping_a_row_from_a_shard_leaves_control_alone(world):
 
 
 @sharded
-def test_shard_to_control_brings_a_shard_write_back(world):
-    civ = world.rng.choice(CIVS)
-    alias = alias_for_civilization(civ)
+def test_a_purged_civilization_refuses_the_sync_until_sharded():
+    """GlobalCode SHARD_PURGED (written on 115 by stage 5's purge): control holds none of that civilization's SHARD
+    rows, so a sync in the one-database form would copy control's emptiness over its shard (VERIFY-stage5 H1).
+    Refused; sharded, the sync runs and the shard keeps its rows. Mutation: `reconcile(fix=True)` without
+    `check_purge_records` -> the refused sync runs and deletes the shard's soul."""
+    from django.core.exceptions import ImproperlyConfigured
+
+    from apps.core.shard_sync import PURGED
+    from apps.tenants.models import GlobalCode, Tenant
+    from apps.tenants.tasks import sync_shards
+
     Soul = apps.get_model("souls", "Soul")
-    soul = Soul._base_manager.using(alias).filter(tenant__in=[h.pk for h in world.halls if h.civilization == civ]).first()
-    Soul._base_manager.using(alias).filter(pk=soul.pk).update(name="written-on-the-shard")
-
-    code, out = _reconcile("--civ", civ, "--direction", "shard-to-control")
-    assert code == 1 and _reported(out) == {(Soul._meta.label, str(soul.pk))}, out
-    with override_settings(SHARD_READ_CIVS=[civ], SHARD_WRITE_CIVS=[civ]):  # stage 4: the shard is the master
-        call_command("assign_shard_id_ranges", "--civ", civ, stdout=io.StringIO())  # gap 4a: before writes cut over
-        assert _reconcile("--civ", civ, "--direction", "shard-to-control", "--fix")[0] == 0
-    assert Soul._base_manager.get(pk=soul.pk).name == "written-on-the-shard"
-    assert _reconcile("--all")[0] == 0
-
-
-@sharded
-def test_shard_to_control_fix_is_refused_while_control_is_the_master():
-    """VERIFY-stage2 item 2 (the reviewer's probe, inverted): before a civilization's writes are cut over,
-    `--direction shard-to-control --fix` would revert control's newer value and raw-delete its new row."""
-    from apps.realms.models import Realm
-    from apps.tenants.models import Tenant
-
-    hall = Tenant.objects.create(code="S2C_GR", display_name="g", declared_civilization="GREEK")
-
-    def realm(name):
-        return Realm.all_objects.create(realm_code=f"R{uuid.uuid4().hex[:8]}", name_en=name, name_local=name,
-                                        civilization="GREEK", realm_type="HELL", tenant=hall)
-
-    kept = realm("before")
+    hall = Tenant.objects.create(code="PRG_GR", display_name="g", declared_civilization="GREEK")
+    soul = Soul.objects.create(name="only on its shard", tenant=hall)
     _sync()
-    Realm.all_objects.filter(pk=kept.pk).update(name_en="newer-on-control")
-    fresh = realm("written-after-the-sync")
-    out = io.StringIO()
-    with pytest.raises(CommandError, match=r"refused for \['GREEK'\]: not in SHARD_WRITE_CIVS"):
-        call_command("reconcile_shards", "--civ", "GREEK", "--direction", "shard-to-control", "--fix", stdout=out)
-    assert Realm.all_objects.get(pk=kept.pk).name_en == "newer-on-control"
-    assert Realm.all_objects.filter(pk=fresh.pk).exists()
-    with pytest.raises(CommandError, match="refused"):  # --all names it too
-        call_command("reconcile_shards", "--all", "--direction", "shard-to-control", "--fix", stdout=io.StringIO())
-    assert _reconcile("--civ", "GREEK", "--direction", "shard-to-control")[0] == 1  # reporting is still allowed
+    Soul._base_manager.using("default").filter(pk=soul.pk)._raw_delete("default")  # what the purge left on control
+    GlobalCode.objects.using("default").create(kind=PURGED, value="GREEK")
+    for run in (sync_shards, lambda: call_command("reconcile_shards", "--civ", "GREEK", "--fix", stdout=io.StringIO())):
+        with pytest.raises(ImproperlyConfigured, match=r"\['GREEK'\] were purged"):
+            run()
+        assert Soul._base_manager.using("civ_greek").filter(pk=soul.pk).exists()
+    with override_settings(SHARDED=True):
+        sync_shards()
+    assert Soul._base_manager.using("civ_greek").filter(pk=soul.pk).exists()
 
 
 @sharded

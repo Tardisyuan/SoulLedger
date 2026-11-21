@@ -126,7 +126,7 @@ def test_the_seat_hall_fills_its_seat_on_a_bench_opened_after_the_cut_and_the_be
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         _bench(x, f"s{pair[0][:2]}")
         assert x["home_admin"].post(_bench_url(x, "activate"), {}, format="json").status_code == 200, where
         r = _sentence(x)
@@ -159,7 +159,7 @@ def test_a_bench_cancelled_before_the_seats_sentence_reaches_it_refuses_it_and_t
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         _bench(x, f"c{pair[0][:2]}")
         assert _sentence(x).status_code == 200, where
         [msg] = _pending("dispatch.joint_sentence")
@@ -226,7 +226,7 @@ def test_the_residence_executes_and_then_releases_a_stop_of_a_plan_made_after_th
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         node = _abroad_after_the_cut(x, f"e{pair[0][:2]}")
         disposition = node.disposition_id
         r = x["res_admin"].post(f"/api/v1/disposition/{disposition}/execute/", {}, format="json",
@@ -278,7 +278,7 @@ def test_a_return_requested_by_the_home_after_the_residence_sent_the_soul_home_i
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         _abroad_after_the_cut(x, f"n{pair[0][:2]}")
         # The home hall cancels: step 1 waits for the relay (RETURN_REQUESTED on the home's master).
         r = x["home_admin"].post(_plan_url("cancel", pk=x["plan"].pk), {"reason": "赦免"}, format="json",
@@ -337,7 +337,7 @@ def test_dispatch_frozen_refuses_a_seat_and_a_cross_civilization_rebirth_writing
 
     x = _halls(pair)
     where = x["where"]
-    with cut(*pair):
+    with cut():
         with _in_hall(x["home"]):
             cj = CrossTenantJudgmentService.create("联审", "d", x["home"], None)
             soul = Soul.objects.create(name="迁籍", tenant=x["home"], current_state=SoulState.REINCARNATING)
@@ -387,7 +387,7 @@ def test_a_deed_and_a_contact_save_between_a_returns_step_2_and_step_3_wait_and_
     _assign(*CIVS)
     home, res = halls[pair[0]], halls[pair[1]]
     where = f"{pair[0]} home, {pair[1]} residence"
-    with cut(*pair):
+    with cut():
         assert _master(res) < _master(home), (_master(res), _master(home))
         soul, record = _approved({"seed": f"mu6{pair[0][:2]}", "src": pair[0], "tgt": pair[1], "realm": False},
                                  halls)

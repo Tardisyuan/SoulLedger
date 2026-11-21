@@ -4,7 +4,7 @@ docs/audit/2026-11-15-sharding/PLAN.md 阶段 4).
     manage.py check_soul_ownership --all
 
 The primary row of a soul is on its owner's database, by the routing of the day: the shard of the
-civilization of `soul.tenant` once that civilization is in SHARD_WRITE_CIVS, else control. A shard row that
+civilization of `soul.tenant` while sharded, else control. A shard row that
 names its own shard's civilization as `tenant`, of a civilization whose writes are cut over, claims to be
 primary; two such claims is a soul written in two places (a cross-civilization move half done).
 
@@ -18,7 +18,6 @@ Any other row of the soul is a copy nothing justifies. A saga message that is a 
 seat, a D6 write that will not be delivered on its own) is a problem too. Prints one line per problem, exits 1
 when any.
 """
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.core.shard_reads import CONTROL_ALIAS
@@ -26,7 +25,7 @@ from apps.core.shard_sync import shard_aliases
 
 
 def ownership_problems(aliases):
-    from apps.core.sharding import alias_for_civilization
+    from apps.core.sharding import alias_for_civilization, cut_civilizations
     from apps.souls.models import Civilization, Soul
     from apps.tenants.models import Tenant
 
@@ -36,7 +35,7 @@ def ownership_problems(aliases):
         civ = civ_of.get(tenant_id)
         return alias_for_civilization(civ) if civ in Civilization.values else None
 
-    cut_over = {alias_for_civilization(c) for c in settings.SHARD_WRITE_CIVS}
+    cut_over = {alias_for_civilization(c) for c in cut_civilizations()}
     rows = {}  # soul pk -> {alias: (tenant_id, home_tenant_id)}
     for alias in aliases:
         for pk, tenant_id, home_id in Soul._base_manager.using(alias).values_list("pk", "tenant_id", "home_tenant_id").iterator():

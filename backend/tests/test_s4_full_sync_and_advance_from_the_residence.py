@@ -1,11 +1,9 @@
-"""Stage 4, after the third review (VERIFY-stage4-r3 follow-up), on a world built after both civilizations are
-write-cut (the r3 world: `test_s4_residence_hall_acts_after_the_cut._abroad_after_the_cut`):
+"""Stage 4, after the third review (VERIFY-stage4-r3 follow-up), on a world built sharded
+(the r3 world: `test_s4_residence_hall_acts_after_the_cut._abroad_after_the_cut`):
 
-  sync     the beat's sync of EVERY shard (shard-to-control for the write-cut ones). A soul that came home from a
-           civilization whose shard sorts after its home's was inserted into control's home slice while control
-           still held its row under the residence: IntegrityError on souls_soul.id, the whole sync of that shard
-           rolled back. Now control ends with one row of it -- the primary's -- compare is clean both ways, and the
-           residence's dispositions (answered from control's mirror) are found.
+  sync     the beat's sync of EVERY shard runs clean while a soul goes abroad and comes home (until 2026-11-21 its
+           shard-to-control direction tripped over control's mirror of such a soul; that direction is gone), and the
+           residence finds its dispositions.
   advance  asked in the residence's own context (its case on the soul withdrawn, which releases the stop's
            WAITING): it locked the home's plan on the residence's master. Now a message to the plan's master
            (`transfer.PLAN_ADVANCE`), and the soul comes home and the plan completes.
@@ -25,14 +23,13 @@ PAIRS = r3.PAIRS  # (CHINESE home, GREEK residence), (EGYPTIAN home, EUROPEAN re
 
 
 def _full_sync(where):
-    """What beat's `sync_shards` does, every shard; then nothing differs either way."""
-    from apps.core.shard_sync import CONTROL_TO_SHARD, SHARD_TO_CONTROL, compare, shard_aliases, sync
+    """What beat's `sync_shards` does, every shard; then nothing differs."""
+    from apps.core.shard_sync import compare, shard_aliases, sync
 
     sync(shard_aliases())
     for shard in shard_aliases():
-        for direction in (SHARD_TO_CONTROL, CONTROL_TO_SHARD):
-            left = {m._meta.label: diffs for m, (_, _, diffs, _) in compare(shard, direction).items()}
-            assert not left, f"{where}: {shard} {direction} still differs after the sync: {left}"
+        left = {m._meta.label: diffs for m, (_, _, diffs, _) in compare(shard).items()}
+        assert not left, f"{where}: {shard} still differs after the sync: {left}"
 
 
 @pytest.fixture
@@ -47,11 +44,9 @@ def full_sync(monkeypatch):
     monkeypatch.setattr(r3, "_quiet", settle)
 
 
-def _control_has_one_row_of(x, hall, where):
+def _primary_is_in(x, hall, where):
     from apps.souls.models import Soul
 
-    rows = list(Soul._base_manager.using("default").filter(pk=x["soul"].pk).values_list("tenant_id", flat=True))
-    assert rows == [hall.pk], f"{where}: control holds {rows} for the soul, not one row of hall {hall.pk}"
     primary = Soul._base_manager.using(r3._master(hall)).get(pk=x["soul"].pk)
     assert primary.tenant_id == hall.pk, where
 
@@ -71,18 +66,18 @@ def _release(x, disposition, tag):
 
 @sharded
 @pytest.mark.parametrize("pair", PAIRS, ids=lambda p: f"{p[0]}-{p[1]}")
-def test_a_full_sync_keeps_one_control_row_of_a_soul_abroad_and_home_again_and_the_residence_finds_its_stop(
+def test_a_full_sync_runs_clean_for_a_soul_abroad_and_home_again_and_the_residence_finds_its_stop(
         pair, full_sync):
     from apps.sentence_plan.models import SentencePlan, SentencePlanStatus
 
     x = r3._halls(pair)
     where = x["where"]
     tag = f"fs{pair[0][:2]}"
-    with cut(*pair):
+    with cut():
         node = r3._abroad_after_the_cut(x, tag)  # every settle in it synced every shard
-        _control_has_one_row_of(x, x["res"], where)
+        _primary_is_in(x, x["res"], where)
         disposition = node.disposition_id
-        # The residence's stop, read through control's mirror (its join crosses masters): found.
+        # The residence's stop (its join crosses masters): found.
         r = x["res_admin"].get(f"/api/v1/disposition/{disposition}/")
         assert r.status_code == 200, (where, r.status_code, r.content[:500])
         listed = x["res_admin"].get("/api/v1/disposition/").json()["results"]
@@ -92,8 +87,8 @@ def test_a_full_sync_keeps_one_control_row_of_a_soul_abroad_and_home_again_and_t
         assert r.status_code == 200, (where, r.status_code, r.content[:2000])
         r3._quiet(where)
         _release(x, disposition, tag)
-        r3._quiet(where)  # the soul came home: its home shard sorts first, control still filed it under the residence
-        _control_has_one_row_of(x, x["home"], where)
+        r3._quiet(where)  # the soul came home
+        _primary_is_in(x, x["home"], where)
         plan = SentencePlan._base_manager.using(r3._master(x["home"])).get(pk=x["plan"].pk)
         assert plan.status == SentencePlanStatus.COMPLETED, (where, plan.status)
 
@@ -109,7 +104,7 @@ def test_the_residence_withdrawing_its_case_releases_the_waiting_stop_and_the_pl
     x = r3._halls(pair)
     where = x["where"]
     tag = f"wd{pair[0][:2]}"
-    with cut(*pair):
+    with cut():
         node = r3._abroad_after_the_cut(x, tag)
         disposition = node.disposition_id
         assert x["res_admin"].post(f"/api/v1/disposition/{disposition}/execute/", {}, format="json",
@@ -140,7 +135,7 @@ def test_the_residence_withdrawing_its_case_releases_the_waiting_stop_and_the_pl
         want = SoulState.REINCARNATING if pair[0] in REBIRTH_CAPABLE_CIVILIZATIONS else SoulState.SETTLED
         assert (soul.tenant_id, soul.current_state) == (x["home"].pk, want), (where, soul.tenant_id, soul.current_state)
         assert not Soul._base_manager.using(r3._master(x["res"])).filter(pk=soul.pk).exists(), where
-        _control_has_one_row_of(x, x["home"], where)
+        _primary_is_in(x, x["home"], where)
         _audited(where, resource="sentencenode", resource_id=str(node.pk), action="UPDATE")
         assert not any(Judgment._base_manager.using(a).filter(pk=case.pk, is_deleted=False).exists()
                        for a in settings.DATABASES), f"{where}: the withdrawn case stands somewhere"

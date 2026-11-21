@@ -9,7 +9,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Button } from "@/src/components/ui/Button";
 import { BaseModal } from "@/src/components/ui/Modal";
-import { SelectField } from "@/src/components/ui/Field";
+import { SelectField, TextAreaField } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { responseCode } from "@soulledger/core/api/client";
 import { SoulUnderworldMap } from "./SoulUnderworldMap";
@@ -153,15 +153,26 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
   );
 }
 
-/** 挪站弹层(S-1b):一个下拉列 13 站(当前站标「· 现在」不可选),一句后果。 */
+/** 后端 `SoulStationMoveSerializer.reason` 的 max_length。 */
+const REASON_MAX = 500;
+/** 后端的拒绝码里有自己一句话的那几个(`souls.diyu_station.error.*`);别的落到 `common.error`。 */
+const MOVE_ERRORS = new Set(["not_diyu", "alive", "reason_required", "soul_settled"]);
+
+/**
+ * 挪站弹层(S-1b):一个下拉列 13 站(当前站标「· 现在」不可选),一句后果。
+ * 决定 #11:往回挪(选的站在当前站之前)要写理由 —— 多一个必填的理由框,空白时不能提交;往前挪不发 `reason`。
+ * 理由框的标签与 `reason_required` / `soul_settled` 两句是临时措辞,等 Design 第六十三批定稿;egy 暂缺(egyPendingKeys.json)。
+ */
 function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onClose: () => void }) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<Station>(DIYU_STATIONS[Math.min(at, DIYU_STATIONS.length - 1)]);
+  const [reason, setReason] = useState("");
   const current = DIYU_STATIONS[at - 1];
+  const backward = DIYU_STATIONS.indexOf(target) + 1 < at;
   const move = useMutation({
-    mutationFn: (station: Station) => soulsApi.moveStation(soul.id, station),
+    mutationFn: (station: Station) => soulsApi.moveStation(soul.id, station, backward ? reason.trim() : undefined),
     onSuccess: (_, station) => {
       void queryClient.invalidateQueries({ queryKey: soulKeys.all });
       showToast(t("souls.diyu_station.moved", { station: t(`souls.diyu_station.${station}`) }), "success");
@@ -169,8 +180,7 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
     },
     onError: (err: unknown) => {
       const code = responseCode(err);
-      showToast(code === "not_diyu" || code === "alive" ? t(`souls.diyu_station.error.${code}`) : t("common.error"),
-        "error");
+      showToast(code && MOVE_ERRORS.has(code) ? t(`souls.diyu_station.error.${code}`) : t("common.error"), "error");
     },
   });
   return (
@@ -188,7 +198,7 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
             variant="primary"
             data-testid="soul-diyu-station-move-confirm"
             loading={move.isPending}
-            disabled={target === current}
+            disabled={target === current || (backward && !reason.trim())}
             onClick={() => move.mutate(target)}
           >
             {t("souls.diyu_station.move_confirm")}
@@ -213,6 +223,19 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
             disabled: s === current,
           }))}
         />
+        {backward && (
+          <TextAreaField
+            modEnterSubmits={false}
+            id="soul-diyu-station-reason"
+            label={t("souls.diyu_station.reason_label")}
+            required
+            maxLength={REASON_MAX}
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            disabled={move.isPending}
+          />
+        )}
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.diyu_station.move_body")}</p>
       </div>
     </BaseModal>
