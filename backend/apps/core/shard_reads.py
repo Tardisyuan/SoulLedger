@@ -519,6 +519,11 @@ def write_route(model, hints):
     if instance is not None and placement(type(instance)) in (SHARD, REFERENCE):
         return _checked(write_alias_of(instance))
     alias = acting_alias()
+    if alias in (None, MASTER) and instance is not None:
+        # A control row hinted (assigning it to a new row's key in Model.__init__, e.g. ChatIdentity(account=...)
+        # before `soul` is set): no answer yet, not a refusal. The write itself names its database or asks with
+        # the row, and `_before_shard_write` checks it there (simulator 2026-11-21: a soul's first letters 500ed).
+        return None
     if alias in (None, MASTER):
         raise NoShardContext(f"{model._meta.label}: a write naming no row and no single civilization while "
                              f"{write_cut()} write to their shards")

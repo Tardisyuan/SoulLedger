@@ -582,3 +582,29 @@ def test_reconcile_fix_never_overwrites_a_shards_own_rows():
             soul = Soul.objects.create(name="shard only", tenant=halls["GREEK"])
         call_command("reconcile_shards", "--civ", "GREEK", "--fix", verbosity=0)
         assert Soul._base_manager.using(GREEK).filter(pk=soul.pk).exists()
+
+
+@sharded
+def test_a_soul_creates_a_row_whose_first_key_is_a_control_row():
+    """A soul's request acts as MASTER. `ChatIdentity(account=..., soul=...)` assigns the control row (the account)
+    first, and Django asks the router where the new row goes with only that row in hand: an answer of "not yet",
+    never NoShardContext (simulator 2026-11-21: the first open of 书信 was a 500). The row lands on its soul's shard."""
+    from apps.authentication.models import User
+    from apps.chat.models import ChatIdentity
+    from apps.core.shard_reads import read_context
+    from apps.soul_accounts.models import AccountOrigin, SoulAccount
+    from apps.souls.models import Soul
+
+    halls = _halls()
+    _assign("GREEK")
+    with cut():
+        with _in_hall(halls["GREEK"]):
+            soul = Soul.objects.create(name="first letter", tenant=halls["GREEK"])
+            user = User.objects.create_user(username="first-letter", password="x", role="SOUL",
+                                            tenant=halls["GREEK"])
+            account = SoulAccount.objects.create(user=user, soul=soul, cycle=0, origin=AccountOrigin.OFFICER)
+        with read_context("default"):  # no hall: MASTER, as a soul's request
+            identity, made = ChatIdentity.objects.get_or_create(
+                account=account, defaults={"soul": soul, "localpart": "soul_first", "matrix_user_id": "@soul_first:x"})
+    assert made
+    assert _where(ChatIdentity, identity.pk) == [GREEK]
