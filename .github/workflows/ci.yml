@@ -73,7 +73,9 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # 2026-11-21: the 11-20 green run took 1 h 56 min and the next was cancelled at 120 with 67 % done after a
+    # 32-minute stall, so 180 with a per-test hang dump below.
+    timeout-minutes: 180
     needs: changes
     if: needs.changes.outputs.run == 'true'
     env:
@@ -123,7 +125,9 @@ jobs:
           # local gates do: plain -n queues the slow migration round trips on one worker. Coverage and its
           # floor still apply (pytest-cov combines the workers). --durations as run-gates.sh: the thirty slowest
           # over 5 s, so the daily run's 1.5-hour tail says where it goes (docs/audit/ci-timing-2026-11-20.md §5).
-          python -m pytest --tb=short -q -n auto --dist worksteal --durations=30 --durations-min=5 --junitxml="$RUNNER_TEMP/backend.xml"
+          # faulthandler as the local gates: a test stuck 10 min dumps every thread and ends its worker, naming it.
+          python -m pytest --tb=short -q -n auto --dist worksteal --durations=30 --durations-min=5 \
+            -o faulthandler_timeout=600 -o faulthandler_exit_on_timeout=true --junitxml="$RUNNER_TEMP/backend.xml"
       - name: Upload suite count
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
