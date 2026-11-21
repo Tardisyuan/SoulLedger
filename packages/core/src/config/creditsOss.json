@@ -149,6 +149,11 @@
       "name": "sentry-sdk",
       "licence": "MIT",
       "url": "https://pypi.org/project/sentry-sdk/"
+    },
+    {
+      "name": "sqlglot",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/sqlglot/"
     }
   ],
   "web": [

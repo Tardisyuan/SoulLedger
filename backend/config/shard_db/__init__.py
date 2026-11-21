@@ -8,6 +8,7 @@ before 1B made them bare. Replaying those migrations on an empty shard would fai
 whatever the historical field says: a key to a table that is not migrated on this alias is bare here.
 On every other alias the router migrates everything and the editor changes nothing.
 """
+import copy
 from contextlib import contextmanager
 
 from django.db import router
@@ -33,6 +34,20 @@ def databases_from_env(env, *, disable_server_side_cursors=False, conn_max_age=6
         db["DISABLE_SERVER_SIDE_CURSORS"] = disable_server_side_cursors
         out[f"civ_{key[len(ENV_PREFIX):].lower()}"] = db
     return dict(sorted(out.items()))
+
+
+def ask_data_shard_databases(databases):
+    """{`ask_data_<shard alias>`: entry} for every `civ_*` alias, when `ask_data` is configured (docs/ARCHITECTURE-ask-data.md
+    §4, ADR 0007): the `ask_data` entry -- its role, password, OPTIONS -- pointed at the shard's HOST / PORT / NAME.
+    So one ASK_DATA_DATABASE_URL serves control and every shard: the role's password lives in that URL only, never
+    in a SHARD_DATABASE_URL_<CIV>, and `ask_data_setup` creates the same role with the same password on each.
+    {} when `ask_data` is not configured or nothing is sharded. In tests each mirrors its shard."""
+    base = databases.get("ask_data")
+    if base is None:
+        return {}
+    return {f"ask_data_{alias}": {**copy.deepcopy(base), "NAME": db["NAME"], "HOST": db["HOST"], "PORT": db["PORT"],
+                                  "TEST": {"MIRROR": alias}}
+            for alias, db in sorted(databases.items()) if alias.startswith("civ_")}
 
 
 class BareKeysToAbsentTables:

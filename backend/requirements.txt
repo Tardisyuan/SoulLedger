@@ -47,6 +47,11 @@ httpcore2>=2.10.0
 # Pulls in numpy (its only dependency).
 pgvector>=0.4,<0.5
 
+# SQL parsing for the ask-data gate (apps/soul_assist/ask_data;
+# docs/ARCHITECTURE-ask-data.md §3). Pure Python, no dependencies; the
+# major moves on AST changes, hence <31.
+sqlglot>=30.29,<31
+
 # API Docs
 drf-spectacular>=0.27
 

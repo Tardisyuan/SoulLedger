@@ -232,6 +232,26 @@ DATABASES.update(databases_from_env(
     os.environ, disable_server_side_cursors=DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"],
     conn_max_age=DB_CONN_MAX_AGE))
 
+# 问数(docs/ARCHITECTURE-ask-data.md §4,ADR 0007):同一个库(分库时还有每个分库)，换成 `manage.py ask_data_setup` 建的只读角色连。
+# 不设 = 没有 `ask_data` 别名，问数答 503 `ask_data_not_configured`。不迁移(config/sharding.py 的 allow_migrate),
+# 测试里是 default 的镜像(不建测试库;RLS 测试自己用临时角色连)。只认 PostgreSQL:墙是 RLS。
+ASK_DATA_DATABASE_URL = os.getenv("ASK_DATA_DATABASE_URL", "").strip()
+if ASK_DATA_DATABASE_URL:
+    DATABASES["ask_data"] = dj_database_url.parse(
+        ASK_DATA_DATABASE_URL, conn_max_age=DB_CONN_MAX_AGE, conn_health_checks=True)
+    if "postgresql" not in DATABASES["ask_data"]["ENGINE"]:
+        raise ValueError("ASK_DATA_DATABASE_URL must be a PostgreSQL URL: the ask_data wall is row-level security")
+    DATABASES["ask_data"]["DISABLE_SERVER_SIDE_CURSORS"] = DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"]
+    DATABASES["ask_data"]["TEST"] = {"MIRROR": "default"}
+    # 分库时每个分库一个 `ask_data_civ_<文明>`:同一个角色与密码(本 URL),换成分库的主机 / 端口 / 库名(2026-11-21 决定 2)。
+    from config.shard_db import ask_data_shard_databases  # noqa: E402
+
+    DATABASES.update(ask_data_shard_databases(DATABASES))
+#: 每条问数 SQL 的 SET LOCAL statement_timeout(毫秒),比全局的 DB_STATEMENT_TIMEOUT_MS 短。
+ASK_DATA_TIMEOUT_MS = int(os.getenv("ASK_DATA_TIMEOUT_MS", "3000"))
+#: 结果行数上限;多出的截掉并标 truncated(不改写 SQL 加 LIMIT)。
+ASK_DATA_MAX_ROWS = int(os.getenv("ASK_DATA_MAX_ROWS", "200"))
+
 
 def _apply_statement_timeout(databases: dict, ms: int) -> None:
     """`-c statement_timeout=<ms>` in the libpq `options` of every PostgreSQL alias, in place; 0 = none.

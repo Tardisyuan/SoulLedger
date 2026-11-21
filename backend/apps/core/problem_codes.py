@@ -535,6 +535,20 @@ class ProblemCode(StrEnum):
     SOUL_ACCOUNT = "soul_account"
     SYSTEM_ADMIN_ACCOUNT = "system_admin_account"
     SYSTEM_ADMIN_ONLY = "system_admin_only"
+    # 问数 (`POST /api/v1/ask-data/`, docs/ARCHITECTURE-ask-data.md): the gate's codes (ask_data/gate.py), then the
+    # executor's (ask_data/executor.py). A 400 carries the refused SQL beside the code.
+    ASK_DATA_NOT_CONFIGURED = "ask_data_not_configured"
+    UNPARSEABLE = "unparseable"
+    MULTIPLE_STATEMENTS = "multiple_statements"
+    NOT_A_SELECT = "not_a_select"
+    LOCKING_CLAUSE = "locking_clause"
+    FORBIDDEN_FUNCTION = "forbidden_function"
+    UNKNOWN_FUNCTION = "unknown_function"
+    TABLE_NOT_ALLOWED = "table_not_allowed"
+    STAR_NOT_ALLOWED = "star_not_allowed"
+    TIMEOUT = "timeout"
+    READ_ONLY = "read_only"
+    EXECUTION_ERROR = "execution_error"
 
 
 PROBLEM_CODES = frozenset(c.value for c in ProblemCode)

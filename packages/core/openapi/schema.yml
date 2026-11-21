@@ -137,6 +137,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppVersion'
           description: ''
+  /api/v1/ask-data/:
+    post:
+      operationId: ask_data
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskDataRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AskDataRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AskDataRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskDataResult'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AskDataError'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AskDataError'
+          description: ''
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AskDataError'
+          description: ''
+        '503':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AskDataError'
+          description: ''
   /api/v1/assist/:
     post:
       operationId: officer_assist_ask
@@ -25446,6 +25498,76 @@ components:
       required:
       - display_name
       - role
+    AskDataError:
+      type: object
+      description: |-
+        RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+
+        A named error component that adds members subclasses this; one that adds nothing is folded into
+        `Problem` by `problem_responses` below.
+      properties:
+        type:
+          type: string
+          description: 'Always `about:blank`: `code` is the discriminator.'
+        title:
+          type: string
+          description: The HTTP status phrase.
+        status:
+          type: integer
+        code:
+          $ref: '#/components/schemas/ProblemCodeEnum'
+        detail:
+          type: string
+        instance:
+          type: string
+          description: The request id (`X-Request-ID`).
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemFieldError'
+          description: Validation problems only.
+        retry_at:
+          type: string
+          format: date-time
+        sql:
+          type: string
+      required:
+      - code
+      - status
+      - title
+      - type
+    AskDataRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          maxLength: 500
+      required:
+      - question
+    AskDataResult:
+      type: object
+      properties:
+        sql:
+          type: string
+        columns:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            type: array
+            items: {}
+        truncated:
+          type: boolean
+        elapsed_ms:
+          type: integer
+      required:
+      - columns
+      - elapsed_ms
+      - rows
+      - sql
+      - truncated
     AssignRoles:
       type: object
       description: |-
@@ -43207,6 +43329,7 @@ components:
       - approval_flow_required
       - approval_in_progress
       - approval_started
+      - ask_data_not_configured
       - assigned_to_other
       - assignee_out_of_scope
       - assistant_busy
@@ -43311,6 +43434,7 @@ components:
       - eternal_sentence
       - event_after_death
       - event_before_birth
+      - execution_error
       - expired
       - export_in_progress
       - fail_reason_contradicts_record
@@ -43327,6 +43451,7 @@ components:
       - final_review_required
       - five_heinous_must_fail
       - forbidden
+      - forbidden_function
       - foreign_node
       - foreign_realm
       - foreign_stops_choice_required
@@ -43395,6 +43520,7 @@ components:
       - ladder_running
       - lifespan_not_ended
       - locked
+      - locking_clause
       - login_locked
       - malformed_csv
       - media_not_found
@@ -43408,6 +43534,7 @@ components:
       - model_not_found
       - month_too_large
       - mortal_sin_unrepented
+      - multiple_statements
       - muted
       - name_empty
       - name_taken
@@ -43439,6 +43566,7 @@ components:
       - node_not_retryable
       - not_a_draft
       - not_a_request
+      - not_a_select
       - not_acceptable
       - not_alive
       - not_allowed
@@ -43526,6 +43654,7 @@ components:
       - private_address
       - proof_required
       - rate_limited
+      - read_only
       - realm_full
       - realm_not_allowed
       - realm_not_found
@@ -43603,10 +43732,12 @@ components:
       - soup_already_taken
       - soup_not_taken
       - soup_refused
+      - star_not_allowed
       - statute_retired
       - system_admin_account
       - system_admin_only
       - system_void
+      - table_not_allowed
       - target_dispatch_disabled
       - target_outranks_caller
       - template_not_found
@@ -43624,6 +43755,7 @@ components:
       - throttled
       - ticket_expired
       - ticket_invalid
+      - timeout
       - timeout_incomplete
       - timeout_role_missing
       - token_not_valid
@@ -43645,8 +43777,10 @@ components:
       - unknown_civilization
       - unknown_clause
       - unknown_columns
+      - unknown_function
       - unknown_node
       - unknown_print_key
+      - unparseable
       - unpriced_backup_model
       - unpriced_model
       - unprocessable
@@ -43723,6 +43857,7 @@ components:
         * `approval_flow_required` - approval_flow_required
         * `approval_in_progress` - approval_in_progress
         * `approval_started` - approval_started
+        * `ask_data_not_configured` - ask_data_not_configured
         * `assigned_to_other` - assigned_to_other
         * `assignee_out_of_scope` - assignee_out_of_scope
         * `assistant_busy` - assistant_busy
@@ -43827,6 +43962,7 @@ components:
         * `eternal_sentence` - eternal_sentence
         * `event_after_death` - event_after_death
         * `event_before_birth` - event_before_birth
+        * `execution_error` - execution_error
         * `expired` - expired
         * `export_in_progress` - export_in_progress
         * `fail_reason_contradicts_record` - fail_reason_contradicts_record
@@ -43843,6 +43979,7 @@ components:
         * `final_review_required` - final_review_required
         * `five_heinous_must_fail` - five_heinous_must_fail
         * `forbidden` - forbidden
+        * `forbidden_function` - forbidden_function
         * `foreign_node` - foreign_node
         * `foreign_realm` - foreign_realm
         * `foreign_stops_choice_required` - foreign_stops_choice_required
@@ -43911,6 +44048,7 @@ components:
         * `ladder_running` - ladder_running
         * `lifespan_not_ended` - lifespan_not_ended
         * `locked` - locked
+        * `locking_clause` - locking_clause
         * `login_locked` - login_locked
         * `malformed_csv` - malformed_csv
         * `media_not_found` - media_not_found
@@ -43924,6 +44062,7 @@ components:
         * `model_not_found` - model_not_found
         * `month_too_large` - month_too_large
         * `mortal_sin_unrepented` - mortal_sin_unrepented
+        * `multiple_statements` - multiple_statements
         * `muted` - muted
         * `name_empty` - name_empty
         * `name_taken` - name_taken
@@ -43955,6 +44094,7 @@ components:
         * `node_not_retryable` - node_not_retryable
         * `not_a_draft` - not_a_draft
         * `not_a_request` - not_a_request
+        * `not_a_select` - not_a_select
         * `not_acceptable` - not_acceptable
         * `not_alive` - not_alive
         * `not_allowed` - not_allowed
@@ -44042,6 +44182,7 @@ components:
         * `private_address` - private_address
         * `proof_required` - proof_required
         * `rate_limited` - rate_limited
+        * `read_only` - read_only
         * `realm_full` - realm_full
         * `realm_not_allowed` - realm_not_allowed
         * `realm_not_found` - realm_not_found
@@ -44119,10 +44260,12 @@ components:
         * `soup_already_taken` - soup_already_taken
         * `soup_not_taken` - soup_not_taken
         * `soup_refused` - soup_refused
+        * `star_not_allowed` - star_not_allowed
         * `statute_retired` - statute_retired
         * `system_admin_account` - system_admin_account
         * `system_admin_only` - system_admin_only
         * `system_void` - system_void
+        * `table_not_allowed` - table_not_allowed
         * `target_dispatch_disabled` - target_dispatch_disabled
         * `target_outranks_caller` - target_outranks_caller
         * `template_not_found` - template_not_found
@@ -44140,6 +44283,7 @@ components:
         * `throttled` - throttled
         * `ticket_expired` - ticket_expired
         * `ticket_invalid` - ticket_invalid
+        * `timeout` - timeout
         * `timeout_incomplete` - timeout_incomplete
         * `timeout_role_missing` - timeout_role_missing
         * `token_not_valid` - token_not_valid
@@ -44161,8 +44305,10 @@ components:
         * `unknown_civilization` - unknown_civilization
         * `unknown_clause` - unknown_clause
         * `unknown_columns` - unknown_columns
+        * `unknown_function` - unknown_function
         * `unknown_node` - unknown_node
         * `unknown_print_key` - unknown_print_key
+        * `unparseable` - unparseable
         * `unpriced_backup_model` - unpriced_backup_model
         * `unpriced_model` - unpriced_model
         * `unprocessable` - unprocessable
