@@ -33,7 +33,7 @@ const ok = (data: unknown, status = 200): Answer => ({ status, data });
 
 function meOf(rec: Recording) {
   const user = rec.login.user as Row & { id: number; username: string; display_name?: string };
-  return { id: user.id, name: user.display_name || user.username, tenant: user.tenant };
+  return { id: user.id, name: user.display_name || user.username, username: user.username, tenant: user.tenant };
 }
 
 const find = (rec: Recording, path: string, id: unknown) => rowsNow(rec, path).find((row) => String(row.id) === String(id));
@@ -52,8 +52,9 @@ function groupOf(row: Row, me: number): string {
   return row.claimed_by === me ? "mine" : "others";
 }
 
-/** The queue never sees a case still before the city god, or held, the same as the server's PENDING. */
-const inQueue = (row: Row) => isPending(row) && !row.is_archived && row.city_god_status !== "PENDING" && row.city_god_status !== "RETURNED";
+/** The queue never sees a case still before the city god, the same as the server's PENDING (`OPEN_Q` minus the city god;
+ * no `is_archived`: only a concluded case is archived, so an archived one is never pending anyway). */
+const inQueue = (row: Row) => isPending(row) && row.city_god_status !== "PENDING" && row.city_god_status !== "RETURNED";
 
 const OPEN_CROSS = ["PROPOSED", "ACTIVE"];
 
@@ -208,18 +209,21 @@ function dossier(rec: Recording, id: string): Answer {
   });
 }
 
+/** A change of claimant drops a reassign request, as the server does (`claims.py`). */
+const NO_REASSIGN = { reassign_requested_at: null, reassign_requested_by: null, reassign_requested_by_name: null, reassign_reason: "" };
+
 function claimPatch(action: string, body: Row, me: ReturnType<typeof meOf>): Row | null {
   switch (action) {
     case "claim":
-      return { claimed_by: me.id, claimed_by_name: me.name, claimed_at: now(), deferred_at: null, defer_reason: "" };
+      return { claimed_by: me.id, claimed_by_name: me.name, claimed_at: now(), deferred_at: null, defer_reason: "", ...NO_REASSIGN };
     case "release":
-      return { claimed_by: null, claimed_by_name: null, claimed_at: null };
+      return { claimed_by: null, claimed_by_name: null, claimed_at: null, ...NO_REASSIGN };
     case "defer":
       return { deferred_at: now(), deferred_by: me.id, deferred_by_name: me.name, defer_reason: String(body.reason ?? "") };
     case "undefer":
       return { deferred_at: null, deferred_by: null, deferred_by_name: null, defer_reason: "" };
     case "reassign":
-      return { claimed_by: body.to, claimed_by_name: null, claimed_at: now() };
+      return { claimed_by: body.to, claimed_by_name: null, claimed_at: now(), ...NO_REASSIGN };
     default:
       return null;
   }
@@ -227,7 +231,13 @@ function claimPatch(action: string, body: Row, me: ReturnType<typeof meOf>): Row
 
 function logEvent(rec: Recording, soul: unknown, soulName: unknown, type: string, payload: Row): void {
   const template = rowsNow(rec, "/events/").find((e) => e.event_type === type) ?? rowsNow(rec, "/events/")[0] ?? {};
-  addRow("/events/", { ...template, id: newId(), soul, soul_name: soulName, event_type: type, payload, created_at: now(), timestamp: now() });
+  const me = meOf(rec);
+  const role = (rec.login.user as Row).role;
+  // The rows carry `create_time` (what /events and the soul's timeline sort and show), and the officer who did it.
+  addRow("/events/", {
+    ...template, id: newId(), soul, soul_name: soulName, event_type: type, payload, created_at: now(), timestamp: now(), create_time: now(),
+    actor: `${me.username} (${role})`, actor_display_name: me.name, actor_role: role,
+  });
 }
 
 /** A new approval flow for a case just concluded: a recorded flow of the same civilization, restarted. */
@@ -410,9 +420,12 @@ function approveNode(rec: Recording, id: string, body: Row): Answer {
 
 // ── Simple status moves ─────────────────────────────────────────────────────────────────────────
 
+const decidedBy = (me: ReturnType<typeof meOf>) => ({ decided_by: me.id, decided_by_name: me.username, decided_at: now() });
+
 const STATUS_MOVES: [RegExp, string, (body: Row, me: ReturnType<typeof meOf>) => Row][] = [
-  [/^\/dispatch\/records\/([^/]+)\/approve\/$/, "/dispatch/records/", () => ({ status: "APPROVED" })],
-  [/^\/dispatch\/records\/([^/]+)\/reject\/$/, "/dispatch/records/", (b) => ({ status: "REJECTED", rejection_reason: b.reason ?? "" })],
+  // `decided_by_name` is the username (`DispatchRecordSerializer`): the detail page's 「经办」 line reads it.
+  [/^\/dispatch\/records\/([^/]+)\/approve\/$/, "/dispatch/records/", (_b, me) => ({ status: "APPROVED", ...decidedBy(me) })],
+  [/^\/dispatch\/records\/([^/]+)\/reject\/$/, "/dispatch/records/", (b, me) => ({ status: "REJECTED", rejection_reason: b.reason ?? "", ...decidedBy(me) })],
   [/^\/dispatch\/records\/([^/]+)\/execute\/$/, "/dispatch/records/", () => ({ status: "EXECUTED", executed_at: now() })],
   [/^\/dispatch\/records\/([^/]+)\/cancel\/$/, "/dispatch/records/", () => ({ status: "CANCELLED" })],
   [/^\/dispatch\/records\/([^/]+)\/submit\/$/, "/dispatch/records/", () => ({ status: "PROPOSED", proposed_at: now() })],
@@ -675,6 +688,36 @@ function soulDies(rec: Recording, path: string): Answer | null {
   return detail(rec, "/souls/", m[1]);
 }
 
+/** 挪站 (`POST /souls/{id}/station/`, apps/souls/stations.py `arrive`): the station, and its DIYU_STATION_CHANGED with
+ * `from` / `to` / `via`, plus the officer's `reason` when given (a move back carries one: the screen asks for it). */
+function soulStation(rec: Recording, path: string, body: Row): Answer | null {
+  const m = /^\/souls\/([^/]+)\/station\/$/.exec(path);
+  if (!m) return null;
+  const soul = find(rec, "/souls/", m[1]);
+  if (!soul) return null;
+  const from = String(soul.diyu_station ?? "");
+  const to = String(body.station ?? "");
+  if (to && to !== from) {
+    patchRow("/souls/", m[1], { diyu_station: to });
+    const reason = String(body.reason ?? "").trim();
+    logEvent(rec, m[1], soul.name, "DIYU_STATION_CHANGED", { from, to, via: "officer", ...(reason ? { reason } : {}) });
+  }
+  return detail(rec, "/souls/", m[1]);
+}
+
+/** 迁移文明 (`POST /users/{id}/migrate-civilization/`): the hall (a code) and the civilization move; a hall-less admin
+ * keeps no hall. The new `tenant` is the hall's own row, in the shape the row already had. */
+function migrateCivilization(rec: Recording, path: string, body: Row): Answer | null {
+  const m = /^\/users\/([^/]+)\/migrate-civilization\/$/.exec(path);
+  if (!m) return null;
+  const hall = body.tenant ? rowsNow(rec, "/tenants/").find((t) => t.code === body.tenant) : undefined;
+  const user = find(rec, "/users/", m[1]);
+  const old = (user?.tenant ?? null) as Row | null;
+  const tenant = hall && old ? Object.fromEntries(Object.keys(old).map((k) => [k, hall[k] ?? old[k]])) : (hall ?? null);
+  patchRow("/users/", m[1], { tenant: tenant && { ...tenant, civilization: body.civilization }, civilization: body.civilization });
+  return detail(rec, "/users/", m[1]);
+}
+
 /**
  * `GET /judgment/next/`, `previous/`: the triage queue's cursor. The server counts live rows, so a recording of it can
  * never tick down: same order and same counting here (`_pending_queue`, `_cursor_order`, backend/apps/judgment/views.py).
@@ -789,7 +832,9 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
     roles(rec, path, body) ??
     users(rec, path, body) ??
     dispatchCreate(rec, path, body) ??
-    soulDies(rec, path)
+    soulDies(rec, path) ??
+    soulStation(rec, path, body) ??
+    migrateCivilization(rec, path, body)
   );
 }
 
@@ -807,6 +852,97 @@ function recordedLike(rec: Recording, pattern: RegExp, query: URLSearchParams, n
     if (doc.s !== 200) continue;
     const recorded = new URLSearchParams(q);
     if (names.every((n) => recorded.get(n) === query.get(n))) return ok(doc.b);
+  }
+  return null;
+}
+
+// ── The officer app's reads (backend/apps/officer_app), which the web reads too ───────────────────────────────────
+
+const TODO_FIELDS: Record<string, string> = {
+  approval: "approvals", reassignment: "reassignments", cooldown: "cooldowns", rebirth: "rebirths", letter: "letters",
+  sentence_change: "sentence_changes", unassigned_letter: "unassigned_letters", pick: "pick_nodes", city_god: "city_god", wangsi: "wangsi",
+};
+const TODO_PAGE = 10;
+type TodoGroup = { count: number; items: Row[] };
+const todoItem = (kind: string, id: unknown, title: unknown, createdAt: unknown, extra: Row = {}): Row => ({
+  kind, id: String(id), title: title ?? "", created_at: createdAt ?? null, target: { kind, id: String(id) }, ...extra,
+});
+
+/**
+ * 「待我处理」 whole (todo.py `build`, every row of every group): approvals and rebirths from the flows as they stand
+ * (in the demo every open flow is this account's), letters from the inbox, the rest as recorded — the city god's and
+ * 枉死城's rows only while their case still waits there.
+ */
+function todoNow(rec: Recording): Record<string, Row[]> {
+  const recorded = read(rec, "/officer-app/todo/", qs()).data as Record<string, TodoGroup | undefined> | null;
+  const groups: Record<string, Row[]> = Object.fromEntries(Object.values(TODO_FIELDS).map((f) => [f, [...(recorded?.[f]?.items ?? [])]]));
+  const flows = rowsNow(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS")
+    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+  groups.approvals = flows.filter((w) => w.case_type !== "REBIRTH_APPLICATION")
+    .map((w) => todoItem("approval", w.id, w.workflow_name, w.created_at, { title_en: w.workflow_name_en ?? "" }));
+  // A rebirth row is named by its application, which names its flow (first review or appeal).
+  const applications = rowsNow(rec, "/soul-accounts/rebirth-applications/");
+  groups.rebirths = flows.filter((w) => w.case_type === "REBIRTH_APPLICATION").flatMap((w) => {
+    const app = applications.find((a) => a.workflow === w.id || a.appeal_workflow === w.id);
+    return app ? [todoItem("rebirth", app.id, w.soul_name, w.created_at, { soul_code: app.soul_code, is_appeal: !!w.is_appeal })] : [];
+  });
+  const caseNow = (item: Row) => find(rec, "/judgment/", (item.target as Row | undefined)?.id ?? item.id);
+  groups.city_god = groups.city_god.filter((item) => ["PENDING", "RETURNED", undefined].includes(caseNow(item)?.city_god_status as string | undefined));
+  groups.wangsi = groups.wangsi.filter((item) => { const c = caseNow(item); return !c || (c.grievance_status === "FILED" && isPending(c)); });
+  return groups;
+}
+
+function officerAppRead(rec: Recording, path: string, query: URLSearchParams): Answer | null {
+  if (path === "/officer-app/todo/") {
+    const groups = todoNow(rec);
+    const counts = letterCounts(rec);
+    const group = (field: string, offset = 0): TodoGroup =>
+      field in counts ? counts[field as keyof typeof counts] : { count: groups[field].length, items: groups[field].slice(offset, offset + TODO_PAGE) };
+    // `?kind=` (with `offset`): that one group, `{count, items}`, from item `offset` on (views.py `TodoView`).
+    const kind = query.get("kind");
+    if (kind) return TODO_FIELDS[kind] ? ok(group(TODO_FIELDS[kind], Math.max(0, Number(query.get("offset")) || 0))) : ok({ count: 0, items: [] });
+    return ok(Object.fromEntries(Object.values(TODO_FIELDS).map((f) => [f, group(f)])));
+  }
+  // 我的数 (stats.py): only this account's own. The rows carry no `concluded_by`, so a case is mine by its claimant
+  // (`conclude` here keeps it as the one who decided).
+  if (path === "/officer-app/stats/") {
+    const me = meOf(rec).id;
+    const cases = rowsNow(rec, "/judgment/");
+    const concluded = cases.filter((r) => r.verdict != null && (r.concluded_by ?? r.claimed_by) === me);
+    const month = new Date();
+    const monthStart = new Date(month.getFullYear(), month.getMonth(), 1).getTime();
+    const appeals = rowsNow(rec, "/judgment/appeals/").filter((a) => a.reviewer === me);
+    return ok({
+      concluded_this_month: concluded.filter((r) => typeof r.concluded_at === "string" && Date.parse(r.concluded_at) >= monthStart).length,
+      concluded_total: concluded.length,
+      open_claims: cases.filter((r) => isPending(r) && r.claimed_by === me).length,
+      // OVERTURNED: what the demo's own decide writes for 改判.
+      appeals_reviewed: appeals.filter((a) => ["UPHELD", "AMENDED", "OVERTURNED"].includes(String(a.status))).length,
+      appeals_in_review: appeals.filter((a) => a.status === "IN_REVIEW").length,
+    });
+  }
+  // 加签候选人: recorded once without `q`; the server's `q` is "username or display name contains".
+  if (path === "/officer-app/signer-candidates/" && query.get("q")) {
+    const words = String(query.get("q")).toLowerCase();
+    const all = read(rec, path, qs()).data;
+    return ok((Array.isArray(all) ? (all as Row[]) : []).filter((p) => `${p.username} ${p.name}`.toLowerCase().includes(words)));
+  }
+  // One waiting item: recorded for what the recording had, made up from the flow for what the visitor made.
+  const item = /^\/officer-app\/items\/(approval|rebirth)\/([^/]+)\/$/.exec(path);
+  if (item) {
+    const answer = read(rec, path, query);
+    if (answer.status === 200 && !Array.isArray(answer.data)) return answer;
+    const [, kind, id] = item;
+    const app = kind === "rebirth" ? find(rec, "/soul-accounts/rebirth-applications/", id) : undefined;
+    const flow = find(rec, "/workflows/", kind === "rebirth" ? (app?.appeal_workflow ?? app?.workflow) : id);
+    if (!flow) return { status: 404, data: { type: "about:blank", title: "Not Found", status: 404, code: "not_found", detail: "Not found." } };
+    const open = flow.status === "IN_PROGRESS";
+    return ok({
+      kind, id, title: kind === "rebirth" ? flow.soul_name : flow.workflow_name, title_en: kind === "rebirth" ? "" : (flow.workflow_name_en ?? ""),
+      workflow_id: String(flow.id), created_at: flow.created_at, facts: {},
+      ...(app ? { soul_code: app.soul_code, is_appeal: !!flow.is_appeal } : {}),
+      actionable: open, state: open ? "actionable" : "already_handled", handled_by: null, handled_at: null, cosigners: [], waiting_on_cosigner: null,
+    });
   }
   return null;
 }
@@ -838,19 +974,15 @@ export function derived(rec: Recording, path: string, query: URLSearchParams): A
   if (dossierOf) return dossier(rec, dossierOf[1]);
   const inbox = inboxRead(rec, path, query);
   if (inbox) return inbox;
-  // 待办的件数跟着这个世界走:录制时的数字是「这个账号本人待办」,而演示里这些事都归他。
-  if (path === "/officer-app/todo/") {
-    const todo = read(rec, path, query).data as Record<string, { count: number; items: unknown[] }>;
-    const flows = rowsNow(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS");
-    const count = (n: number) => ({ count: n, items: [] });
-    return ok({
-      ...todo,
-      approvals: count(flows.filter((w) => w.case_type !== "REBIRTH_APPLICATION").length),
-      rebirths: count(flows.filter((w) => w.case_type === "REBIRTH_APPLICATION").length),
-      ...letterCounts(rec),
-    });
+  const officerApp = officerAppRead(rec, path, query);
+  if (officerApp) return officerApp;
+  const openWork = /^\/users\/[^/]+\/migrate-civilization\/open-work\/$/.exec(path);
+  if (openWork) {
+    // A row the visitor made was never asked about: it holds nothing.
+    const answer = read(rec, path, query);
+    return answer.status === 200 && !Array.isArray(answer.data) ? answer : ok({ claimed: 0, approvals: 0, dispatch: 0, cross: 0, kinds: {} });
   }
-  if (path === "/judgment/" && ["group", "has_verdict", "verdict_null", "source", "civilization"].some((k) => query.has(k))) {
+  if (path === "/judgment/" && ["group", "has_verdict", "verdict_null", "source", "civilization", "reassign_requested"].some((k) => query.has(k))) {
     const me = meOf(rec).id;
     const group = query.get("group");
     const hasVerdict = query.get("has_verdict");
@@ -859,6 +991,9 @@ export function derived(rec: Recording, path: string, query: URLSearchParams): A
       if (group && (!inQueue(row) || groupOf(row, me) !== group)) return false;
       if (hasVerdict === "true" && row.verdict == null) return false;
       if ((hasVerdict === "false" || query.get("verdict_null") === "true") && row.verdict != null) return false;
+      // `filter_reassign_requested`: still pending (`PENDING`, the queue's own set) and asked for.
+      const asked = query.get("reassign_requested");
+      if (asked && (!inQueue(row) || (row.reassign_requested_at != null) !== (asked === "true"))) return false;
       return true;
     });
     return listOf(rows, query, {});

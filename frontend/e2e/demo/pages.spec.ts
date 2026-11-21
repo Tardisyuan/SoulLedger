@@ -3,7 +3,7 @@ import { BROKEN, clean, enter, enterOnce, recording, rows, watch, type Role } fr
 
 const STATIC = `/dashboard /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins /audit/permissions
   /audit/sessions /audit/stats /city-god-cases /city-gods /corpus /cross-judgments /death-sync /death-sync/api-keys /death-sync/tudi-gods
-  /death-sync/webhooks /desk /dispatch /dispatch/propose /disposition /events /halls /judgment /judgment/appeals /judgment/capture-due
+  /death-sync/webhooks /desk /dispatch /dispatch/propose /disposition /events /halls /judgment /judgment/appeals /judgment/capture-due /judgment/wangsi
   /judgment/queue /ledger /menus /menus/buttons /moderation /notifications /organizations /permissions /profile /realms
   /rebirth-applications /rebirths /recycle-bin /scheduler /sentence-plans /sentence-requests /social /social/follows /soul-credentials
   /soul-inbox /souls /tenants /users /welcome /workflow`.split(/\s+/);

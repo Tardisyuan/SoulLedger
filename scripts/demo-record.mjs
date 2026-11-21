@@ -35,10 +35,12 @@ const API = `${API_ORIGIN}/api/v1`;
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../frontend/demo/data");
 const PASSWORD = "demo-only-not-a-secret";
 const ROLES = { admin: "demo_admin", judge: "demo_judge", judge_eu: "demo_judge_eu", judge_eg: "demo_judge_eg", judge_gr: "demo_judge_gr", moderator: "demo_moderator" };
-const STATIC_ROUTES = `/dashboard /dashboard/annual /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins
+// `/dashboard?tab=more`: the to-do strip sits under 「更多」, an aria-pressed toggle the walk's `[role="tab"]` clicks
+// never press, so `/officer-app/todo/` and the strip's other reads were never asked (found 2026-11-21).
+const STATIC_ROUTES = `/dashboard /dashboard?tab=more /dashboard/annual /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins
   /audit/permissions /audit/sessions /audit/stats /city-god-cases /city-gods /corpus /cross-judgments /death-sync
   /death-sync/api-keys /death-sync/tudi-gods /death-sync/webhooks /desk /desk/overview /dispatch /dispatch/propose /disposition /events /halls
-  /judgment /judgment/appeals /judgment/capture-due /judgment/queue /ledger /menus /menus/buttons /moderation
+  /judgment /judgment/appeals /judgment/capture-due /judgment/queue /judgment/wangsi /ledger /menus /menus/buttons /moderation
   /notifications /organizations /permissions /profile /realms /rebirth-applications /rebirths /recycle-bin /scheduler
   /sentence-plans /sentence-requests /social /social/follows /soul-credentials /soul-inbox /souls /tenants /users /welcome
   /workflow`.split(/\s+/);
@@ -283,6 +285,17 @@ async function sweepWithParams(rec, access, login) {
   const codes = [...new Set([...TENANT_CODES, ...tenants.map((t) => t.code).filter(Boolean)])];
   for (const code of codes) await getAll(rec, access, `${rec.api}/dispatch/records/realm-options/?target_tenant_code=${code}`);
   for (const civ of CIVILIZATIONS) await getAll(rec, access, `${rec.api}/workflows/case-types/?civilization=${civ}`);
+  // The officer app's reads the web makes too (the schema sweep skips `/officer-app/`): the to-do and its groups,
+  // 我的数, the co-signer candidates, and each waiting flow's item (a rebirth one is named by its application).
+  // The demo derives the to-do from the rows (`officerAppRead` in flows.ts); recorded, it is what that is checked against.
+  await getAll(rec, access, `${rec.api}/officer-app/todo/`);
+  for (const kind of ["approval", "rebirth", "cooldown", "city_god", "wangsi"]) await getAll(rec, access, `${rec.api}/officer-app/todo/?kind=${kind}&offset=0`);
+  await getAll(rec, access, `${rec.api}/officer-app/stats/`);
+  await getAll(rec, access, `${rec.api}/officer-app/signer-candidates/`);
+  for (const flow of rowsOf(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION")) {
+    await getAll(rec, access, `${rec.api}/officer-app/items/approval/${flow.id}/`);
+  }
+  for (const app of rowsOf(rec, "/soul-accounts/rebirth-applications/")) await getAll(rec, access, `${rec.api}/officer-app/items/rebirth/${app.id}/`);
   for (const id of tenantIds) await getAll(rec, access, `${rec.api}/judgment/handover/officers/?tenant=${id}`);
   // 案卷台 (/desk) and 总簿 (/desk/overview): the counts by source and by civilization, and each group by source. The demo
   // derives these from the rows (`queueCounts` in flows.ts); recorded, they are what that derivation is checked against.

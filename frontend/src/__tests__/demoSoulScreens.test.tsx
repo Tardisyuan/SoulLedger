@@ -53,6 +53,22 @@ describe("the demo's soul screens", () => {
     expect(document.querySelectorAll('[data-route-step="here"]')).toHaveLength(1);
   });
 
+  it("书信: grouped by side under 「我」/「殿司」 heads (第六十四批), not one bubble a letter, with whose turn it is", () => {
+    const view = soulView(REC, "cn", tZh);
+    render(
+      <I18nProvider>
+        <SoulScreenBody screen="letters" view={view} civ="cn" />
+      </I18nProvider>
+    );
+    const groups = [...document.querySelectorAll("[data-letter-group]")].map((g) => g.getAttribute("data-letter-group"));
+    expect(groups).toEqual(["me", "hall"]);
+    expect(document.querySelectorAll("[data-letter-day]").length).toBeGreaterThan(0);
+    expect(screen.getByText(tZh("soul_app.chat.side.me"))).toBeInTheDocument();
+    // The hall wrote last: it is the soul's turn, and the hall is not said to be awaited.
+    expect(screen.getByTestId("demo-soul-letters-state")).toHaveTextContent(tZh("soul_app.chat.state.awaiting_me"));
+    expect(screen.queryByText(tZh("soul_app.chat.state.awaiting_hall"))).toBeNull();
+  });
+
   it("the lock screen's live progress says the soul and the step", () => {
     renderScreen("lock");
     expect(screen.getByText(tZh("live.headline", { soul: "Tristan", step: tZh("map.europe.terraces") }))).toBeInTheDocument();

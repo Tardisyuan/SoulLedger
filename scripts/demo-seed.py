@@ -105,6 +105,8 @@ OFFICERS = {
 #   citygod      dead, still before the city god
 #   queue        dead, sent on, waiting in the claim queue
 #   claimed      as queue, in the demo judge's own hands
+#   held         died before the fated day (枉死), sent on: in the queue, held until that day (「候至某日」)
+#   wangsi       died before the fated day, still before the city god, a grievance filed (枉死申诉, `seed_wangsi`)
 #   flow         concluded, the approval flow half walked
 #   failed       concluded FAILED, flow walked, sentence being served
 #   passed       concluded PASSED, flow walked, waiting to be reborn
@@ -124,6 +126,7 @@ SOULS = {
         ("周德海", 70, 2, "queue"), ("林秀英", 55, 12, "queue"), ("陈建国", 12, 61, "queue"), ("王桂兰", 48, 9, "claimed"), ("赵志强", 18, 52, "claimed"),
         ("孙玉梅", 40, 35, "flow"), ("马国栋", 30, 44, "flow"), ("胡春花", 45, 20, "citygod"), ("郑立民", 58, 6, "citygod"),
         ("吴淑芬", 52, 30, "flow"), ("黄德福", 36, 41, "flow"),
+        ("刘秀兰", 50, 20, "held"), ("何志远", 46, 18, "wangsi"),
     ],
     "EU_HEAVEN_HELL": [
         ("Tristan", 62, 30, "purgatory"), ("Isolde", 64, 28, "passed"), ("Dido", 40, 55, "failed"), ("Francesca da Rimini", 35, 45, "failed"),
@@ -314,6 +317,8 @@ def make_soul(tenant, name, merit, demerit, i, *, fate=""):
     fated = {}
     if fate == "due":  # 阳寿已到,还没发牒:`/judgment/capture-due` 列的就是这些。
         fated = {"fated_death_year": 2025, "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
+    elif fate in ("held", "wangsi"):  # 枉死:the fated day is still ahead, so the death is untimely and held to it.
+        fated = {"fated_death_year": random.randint(2048, 2066), "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
     elif fate == "alive" and not historic:
         fated = {"fated_death_year": random.randint(2031, 2068), "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
     if tenant.code == "GR_HADES":
@@ -475,7 +480,14 @@ def carry_out(soul, tenant, fate, judges, stats):
     soul.refresh_from_db()
     if case is None:
         case = Judgment.all_objects.filter(soul=soul).first()
-    if fate == "citygod":
+    if fate in ("citygod", "wangsi"):
+        return
+    if fate == "held":
+        # Sent on as `sent_on` does, but `held_until` stays: the queue shows it held, 「候至某日」 (demo-seed.py `sent_on`
+        # clears it on purpose for every other case).
+        Judgment.all_objects.filter(pk=case.pk, city_god_status=CityGodStatus.PENDING).update(city_god_status=CityGodStatus.SENT_ON)
+        case.refresh_from_db()
+        cite_grounds(case, soul, None)
         return
     sent_on(case)
     judge = judges[tenant.code]
@@ -750,14 +762,57 @@ def seed_appeals():
 
 
 def seed_queue_variety(tenants):
-    """Somebody else's claim and a deferred case, so the queue's other two groups are not empty."""
+    """Somebody else's claim and a deferred case, so the queue's other two groups are not empty; the other claim asks
+    to be reassigned (the admin's 「改派请求」)."""
     cn = tenants["CN_DIYU"]
-    open_cases = list(Judgment.all_objects.filter(tenant=cn, verdict__isnull=True, claimed_by__isnull=True, city_god_status=CityGodStatus.SENT_ON))
+    open_cases = list(Judgment.all_objects.filter(tenant=cn, verdict__isnull=True, claimed_by__isnull=True, city_god_status=CityGodStatus.SENT_ON, held_until__isnull=True))
     if len(open_cases) >= 3:
-        claims.claim(open_cases[0].pk, User.objects.get(username="zhong_kui"))
+        zhong_kui = User.objects.get(username="zhong_kui")
+        claims.claim(open_cases[0].pk, zhong_kui)
+        claims.request_reassign(Judgment.all_objects.get(pk=open_cases[0].pk), zhong_kui, "亡者是我同乡,依例回避,请改派。")
         demo = User.objects.get(username="demo_judge")
         claims.claim(open_cases[1].pk, demo)
         claims.defer(open_cases[1].pk, demo, "待阳间证人到案", may_override=False)
+
+
+def seed_wangsi(tenants, judge):
+    """枉死申诉:the demo judge sits under the hall's default city god, and the 枉死 case before it has a grievance filed
+    (the officer writes it down for the soul, `wangsi.file_grievance`). /judgment/wangsi lists it."""
+    from apps.judgment import wangsi
+    from apps.judgment.models import CityGodOfficer
+
+    god = CityGod.all_objects.filter(tenant=tenants["CN_DIYU"], is_default=True).first()
+    if god is not None:
+        CityGodOfficer.objects.get_or_create(citygod=god, user=judge)
+    for case in Judgment.all_objects.filter(soul__name="何志远", untimely=True):
+        try:
+            wangsi.file_grievance(case.pk, judge, "阳寿未尽,为恶犬所伤,失足落水而亡,非其罪也。")
+        except Exception as exc:
+            print("  wangsi stuck:", type(exc).__name__, str(exc)[:160])
+    print("wangsi grievances:", Judgment.all_objects.filter(grievance_status="FILED").count())
+
+
+def seed_rebirth_states(admin):
+    """转生申请的三种流程状态各一份(第六十一批 四):异常处理中、复议中、已终止;已终止那份起了冷却,灵魂随即申请缩短
+    (`can_reject`)。只动地府里不在灵魂入口(SOUL_VIEW)上的那几位,入口那位的转生页照旧。"""
+    from apps.soul_accounts.models import RebirthApplication
+
+    shown = {name for names in SOUL_VIEW.values() for name in names}
+    rows = list(RebirthApplication.objects.filter(status="UNDER_REVIEW", soul__civilization="CHINESE")
+                .exclude(soul__name__in=shown).select_related("workflow", "soul").order_by("created_at")[:3])
+    if len(rows) < 3:
+        print("  rebirth states stuck: only", len(rows), "applications under review")
+        return
+    for app, status in zip(rows[:2], ("EXCEPTION", "APPEAL"), strict=True):
+        app.workflow.status = status
+        app.workflow.save(update_fields=["status"])  # post_save → `rebirth.sync_from_workflow`
+    ended = rows[2]
+    ended.workflow.terminate(admin, "申请人另有未结之案,先行终止。")
+    try:
+        rebirth.request_cooldown_shortening(accounts.current_account_of(ended.soul), "家中老母病重,请求早日转生。")
+    except Exception as exc:
+        print("  cooldown shortening stuck:", type(exc).__name__, str(exc)[:160])
+    print("rebirth states:", {a.soul.name: RebirthApplication.objects.get(pk=a.pk).status for a in rows})
 
 
 def seed_cross_judgments(tenants):
@@ -1062,6 +1117,8 @@ def main():
     seed_social(tenants)
     seed_death_sync(tenants)
     seed_accounts(tenants)
+    seed_rebirth_states(demo[0])
+    seed_wangsi(tenants, demo[1])
     seed_soul_circle()
     seed_soul_logins()
     seed_appeals()

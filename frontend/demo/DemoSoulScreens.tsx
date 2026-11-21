@@ -6,8 +6,11 @@
  * `data/soul_<civ>.<lang>.json`) and lay it out as the app does; they are not the app's code, which is React Native.
  * Where the place on the road comes from is the app's own reading (`soulRoute`, packages/core), so the two agree.
  */
+import { useState } from "react";
 import type { MeProfile, MeRebirthApplicationList, MeSentencePlan } from "@soulledger/core/api/soul";
 import type { PaginatedSoulPosts } from "@soulledger/core/api/soul-social";
+import { formatListDate, hhmm } from "@soulledger/core/domain/dates";
+import { groupLetters, letterState, type LetterFacts } from "@soulledger/core/domain/letters";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { liveContent, soulRoute, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
@@ -121,11 +124,23 @@ function Route({ route }: { route: SoulRoute }) {
   );
 }
 
+type Letter = (typeof letters.letters)[keyof typeof letters.letters][number];
+
+/**
+ * 第六十四批, as the soul app's `conversation.tsx` draws a hall room: one column, a day line between days, the letters
+ * one side wrote in a row as one group under one head (「我」 / 「殿司」; the soul never sees officers' names), the soul's
+ * own groups on the card2 panel; under it, whose turn it is (`letterState`).
+ */
 function Letters({ civ }: { civ: SealCiv }) {
-  const { t, locale, formatDateTime } = useI18n();
+  const { t, locale } = useI18n();
   const lang = locale === "zh-Hans" ? "zh" : "en";
+  const [now] = useState(() => Date.now());
   const thread = letters.letters[civ];
   const hall = t(`plaque.realm.${civ}`);
+  const factsOf = (m: Letter): LetterFacts => ({ ts: now - m.minutes_ago * 60000, side: m.from === "me" ? "soul" : "hall", author: m.from });
+  const rows = groupLetters(thread, factsOf);
+  const last = thread[thread.length - 1];
+  const state = letterState("open", last ? factsOf(last).side : undefined);
   return (
     <div data-testid="demo-soul-letters">
       <header className={SECTION}>
@@ -133,25 +148,46 @@ function Letters({ civ }: { civ: SealCiv }) {
         <h2 className="m-0 mt-1 font-title text-lg">{t("soul_app.chat.hall.title", { hall })}</h2>
         <p className="m-0 mt-1 text-xs text-[oklch(var(--color-ink-muted))]">{t("soul_app.chat.hall.subtitle")}</p>
       </header>
-      <ol className="m-0 flex list-none flex-col gap-3 p-4">
-        {thread.map((m, i) => (
-          <li key={i} className={m.from === "me" ? "self-end" : "self-start"}>
-            <p
-              className={`m-0 max-w-[18rem] rounded-panel border border-[oklch(var(--color-line))] px-3 py-2 text-sm ${
-                m.from === "me" ? "bg-[oklch(var(--color-surface-2))]" : "bg-[oklch(var(--color-surface-1))]"
-              }`}
-            >
-              {m[lang]}
-            </p>
-            <p className={`m-0 mt-1 text-2xs text-[oklch(var(--color-ink-subtle))] ${m.from === "me" ? "text-right" : ""}`}>
-              {formatDateTime(new Date(Date.now() - m.minutes_ago * 60000).toISOString())}
-            </p>
-          </li>
-        ))}
-      </ol>
+      <div className="flex flex-col gap-6 p-4">
+        {rows.map((row) => {
+          if (row.kind === "day") {
+            const [y, mo, d] = row.day.split("-").map(Number);
+            return (
+              <div key={row.key} role="separator" data-letter-day={row.day} className="flex items-center gap-2 text-2xs text-[oklch(var(--color-ink-subtle))]">
+                <span>{formatListDate(new Date(y, mo - 1, d), locale, { time: false })}</span>
+                <span aria-hidden="true" className="h-px flex-1 bg-[oklch(var(--color-line))]" />
+              </div>
+            );
+          }
+          const own = row.side === "soul";
+          return (
+            <section key={row.key} data-letter-group={own ? "me" : "hall"} className={own ? "rounded-panel bg-[oklch(var(--color-surface-2))] p-3" : ""}>
+              <p className="m-0 flex items-baseline justify-between gap-3 text-sm">
+                <span className="font-medium text-[oklch(var(--color-ink))]">{t(own ? "soul_app.chat.side.me" : "soul_app.chat.side.hall")}</span>
+                <time className={TIME}>{hhmm(new Date(row.ts))}</time>
+              </p>
+              <ol className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
+                {row.letters.map((l, i) => (
+                  <li key={i}>
+                    {l.stamp && <p className={`m-0 mb-2 text-right ${TIME}`}>{hhmm(new Date(l.ts))}</p>}
+                    <p className="m-0 font-serif text-md whitespace-pre-wrap break-words text-[oklch(var(--color-ink))]">{l.item[lang]}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          );
+        })}
+        {state && (
+          <p data-testid="demo-soul-letters-state" role="status" className="m-0 text-sm text-[oklch(var(--color-ink-muted))]">
+            {t(state === "awaiting_hall" ? "soul_app.chat.state.awaiting_hall" : "soul_app.chat.state.awaiting_me")}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
+
+const TIME = "text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]";
 
 function Circle({ view }: { view: SoulView }) {
   const { t, formatDateTime } = useI18n();
