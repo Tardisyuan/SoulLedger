@@ -586,3 +586,90 @@ def test_two_relays_at_once_deliver_each_message_once_and_fail_none(monkeypatch)
         assert {_soul().all_objects.get(pk=DispatchRecord.all_objects.get(pk=pk).soul_id).tenant_id
                 for pk in records} == {tgt.pk}, where
         _ownership()
+
+
+@sharded
+@NEEDS_ROW_LOCKS
+@pytest.mark.django_db(databases="__all__", transaction=True)
+def test_a_message_one_relay_saw_refused_is_not_applied_by_the_other(monkeypatch):
+    """Real threads on real PostgreSQL (state-machine audit 2026-11-20 item 14). A refusal rolls back the apply and its
+    inbox row. One relay is refused (the target closed at that moment); before it closes the source, the other relay
+    delivers the same message and the target, open again, takes it. The first closes REFUSED and compensates, the
+    second finds the row closed: the soul arrived on the target and was put back on the source -- primary on both.
+    The refusal is now written in the target's inbox, so the second reads it and applies nothing."""
+    from contextlib import contextmanager
+
+    from apps.core.shard_reads import CONTROL_ALIAS, read_context
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+    from apps.dispatch.transfer import EXECUTE
+    from apps.tenants import shard_saga
+    from apps.tenants.models import ShardInbox, ShardMessageState
+    from apps.tenants.shard_saga import Refused, master_of
+
+    seed = random.randrange(10**6)
+    w = _world(seed)
+    halls = _halls()
+    _assign(*CIVS)
+    where = f"seed {seed} {w['src']}->{w['tgt']} cut {w['cut']}"
+    print(f"refused then applied: {where}")
+    monkeypatch.setattr(shard_saga, "_kick", lambda: None)
+    src = halls[w["src"]]
+    apply, done, refused = shard_saga._HANDLERS[EXECUTE]
+
+    def refusing(payload):
+        if threading.current_thread().name == "refuser":
+            raise Refused("closed for dispatch at this moment")
+        return apply(payload)
+    monkeypatch.setitem(shard_saga._HANDLERS, EXECUTE, (refusing, done, refused))
+    at_source, applied, closed = threading.Event(), threading.Event(), threading.Event()
+    real_on_master = shard_saga.on_master
+
+    @contextmanager
+    def gated(hall):
+        """Each relay's source step (step 3): the refuser waits there for the applier's target step to be over, the
+        applier waits for the refuser to have closed the row."""
+        name, source = threading.current_thread().name, hall.pk == src.pk
+        if source and name == "refuser":
+            at_source.set()
+            applied.wait(10)
+        if source and name == "applier":
+            applied.set()
+            closed.wait(10)
+        with real_on_master(hall) as alias:
+            yield alias
+        if source and name == "refuser":
+            closed.set()
+    monkeypatch.setattr(shard_saga, "on_master", gated)
+
+    with cut(), read_context(CONTROL_ALIAS):
+        soul, record = _approved(w, halls)
+        with transaction.atomic(using=master_of(src)):
+            _execute(record.pk)
+        [(_, msg)] = _messages().values()
+        errors = []
+
+        def relay():
+            try:
+                with read_context(CONTROL_ALIAS):
+                    shard_saga.deliver(msg)
+            except Exception as e:  # noqa: BLE001 -- reported below
+                errors.append(f"{threading.current_thread().name}: {e!r}")
+            finally:
+                connections.close_all()
+
+        refuser = threading.Thread(target=relay, name="refuser")
+        refuser.start()
+        assert at_source.wait(30), f"{where}: the refuser never reached the source step"
+        applier = threading.Thread(target=relay, name="applier")
+        applier.start()
+        for t in (refuser, applier):
+            t.join(60)
+        assert not refuser.is_alive() and not applier.is_alive(), f"{where}: a relay hung"
+        assert errors == [], f"{where}: {errors}"
+        [(_, msg)] = _messages().values()
+        assert msg.state == ShardMessageState.REFUSED, f"{where}: {msg.state}"
+        answer = ShardInbox._base_manager.using(master_of(msg.target_tenant)).get(message_id=msg.message_id)
+        assert answer.refused, f"{where}: the target applied a message the source closed as refused"
+        assert DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.APPROVED, where
+        assert _soul().all_objects.get(pk=soul.pk).tenant_id == src.pk, where
+        _ownership()

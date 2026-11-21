@@ -93,19 +93,13 @@ def _deliver_locked(delivery_id):
     webhook = delivery.webhook
     ceiling = attempt_ceiling(webhook)
     if delivery.attempt >= ceiling:
-        delivery.status = EventWebhookStatus.ABANDONED
-        delivery.error = f"放弃:已试 {delivery.attempt} 次,上限 {ceiling}"
-        delivery.save(update_fields=["status", "error"])
-        return
+        return _abandon(delivery, f"放弃:已试 {delivery.attempt} 次,上限 {ceiling}")
 
     secret = webhook.signing_secret
     if not secret:
         # 与 handler 里同一个理由:没有密钥就不发,而不是用空密钥签一个
         # 谁都能伪造的签名。
-        delivery.status = EventWebhookStatus.ABANDONED
-        delivery.error = "webhook 没有 signing_secret,拒绝发出未签名的投递"
-        delivery.save(update_fields=["status", "error"])
-        return
+        return _abandon(delivery, "webhook 没有 signing_secret,拒绝发出未签名的投递")
 
     payload = json.dumps(delivery.payload_json, default=str).encode()
     delivery.attempt += 1
@@ -148,10 +142,27 @@ def _deliver_locked(delivery_id):
         delivery.save(update_fields=["status", "attempt", "response_status", "delivered_at", "error"])
         return
     except Exception as exc:  # noqa: BLE001 — 记下来再决定重试
+        error = f"{type(exc).__name__}: {exc}"
+        if delivery.attempt >= ceiling:
+            return _abandon(delivery, f"放弃:已试 {delivery.attempt} 次,上限 {ceiling};最后一次 {error}",
+                            "attempt", "response_status")
         delivery.status = EventWebhookStatus.FAILED
-        delivery.error = f"{type(exc).__name__}: {exc}"[:2000]
+        delivery.error = error[:2000]
         delivery.save(update_fields=["status", "attempt", "response_status", "error"])
     return delivery.attempt, ceiling
+
+
+def _abandon(delivery, error, *fields):
+    """「不会再自动重试」只有这一种写法:ABANDONED(状态机审计 2026-11-20 第 14 条)。
+
+    此前最后一次失败写的是 FAILED、`attempt` 到上限:看着像还会重试,`AdminWebhookDeliveryViewSet.redeliver`
+    得另判一次次数;`retry_pending_webhooks` 过五分钟把它再入队,只为翻成 ABANDONED,还把最后一次的错误改写成
+    「已试 N 次」;管理员调高 `max_retries` 后,已被「重新投递」复制过的那一行又会被自动重发 —— 端点收两次。"""
+    from apps.events.models import EventWebhookStatus
+
+    delivery.status = EventWebhookStatus.ABANDONED
+    delivery.error = error[:2000]
+    delivery.save(update_fields=["status", "error", *fields])
 
 
 @shared_task(name="events.retry_pending_webhooks", **time_limits("events.retry_pending_webhooks"))

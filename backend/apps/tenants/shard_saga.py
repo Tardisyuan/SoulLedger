@@ -15,6 +15,8 @@ bench, and the origin side's writes to a soul that resides elsewhere (D6) -- go 
               unique, so a redelivery inserts nothing and applies nothing -- and applies the handler; then, on the
               source master, one transaction that runs the handler's `done` (or `refused`) and closes the row.
   refused     only a handler raising `Refused` (the target will not take it: a hall closed meanwhile) compensates.
+              The refusal is written in the target's inbox too (`refused`), so the target answers once: a second relay
+              on the same message reads the answer, never applies what was refused.
               Any other error leaves the row PENDING (its `attempts` and `last_error` noted); the next relay retries
               it, and the inbox makes that safe. After MAX_ATTEMPTS failures it is FAILED: a dead letter the relay
               stops trying, which `check_soul_ownership` and `relay_outbox` report (exit 1) until an operator fixes
@@ -347,12 +349,12 @@ def _deliver(msg):
                 with transaction.atomic(using=alias):
                     inbox._base_manager.using(alias).create(message_id=msg.message_id, tenant=target, kind=msg.kind)
             except IntegrityError:
-                pass  # applied before: a redelivery
+                outcome = _answered(alias, msg)  # answered before: a redelivery, or another relay's
             else:
                 apply(msg.payload)
     except Refused as e:
         log.info("saga message %s (%s) refused by %s: %s", msg.message_id, msg.kind, target.code, e)
-        outcome = state.REFUSED
+        outcome = _refuse(msg, target)
     with on_master(msg.tenant) as alias:
         row = outbox._base_manager.using(alias).select_for_update().filter(pk=msg.pk, state=state.PENDING).first()
         if row is None:
@@ -368,6 +370,30 @@ def _deliver(msg):
             after(msg.payload)
         outbox._base_manager.using(alias).filter(pk=row.pk).update(state=outcome, done_at=timezone.now())
     return 1
+
+
+def _answered(alias, msg):
+    """The target's answer already in its inbox: DONE if it applied the message, REFUSED if it refused it."""
+    _, inbox, state = _models()
+    refused = inbox._base_manager.using(alias).filter(message_id=msg.message_id).values_list("refused", flat=True)
+    return state.REFUSED if refused.get() else state.DONE
+
+
+def _refuse(msg, target):
+    """Write the refusal in the target's inbox, as an application is: the target answers a message once. The
+    refusal rolled back the apply and its inbox row, so without this a second relay delivering the same message
+    (the on-commit kick and the sweep) could apply it after this one was refused -- the target having opened
+    meanwhile -- while this one closed the source REFUSED and compensated: the soul primary on both masters
+    (state-machine audit 2026-11-20 item 14). Returns the answer that stands: this refusal, or the other relay's."""
+    _, inbox, state = _models()
+    with on_master(target) as alias:
+        try:
+            with transaction.atomic(using=alias):
+                inbox._base_manager.using(alias).create(message_id=msg.message_id, tenant=target, kind=msg.kind,
+                                                        refused=True)
+        except IntegrityError:
+            return _answered(alias, msg)
+    return state.REFUSED
 
 
 # ---- writes to a row on another master (D6) -------------------------------------------------------------------
