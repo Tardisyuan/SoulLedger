@@ -14,8 +14,9 @@ from django.urls import resolve
 from tests.test_crossing_key_filters import _ordering_failures
 
 #: The sorts the web and the apps send (grep `ordering` in frontend/, packages/core/, mobile*/): each stays applied.
+#: (`/souls/?ordering=karmic_balance` is not an ordering term: SoulViewSet.get_queryset orders by karma itself.)
 USED_SORTS = [("/api/v1/disposition/", "term_end"), ("/api/v1/judgment/appeals/", "create_time"),
-              ("/api/v1/judgment/", "-created_at"), ("/api/v1/souls/", "name"), ("/api/v1/souls/", "karmic_balance"),
+              ("/api/v1/judgment/", "-created_at"), ("/api/v1/souls/", "name"),
               ("/api/v1/audit-logs/", "-timestamp"), ("/api/v1/users/", "username"), ("/api/v1/users/", "email"),
               ("/api/v1/users/", "role"), ("/api/v1/dispatch/records/", "-proposed_at"),
               ("/api/v1/dispatch/cross-tenant-judgments/", "-create_time"), ("/api/v1/events/", "create_time"),
@@ -44,8 +45,8 @@ def test_a_sort_the_clients_send_is_still_applied(path, term, admin_user, cn_ten
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("path,term", [("/api/v1/death-sync/api-keys/", "_raw_key"),
-                                       ("/api/v1/death-sync/webhooks/", "-_signing_secret")])
-def test_a_secret_name_is_ignored_over_http(path, term, admin_user):
+                                       ("/api/v1/death-sync/api-keys/", "-unknown")])
+def test_a_secret_name_is_ignored_over_http(path, term, admin_user):  # webhooks: the walk above (a hall's admin)
     from rest_framework.test import APIClient
 
     client = APIClient()
