@@ -631,3 +631,30 @@ def test_a_souls_follow_lists_show_the_souls_it_follows():
             body = client.get(path).json()
             assert [(r["user_id"], r["is_following"], r["is_followed_by"]) for r in body["results"]] == [
                 (b.user_id, True, True)], (path, body)
+
+
+@sharded
+def test_a_subquery_over_the_other_side_of_the_control_shard_line_is_refused():
+    """Django compiles a statement on its outer model's database, subqueries included. A User query (control) with
+    a Follow subquery (the civilization's shard) found no edge and answered empty / false with no error
+    (apps/social/soul_views.py until 184793e22); the reverse reads a table the shard does not have. Both raise
+    CrossDatabaseSubquery. A subquery on the same side, or over a hall (REFERENCE, on both), runs."""
+    from django.db.models import Exists, OuterRef
+
+    from apps.authentication.models import User
+    from apps.core.shard_reads import CrossDatabaseSubquery
+    from apps.social.models import Follow
+    from apps.tenants.models import Tenant
+
+    halls = _halls()
+    with cut(), _in_hall(halls["GREEK"]):
+        with pytest.raises(CrossDatabaseSubquery, match="social.Follow"):
+            list(User.objects.filter(pk__in=Follow.objects.values_list("following_id", flat=True)))
+        with pytest.raises(CrossDatabaseSubquery, match="social.Follow"):
+            User.objects.annotate(f=Exists(Follow.objects.filter(follower_id=OuterRef("pk")))).filter(f=True).exists()
+        with pytest.raises(CrossDatabaseSubquery, match="authentication.User"):
+            list(Follow.objects.filter(follower_id__in=User.objects.filter(role="SOUL").values("pk")))
+
+        assert list(User.objects.filter(pk__in=User.objects.filter(role="SOUL").values("pk"))) == []
+        assert list(Follow.objects.filter(follower_id__in=Follow.objects.values("following_id"))) == []
+        assert User.objects.filter(tenant__in=Tenant.objects.filter(pk=halls["GREEK"].pk)).count() == 0

@@ -857,40 +857,85 @@ def _crossing_join(query, alias):
     return _crossing_subquery(q)
 
 
-def _crossing_subquery(query, depth=0):
+def _crossing_subquery(query):
     """A correlated subquery that matches the outer row through a crossing key is the same hazard as a join
     (Exists(Reincarnation.filter(soul=OuterRef("soul")))): the rows it looks for may be in another shard. The
     label of the first crossing key such a subquery (any level down) filters on, or None."""
     from django.db.models.expressions import Col
-    from django.db.models.sql import Query
 
     by_field = {(f.model._meta.concrete_model, f.column): f"{f.model._meta.label}.{f.name}" for f in crossing_keys()}
+    for node in _subqueries(query):
+        inner = node.model._meta.concrete_model if node.model else None
+        for expr in _nodes(node.where):
+            lhs = getattr(expr, "lhs", None)
+            if isinstance(lhs, Col) and (inner, lhs.target.column) in by_field and _outer_ref(expr, node):
+                return by_field[(inner, lhs.target.column)]
+    return None
+
+
+def _subqueries(query, depth=0):
+    """Every subquery (a Query) in `query`'s annotations and WHERE, outermost first, down to three levels:
+    `pk__in=<queryset>`, Exists(...), Subquery(...)."""
+    from django.db.models.sql import Query
 
     def walk(node):
         if isinstance(node, Query):
-            inner = node.model._meta.concrete_model if node.model else None
-            for expr in _nodes(node.where):
-                lhs = getattr(expr, "lhs", None)
-                if isinstance(lhs, Col) and (inner, lhs.target.column) in by_field and _outer_ref(expr, node):
-                    return by_field[(inner, lhs.target.column)]
+            yield node
             if depth < 3:
-                found = _crossing_subquery(node, depth + 1)
-                if found:
-                    return found
-            return None
+                yield from _subqueries(node, depth + 1)
+            return
         for child in node.get_source_expressions() if hasattr(node, "get_source_expressions") else ():
             if child is not None:
-                found = walk(child)
-                if found:
-                    return found
+                yield from walk(child)
         inner_query = getattr(node, "query", None)
-        return walk(inner_query) if isinstance(inner_query, Query) else None
+        if isinstance(inner_query, Query):
+            yield from walk(inner_query)
 
     for expr in [*query.annotations.values(), *_nodes(query.where)]:
-        found = walk(expr)
-        if found:
-            return found
+        yield from walk(expr)
+
+
+class CrossDatabaseSubquery(CrossShardJoin):
+    """A subquery whose model lives on the other side of the control / shard line from the query it sits in
+    (User.objects.filter(pk__in=Follow.objects.values("following_id")), or an Exists over Follow on a User query):
+    Django compiles the whole statement on the outer query's database, which does not hold the inner rows, so the
+    answer is empty or false without a word (apps/social/soul_views.py until 184793e22). Loud instead; the call
+    site reads the inner ids from their own database into a list, then filters or annotates with that."""
+
+
+def _side(model, alias):
+    """"control" or "shard": where `model`'s rows are read under sharding. A CONTROL model and a control-mastered
+    SHARD model (CONTROL_READS) are control's; any other SHARD model is its civilization's shard's; a REFERENCE
+    model (a hall) is on both, so it sides with the database the statement runs on (`alias`)."""
+    kind = placement(model)
+    if kind == REFERENCE:
+        return "shard" if alias.startswith("civ_") else "control"
+    return "shard" if kind == SHARD and not control_mastered(model) else "control"
+
+
+def _other_database_subquery(query, alias):
+    """The label of the first subquery model in `query` (run on `alias`) whose rows live on the other side, or
+    None. A REFERENCE subquery is on both sides and never counts."""
+    if query.model is None:
+        return None
+    outer = _side(query.model, alias)
+    for node in _subqueries(query):
+        if (node.model is not None and placement(node.model) != REFERENCE
+                and _side(node.model, alias) != outer):
+            return node.model._meta.label
     return None
+
+
+def refuse_other_database_subquery(qs, alias):
+    """Raise CrossDatabaseSubquery when `qs`, compiled on `alias`, holds a subquery of a model the other side
+    holds. A no-op unsharded."""
+    if not settings.SHARDED:
+        return
+    label = _other_database_subquery(qs.query, alias)
+    if label:
+        raise CrossDatabaseSubquery(
+            f"{qs.model._meta.label} on {alias} has a subquery over {label}, whose rows are on the other side of "
+            f"the control / shard line; read its ids first (a list), then filter or annotate with them")
 
 
 def _nodes(where):
@@ -919,6 +964,7 @@ def guard(qs, alias):
     strip_unreachable_joins(qs, alias)
     if not alias.startswith("civ_"):
         return None
+    refuse_other_database_subquery(qs, alias)
     key = _crossing_join(qs.query, alias)
     if key:
         raise CrossShardJoin(f"{qs.model._meta.label} on {alias} joins through the crossing key {key}")
@@ -936,8 +982,12 @@ def _strip_for_write(qs):
 def _guard_routed(qs, aggregates=None):
     """A read the router sends to one shard (not a FANOUT merge, not an explicit `.using`). `aggregates`: the
     expressions an aggregate() is about to add (their filters may join too)."""
-    if qs._db is None and not qs._for_write and placement(qs.model) == SHARD:
-        guard(qs.alias(**aggregates) if aggregates else qs, qs.db)
+    if qs._db is not None or qs._for_write:
+        return  # `.using(alias)` says where on purpose: control's own rows with no hall (`_rows_abroad`)
+    probe = qs.alias(**aggregates) if aggregates else qs
+    if placement(qs.model) == SHARD:
+        guard(probe, qs.db)
+    refuse_other_database_subquery(probe, qs.db)
 
 
 # ---- the merge ---------------------------------------------------------------------------------------------
