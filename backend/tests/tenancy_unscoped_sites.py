@@ -263,6 +263,7 @@ SITES = [
     ('apps/notifications/tasks.py', 'Tenant.objects', 1, 'FANOUT', 'CONTROL', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant_id'),
     ('apps/officer_app/todo.py', 'DispatchRecord._base_manager', 1, 'FILTERED', 'CONTEXT', 'explicit target_tenant=tenant (none() without a tenant)'),
     ('apps/officer_app/todo.py', 'ApprovalWorkflow._base_manager', 1, 'FILTERED', 'CONTEXT', 'scope_to_tenant on the same line'),
+    ('apps/perm/filters.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "_through_soul_by_id (2026-11-21): the souls of the caller's already hall-scoped rows, by those ids, from every leg, to run the soul's data scope on them"),
     ('apps/perm/data_scope.py', 'Organization._base_manager', 1, 'FILTERED', 'CONTEXT', "(id, parent_id) of the user's own hall's live orgs, filtered by user.tenant_id; only org ids leave, and they are ANDed onto an already hall-scoped queryset"),
     ('apps/perm/data_scope.py', 'model._base_manager', 1, 'PK', 'CONTEXT', "a pk__in subquery keyed by the user (M2M / reverse FK); it only narrows the caller's already hall-scoped queryset"),
     ('apps/perm/data_scope.py', 'related._base_manager', 1, 'PK', 'CONTEXT', "ids of the few related rows (e.g. city gods) the user is a member of, keyed by the user; they only narrow the caller's already hall-scoped queryset"),
