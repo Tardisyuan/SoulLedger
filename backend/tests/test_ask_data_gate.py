@@ -99,6 +99,22 @@ REJECTED = [
     ("SELECT count(*) FROM pg_sleep(age(now())::int)", gate.FORBIDDEN_FUNCTION),
     # 表函数只放 generate_series;FROM 里别的函数照旧
     ("SELECT n FROM my_srf(1) AS n", gate.UNKNOWN_FUNCTION),
+    # 数组放行了,unnest 没有:在 FROM 里、在选择列表里都拒
+    ("SELECT u FROM unnest(ARRAY[1, 2]) AS u", gate.UNKNOWN_FUNCTION),
+    ("SELECT unnest(fail_reasons) FROM judgment_judgment", gate.UNKNOWN_FUNCTION),
+    ("SELECT x FROM judgment_judgment, unnest(ARRAY[1]) AS x", gate.UNKNOWN_FUNCTION),
+    # 会话身份:sqlglot 把 user / current_role 读成列,真 PG 返回角色名(2026-11-21 评审)
+    ("SELECT user", gate.FORBIDDEN_FUNCTION),
+    ("SELECT current_role", gate.FORBIDDEN_FUNCTION),
+    ("SELECT current_user", gate.FORBIDDEN_FUNCTION),
+    ("SELECT session_user", gate.FORBIDDEN_FUNCTION),
+    ("SELECT count(*) FROM judgment_judgment WHERE USER = 'x'", gate.FORBIDDEN_FUNCTION),
+    # 属性调用写法:`j.to_jsonb` 就是 `to_jsonb(j)`,限定名后面不是该来源的列就当函数
+    ("SELECT j.to_jsonb FROM judgment_judgment j", gate.UNKNOWN_FUNCTION),
+    ("SELECT judgment_judgment.row_to_json FROM judgment_judgment", gate.UNKNOWN_FUNCTION),
+    ("SELECT s.to_jsonb FROM (SELECT id FROM judgment_judgment) s", gate.UNKNOWN_FUNCTION),
+    ("WITH c AS (SELECT id FROM judgment_judgment) SELECT c.to_jsonb FROM c", gate.UNKNOWN_FUNCTION),
+    ("SELECT count(*) FROM judgment_judgment j WHERE j.to_jsonb IS NOT NULL", gate.UNKNOWN_FUNCTION),
     # 表
     ("SELECT table_name FROM information_schema.tables", gate.TABLE_NOT_ALLOWED),
     ("SELECT rolname FROM pg_catalog.pg_roles", gate.TABLE_NOT_ALLOWED),
@@ -137,6 +153,12 @@ REJECTED = [
     ("SELECT * FROM judgment_judgment", gate.STAR_NOT_ALLOWED),
     ("SELECT j.* FROM judgment_judgment j", gate.STAR_NOT_ALLOWED),
     ("SELECT id FROM (SELECT * FROM souls_soul) s", gate.STAR_NOT_ALLOWED),
+    # 不带限定的来源名是整行(等于 `j.*`):别名、表名、子查询与 CTE 名都算
+    ("SELECT j FROM judgment_judgment j", gate.STAR_NOT_ALLOWED),
+    ("SELECT judgment_judgment FROM judgment_judgment", gate.STAR_NOT_ALLOWED),
+    ("SELECT count(*) FROM judgment_judgment j GROUP BY j", gate.STAR_NOT_ALLOWED),
+    ("SELECT s FROM (SELECT id FROM souls_soul) s", gate.STAR_NOT_ALLOWED),
+    ("WITH c AS (SELECT id FROM souls_soul) SELECT c FROM c", gate.STAR_NOT_ALLOWED),
 ]
 
 
@@ -156,7 +178,7 @@ ALLOWED = [
     ("SELECT /* 注释 */ count(*) FROM souls_soul", {S}),
     # 两表 JOIN
     (
-        "SELECT s.status, count(j.id) FROM judgment_judgment j JOIN souls_soul s ON s.id = j.soul_id GROUP BY s.status",
+        "SELECT s.current_state, count(j.id) FROM judgment_judgment j JOIN souls_soul s ON s.id = j.soul_id GROUP BY s.current_state",
         {J, S},
     ),
     # CTE(CTE 名不算表)
@@ -209,6 +231,20 @@ ALLOWED = [
         {J},
     ),
     ("SELECT generate_series(1, 3)", set()),
+    # 数组字面量、ANY / ALL、下标,jsonb 的 -> / ->> / #> / #>>(2026-11-21 评审:原先都是 unknown_function)
+    ("SELECT count(*) FROM judgment_judgment WHERE court = ANY(ARRAY['第一殿', '第二殿'])", {J}),
+    ("SELECT count(*) FROM judgment_judgment WHERE court <> ALL(ARRAY['第一殿'])", {J}),
+    ("SELECT count(*) FROM judgment_judgment WHERE court = ANY('{第一殿,第二殿}'::text[])", {J}),
+    ("SELECT (ARRAY[1, 2, 3])[2]", set()),
+    ("SELECT p.fail_reasons -> 0, fail_reasons ->> 0, fail_reasons #> '{0}', fail_reasons #>> '{0}' "
+     "FROM judgment_judgment p", {J}),
+    ("SELECT count(*) FROM judgment_judgment WHERE fail_reasons ->> 0 = 'LATE'", {J}),
+    # 来源名也是列名的不算整行:generate_series 的别名、CTE / 子查询里同名的输出列、限定写法下的真列
+    ("SELECT n FROM generate_series(1, 3) AS n WHERE n > 1", set()),
+    ("WITH n AS (SELECT 1 AS n) SELECT n FROM n", set()),
+    ("SELECT s.c FROM (SELECT count(*) AS c FROM souls_soul) s", {S}),
+    ("SELECT judgment_judgment.court FROM judgment_judgment", {J}),
+    ('SELECT count(*) FROM judgment_judgment j WHERE j."court" IS NOT NULL', {J}),
     # 四张表
     (
         "SELECT count(*) FROM judgment_judgment j JOIN souls_soul s ON s.id = j.soul_id "
