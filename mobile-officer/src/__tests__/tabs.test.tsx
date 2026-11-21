@@ -370,18 +370,31 @@ describe("the other tabs have the same four states", () => {
     fireEvent.press(screen.getByTestId("notice-1"));
     await screen.findByTestId("toast");
     expect(screen.getByText("●")).toBeTruthy();
-    const fades = timing.mock.calls.filter(([, config]) => config.duration === motion.unreadIn);
+    if (reduced) expect(screen.queryByTestId("notice-1-glyph-fade")).toBeNull();
+    else expect(screen.getByTestId("notice-1-glyph-fade")).toBeTruthy();
+    timing.mockRestore();
+    spy.mockResolvedValue(false);
+  });
+
+  it.each([false, true])("第六十三批 E1: Row's glyphFadeIn is one 160 opacity fade on the enter curve (reduce motion %s: none)", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    renderOfficer(<Row testID="probe" title="x" glyph="○" glyphFadeIn />); // let the reduce-motion answer land first
+    await act(async () => {});
+    const timing = jest.spyOn(Animated, "timing");
+    renderOfficer(<Row testID="r" title="新审批" glyph="●" glyphFadeIn />);
+    await act(async () => {});
     if (reduced) {
-      expect(screen.queryByTestId("notice-1-glyph-fade")).toBeNull();
-      expect(fades).toEqual([]);
+      expect(screen.queryByTestId("r-glyph-fade")).toBeNull();
+      expect(timing).not.toHaveBeenCalled();
     } else {
       expect(motion.unreadIn).toBe(160);
-      expect(screen.getByTestId("notice-1-glyph-fade")).toBeTruthy();
-      expect(fades).toHaveLength(1);
-      expect(fades[0][1]).toMatchObject({ toValue: 1, easing: EASE.enter, useNativeDriver: true });
+      expect(screen.getByTestId("r-glyph-fade")).toBeTruthy();
+      expect(timing).toHaveBeenCalledTimes(1);
+      expect(timing.mock.calls[0][1]).toEqual({ toValue: 1, duration: 160, easing: EASE.enter, useNativeDriver: true });
     }
+    expect(screen.getByText("●", { includeHiddenElements: true })).toBeTruthy();
     timing.mockRestore();
-    spy.mockRestore();
+    spy.mockResolvedValue(false);
   });
 
   it("notices: no big 「通知」 title under the top bar; 全部已读 stays", async () => {

@@ -229,7 +229,7 @@ function FadeIn({ on, testID, children }: { on: boolean; testID?: string; childr
     fade.start();
     return () => fade.stop();
   }, [run, opacity, unreadIn]);
-  if (!on) return <>{children}</>;
+  if (!run) return <>{children}</>;
   return (
     <Animated.View testID={testID} style={{ opacity }}>
       {children}

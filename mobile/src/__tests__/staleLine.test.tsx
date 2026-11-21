@@ -105,6 +105,6 @@ it.each([false, true])(
       });
       expect(screen.queryByTestId("stale-line")).toBeNull();
     }
-    spy.mockRestore();
+    spy.mockResolvedValue(false);
   }
 );

@@ -266,8 +266,8 @@ describe("时间线一行", () => {
   it("换站写去处;没有理由就不多写", () => {
     expect(describeSystemEvent(event("DIYU_STATION_CHANGED", { from: "", to: "TUDI_TEMPLE", via: "death" }), labels))
       .toBe("十三站换站 · 土地庙");
-    expect(describeSystemEvent(event("DIYU_STATION_CHANGED", { from: "FENGDU_CITY", to: "TUDI_TEMPLE", via: "officer", reason: "" }), labels))
-      .toBe("十三站换站 · 土地庙");
+    expect(describeSystemEvent(event("DIYU_STATION_CHANGED", { from: "TUDI_TEMPLE", to: "YELLOW_SPRINGS_ROAD", via: "officer", reason: "" }), labels))
+      .toBe("十三站换站 · 黄泉路");
   });
 
   const moved = (payload: Record<string, unknown>) =>
