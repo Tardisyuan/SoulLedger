@@ -21,7 +21,7 @@ from django.utils import timezone
 from apps.judgment import claims
 from apps.judgment.appeals import original_officers
 from apps.judgment.claims import ClaimRefusedError
-from apps.judgment.models import OPEN_APPEAL_STATUSES, AppealStatus, CityGod, Judgment, JudgmentAppeal
+from apps.judgment.models import OPEN_APPEAL_STATUSES, OPEN_Q, AppealStatus, CityGod, Judgment, JudgmentAppeal
 
 LETTER_PERMISSION = "soul_inbox.reply"
 
@@ -41,8 +41,7 @@ def _assert_people(source, target, tenant_id):
 
 
 def _open_judgments(source, tenant_id):
-    return Judgment.objects.filter(tenant_id=tenant_id, claimed_by=source, verdict__isnull=True, is_final=False,
-                                   is_archived=False)
+    return Judgment.objects.filter(OPEN_Q, tenant_id=tenant_id, claimed_by=source)
 
 
 def _open_appeals(source, tenant_id):

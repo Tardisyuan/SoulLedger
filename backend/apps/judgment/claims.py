@@ -56,12 +56,11 @@ def _lock_many(pks) -> list[Judgment]:
 
 
 def _assert_pending(judgment: Judgment) -> None:
-    """已结案、已撤案、已归档的案子不再有「谁在办」。
+    """已结案、已撤案的案子不再有「谁在办」(已归档的一定已结案,见 `OPEN_Q`)。
 
-    与 `open_judgments` 同一组列;`is_archived` 额外排除,因为队列(`_pending_queue`)
-    也排除它。结案后认领信息保留,但不能再改。
+    与 `open_judgments` 同一组列。结案后认领信息保留,但不能再改。
     """
-    if judgment.is_concluded or judgment.is_deleted or judgment.is_archived:
+    if not judgment.is_open:
         raise ClaimRefusedError("This judgment is no longer pending.", "not_pending")
     _assert_sent_on(judgment)
 

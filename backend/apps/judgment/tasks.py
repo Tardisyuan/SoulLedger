@@ -35,7 +35,7 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
     stamped — never concluded, never touched otherwise (user decision
     2026-10-17). `Judgment.save()` clears the stamp on the next activity.
     """
-    from apps.judgment.models import DUAT_BARRED, Judgment
+    from apps.judgment.models import DUAT_BARRED, OPEN_Q, Judgment
     from apps.tenants.managers import clear_current_tenant, set_current_tenant
     from apps.tenants.models import Tenant
 
@@ -54,9 +54,8 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
         # 老案子被认领、标记随之清掉,下一次跑又会立刻标回去。`stale_since__isnull`
         # 让已标的不再重盖(BD-14 是同一件事的旧形:每跑一次往 notes 多追加一行)。
         stale_judgments = Judgment.objects.filter(
+            OPEN_Q,
             tenant_id=tenant_id,
-            is_final=False,
-            verdict__isnull=True,
             created_at__lt=threshold,
             update_time__lt=threshold,
             stale_since__isnull=True,

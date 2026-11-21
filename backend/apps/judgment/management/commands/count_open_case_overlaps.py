@@ -13,12 +13,12 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Count
 
-from apps.judgment.models import Judgment, JudgmentKind
+from apps.judgment.models import OPEN_Q, Judgment, JudgmentKind
 
 
 def overlaps(original_only=False):
     """{soul_id: 未结案件数},只列多于一件的。"""
-    rows = Judgment.all_objects.filter(verdict__isnull=True, is_final=False, is_deleted=False)
+    rows = Judgment.all_objects.filter(OPEN_Q)
     if original_only:
         rows = rows.filter(kind=JudgmentKind.ORIGINAL)
     return dict(rows.values("soul_id").annotate(n=Count("id")).filter(n__gt=1).values_list("soul_id", "n"))

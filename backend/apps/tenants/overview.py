@@ -21,6 +21,7 @@ def hall_row(tenant) -> dict:
         AT_CITY_GOD,
         DUAT_BARRED,
         OPEN_APPEAL_STATUSES,
+        OPEN_Q,
         Judgment,
         JudgmentAppeal,
         JudgmentKind,
@@ -52,7 +53,7 @@ def hall_row(tenant) -> dict:
     from apps.souls import acheron
     from apps.souls.models import Soul
 
-    open_cases = Judgment.objects.filter(tenant=tenant, verdict__isnull=True, is_final=False, is_archived=False)
+    open_cases = Judgment.objects.filter(OPEN_Q, tenant=tenant)
     greek_original = Q(civilization="GREEK", kind=JudgmentKind.ORIGINAL)
     # The souls on Acheron's bank, by id: the open Greek originals' souls first, then those souls from every leg --
     # not `soul__ferry_passage`, a join through a crossing key answered from control's mirror (PREP-stage5 M3).
