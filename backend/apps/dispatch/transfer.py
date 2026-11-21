@@ -282,7 +282,7 @@ def _activate_node(payload):
     node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
     if node.status != SentenceNodeStatus.DISPATCHING:
         return
-    node.status = SentenceNodeStatus.ACTIVE
+    node.move(SentenceNodeStatus.ACTIVE)
     node.disposition_id = payload["disposition_id"]
     node.activated_at = parse_datetime(payload["at"])
     _save(node, "status", "disposition_id", "activated_at")

@@ -54,6 +54,24 @@ VACATED_NODE_STATUSES = (SentenceNodeStatus.REMOVED, SentenceNodeStatus.CANCELLE
 #: WAITING(Q7 之后才加的状态)同样是「灵魂在那里」,一并纳入。
 OCCUPYING_NODE_STATUSES = (SentenceNodeStatus.DISPATCHING, SentenceNodeStatus.ACTIVE, SentenceNodeStatus.WAITING)
 
+_N = SentenceNodeStatus
+#: 节点的全部合法转移(状态机审计 2026-11-20 §4-1)。由全部写点推出:PENDING → 激活原属站 / 发调拨 / 减项 / 撤销;
+#: DISPATCHING → 执行地执行 / 被拒退回 / 撤销 / 申诉改判撤下在途站;ACTIVE → 永久 / 暂留 / 期满 / 手动结束 / 改判撤下;
+#: WAITING → 放行 / 手动结束;ETERNAL → 手动结束(撤销 = 赦免)。COMPLETED / ABORTED / REMOVED / CANCELLED 是终态。
+#: 新写点要新边:先加在这里,`test_sentence_node_transitions.py` 逐条走表。
+NODE_TRANSITIONS = {
+    _N.PENDING: frozenset({_N.DISPATCHING, _N.ACTIVE, _N.REMOVED, _N.CANCELLED}),
+    _N.DISPATCHING: frozenset({_N.ACTIVE, _N.PENDING, _N.CANCELLED, _N.REMOVED}),
+    _N.ACTIVE: frozenset({_N.ETERNAL, _N.WAITING, _N.COMPLETED, _N.ABORTED, _N.REMOVED}),
+    _N.WAITING: frozenset({_N.COMPLETED, _N.ABORTED}),
+    _N.ETERNAL: frozenset({_N.ABORTED}),
+}
+del _N
+
+
+class InvalidNodeTransitionError(Exception):
+    """表外的节点转移:是缺陷,不是业务拒绝。抛出即回滚调用方的事务。"""
+
 
 class SentenceRequestKind(models.TextChoices):
     AMEND = "AMEND", "加项 / 减项"
@@ -171,6 +189,12 @@ class SentenceNode(AuditUserFields, models.Model):
         indexes = [
             models.Index(fields=["tenant_code", "status"]),
         ]
+
+    def move(self, to):
+        """`status` 改成 `to`,边须在 `NODE_TRANSITIONS` 里。只改内存;调用方照旧在自己的事务里 save。"""
+        if to not in NODE_TRANSITIONS.get(self.status, ()):
+            raise InvalidNodeTransitionError(f"Sentence node {self.pk}: {self.status} -> {to} is not a transition")
+        self.status = to
 
     def __str__(self):
         return f"Node {self.order} @{self.tenant_code} ({self.status})"
