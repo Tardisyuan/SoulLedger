@@ -58,6 +58,7 @@ SITES = [
     ('apps/core/shard_reads.py', 'f.related_model._base_manager', 1, 'PK', 'FANOUT', "related_of: the one row a hall-less (D2) row's forward key names, by that id, from every leg"),
     ('apps/chat/inbox.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "awaiting_reply_q (stage 5 prep M3): the souls of the caller's scoped conversations, by those ids, from every leg (their current hall)"),
     ('apps/judgment/annual.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "_souls (stage 5 prep M3): the souls the caller's scoped judgments name, by those ids, from every leg (their hall's civilization and name)"),
+    ('apps/judgment/claims.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "held_q (batch 63 二 f): the souls of the caller's scoped open Greek originals, by those ids, from every leg (on Acheron's bank or not)"),
     ('apps/judgment/precedents.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "_current_balances (stage 5 prep M3): the souls of the hall's own snapshot-less candidate cases, by those ids, from every leg"),
     ('apps/judgment/precedents.py', 'Disposition._base_manager', 1, 'PK', 'FANOUT', "_attach_dispositions: the dispositions of the precedents already chosen in the judgment's own hall, by their judgment ids, from every leg (a hall-less one lives on control)"),
     ('apps/judgment/sources.py', 'Soul._base_manager', 1, 'PK', 'FANOUT', "_away_q (stage 5 prep M3): the souls the caller's scoped judgments name, by those ids, from every leg (their home hall)"),
