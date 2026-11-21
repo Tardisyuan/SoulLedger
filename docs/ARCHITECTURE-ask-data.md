@@ -253,3 +253,16 @@ UPDATE / DELETE / 未授权列 / 未授权表全被库拒且什么都没写、`p
 
 JS 第一次跑红过一次:`creditsOssDrift.test.ts`,第 0 步加了 sqlglot 却没进「致谢」的开源清单;已补(`packages/core/src/config/creditsOss.json`)。
 两次门禁都因工作区里有未提交的本文而没记账(门禁只在干净工作区记账);本文提交之后没有再跑。
+
+**2026-11-21,三条决定(`feat/ask-data-decisions`,先合了 main 的 `settings.SHARDED`)。** 提交 `a1b585269`(决定 1)、`b24e9ede1`(决定 2、3)。
+门禁数字都在 `b24e9ede1`(树 `c00f0edb37`)上;改了 `problem_codes.py`,后端按规则全量。
+
+| 命令 | 在哪 | 退出码 | 计数 |
+|---|---|---|---|
+| `scripts/run-gates.sh --real-pg --base feat/ask-data` | unRAID | 0 | 后端全量含迁移往返 11662 passed / 785 skipped / 47 subtests,1862 s;记账(backend) |
+| `GATES_SIDES=js scripts/run-gates.sh --base feat/ask-data` | unRAID | 0 | core vitest 37 / 372;web jest 371 套 / 6601;灵魂端 74 / 1366;官员端 57 / 1291;记账(js) |
+| `--real-pg --workers 4 --tests --ds=config.settings_sharded -m sharded`(ask_data_sharded、ask_data_rls、审计两份) | unRAID | 0 | 16 passed |
+| `--real-pg --tests`(ask_data 六个文件、未登记查询、problem 信封、审计两份、PG-only 名单) | unRAID | 0 | 355 passed / 15 skipped(提交前一版;其后只多了一条分库审计测试,上一行已含) |
+| 变异(各自单独,跑完还原):闸门五处 | 本机(纯函数) | 1(预期) | 2 / 4 / 2 / 5 / 4 failed,还原 108 passed |
+| 变异:`alias_for` 不看分库、`ask_data_setup` 只建 default(分库组) | unRAID | 1(预期) | 各 2 failed / 1 passed |
+| 变异:拒绝时不写审计、审计里写整份行、吞掉审计失败(`test_ask_data_api.py`) | unRAID | 1(预期) | 8 / 1 / 1 failed |
