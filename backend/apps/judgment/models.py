@@ -272,8 +272,8 @@ def open_judgments(soul):
 
 #: 「未结」的查询写法,与 `Judgment.is_open` 同一个定义(审计 2026-11-20 §4 #3;两者逐格一致由 `tests/test_judgment_is_open.py`、
 #: 只此一种写法由 `tests/test_judgment_open_check_has_one_spelling.py` 守)。含 `is_deleted=False`:`Judgment.objects` 本来就滤掉
-#: 软删(TenantManager),`all_objects` 不滤,写在这里两种 manager 上答案相同。`is_archived` 不在里面 —— 要连归档一起
-#: 排除的地方在旁边自己写。
+#: 软删(TenantManager),`all_objects` 不滤,写在这里两种 manager 上答案相同。不看 `is_archived`:归档只收有裁决的案子
+#: (`JudgmentViewSet.archive` 拒无裁决的;序列化器与 admin 里 `verdict` / `is_final` / 归档列只读),已归档的一定已结案。
 NOT_CONCLUDED_Q = models.Q(verdict__isnull=True, is_final=False)  # `not Judgment.is_concluded`,不看软删
 OPEN_Q = NOT_CONCLUDED_Q & models.Q(is_deleted=False)
 
@@ -579,7 +579,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
             # 历年全部案件。`city_god_status` 不进条件:城隍处的件数少,在索引上再筛即可。
             models.Index(
                 fields=["tenant", "claimed_by", "created_at"], name="judgment_pending_idx",
-                condition=models.Q(verdict__isnull=True, is_final=False, is_archived=False, is_deleted=False),
+                condition=models.Q(verdict__isnull=True, is_final=False, is_deleted=False),
             ),
         ]
         # 文明专属列只出现在本文明的案子上(be-domain 1.4 / 3.7,2026-11-14)。按 `civilization` 列判 —— 它是开案时

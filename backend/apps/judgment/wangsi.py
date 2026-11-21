@@ -42,8 +42,8 @@ def is_held(judgment: Judgment) -> bool:
 
 
 def _assert_held(judgment: Judgment) -> None:
-    # 与 `claims._assert_pending` 同一组列:已归档的案子也不再接申诉(2026-10-29 审查)。
-    if not judgment.is_open or judgment.is_archived:
+    # 与 `claims._assert_pending` 同一组列。已归档的案子一定已结案(见 `OPEN_Q`),`is_open` 已把它挡在外面。
+    if not judgment.is_open:
         raise WangsiRefusedError("This judgment is no longer pending.", "not_pending")
     if not is_held(judgment):
         raise WangsiRefusedError("This soul is not held in 枉死城.", "not_in_wangsi")

@@ -29,7 +29,7 @@ class MoveRefusedError(Exception):
 def _claimed_judgments(user):
     from apps.judgment.models import OPEN_Q, Judgment
 
-    return Judgment.objects.filter(OPEN_Q, claimed_by=user, is_archived=False)
+    return Judgment.objects.filter(OPEN_Q, claimed_by=user)
 
 
 def _appeals_in_review(user):

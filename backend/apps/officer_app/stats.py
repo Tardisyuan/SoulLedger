@@ -14,7 +14,7 @@ def of(user) -> dict:
     return {
         "concluded_this_month": concluded.filter(concluded_at__gte=_month_start()).count(),
         "concluded_total": concluded.count(),
-        "open_claims": Judgment.objects.filter(OPEN_Q, claimed_by=user, is_archived=False).count(),
+        "open_claims": Judgment.objects.filter(OPEN_Q, claimed_by=user).count(),
         "appeals_reviewed": appeals.filter(status__in=(AppealStatus.UPHELD, AppealStatus.AMENDED)).count(),
         "appeals_in_review": appeals.filter(status=AppealStatus.IN_REVIEW).count(),
     }

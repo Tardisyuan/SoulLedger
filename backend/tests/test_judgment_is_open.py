@@ -1,11 +1,16 @@
 """「未结」的两种写法答案相同:实例上的 `Judgment.is_open` / `is_concluded` 与查询里的 `OPEN_Q` / `NOT_CONCLUDED_Q`
 (审计 2026-11-20 §4 #3)。逐格跑 裁决 × 已封 × 归档 × 软删 十六种组合,两种 manager 都比。
 
-另守「归档」只收已有裁决的案子(`JudgmentViewSet.archive`):未结的案子不能归档。
+另守「归档」只收已有裁决的案子 —— 「未结」不看 `is_archived` 的前提:API 上 `JudgmentViewSet.archive` 拒无裁决的,
+Django admin 里裁决、封印与归档列只读。两处任一放开,就做得出「已归档的未结案件」,这里红。
+
+16 格里归档那一维不改变答案(已归档未结的两格算未结):那两格只能用 `.update` 造出来,正常路径到不了。
 """
 import itertools
 
 import pytest
+from django.contrib import admin
+from django.test import RequestFactory
 from rest_framework.test import APIClient
 
 from apps.authentication.models import User, UserRole
@@ -66,3 +71,19 @@ def test_a_case_without_a_verdict_cannot_be_archived(tenant, is_final):
 
     assert response.status_code == 400, response.content
     assert Judgment.all_objects.get(pk=judgment.pk).is_archived is False
+
+
+ADMIN_LOCKED = ["verdict", "is_final", "is_archived", "archived_at", "archived_by", "archive_reason"]
+
+
+@pytest.mark.django_db
+def test_the_admin_cannot_write_a_verdict_or_an_archive():
+    superuser = User.objects.create_superuser(username="root", password="x")
+    request = RequestFactory().get("/admin/judgment/judgment/add/")
+    request.user = superuser
+    model_admin = admin.site._registry[Judgment]
+
+    assert set(ADMIN_LOCKED) <= set(model_admin.get_readonly_fields(request))
+    form_fields = set(model_admin.get_form(request).base_fields)
+    assert not form_fields & set(ADMIN_LOCKED), form_fields & set(ADMIN_LOCKED)
+    assert {f.name for f in Judgment._meta.get_fields()} >= set(ADMIN_LOCKED)

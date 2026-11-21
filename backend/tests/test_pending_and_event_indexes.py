@@ -14,8 +14,8 @@ from apps.souls.models import Soul
 
 EXPECTED = [
     (Judgment, "judgment_pending_idx", ["tenant", "claimed_by", "created_at"],
-     Q(verdict__isnull=True, is_final=False, is_archived=False, is_deleted=False),
-     "apps.judgment.migrations.0053_judgment_pending_idx"),
+     Q(verdict__isnull=True, is_final=False, is_deleted=False),
+     "apps.judgment.migrations.0059_judgment_pending_idx_without_archived"),
     (SoulEvent, "soulevent_tenant_type_time_idx", ["tenant", "event_type", "create_time"], None,
      "apps.events.migrations.0034_soulevent_tenant_type_time_idx"),
     (Soul, "soul_needs_recalc_idx", ["tenant"], Q(needs_ledger_recalculation=True),
@@ -41,7 +41,12 @@ def test_the_index_is_declared_and_added_concurrently(model, name, fields, condi
 
 def test_the_pending_index_condition_is_implied_by_the_queue_predicate():
     """计划器只在查询的 WHERE 蕴含索引条件时用部分索引。队列的 `PENDING` 必须逐列含着索引条件里的
-    每一项(`is_deleted` 由 TenantManager 加)—— `PENDING` 改了列而索引没跟着改,这里红。"""
-    pending = str(Judgment.objects.filter(PENDING).query)
-    for column in ('"verdict" IS NULL', '"is_final"', '"is_archived"', '"is_deleted"'):
-        assert column in pending, column
+    每一项 —— `PENDING` 改了列而索引没跟着改,这里红。列名从索引条件本身读,不另抄一份。
+    `is_archived` 两边都不再有(审计 2026-11-20 §4 #3:已归档的一定已结案,0059 去掉了它)。"""
+    pending = str(Judgment.objects.filter(PENDING).query).split(" WHERE ", 1)[1]
+    index = next(i for i in Judgment._meta.indexes if i.name == "judgment_pending_idx")
+    columns = {lookup.split("__")[0] for lookup, _ in index.condition.children}
+    assert columns == {"verdict", "is_final", "is_deleted"}
+    for column in columns:
+        assert f'"{column}"' in pending, column
+    assert '"is_archived"' not in pending

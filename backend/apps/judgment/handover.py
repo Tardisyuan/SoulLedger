@@ -41,7 +41,7 @@ def _assert_people(source, target, tenant_id):
 
 
 def _open_judgments(source, tenant_id):
-    return Judgment.objects.filter(OPEN_Q, tenant_id=tenant_id, claimed_by=source, is_archived=False)
+    return Judgment.objects.filter(OPEN_Q, tenant_id=tenant_id, claimed_by=source)
 
 
 def _open_appeals(source, tenant_id):
