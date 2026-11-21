@@ -10658,7 +10658,7 @@
   },
   "letters": {
     "state": {
-      "awaiting_hall": "The hall's turn to reply · the letter has waited {{wait}}",
+      "awaiting_hall": "The hall’s turn to reply · the letter has waited {{wait}}",
       "awaiting_soul": "Replied · waiting for the soul",
       "closed": "This exchange is closed · read-only"
     },

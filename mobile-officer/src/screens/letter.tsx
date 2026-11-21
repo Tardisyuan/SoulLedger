@@ -295,9 +295,9 @@ export function LetterThread({
   const shownConversation = thread.data?.conversation;
   const gate = shownConversation ? inboxReplyGate(shownConversation, { userId: user?.id, movedSeen: failure === MOVED }) : "open";
   const last = ordered[ordered.length - 1];
-  const state = shownConversation ? letterState(gate, last ? factsOf(last).side : undefined) : null;
+  const turn = shownConversation ? letterState(gate, last ? factsOf(last).side : undefined) : null;
   // The groups only change when the letters, or whether the hall still owes a reply, do -- not as the officer types.
-  const awaiting = state === "awaiting_hall";
+  const awaiting = turn === "awaiting_hall";
   const rows = useMemo(() => groupLetters(ordered, factsOf, { open: awaiting }), [ordered, awaiting]);
 
   if (thread.error && lettersUnavailable(thread.error)) {
@@ -317,7 +317,7 @@ export function LetterThread({
 
   const { conversation } = thread.data;
   const meId = user?.id;
-  const readOnly = isReadOnlyLetterState(state);
+  const readOnly = isReadOnlyLetterState(turn);
   // The server always sends `assignee` (null = nobody); only that explicit null is "unassigned".
   const assigned = conversation.assignee !== null;
   const flags = { archived: conversation.archived, closed: conversation.closed_at != null, assigned };
@@ -337,11 +337,11 @@ export function LetterThread({
   const since = awaiting ? lastSoulLetterAt(ordered, factsOf) : undefined;
   const wait = since !== undefined ? letterWait(since, Date.now()) : null;
   const status =
-    state === "awaiting_hall" && wait ? (
+    turn === "awaiting_hall" && wait ? (
       <Txt testID="letter-state" variant="section" style={styles.status}>
         {t("letters.state.awaiting_hall", { wait: t(`common.duration.${wait.unit}`, { n: String(wait.n) }) })}
       </Txt>
-    ) : state === "awaiting_soul" ? (
+    ) : turn === "awaiting_soul" ? (
       <Txt testID="letter-state" variant="body" tone="muted" style={styles.status}>
         {t("letters.state.awaiting_soul")}
       </Txt>
@@ -438,8 +438,8 @@ export function LetterThread({
         {readOnly ? (
           footer(
             <View style={{ padding: space[4] }}>
-              <Txt testID={state === "closed" ? "letter-closed" : "letter-moved"} variant="body" tone="muted" style={styles.status}>
-                {t(state === "closed" ? "letters.state.closed" : "officer_app.letter.moved")}
+              <Txt testID={turn === "closed" ? "letter-closed" : "letter-moved"} variant="body" tone="muted" style={styles.status}>
+                {t(turn === "closed" ? "letters.state.closed" : "officer_app.letter.moved")}
               </Txt>
             </View>
           )
