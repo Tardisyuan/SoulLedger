@@ -16,8 +16,9 @@
 #     side passed (a full pass, or selective passes covering that commit's changes against the merge-base
 #     with origin/main), else the merge-base. The first lines say which base each side took and why.
 #   - A push (the hook passes --prepush, and the pushed files in PREPUSH_CHANGED) is let through when both
-#     sides' ledgers vouch for the pushed tree and its files. The older whole-tree ledgers
-#     (soulledger-gates-passed, ...-selective) are still read, for both sides.
+#     sides' ledgers vouch for the pushed tree and its files; when only one side's do, only the other side
+#     runs (2026-11-21). The older whole-tree ledgers (soulledger-gates-passed, ...-selective) are still
+#     read, for both sides. A green --real-pg run is recorded for the backend side too (record_side).
 #
 # WHAT RUNS. Each side decides from its own changed files (the diff from its base, plus untracked files).
 #   - backend: pytest by app (scripts/select-backend-tests.py) plus the tests listed in
@@ -31,7 +32,8 @@
 # FULL: `--full` or GATES_FULL=1 - everything, with the coverage floors. A push to main is NOT full
 # (2026-10-24). `--affected` is the default spelled out; nothing forces selective (GATES_FULL=0 does not).
 # ONE SIDE: GATES_SIDES=js or GATES_SIDES=backend (default both, 2026-11-15) runs that side only; the other
-# prints that it was skipped and records nothing. Ignored on a push (both run); GATES_SIDES=js with
+# prints that it was skipped and records nothing. Ignored on a push (a push runs the sides its ledgers do
+# not vouch for); GATES_SIDES=js with
 # --real-pg is refused. E.g. GATES_SIDES=js while a `--real-pg --full` covers the backend.
 # --real-pg --full also runs the sharded group (--ds=config.settings_sharded -m sharded: four civilization
 # shards, sharding stage 2; it replaced the multi-database guard and its test-only settings in stage 2), at
@@ -119,14 +121,15 @@ done
 P="gates"; [ "$PREPUSH" = 1 ] && P="pre-push"
 # GATES_SIDES (2026-11-15, user decision): js | backend | both (default). The other side does not run, says
 # so, and records nothing — e.g. GATES_SIDES=js while a `--real-pg --full` covers the backend. Not on a
-# push: the hook runs both sides (a delegated run, GATES_IN_REMOTE=1, takes what the caller passed it).
+# push: the hook runs the sides the ledgers do not vouch for (A PUSH OF A TREE ... below sets it), never by
+# request (a delegated run, GATES_IN_REMOTE=1, takes what the caller passed it).
 GATES_SIDES="${GATES_SIDES:-both}"
 case "$GATES_SIDES" in
     both|js|backend) ;;
     *) echo "run-gates: GATES_SIDES must be js, backend or both, got '$GATES_SIDES'"; exit 2 ;;
 esac
 if [ "$GATES_SIDES" != both ] && [ "$PREPUSH" = 1 ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
-    echo "$P: GATES_SIDES=$GATES_SIDES ignored on a push — both sides run"; GATES_SIDES=both
+    echo "$P: GATES_SIDES=$GATES_SIDES ignored on a push — the sides the ledgers do not vouch for run"; GATES_SIDES=both
 fi
 if [ "$GATES_SIDES" = js ] && [ "$REAL_PG" = 1 ]; then
     echo "run-gates: --real-pg runs only the backend; GATES_SIDES=js leaves it nothing to run"; exit 2
@@ -913,18 +916,23 @@ PUSHED_SHA=""
 case "${PREPUSH_RANGE:-}" in *..*) PUSHED_SHA="${PREPUSH_RANGE##*..}" ;; esac
 PUSHED_TREE=""
 [ -n "$PUSHED_SHA" ] && PUSHED_TREE="$(git rev-parse -q --verify "$PUSHED_SHA^{tree}" 2>/dev/null || true)"
+# 2026-11-21: one side proven is that side skipped, the other run (GATES_SIDES) — the same rule per side, not
+# all or nothing: a JS pass and a real-PG backend pass of one tree used to rerun both sides.
 if [ "$PREPUSH" = 1 ] && [ -n "$PUSHED_TREE" ]; then
     WANT="$CHANGED"; { [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ]; } && WANT=-
-    if side_proves backend "$PUSHED_TREE" "$WANT"; then
-        BE_KIND="$PROVEN_KIND"
-        if side_proves js "$PUSHED_TREE" "$WANT"; then
-            if [ "$BE_KIND" = full ] && [ "$PROVEN_KIND" = full ]; then
-                echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` — not running it again"
-            else
-                echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh\` for these changes (backend $BE_KIND, JS $PROVEN_KIND) — not running it again"
-            fi
-            exit 0
+    BE_KIND=""; JS_KIND=""
+    side_proves backend "$PUSHED_TREE" "$WANT" && BE_KIND="$PROVEN_KIND"
+    side_proves js "$PUSHED_TREE" "$WANT" && JS_KIND="$PROVEN_KIND"
+    if [ -n "$BE_KIND" ] && [ -n "$JS_KIND" ]; then
+        if [ "$BE_KIND" = full ] && [ "$JS_KIND" = full ]; then
+            echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` — not running it again"
+        else
+            echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh\` for these changes (backend $BE_KIND, JS $JS_KIND) — not running it again"
         fi
+        exit 0
+    elif [ -n "$BE_KIND" ] || [ -n "$JS_KIND" ]; then
+        if [ -n "$BE_KIND" ]; then GATES_SIDES=js; else GATES_SIDES=backend; fi
+        echo "$P: tree ${PUSHED_TREE:0:10}: the $([ -n "$BE_KIND" ] && echo backend || echo JS) side's ledgers vouch for these changes ($BE_KIND$JS_KIND) — running the $GATES_SIDES side only"
     fi
 fi
 
@@ -932,16 +940,19 @@ fi
 # green side is recorded in its own ledger whatever the other side did. --full covers `*` (any push of the
 # tree); a selective run, the files the side covered (COVERED_BE / COVERED_JS).
 # A green --real-pg run records its backend side in its own ledger, `$STAMP-realpg` (2026-11-20, user: before a
-# whole real-PG run, a hook asks whether it is needed — local-gates/test-scope-guard.py reads this ledger). It
-# never vouches for a push: the push ledgers are the SQLite side's.
+# whole real-PG run, a hook asks whether it is needed — local-gates/test-scope-guard.py reads this ledger), and
+# since 2026-11-21 in `$STAMP-backend` as well, so it vouches for a push: it runs the backend side's ruff and
+# makemigrations (static_backend) and the same pytest selection (plus the PostgreSQL-only tests, which a
+# delegated SQLite-side run adds as well), on PostgreSQL. `-realpg` lines written before that day ran no ruff
+# and no makemigrations, which is why they are not read as backend passes.
 record_side() {
     [ "$PREPUSH" = 0 ] && [ "$2" = 0 ] || return 0
     if [ "$REAL_PG" = 1 ]; then [ "$1" = backend ] && [ "$TESTS" = 0 ] || return 0; fi
     side_on "$1" || return 0  # GATES_SIDES left it out: nothing ran, nothing to vouch for
     cd "$ROOT" || return 0
     tree_is_clean || { echo "$P: not recording the $1 pass — $CLEAN_WHY"; return 0; }
-    local tree file="$STAMP-$1" cov kind=selective
-    [ "$REAL_PG" = 1 ] && file="$STAMP-realpg"
+    local tree files=("$STAMP-$1") file cov kind=selective
+    [ "$REAL_PG" = 1 ] && files+=("$STAMP-realpg")
     tree="$(git rev-parse HEAD^{tree})"
     [ "$tree" = "$START_TREE" ] || { echo "$P: not recording the $1 pass — HEAD moved during the run (tested ${START_TREE:0:10}, now ${tree:0:10})"; return 0; }
     if [ "$FULL_RUN" = 1 ]; then
@@ -951,8 +962,10 @@ record_side() {
     else
         cov="$(echo "$COVERED_JS" | grep -v '^$' | paste -sd'|' -)"
     fi
-    printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" "$cov" >>"$file"
-    tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+    for file in "${files[@]}"; do
+        printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" "$cov" >>"$file"
+        tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+    done
     echo "$P: recorded a $kind pass ($1) for tree ${tree:0:10}"
 }
 # Consumed: nothing below (pytest included) should inherit the hand-off.
@@ -1248,7 +1261,8 @@ fi
 # round trips only when a migration changed. `--real-pg --full` runs everything,
 # round trips included — before merging into main. The full run took ~45 minutes
 # at -n 2 with the round trips (2026-10-28); 950 s at -n 4 without (2026-10-19).
-# No jest, no tsc/eslint, no ruff/makemigrations: the ordinary run covers those.
+# No jest, no tsc/eslint. ruff and makemigrations do run (2026-11-21, seconds): with them a green run is
+# the backend side's run on PostgreSQL, and it is recorded for that side (record_side).
 if [ "$REAL_PG" = 1 ]; then
     P="real-pg"
     RUN_CORE=0; RUN_FRONTEND=0; RUN_MOBILE=0; RUN_OFFICER=0; RUN_JEST_READERS=0; MOBILE_READERS=""
@@ -1609,7 +1623,7 @@ static_backend() {
 STATIC_RED=0
 if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
-    if [ "$RUN_BACKEND" = 1 ] && [ "$REAL_PG" = 0 ]; then
+    if [ "$RUN_BACKEND" = 1 ]; then
         echo "  → ruff";  "$RUFF" check .          || static_fail "ruff failed"
         # `makemigrations --check` BEFORE pytest, because it is the cheap one and
         # because it catches a class the suite does not: a model `choices` list
@@ -1636,8 +1650,6 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
                 static_fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
             fi
         fi
-    elif [ "$REAL_PG" = 1 ]; then
-        echo "  → ruff, makemigrations: skipped — --real-pg runs pytest only"
     else
         echo "  → ruff, makemigrations: skipped — nothing under backend/ changed"
     fi
