@@ -49,7 +49,8 @@ def test_a_sort_the_clients_send_is_still_applied(path, term, admin_user, cn_ten
 def test_a_secret_name_is_ignored_over_http(path, term, admin_user):  # webhooks: the walk above (a hall's admin)
     from rest_framework.test import APIClient
 
-    client = APIClient()
-    client.force_authenticate(admin_user)
+    from tests.conftest import sign_in
+
+    client = sign_in(APIClient(), admin_user)
     response = client.get(path, {"ordering": term})
     assert response.status_code == 200, response.content[:300]

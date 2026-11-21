@@ -167,6 +167,10 @@ class TestJudgmentQueueCursor:
 
     def test_archived_and_deleted_cases_never_appear(self, admin_client, soul, other_soul, cn_tenant, admin_user):
         archived = self._pending(soul, cn_tenant)
+        with pytest.raises(ValueError):  # an open case cannot be archived (Judgment.archive)
+            archived.archive(user=admin_user, reason="录入重复")
+        Judgment.all_objects.filter(pk=archived.pk).update(verdict="PASSED", is_final=True)
+        archived.refresh_from_db()
         archived.archive(user=admin_user, reason="录入重复")
         deleted = self._pending(other_soul, cn_tenant)
         deleted.delete_or_raise(user=admin_user, reason="录入重复")

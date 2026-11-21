@@ -675,6 +675,14 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         """False once a verdict has been recorded — see class docstring."""
         return self.verdict is None
 
+    def archive(self, user=None, reason=""):
+        """Only a case with a verdict is archived; an open one is deleted instead (`can_delete`). The open-case
+        checks rely on it -- `is_open` / `OPEN_Q` carry no is_archived branch -- so the model refuses, not just
+        the API view."""
+        if self.can_delete:
+            raise ValueError("This judgment has no verdict; delete it instead of archiving.")
+        return super().archive(user=user, reason=reason)
+
     def delete_or_raise(self, user=None, reason=""):
         """Soft-delete this judgment, or raise DeletionNotAllowedError
         (archivable=True) once it carries a verdict."""
