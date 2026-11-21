@@ -150,7 +150,8 @@ def visible_posts_for_soul(viewer, queryset=None):
     tenant = civilization_of(viewer)
     if tenant is None:
         return qs.none()
-    following = Follow.objects.filter(follower=viewer, tenant=tenant).values("following_id")
+    # Follow edges are on the shard, posts on control: ids, never a subquery (it found no edge sharded).
+    following = list(Follow.objects.filter(follower=viewer, tenant=tenant).values_list("following_id", flat=True))
     return qs.filter(
         tenant=tenant,
         author__role=SOUL_ROLE,

@@ -356,7 +356,8 @@ class OfficerCooldownShorteningViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
 
         from apps.tenants.models import Tenant
 
-        tenants = Tenant.objects.filter(pk__in=qs.order_by().values("soul__home_tenant"))
+        # The halls by id: a subquery over the requests (a shard's rows) would compile on control and find none.
+        tenants = Tenant.objects.filter(pk__in=set(qs.order_by().values_list("soul__home_tenant", flat=True)))
         days = Case(
             *[When(soul__home_tenant=t.pk, then=Value(timedelta(days=rebirth.cooldown_days(t)))) for t in tenants],
             default=Value(timedelta(days=rebirth.DEFAULT_COOLDOWN_DAYS)), output_field=DurationField(),

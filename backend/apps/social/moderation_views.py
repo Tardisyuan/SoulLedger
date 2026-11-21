@@ -76,20 +76,30 @@ MODERATE = "social.moderate"
 ERRORS = {400: ModerationErrorSerializer, 403: ModerationErrorSerializer, 409: ModerationErrorSerializer}
 
 
-def ai_screen_annotations(kind):
+def ai_screen_annotations(kind, queue):
     """列表行带上已存的 AI 预筛分(`ModerationScore`):分、理由、来源、信号与打分时的正文指纹。
-    指纹对不上(作者改过正文)由序列化器当作没打过分。"""
-    from django.db.models import JSONField, OuterRef, Subquery
+    指纹对不上(作者改过正文)由序列化器当作没打过分。
+
+    分数在文明分库、帖子与评论在控制库:先把这批行的分数读出来,再按主键写成值,不用子查询 —— 子查询在
+    控制库上编译,分库化后找不到任何分数(全是 null,按风险排序失效)。
+    ponytail: 每行一个 When,队列里打过分的行到上千条时改成把分数存进帖子 / 评论自己的列。"""
+    from django.db.models import CharField, IntegerField, JSONField
 
     from apps.social.models import ModerationScore
 
-    row = ModerationScore.objects.filter(kind=kind, object_id=OuterRef("pk"))
+    rows = list(ModerationScore.objects.filter(kind=kind, object_id__in=list(queue.values_list("pk", flat=True)))
+                .values("object_id", "score", "reason", "source", "signals", "content_hash"))
+
+    def by_pk(field, output):
+        return Case(*[When(pk=r["object_id"], then=Value(r[field], output_field=output)) for r in rows],
+                    default=Value(None, output_field=output), output_field=output)
+
     return {
-        "ai_score": Subquery(row.values("score")[:1]),
-        "ai_reason": Subquery(row.values("reason")[:1]),
-        "ai_source": Subquery(row.values("source")[:1]),
-        "ai_signals": Subquery(row.values("signals")[:1], output_field=JSONField()),
-        "ai_hash": Subquery(row.values("content_hash")[:1]),
+        "ai_score": by_pk("score", IntegerField()),
+        "ai_reason": by_pk("reason", CharField()),
+        "ai_source": by_pk("source", CharField()),
+        "ai_signals": by_pk("signals", JSONField()),
+        "ai_hash": by_pk("content_hash", CharField()),
     }
 
 
@@ -186,7 +196,7 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
         qs = super().get_queryset().select_related("author")
         qs = qs.annotate(
             open_report_count=Count("reports", filter=Q(reports__status=ReportStatus.OPEN), distinct=True),
-            **ai_screen_annotations(self.ai_kind),
+            **ai_screen_annotations(self.ai_kind, qs),
         )
         # `?order=risk`:AI 预筛的分高的先看(没打过分的排最后)。只是排序,不筛掉任何一条。
         if self.request.query_params.get("order") == "risk":

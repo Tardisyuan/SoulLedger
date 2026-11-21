@@ -211,9 +211,9 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         tenant = getattr(request, "tenant", None)
         if not tenant:
             return Response([], status=status.HTTP_200_OK)
-        following_ids = Follow.objects.filter(
+        following_ids = list(Follow.objects.filter(  # edges on the shard, posts on control: ids, not a subquery
             follower=request.user, tenant=tenant
-        ).values_list("following_id", flat=True)
+        ).values_list("following_id", flat=True))
         qs = Post.objects.filter(
             author_id__in=following_ids,
             visibility__in=["PUBLIC", "FOLLOWERS"],

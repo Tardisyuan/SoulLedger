@@ -44,10 +44,11 @@ def visible_posts(request, queryset=None):
         return qs.none()
 
     tenant = request_tenant(request)
+    # Follow edges are on the shard, posts on control: ids, never a subquery (it found no edge sharded).
     following_ids = (
-        Follow.objects.filter(follower=user, tenant=tenant).values_list(
+        list(Follow.objects.filter(follower=user, tenant=tenant).values_list(
             "following_id", flat=True
-        )
+        ))
         if tenant
         else []
     )

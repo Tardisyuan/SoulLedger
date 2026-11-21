@@ -177,7 +177,8 @@ class MeSocialFeedView(SoulSocialView):
             qs = qs.filter(author_id=author)
         if request.query_params.get("following") == "true":
             followed = Follow.objects.filter(follower=request.user, tenant=circle.civilization_of(request.user))
-            qs = qs.filter(Q(author=request.user) | Q(author_id__in=followed.values("following_id")))
+            # Posts are read on control, Follow edges on the shard: ids, never a subquery (it found no edge sharded).
+            qs = qs.filter(Q(author=request.user) | Q(author_id__in=list(followed.values_list("following_id", flat=True))))
         return self.paginate(circle.annotate_posts_for(request.user, qs).order_by("-create_time"), SoulPostSerializer)
 
     @extend_schema(request=SoulPostCreateSerializer, responses={201: SoulPostSerializer, **BAD_REQUEST, **ERRORS})
