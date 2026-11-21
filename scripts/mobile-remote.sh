@@ -29,7 +29,7 @@
 # Builds take their own lock ($RDIR/android/build.lock), not the gates' run.lock: the box has 20
 # cores, a gate container is held to 12 and a build to 8, so the two run side by side (user decision
 # 2026-10-29); the lock only keeps two builds apart. Metro takes no lock — it is light.
-# The lock and the time limit follow scripts/run-gates.sh (TIME LIMITS ON THE REMOTE MACHINE; 2026-11-13, test
+# The lock and the time limit follow scripts/gates-remote.sh (TIME LIMITS ON THE REMOTE MACHINE; 2026-11-13, test
 # review 3.5): the lock is held by a subshell on the box that removes the container before letting go, so a
 # dropped ssh no longer frees it under a build still running, and `timeout` is the container's own command.
 # 30 minutes: the longest build measured is 461 s (a warm tree; the others 124 s and 220 s). A cold tree also
@@ -57,7 +57,7 @@ cd "$ROOT"
 rsh() { ssh -o BatchMode=yes -o ConnectTimeout=5 "$H" "$@"; }
 
 # remote_flock <fd> <lock name> <container name prefix>… — the remote shell's words for "take this lock; when
-# it is taken, say who has it, then wait". A copy of scripts/run-gates.sh's, kept identical by its test.
+# it is taken, say who has it, then wait". A copy of scripts/gates-remote.sh's, kept identical by its test.
 remote_flock() {
     local fd="$1" lock="$2" filters="" n; shift 2
     for n in "$@"; do filters="$filters --filter name=$n"; done
@@ -68,14 +68,14 @@ sync_tree() {
     # .sl-last-use: this tree is in use — run-gates.sh deletes synced trees no run has used for two weeks
     # (remote_prune; a tree a container mounts, such as a running Metro's, is never deleted).
     rsh "mkdir -p $W $RDIR/android/sdk $RDIR/android/gradle && touch $W/.sl-last-use"
-    # Same file list and protections as run-gates.sh's remote_sync, minus .git; plus the generated
+    # Same file list and protections as gates-remote.sh's remote_sync, minus .git; plus the generated
     # android/ and Expo's cache, so prebuild output and the gradle build survive --delete.
     { git ls-files -z; git ls-files -z -o --exclude-standard -- packages mobile mobile-officer scripts; } \
         | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P mobile*/android/' \
             --filter='P mobile*/.expo/' --filter='P .sl-*' --from0 --files-from=- -r "$ROOT/" "$H:$W/"
 }
 
-# The JS dependency hash, as run-gates.sh's deps_hash_js: the lockfile, only the dependency fields of each
+# The JS dependency hash, as gates-remote.sh's deps_hash_js: the lockfile, only the dependency fields of each
 # package.json (a version or script edit reinstalls nothing), and the image. No Python is installed here, so
 # there is no second hash. A function for its test (backend/tests/test_prepush_runs_the_gates_a_change_can_break.py).
 deps_hash_js() {
@@ -92,7 +92,7 @@ for path in sys.argv[1:]:
     echo "$IMG"
 }
 DEPS=$(deps_hash_js | shasum | cut -c1-16)
-# Installed in the synced tree once per lockfile change (run-gates.sh's REMOTE_DEPS, without the venv).
+# Installed in the synced tree once per lockfile change (gates-remote.sh's REMOTE_DEPS, without the venv).
 REMOTE_DEPS='
     if [ "$(cat .sl-deps 2>/dev/null)" != "$SL_DEPS" ]; then
       echo "    (installing node_modules for these lockfiles — once per lockfile change)"
