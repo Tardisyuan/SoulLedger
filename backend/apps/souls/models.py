@@ -1087,14 +1087,14 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         from django.core.exceptions import ValidationError as DjangoValidationError
 
         from apps.events.services import EventService
-        from apps.judgment.models import DUAT_BARRED, Judgment, JudgmentKind
+        from apps.judgment.models import DUAT_BARRED, OPEN_Q, Judgment, JudgmentKind
         from apps.realms.path import SoulPathService
 
         new = self.duat_passage
         if old == new or (old not in DUAT_BARRED and new not in DUAT_BARRED):
             return
         cases = list(Judgment.objects.select_for_update(of=("self",)).filter(
-            soul=self, kind=JudgmentKind.ORIGINAL, verdict__isnull=True, is_final=False, is_deleted=False))
+            OPEN_Q, soul=self, kind=JudgmentKind.ORIGINAL))
         if old in DUAT_BARRED:
             cases = [case for case in cases if case.duat_stage in DUAT_BARRED]
         if not cases:
@@ -1139,7 +1139,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         from django.core.exceptions import ValidationError as DjangoValidationError
 
-        from apps.judgment.models import EMBALMING_DAYS, DuatStage, GrievanceStatus, Judgment, JudgmentKind
+        from apps.judgment.models import EMBALMING_DAYS, OPEN_Q, DuatStage, GrievanceStatus, Judgment, JudgmentKind
 
         if old == self.death_dates() or self.civilization not in (Civilization.CHINESE, Civilization.EGYPTIAN):
             return
@@ -1148,7 +1148,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         released = (GrievanceStatus.UPHELD, GrievanceStatus.UPHELD_LATE, GrievanceStatus.DELIVERED)
         today = timezone.localdate()
         cases = Judgment.objects.select_for_update(of=("self",)).filter(
-            soul=self, kind=JudgmentKind.ORIGINAL, verdict__isnull=True, is_final=False, is_deleted=False)
+            OPEN_Q, soul=self, kind=JudgmentKind.ORIGINAL)
         for case in cases:
             if self.civilization == Civilization.CHINESE:
                 if case.grievance_status in released:

@@ -942,13 +942,13 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         `soul.update` (user 2026-10-29, rbac-be1 L11). With no open case the edit stays a plain soul field."""
         from rest_framework.exceptions import PermissionDenied
 
-        from apps.judgment.models import DUAT_BARRED, Judgment, JudgmentKind
+        from apps.judgment.models import DUAT_BARRED, OPEN_Q, Judgment, JudgmentKind
         from apps.perm.checker import check_permission
 
         if old == new or (old not in DUAT_BARRED and new not in DUAT_BARRED):
             return
         has_open_case = Judgment.objects.filter(
-            soul=instance, kind=JudgmentKind.ORIGINAL, verdict__isnull=True, is_final=False, is_deleted=False,
+            OPEN_Q, soul=instance, kind=JudgmentKind.ORIGINAL,
         ).exists()
         request = self.context.get("request")
         if has_open_case and not check_permission(getattr(request, "user", None), "judgment.assign"):

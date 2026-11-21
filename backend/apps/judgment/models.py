@@ -267,9 +267,15 @@ def open_judgments(soul):
     两个调用方共用这一份定义:`JudgmentSerializer.validate_soul`(一个灵魂同时只能有
     一个未结案审判)与 `DispatchService.end_residence`(有未结案审判时不回归)。
     """
-    return Judgment.all_objects.filter(
-        soul=soul, verdict__isnull=True, is_final=False, is_deleted=False
-    )
+    return Judgment.all_objects.filter(OPEN_Q, soul=soul)
+
+
+#: 「未结」的查询写法,与 `Judgment.is_open` 同一个定义(审计 2026-11-20 §4 #3;两者逐格一致由 `tests/test_judgment_is_open.py`、
+#: 只此一种写法由 `tests/test_judgment_open_check_has_one_spelling.py` 守)。含 `is_deleted=False`:`Judgment.objects` 本来就滤掉
+#: 软删(TenantManager),`all_objects` 不滤,写在这里两种 manager 上答案相同。`is_archived` 不在里面 —— 要连归档一起
+#: 排除的地方在旁边自己写。
+NOT_CONCLUDED_Q = models.Q(verdict__isnull=True, is_final=False)  # `not Judgment.is_concluded`,不看软删
+OPEN_Q = NOT_CONCLUDED_Q & models.Q(is_deleted=False)
 
 
 class JudgmentKind(models.TextChoices):
@@ -658,6 +664,11 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         (审计 2026-11-20 §4 #3). Soft-delete / archive are NOT part of it: call sites that also refuse those
         say so beside it (`tests/test_judgment_open_check_has_one_spelling.py`)."""
         return self.verdict is not None or self.is_final
+
+    @property
+    def is_open(self) -> bool:
+        """未结:没结案、也没撤案(软删)。查询写法是 `OPEN_Q`。归档不在里面,同上。"""
+        return not self.is_concluded and not self.is_deleted
 
     @property
     def can_delete(self) -> bool:

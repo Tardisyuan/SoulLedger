@@ -61,7 +61,7 @@ def _assert_pending(judgment: Judgment) -> None:
     与 `open_judgments` 同一组列;`is_archived` 额外排除,因为队列(`_pending_queue`)
     也排除它。结案后认领信息保留,但不能再改。
     """
-    if judgment.is_concluded or judgment.is_deleted or judgment.is_archived:
+    if not judgment.is_open or judgment.is_archived:
         raise ClaimRefusedError("This judgment is no longer pending.", "not_pending")
     _assert_sent_on(judgment)
 

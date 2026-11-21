@@ -701,7 +701,7 @@ class JudgmentDraftService:
         from django.db.models import F
 
         from apps.core.request_local import get_current_user
-        from apps.judgment.models import Judgment
+        from apps.judgment.models import NOT_CONCLUDED_Q, Judgment
 
         changes = {k: v for k, v in changes.items() if k in cls.FIELDS}
         current = Judgment.all_objects.get(pk=judgment.pk)
@@ -719,8 +719,7 @@ class JudgmentDraftService:
         if user is not None and user.is_authenticated:
             values["update_user"] = user
         updated = Judgment.all_objects.filter(
-            pk=judgment.pk, draft_version=expected_version,
-            verdict__isnull=True, is_final=False,
+            NOT_CONCLUDED_Q, pk=judgment.pk, draft_version=expected_version,
         ).update(**values)
         current = Judgment.all_objects.get(pk=judgment.pk)
         if not updated:

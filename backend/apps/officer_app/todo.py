@@ -182,7 +182,7 @@ def _city_god_items(scope):
     """「城隍初审」:我名下城隍的待初审 + 退回补正,退回补正的在前。"""
     from django.db.models import Case, IntegerField, Value, When
 
-    from apps.judgment.models import AT_CITY_GOD, CityGodStatus, Judgment
+    from apps.judgment.models import AT_CITY_GOD, OPEN_Q, CityGodStatus, Judgment
 
     if not check_permission(scope.user, "city_god.execute"):
         return []
@@ -190,7 +190,7 @@ def _city_god_items(scope):
                           output_field=IntegerField())
     seen = _judgments_in_scope(scope)
     qs = (scope_to_tenant(Judgment.objects.all() if seen is None else seen, scope)
-          .filter(city_god__officers=scope.user, city_god_status__in=AT_CITY_GOD, verdict__isnull=True, is_final=False)
+          .filter(OPEN_Q, city_god__officers=scope.user, city_god_status__in=AT_CITY_GOD)
           .select_related("soul", "city_god").order_by(returned_first, "created_at"))
     return [_item("city_god", j.pk, j.soul.name, j.created_at, city_god_status=j.city_god_status,
                   city_god_name=j.city_god.name, origin_location=j.soul.origin_location, untimely=j.untimely)

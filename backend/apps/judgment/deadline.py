@@ -93,4 +93,6 @@ def overdue_q(queryset, now=None) -> Q:
         days = tenant.judgment_deadline_days
         if days is not None:
             per_hall |= Q(tenant_id=tenant.pk, **{f"{DUE_BASE}__lt": now - timedelta(days=days)})
-    return Q(deferred_at__isnull=True, claimable_since__isnull=False, verdict__isnull=True, is_final=False) & per_hall
+    from apps.judgment.models import NOT_CONCLUDED_Q
+
+    return NOT_CONCLUDED_Q & Q(deferred_at__isnull=True, claimable_since__isnull=False) & per_hall

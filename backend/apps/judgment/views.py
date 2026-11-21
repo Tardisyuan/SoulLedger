@@ -37,7 +37,7 @@ from apps.judgment.attachment_views import CaseAttachmentActionsMixin
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.confession_views import NegativeConfessionActionsMixin
 from apps.judgment.fail_reasons import FailReasonRefusedError
-from apps.judgment.models import AT_CITY_GOD, Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
+from apps.judgment.models import AT_CITY_GOD, OPEN_Q, Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
 from apps.judgment.precedents import precedents_for
@@ -107,7 +107,7 @@ QUEUE_SKIP_LIMIT = 200
 
 #: 「未结案」在队列里的定义。与 `_pending_queue` 同一组列,写一次。
 #: 还在城隍那里初审的不算 —— 解送之前十殿看不到它(apps/judgment/city_gods.py)。
-PENDING = Q(verdict__isnull=True, is_final=False, is_archived=False) & ~Q(city_god_status__in=AT_CITY_GOD)
+PENDING = OPEN_Q & Q(is_archived=False) & ~Q(city_god_status__in=AT_CITY_GOD)
 
 
 #: 「退回重审」(v4 `queue.tab.returned`):判官判了 RETRY、另开的那一件(`weighing.open_retrial`)。

@@ -832,7 +832,7 @@ def cancel(plan, *, reason, user):
     from apps.audit.signals import write_audit_row
     from apps.dispatch.models import DispatchRecord, DispatchStatus
     from apps.dispatch.services import DispatchService
-    from apps.judgment.models import Judgment, JudgmentKind, open_judgments
+    from apps.judgment.models import OPEN_Q, Judgment, JudgmentKind, open_judgments
 
     if not (reason or "").strip():
         raise PlanChangeRefusedError("A reason is required to cancel a sentence plan", "reason_required")
@@ -842,7 +842,7 @@ def cancel(plan, *, reason, user):
         if plan.status not in IN_PROGRESS_PLAN_STATUSES:
             raise PlanChangeRefusedError(f"This plan is {plan.status}", "plan_closed", status=409)
         retrials = Judgment.all_objects.filter(
-            amends_plan_id=plan.pk, kind=JudgmentKind.REOPEN, verdict__isnull=True, is_final=False, is_deleted=False,
+            OPEN_Q, amends_plan_id=plan.pk, kind=JudgmentKind.REOPEN,
         )
         other_open = [str(pk) for pk in open_judgments(soul).exclude(pk__in=retrials.values("pk"))
                       .values_list("pk", flat=True)]
