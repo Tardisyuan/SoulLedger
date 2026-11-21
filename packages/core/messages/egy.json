@@ -866,7 +866,9 @@
       "moved": "Semawy-N Er {{station}}",
       "error": {
         "not_diyu": "Duat Sherer Wa: Sekhet 13.",
-        "alive": "Ba Em Ankh: Nen Em Wat."
+        "alive": "Ba Em Ankh: Nen Em Wat.",
+        "reason_required": "Semawy Er Tepy: Khet Em Tepy.",
+        "soul_settled": "Ba Pen Khetem-N: Nen Semawy Sekhet Mawy."
       },
       "TUDI_TEMPLE": "Per Netjer Ta",
       "YELLOW_SPRINGS_ROAD": "Wat Huangquan",
@@ -883,7 +885,14 @@
       "now_card": "Min · Sekhet {{n}}",
       "state_passed": "Shem-N",
       "state_ahead": "Nen Shem Djer",
-      "EVIL_DOG_VILLAGE": "Sekhet Egou"
+      "EVIL_DOG_VILLAGE": "Sekhet Egou",
+      "reason_label": "Khet",
+      "reason_required_mark": "Em Tepy",
+      "reason_hint_back": "Semawy Er Tepy: Khet Em Tepy.",
+      "reason_hint_forward": "Semawy Er Khet: Khet Nen Em Tepy.",
+      "reason_placeholder": "Mi: Sekhet Tepy Sesh Nen Maat",
+      "timeline_back": "Semawy Er Tepy · {{station}}",
+      "timeline_reason": "Khet: {{reason}}"
     },
     "capture": {
       "escort_hint": "Nefer Er Isfet: {{merit_escort}}. Isfet Er Nefer: {{demerit_escort}}.",
@@ -5284,7 +5293,9 @@
         "unheard": "Nen Sesh Djer",
         "partial": "Sesh-N {{recorded}} / {{total}} · Ky: Nen Sesh Djer",
         "complete": "Djed Nen {{total}} Neb: Sesh-N",
-        "strip_aria": "Maat {{truthful}} · Nen Maat {{untruthful}} · Nen Sesh Djer {{unheard}} · {{total}}"
+        "strip_aria": "Maat {{truthful}} · Nen Maat {{untruthful}} · Nen Sesh Djer {{unheard}} · {{total}}",
+        "none": "Nen Sesh Djer",
+        "count": "Sesh-N {{recorded}} / {{total}}"
       },
       "delivered": "Seshem-N",
       "delivered_on": "Seshem-N · {{date}}",

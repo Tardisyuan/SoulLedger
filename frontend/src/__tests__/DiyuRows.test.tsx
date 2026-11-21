@@ -19,7 +19,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 import { DiyuRows, DiyuStationStrip } from "@/src/components/souls/detail/DiyuRows";
-import { describeSystemEvent, makeSystemEventLabels, buildSystemRows } from "@/src/components/souls/soulLifecycleRows";
+import { describeSystemEvent, makeSystemEventLabels, buildSystemRows, isBackwardStationMove } from "@/src/components/souls/soulLifecycleRows";
 import { renderWithProviders } from "./support/render";
 import { api } from "@soulledger/core/api/client";
 import { soulsApi as realSoulsApi } from "@soulledger/core/api/souls";
@@ -121,66 +121,122 @@ describe("十三站行程条(第五十七批 S-1)", () => {
   });
 });
 
-describe("挪站:往回挪要理由(决定 #11)", () => {
+describe("挪站:理由(决定 #11,Design 第六十三批 一)", () => {
   beforeEach(() => {
     mockMove.mockReset();
     mockShowToast.mockReset();
   });
   const open = async () => {
-    strip({}, true);
+    const view = strip({}, true);
     fireEvent.click(screen.getByTestId("soul-diyu-station-move"));
     await screen.findByText("挪站 · 张三");
-    return screen.getByLabelText("挪到") as HTMLSelectElement;
+    return { view, select: screen.getByLabelText("挪到") as HTMLSelectElement };
   };
   const confirm = () => screen.getByTestId("soul-diyu-station-move-confirm");
+  const reasonBox = () => document.getElementById("soul-diyu-station-reason") as HTMLTextAreaElement;
+  const labelOf = () => document.querySelector('label[for="soul-diyu-station-reason"]')!.textContent;
 
-  it("往前挪:没有理由框,发的请求不带理由", async () => {
+  it("往前挪:理由框一直在,标签「理由」、帮助句「往前挪可以不写」,不写也能挪,请求不带理由", async () => {
     mockMove.mockResolvedValue({ data: {} });
     await open();
-    expect(screen.queryByLabelText(/往回挪的理由/)).toBeNull();
-    expect(confirm()).toBeEnabled();
+    expect(reasonBox()).toBeInTheDocument();
+    expect(labelOf()).toBe("理由");
+    expect(screen.getByText("往前挪可以不写。")).toBeInTheDocument();
+    expect(screen.queryByText("往回挪要写理由。")).toBeNull();
+    expect(reasonBox()).not.toHaveAttribute("aria-required");
+    expect(reasonBox().placeholder).toBe("例如：上一站记错了");
+    expect(reasonBox().maxLength).toBe(500);
     fireEvent.click(confirm());
     await waitFor(() => expect(mockMove).toHaveBeenCalledWith("s1", "EVIL_DOG_VILLAGE", undefined));
   });
 
-  it("往回挪:理由必填,空白时不能提交;写了就随请求发出(去掉首尾空白)", async () => {
+  it("往前挪写了理由:理由一样随请求发出(去掉首尾空白)", async () => {
     mockMove.mockResolvedValue({ data: {} });
-    const select = await open();
+    await open();
+    fireEvent.change(reasonBox(), { target: { value: "  城隍补报 " } });
+    fireEvent.click(confirm());
+    await waitFor(() => expect(mockMove).toHaveBeenCalledWith("s1", "EVIL_DOG_VILLAGE", "城隍补报"));
+  });
+
+  it("选到更早的一站:还是同一个框,标签成「理由 · 必填」,帮助句换成「往回挪要写理由」;确认键不灰", async () => {
+    const { select } = await open();
+    const box = reasonBox();
     fireEvent.change(select, { target: { value: "TUDI_TEMPLE" } });
-    const reason = screen.getByLabelText(/往回挪的理由/) as HTMLTextAreaElement;
-    expect(reason).toBeRequired();
-    expect(reason.maxLength).toBe(500);
-    expect(confirm()).toBeDisabled();
-    fireEvent.change(reason, { target: { value: "   " } });
-    expect(confirm()).toBeDisabled();
+    expect(reasonBox()).toBe(box); // 不出现、不收起:同一个元素
+    expect(labelOf()).toBe("理由 · 必填");
+    expect(reasonBox()).toHaveAttribute("aria-required", "true");
+    expect(screen.getByText("往回挪要写理由。")).toBeInTheDocument();
+    expect(screen.queryByText("往前挪可以不写。")).toBeNull();
+    expect(confirm()).toBeEnabled();
+    fireEvent.change(select, { target: { value: "EIGHTEEN_HELLS" } });
+    expect(reasonBox()).toBe(box);
+    expect(labelOf()).toBe("理由");
+  });
+
+  it("往回挪没写(只有空白也算空)就点确认:行内报错替换帮助句,框转 invalid,焦点回框里,不发请求", async () => {
+    const { select } = await open();
+    fireEvent.change(select, { target: { value: "TUDI_TEMPLE" } });
+    fireEvent.change(reasonBox(), { target: { value: "   " } });
     fireEvent.click(confirm());
     expect(mockMove).not.toHaveBeenCalled();
-    fireEvent.change(reason, { target: { value: "  判错了站 " } });
-    expect(confirm()).toBeEnabled();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("往回挪要写理由。");
+    expect(alert.id).toBe("soul-diyu-station-reason-error");
+    expect(reasonBox()).toHaveAttribute("aria-invalid", "true");
+    expect(reasonBox()).toHaveFocus();
+    // 报错替换了帮助句,不是两句并排。
+    expect(document.getElementById("soul-diyu-station-reason-description")).toBeNull();
+    expect(mockShowToast).not.toHaveBeenCalled();
+    // 写了就消掉报错,再点就发。
+    fireEvent.change(reasonBox(), { target: { value: "  判错了站 " } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    mockMove.mockResolvedValue({ data: {} });
     fireEvent.click(confirm());
     await waitFor(() => expect(mockMove).toHaveBeenCalledWith("s1", "TUDI_TEMPLE", "判错了站"));
   });
 
-  it("改回往前挪,理由框收起,写过的理由也不发", async () => {
-    mockMove.mockResolvedValue({ data: {} });
-    const select = await open();
-    fireEvent.change(select, { target: { value: "TUDI_TEMPLE" } });
-    fireEvent.change(screen.getByLabelText(/往回挪的理由/), { target: { value: "判错了站" } });
-    fireEvent.change(select, { target: { value: "EIGHTEEN_HELLS" } });
-    expect(screen.queryByLabelText(/往回挪的理由/)).toBeNull();
+  it("后端回 reason_required:同一处行内报错,焦点回框里,不弹提示", async () => {
+    mockMove.mockRejectedValue({ response: { status: 400, data: { code: "reason_required" } } });
+    await open();
     fireEvent.click(confirm());
-    await waitFor(() => expect(mockMove).toHaveBeenCalledWith("s1", "EIGHTEEN_HELLS", undefined));
+    expect(await screen.findByRole("alert")).toHaveTextContent("往回挪要写理由。");
+    expect(reasonBox()).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(reasonBox()).toHaveFocus());
+    expect(screen.queryByTestId("soul-diyu-station-move-error")).toBeNull();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it("soul_settled:正文顶上一句,弹层不关,下拉与理由框禁用、「挪站」灰掉,只剩「取消」;关掉后刷新灵魂详情", async () => {
+    mockMove.mockRejectedValue({ response: { status: 409, data: { code: "soul_settled" } } });
+    const { view, select } = await open();
+    const invalidate = jest.spyOn(view.client, "invalidateQueries");
+    fireEvent.click(confirm());
+    expect(await screen.findByTestId("soul-diyu-station-move-error")).toHaveTextContent("这个灵魂已终局，不能再挪站。");
+    expect(screen.getByText("挪站 · 张三")).toBeInTheDocument();
+    expect(select).toBeDisabled();
+    expect(reasonBox()).toBeDisabled();
+    expect(confirm()).toBeDisabled();
+    const cancel = screen.getByRole("button", { name: "取消" });
+    expect(cancel).toBeEnabled();
+    expect(mockShowToast).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+    fireEvent.click(cancel);
+    await waitFor(() => expect(screen.queryByText("挪站 · 张三")).toBeNull());
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["souls"] });
   });
 
   it.each([
-    ["reason_required", "往回挪要写理由。"],
-    ["soul_settled", "这个灵魂已经结案，不在路上了。"],
-  ])("后端拒绝 %s:提示它自己那句,不是「出错了」", async (code, message) => {
-    mockMove.mockRejectedValue({ response: { status: code === "reason_required" ? 400 : 409, data: { code } } });
+    ["not_diyu", "只有地府的亡魂走十三站。"],
+    ["alive", "在世的灵魂不在路上。"],
+    ["something_new", "出错了"],
+  ])("别的拒绝 %s:同一处写它自己那句(新码退回 common.error),弹层仍可再试", async (code, message) => {
+    mockMove.mockRejectedValue({ response: { status: 409, data: { code } } });
     await open();
     fireEvent.click(confirm());
-    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(message, "error"));
-    expect(mockShowToast).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId("soul-diyu-station-move-error")).toHaveTextContent(message);
+    expect(confirm()).toBeEnabled();
+    expect(reasonBox()).toBeEnabled();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });
 
@@ -214,10 +270,36 @@ describe("时间线一行", () => {
       .toBe("十三站换站 · 土地庙");
   });
 
-  it("往回挪写了理由:理由原样跟在去处后面", () => {
-    expect(describeSystemEvent(
-      event("DIYU_STATION_CHANGED", { from: "FENGDU_CITY", to: "TUDI_TEMPLE", via: "officer", reason: "判错了站" }), labels))
-      .toBe("十三站换站 · 土地庙 · 判错了站");
+  const moved = (payload: Record<string, unknown>) =>
+    ({ id: `e-${String(payload.to)}`, soul: "s1", actor: "崔判官", create_time: "2026-11-21T06:02:00Z",
+      event_type: "DIYU_STATION_CHANGED", payload } as unknown as SoulEvent);
+
+  it("第六十三批 一:往回挪(from / to 的站序比出来)是「↺ 退回 · 站名」,理由在下一行「理由：……」全文", () => {
+    const long = "上一站记错了：她还没过黄泉路就被记成了到恶狗岭。".repeat(20);
+    const [back] = buildSystemRows([moved({ from: "EVIL_DOG_VILLAGE", to: "YELLOW_SPRINGS_ROAD", via: "officer", reason: ` ${long} ` })], labels);
+    expect(back.title).toBe("↺ 退回 · 黄泉路");
+    expect(back.title).not.toContain("十三站换站");
+    expect(back.title).not.toContain(long.slice(0, 6));
+    expect(back.note).toBe(`理由：${long}`);
+  });
+
+  it("往前挪照旧「十三站换站 · 站名」;写了理由也在下一行;没写就没有第二行", () => {
+    const [forward] = buildSystemRows([moved({ from: "YELLOW_SPRINGS_ROAD", to: "WANGXIANG_TERRACE", via: "officer", reason: "城隍补报，已到望乡台。" })], labels);
+    expect(forward.title).toBe("十三站换站 · 望乡台");
+    expect(forward.title).not.toContain("↺");
+    expect(forward.note).toBe("理由：城隍补报，已到望乡台。");
+    expect(buildSystemRows([moved({ from: "YELLOW_SPRINGS_ROAD", to: "WANGXIANG_TERRACE", via: "officer", reason: "  " })], labels)[0].note).toBeUndefined();
+    // 死亡时到第一站(from 为空)不是往回挪。
+    expect(buildSystemRows([moved({ from: "", to: "TUDI_TEMPLE", via: "death" })], labels)[0].title).toBe("十三站换站 · 土地庙");
+  });
+
+  it("isBackwardStationMove:只在两端都是十三站、且去处更早时为真", () => {
+    expect(isBackwardStationMove("FENGDU_CITY", "TUDI_TEMPLE")).toBe(true);
+    expect(isBackwardStationMove("TUDI_TEMPLE", "FENGDU_CITY")).toBe(false);
+    expect(isBackwardStationMove("TUDI_TEMPLE", "TUDI_TEMPLE")).toBe(false);
+    expect(isBackwardStationMove("", "TUDI_TEMPLE")).toBe(false);
+    expect(isBackwardStationMove("NOT_A_STATION", "TUDI_TEMPLE")).toBe(false);
+    expect(isBackwardStationMove(undefined, "TUDI_TEMPLE")).toBe(false);
   });
 
   it("勾魂写鬼差与发牒城隍,不写原值", () => {

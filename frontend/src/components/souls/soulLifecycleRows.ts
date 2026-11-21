@@ -13,6 +13,7 @@
 import { resolveEnumDisplay, type Translate } from "@/src/lib/domainDisplay";
 import { verdictNamespace } from "@/src/lib/domainNames";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { DIYU_STATIONS } from "@soulledger/core/domain/diyuStations";
 import type { Soul } from "@soulledger/core/api/souls";
 import type { SoulEvent } from "@soulledger/core/api/events";
 import type { Judgment } from "@soulledger/core/api/judgment";
@@ -331,6 +332,9 @@ export interface SystemEventLabels {
   transferredFrom?: (cityGod: string) => string;
   /** 地府十三站换站的去处「望乡台」、勾魂牒的鬼差「黑白无常」(2026-10-28)。可选,同 `appeal`。 */
   station?: (raw: string | null) => string;
+  /** 往回挪的一行「退回 · 黄泉路」与理由那一行「理由：……」(第六十三批 一)。可选,同 `appeal`。 */
+  stationBack?: (station: string) => string;
+  stationReason?: (reason: string) => string;
   escort?: (raw: string | null) => string;
   /** 「经地上乐园 · 饮忘川、忆善河」(第五十七批 E-3)。可选,同 `appeal`。 */
   earthlyParadise?: string;
@@ -364,6 +368,8 @@ export function makeSystemEventLabels(t: Translate, civilization?: string | null
     },
     transferredFrom: (cityGod) => t("cityGodCases.transferred_from", { city_god: cityGod }),
     station: via("souls.diyu_station"),
+    stationBack: (station) => t("souls.diyu_station.timeline_back", { station }),
+    stationReason: (reason) => t("souls.diyu_station.timeline_reason", { reason }),
     escort: via("souls.capture.escort"),
     earthlyParadise: t("souls.timeline.earthly_paradise"),
   };
@@ -418,9 +424,11 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
       return parts.join(" · ");
     }
     case "DIYU_STATION_CHANGED": {
-      // 「十三站换站 · 望乡台」:只写去处;从哪来在上一行。往回挪时官员写的理由原样跟在后面(决定 #11)。
-      const line = labels.station && typeof p.to === "string" && p.to ? `${event} · ${labels.station(p.to)}` : event;
-      return typeof p.reason === "string" && p.reason ? `${line} · ${p.reason}` : line;
+      // 「十三站换站 · 望乡台」:只写去处;从哪来在上一行。往回挪是「↺ 退回 · 黄泉路」(第六十三批 一):
+      // 方向由 payload 的 from / to 站序比出来。理由不在这一行,在下一行(`systemEventNote`)。
+      if (!labels.station || typeof p.to !== "string" || !p.to) return event;
+      const to = labels.station(p.to);
+      return labels.stationBack && isBackwardStationMove(p.from, p.to) ? `↺ ${labels.stationBack(to)}` : `${event} · ${to}`;
     }
     case "CAPTURE_WARRANT_ISSUED":
     case "SOUL_CAPTURED":
@@ -481,7 +489,19 @@ export function buildLostMoveMarkers(
 export function systemEventNote(e: SoulEvent, labels: SystemEventLabels): string | undefined {
   const p = e.payload as Record<string, unknown>;
   if (e.event_type === "PURGATORY_ASCENDED" && typeof p.through === "string" && p.through) return labels.earthlyParadise;
+  // 挪站时官员写的理由(往前、往回都有可能写),全文、不加引号:这是官员写的记录(第六十三批 一)。
+  if (e.event_type === "DIYU_STATION_CHANGED" && typeof p.reason === "string" && p.reason.trim() && labels.stationReason) {
+    return labels.stationReason(p.reason.trim());
+  }
   return undefined;
+}
+
+/** 十三站里 `to` 排在 `from` 之前:往回挪。`from` 为空(死亡时到第一站)或不认识的值不算。 */
+export function isBackwardStationMove(from: unknown, to: unknown): boolean {
+  const stations: readonly string[] = DIYU_STATIONS;
+  const a = typeof from === "string" ? stations.indexOf(from) : -1;
+  const b = typeof to === "string" ? stations.indexOf(to) : -1;
+  return a >= 0 && b >= 0 && b < a;
 }
 
 export function buildSystemRows(events: SoulEvent[], labels: SystemEventLabels): SystemGroupRow[] {

@@ -902,19 +902,25 @@
         "not_diyu": "只有地府的亡魂走十三站。",
         "alive": "在世的灵魂不在路上。",
         "reason_required": "往回挪要写理由。",
-        "soul_settled": "这个灵魂已经结案，不在路上了。"
+        "soul_settled": "这个灵魂已终局，不能再挪站。"
       },
       "move_title": "挪站 · {{name}}",
       "move_current": "现在：第 {{n}} 站 · {{station}}",
       "move_to": "挪到",
-      "reason_label": "往回挪的理由",
+      "reason_label": "理由",
       "move_body": "挪站只改记录的位置，会记进灵魂账页。",
       "not_on_road": "十三站 · 不在路上",
       "move_confirm": "挪站",
       "here_mark": "现在",
       "now_card": "现在 · 第 {{n}} 站",
       "state_passed": "已过",
-      "state_ahead": "未到"
+      "state_ahead": "未到",
+      "reason_required_mark": "必填",
+      "reason_hint_back": "往回挪要写理由。",
+      "reason_hint_forward": "往前挪可以不写。",
+      "reason_placeholder": "例如：上一站记错了",
+      "timeline_back": "退回 · {{station}}",
+      "timeline_reason": "理由：{{reason}}"
     },
     "birth_continent": {
       "label": "出身部洲",
@@ -5326,7 +5332,8 @@
         "none": "还没有记",
         "partial": "已记 {{recorded}} / {{total}} 条，其余还没有记。",
         "complete": "{{total}} 条都已记下。",
-        "strip_aria": "如实 {{truthful}}，不实 {{untruthful}}，未记 {{unheard}}，共 {{total}} 条"
+        "strip_aria": "如实 {{truthful}}，不实 {{untruthful}}，未记 {{unheard}}，共 {{total}} 条",
+        "count": "已记 {{recorded}} / {{total}}"
       },
       "delivered": "已超度",
       "delivered_on": "已超度 · {{date}}",
