@@ -1,7 +1,7 @@
 /**
  * One conversation (handoff 1c ①–⑦, 1d): a soul, or a hall.
  *
- * The state comes from `chatMode` (../chatRules): the server's facts for this
+ * The state comes from `chatMode` (@soulledger/core/domain/soulChat): the server's facts for this
  * conversation plus what this device's timeline has seen. Each state changes
  * three things and nothing else — the band under the title, how the bubbles
  * look, and what sits where the composer would be:
@@ -39,7 +39,8 @@ import Svg, { Path } from "react-native-svg";
 
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
-import { bubbleStamp, chatMode, dayOf, type ChatMode, type ClosedReason } from "../chatRules";
+import { chatMode, type ChatMode, type ClosedReason } from "@soulledger/core/domain/soulChat";
+import { bubbleStamp, dayOf } from "../chatRules";
 import { PlaqueFrame, usePageTheme } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";

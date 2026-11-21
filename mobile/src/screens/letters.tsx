@@ -19,7 +19,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useChat, type Chat } from "../chat";
-import { CLOSED_REASONS, chatSections, isCompleteCode, listStamp, normalizeCode } from "../chatRules";
+import { CLOSED_REASONS, chatSections } from "@soulledger/core/domain/soulChat";
+import { isCompleteCode, listStamp, normalizeCode } from "../chatRules";
 import { Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";

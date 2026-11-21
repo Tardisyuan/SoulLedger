@@ -12,7 +12,8 @@ import { INBOX_REPLY_MAX } from "@soulledger/core/api/soul-inbox";
 import { clearDrafts, flushDraft, readDraft } from "../drafts";
 import { outboxReasonOf } from "../outbox";
 import { ToastProvider, translate } from "../shared";
-import { TODO_GROUPS, noticeLanding, replyFailureKey, replyReady, withTemplate } from "../rules";
+import { replyReady } from "@soulledger/core/domain/letters";
+import { TODO_GROUPS, noticeLanding, replyFailureKey, withTemplate } from "../rules";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockTodo = jest.fn();
@@ -404,12 +405,18 @@ describe("who handles the letter", () => {
     expect(screen.getByTestId("letter-take-bar")).toBeTruthy();
   });
 
+  it("unassigned, read by an officer of no hall (a civilization admin): the box, not 由我来回 -- assign would refuse them", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: null } });
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user: { ...OFFICER, tenant: null } });
+    await screen.findByTestId("letter-thread");
+    expect(screen.getByTestId("letter-composer")).toBeTruthy();
+    expect(screen.queryByTestId("letter-take-bar")).toBeNull();
+  });
+
   it("someone else's: one line instead of the box (not greyed, nothing to confirm), and 转给我 for who may hand letters on", async () => {
     mockAssign.mockResolvedValue({ data: {} });
     mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
-    const user = { ...OFFICER, permissions: [...(OFFICER.permissions ?? []), "soul_inbox.reply"] };
-    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user });
-    await screen.findByTestId("letter-thread");
+    await openThread();
     expect(screen.getByTestId("letter-handler").props.children).toBe("经办 · 钟书吏");
     expect(screen.queryByTestId("letter-composer")).toBeNull();
     expect(screen.queryByTestId("letter-input")).toBeNull();
@@ -418,11 +425,28 @@ describe("who handles the letter", () => {
     await waitFor(() => expect(mockAssign).toHaveBeenCalledWith("c-1", 7));
   });
 
+  const READER = { ...OFFICER, permissions: OFFICER.permissions.filter((code) => code !== "soul_inbox.reply") };
+  const openAsReader = async () => {
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user: READER });
+    await screen.findByTestId("letter-thread");
+  };
+
   it("someone else's, without soul_inbox.reply: the line, and no 转给我", async () => {
     mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
-    await openThread();
+    await openAsReader();
     expect(screen.getByTestId("letter-not-yours")).toBeTruthy();
     expect(screen.queryByTestId("letter-assign-to-me")).toBeNull();
+  });
+
+  // The web's rule: the server takes neither a reply nor 由我来回 without soul_inbox.reply, so neither is offered.
+  it.each([
+    ["mine", { user_id: 7, display_name: "阎罗" }],
+    ["unassigned", null],
+  ])("%s, without soul_inbox.reply: no box and no take bar", async (_name, assignee) => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee } });
+    await openAsReader();
+    expect(screen.queryByTestId("letter-composer")).toBeNull();
+    expect(screen.queryByTestId("letter-take-bar")).toBeNull();
   });
 });
 
@@ -497,5 +521,18 @@ describe("a soul moved to another hall", () => {
     await open("c-m2");
     expect(screen.queryByTestId("letter-moved")).toBeNull();
     expect(screen.getByTestId("letter-input")).toBeTruthy();
+  });
+
+  // The web's rule: a send answered 409 not_current_hall (the list not yet told) takes the box away as well.
+  it("a send answered not_current_hall: the box gives way to the line, the words stay in the draft", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, id: "c-m3", can_reply: true } });
+    mockReply.mockRejectedValue(httpError(409, { code: "not_current_hall" }));
+    await open("c-m3");
+    fireEvent.changeText(screen.getByTestId("letter-input"), "调走之前写的");
+    fireEvent.press(screen.getByTestId("letter-send"));
+    expect(await screen.findByTestId("letter-moved")).toBeTruthy();
+    expect(screen.queryByTestId("letter-input")).toBeNull();
+    flushDraft();
+    expect(readDraft("c-m3")).toBe("调走之前写的");
   });
 });

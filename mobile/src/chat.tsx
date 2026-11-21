@@ -66,7 +66,7 @@ import { fileField } from "./platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 
-import { sendsThroughBackend } from "./chatRules";
+import { sendsThroughBackend } from "@soulledger/core/domain/soulChat";
 
 export type Availability = "probing" | "ready" | "unavailable" | "not_configured";
 export type Refused = { code: string; retryAt: string | null };

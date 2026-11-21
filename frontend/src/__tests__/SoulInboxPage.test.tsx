@@ -368,6 +368,10 @@ it("第六十一批 E3: a draft that did not load locks the box, says so with �
   await waitFor(() => expect(box.value).toBe("上次没写完"));
   expect(within(thread).queryByTestId("draft-load-failed")).toBeNull();
   expect(box.readOnly).toBe(false);
+  // 取到之后照常存(审计 2026-11-20 §5:此前取失败一次就再也不存)。
+  fireEvent.change(box, { target: { value: "上次没写完,补一句" } });
+  fireEvent.focusOut(box);
+  await waitFor(() => expect(apiMock.saveDraft).toHaveBeenCalledWith("c1", "上次没写完,补一句"));
 });
 
 it("a draft that loads leaves the box editable and shows no load-failed line", async () => {
@@ -536,6 +540,17 @@ it("a thread whose last letter is the soul's says it awaits a reply; one the hal
   const thread = await openThread();
   await within(thread).findByText("我想申诉");
   expect(within(thread).getByText(/^待回复 · \d+ 天$/)).toBeInTheDocument();
+});
+
+// 与后端 `inbox.awaiting_reply` 同一条规则(@soulledger/core/domain/letters):灵魂调走了,殿司回不了,就不算待回复。
+it("a soul's letter last, but the soul moved to another hall: no awaiting badge", async () => {
+  asRole("soul_inbox.read");
+  apiMock.list.mockResolvedValue(page([conversation({ can_reply: false })]));
+  apiMock.messages.mockResolvedValue({ data: [...MESSAGES].reverse() });
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("我想申诉");
+  expect(within(thread).queryByText(/^待回复 · /)).toBeNull();
 });
 
 it("the hall's reply being last leaves no awaiting badge", async () => {

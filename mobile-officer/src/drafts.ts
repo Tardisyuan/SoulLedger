@@ -15,6 +15,7 @@
  * otherwise the next opening would bring the words back.
  */
 import { soulInboxApi } from "@soulledger/core/api/soul-inbox";
+import { normalizeDraft } from "@soulledger/core/domain/letters";
 import { platform } from "@soulledger/core/platform";
 
 import { currentOwner, heldByAnother, readOwned, writeOwned } from "./owner";
@@ -63,7 +64,7 @@ export function readDraft(id: string): string {
 export function saveDraft(id: string, text: string): void {
   const all = read();
   const mine = all.find((d) => d.id === id);
-  const next = text.trim() ? text : "";
+  const next = normalizeDraft(text);
   // Nothing new: iOS also fires onChangeText when React fills the box, and that must not read as an edit.
   if ((mine?.text ?? "") === next) return;
   const rest = all.filter((d) => d.id !== id);

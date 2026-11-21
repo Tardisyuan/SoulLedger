@@ -11,7 +11,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import type { ReactNode } from "react";
 
 import { ChatContext, type Chat } from "../chat";
-import { CLOSED_REASONS, chatMode } from "../chatRules";
+import { CLOSED_REASONS, chatMode } from "@soulledger/core/domain/soulChat";
 import { translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { ChatBlocksScreen } from "../screens/chatBlocks";
