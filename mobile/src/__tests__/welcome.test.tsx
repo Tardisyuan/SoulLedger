@@ -8,7 +8,8 @@ import { AccessibilityInfo, Animated, StyleSheet } from "react-native";
 
 import { headerSeal, lifeEntrance } from "../entrance";
 import { I18nProvider } from "../i18n";
-import { motion, themeFor, v4 } from "../theme";
+import { motion, seal, themeFor, v4 } from "../theme";
+import { OutlineSeal } from "../seal";
 import { WELCOME, Welcome, flightTo, useArrival } from "../welcome";
 import { PROFILE, stubApi } from "./stubApi";
 
@@ -52,7 +53,7 @@ describe("第六十二批 · the welcome", () => {
     expect(WELCOME.still).toBe(80);
   });
 
-  it("the ground is the page's canvas, never a wash of the civilization's colour; the seal is the seal colour, stamped 1.18 → 1", async () => {
+  it("the ground is the page's canvas, never a wash of the civilization's colour; the seal is the header seal's plaque, stamped 1.18 → 1", async () => {
     await play();
     const cn = themeFor("CHINESE", "light");
     expect(flat("welcome-ground").backgroundColor).toBe(cn.s0);
@@ -63,6 +64,9 @@ describe("第六十二批 · the welcome", () => {
     expect(flat("welcome-seal").opacity).toBe(0);
     expect(flat("welcome-text").opacity).toBe(0);
     expect(screen.getByText("你已进入中国地府")).toBeTruthy();
+    // 第六十三批 三 d: the header seal's colour (`plaque`, civT), not the `seal` token — it shrinks into that seal.
+    expect(seal.cn.light).not.toBe(cn.plaque);
+    expect(screen.UNSAFE_getByType(OutlineSeal).props.color).toBe(cn.plaque);
   });
 
   it("entrance 360, hold 900, then the hand-off 320: the sheet's wait ends only when the hand-off does", async () => {

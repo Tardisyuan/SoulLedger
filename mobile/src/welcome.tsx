@@ -3,7 +3,7 @@
  * into a civilization, between pressing 「登录」 and the 本世 page.
  *
  * WHAT IS ON IT: the page's own ground (the canvas, the same in every civilization — no wash of civilization colour),
- * the civilization's top line drawing in from the left, its seal stamped down in the middle (96, the seal colour,
+ * the civilization's top line drawing in from the left, its seal stamped down in the middle (96, `plaque` — the 本世 header seal's colour,
  * 1.18 → 1), and 「你已进入{冥界名}」 16 below it. The theme is the civilization's from the first frame
  * (navigation.tsx themes the signed-in tree by the profile), so nothing switches colour afterwards.
  *
@@ -39,7 +39,7 @@ import { Topline } from "./civHead";
 import { headerSeal, hide, rise, settleEntrance } from "./entrance";
 import { useI18n } from "./i18n";
 import { OutlineSeal } from "./seal";
-import { civKeyOf, motion, seal, themeFor, type CivKey, type ColorScheme } from "./theme";
+import { civKeyOf, motion, themeFor, type CivKey, type ColorScheme } from "./theme";
 import { EASE, Txt } from "./ui";
 
 type Welcomable = Pick<MeProfile, "civilization" | "home_civilization" | "welcomed_civilizations">;
@@ -256,7 +256,8 @@ export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; sc
   const to = themeFor(shown.civilization, scheme);
   // The underworld's name (中国地府, 杜阿特 …), not the civilization's (user decision 2026-09-27).
   const text = t("soul_app.welcome.entered", { civ: t(`soul_app.welcome.realm.${shown.civilization}`) });
-  const color = to.civ === "neutral" ? to.plaque : seal[to.civ][scheme];
+  // 第六十三批 三 d: the header seal's colour (`plaque`, civT), so the seal that shrinks into it does not change colour.
+  const color = to.plaque;
   const sealMotion = {
     opacity: Animated.multiply(v.stamp, v.sealGone),
     transform: [

@@ -275,7 +275,7 @@ describe("四十二条否定告白", () => {
     expect(StyleSheet.flatten(screen.getByTestId("confession-fill-8").props.style).backgroundColor).toBeDefined();
     expect(screen.queryByTestId("confession-fill-37")).toBeNull();
     expect(screen.getByTestId("life-confession-strip").props.accessibilityLabel).toBe("如实 33，不实 3，未记 6，共 42 条");
-    expect(screen.getByTestId("life-confession-count")).toHaveTextContent("36 / 42");
+    expect(screen.getByTestId("life-confession-count")).toHaveTextContent(/^已记 36 \/ 42$/); // 第六十三批 三 b: the count says what it counts
     expect(screen.getByTestId("life-confession-truthful")).toHaveTextContent("如实 33");
     expect(screen.getByTestId("life-confession-untruthful")).toHaveTextContent("不实 3");
     expect(screen.getByTestId("life-confession-unheard")).toHaveTextContent("未记 6");
@@ -310,7 +310,7 @@ describe("四十二条否定告白", () => {
     await openAs(egypt(tally("-".repeat(42))));
     expect(screen.getByTestId("life-confession-none")).toHaveTextContent("还没有记");
     for (const k of ["truthful", "untruthful", "unheard"]) expect(screen.queryByTestId(`life-confession-${k}`)).toBeNull();
-    expect(screen.getByTestId("life-confession-count")).toHaveTextContent("0 / 42");
+    expect(screen.getByTestId("life-confession-count")).toHaveTextContent(/^已记 0 \/ 42$/);
   });
 
   it("sits right above the judgments row, below the records", async () => {
