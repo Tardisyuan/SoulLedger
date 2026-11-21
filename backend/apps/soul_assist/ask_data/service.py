@@ -23,7 +23,8 @@ SYSTEM = (
     "hall in SoulLedger. Use only the tables and columns listed in the facts; any other table or column is refused. "
     "Never filter by hall or tenant: the database shows only the officer's own hall. Never use SELECT * or t.*; "
     "name the columns. One statement only, no semicolon-separated second statement, no writes, no locking clauses. "
-    "Use plain SQL functions (count, sum, avg, min, max, date_trunc, extract, coalesce, CASE). Dates are relative to "
+    "Use plain SQL functions (count, sum, avg, min, max, date_trunc, extract, age, make_date, generate_series, coalesce, "
+    "CASE). Dates are relative to "
     "`today` in the facts. Reply with the SQL in one ```sql fenced block and nothing else."
 )
 

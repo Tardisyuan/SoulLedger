@@ -57,8 +57,8 @@ _FORBIDDEN_EXACT = frozenset(
 )
 _FORBIDDEN_PREFIXES = ("pg_sleep", "dblink", "lo_", "query_to_xml", "txid_", "pg_advisory")
 
-# 放行清单:sqlglot 认得并解析成具体类的函数。认不出的(`Anonymous`)一律拒,所以 `age()`、`make_date()`
-# 这类 PG 函数即使无害也过不了 —— 要放就先确认 sqlglot 把它解析成了哪个类,再加到这里。
+# 放行清单:sqlglot 认得并解析成具体类的函数。认不出的(`Anonymous`)默认拒,只有下面 `_ALLOWED_BY_NAME` 里按名字
+# 放的例外。要放新函数,先确认 sqlglot(requirements.lock 钉的版本)把它解析成哪个类:有类就加到这里,是 `Anonymous` 才按名字放。
 _ALLOWED_FUNCTIONS = frozenset(
     {
         # 聚合
@@ -77,6 +77,11 @@ _ALLOWED_FUNCTIONS = frozenset(
         exp.CurrentDate, exp.CurrentTimestamp, exp.CurrentTime, exp.Localtimestamp, exp.Localtime,
         exp.StrToDate, exp.StrToTime, exp.TimeToStr, exp.UnixToTime,
         exp.DateAdd, exp.DateSub, exp.DateDiff,
+        # 2026-11-21 用户决定放的日期 / 序列函数里 sqlglot 建了类的:make_interval、generate_series(在 FROM 里是表函数,
+        # 见 check 的表循环)、justify_*。date_part / date_trunc / extract / to_char 本来就解析成上面的 Extract /
+        # TimestampTrunc / TimeToStr。
+        exp.MakeInterval, exp.GenerateSeries, exp.ExplodingGenerateSeries,
+        exp.JustifyInterval, exp.JustifyDays, exp.JustifyHours,
         # 字符串
         exp.Length, exp.Upper, exp.Lower, exp.Substring, exp.Trim, exp.Concat, exp.ConcatWs,
         exp.SplitPart, exp.Replace, exp.StrPosition, exp.Left, exp.Right, exp.Initcap, exp.Pad,
@@ -87,6 +92,14 @@ _ALLOWED_FUNCTIONS = frozenset(
         exp.Abs, exp.Ceil, exp.Floor, exp.Round, exp.Sqrt, exp.Sign,
     }
 )  # fmt: skip
+
+#: sqlglot 解析成 `Anonymous` 的 PG 函数里按名字放的(2026-11-21 用户决定;sqlglot 30.29 实测):只读、无副作用,
+#: 所有重载都是纯计算 —— `age(timestamp[, timestamp])` / `age(xid)`、`make_date(int, int, int)`。只认不带 schema
+#: 前缀的写法:`x.age(…)` 在 PG 里是 x 模式下的函数,不是这一个。其余 `Anonymous` 仍是 `unknown_function`。
+_ALLOWED_BY_NAME = frozenset({"age", "make_date"})
+
+#: FROM 里可以出现的表函数(`FROM generate_series(…) AS m`):sqlglot 把它放在 `Table.this`。
+_TABLE_FUNCTIONS = (exp.GenerateSeries, exp.ExplodingGenerateSeries)
 
 
 @dataclass(frozen=True)
@@ -113,6 +126,13 @@ def function_name(fn: exp.Func) -> str:
 
 def _is_forbidden(name: str) -> bool:
     return name in _FORBIDDEN_EXACT or name.startswith(_FORBIDDEN_PREFIXES)
+
+
+def _is_allowed(fn: exp.Func) -> bool:
+    if type(fn) in _ALLOWED_FUNCTIONS:
+        return True
+    return (isinstance(fn, exp.Anonymous) and function_name(fn) in _ALLOWED_BY_NAME
+            and not isinstance(fn.parent, exp.Dot))
 
 
 def _folded(ident: exp.Identifier) -> str:
@@ -155,12 +175,14 @@ def check(sql: str) -> Verdict:
     functions = list(root.find_all(exp.Func))
     if any(_is_forbidden(function_name(fn)) for fn in functions):
         return _reject(FORBIDDEN_FUNCTION)
-    if any(type(fn) not in _ALLOWED_FUNCTIONS for fn in functions):
+    if not all(_is_allowed(fn) for fn in functions):
         return _reject(UNKNOWN_FUNCTION)
 
     whitelist = allowed_tables()
     tables: set[str] = set()
     for table in root.find_all(exp.Table):
+        if isinstance(table.this, _TABLE_FUNCTIONS) and not table.args.get("db") and not table.args.get("catalog"):
+            continue  # 表函数,不是表;它的参数在上面的函数检查里已经过了
         if not isinstance(table.this, exp.Identifier) or table.args.get("db") or table.args.get("catalog"):
             return _reject(TABLE_NOT_ALLOWED)
         name = _folded(table.this)

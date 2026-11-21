@@ -183,6 +183,22 @@ def test_a_long_result_is_cut_at_max_rows_and_flagged(wall):
     assert (len(exact.rows), exact.truncated) == (200, False)
 
 
+@PG_ONLY
+@pytest.mark.django_db(transaction=True)
+def test_the_date_and_series_functions_the_gate_allows_run_as_the_read_only_role(wall):
+    """Decision 1 (2026-11-21): the by-name / newly listed functions pass the gate and the role may call them."""
+    from apps.soul_assist.ask_data import gate
+
+    a, alias = wall["A"][0], wall["alias"]
+    sql = ("SELECT m, count(j.id) FROM generate_series(make_date(2026, 1, 1), make_date(2026, 3, 1), "
+           "interval '1 month') AS m LEFT JOIN judgment_judgment j ON false "
+           "WHERE age(m) IS NOT NULL AND justify_interval(make_interval(days => 40)) IS NOT NULL "
+           "AND date_part('year', m) = 2026 AND to_char(m, 'YYYY') = '2026' GROUP BY m ORDER BY m")
+    assert gate.check(sql).ok
+    result = executor.run(sql, a.pk, using=alias)
+    assert [[str(m)[:10], n] for m, n in result.rows] == [["2026-01-01", 0], ["2026-02-01", 0], ["2026-03-01", 0]]
+
+
 FORGES = [
     # (text, the code the executor refuses it with). Each would read hall B, or run outside the read-only
     # transaction, if it reached the database: psycopg2 sends a text as one simple query, which runs every

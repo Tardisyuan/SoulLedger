@@ -1478,6 +1478,7 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "tests/test_ask_data_rls.py::test_what_the_gate_would_refuse_the_database_refuses_too",
         "tests/test_ask_data_rls.py::test_a_slow_statement_is_cancelled_at_the_timeout",
         "tests/test_ask_data_rls.py::test_a_long_result_is_cut_at_max_rows_and_flagged",
+        "tests/test_ask_data_rls.py::test_the_date_and_series_functions_the_gate_allows_run_as_the_read_only_role",
         "tests/test_ask_data_rls.py::test_a_statement_that_sets_another_hall_still_sees_only_its_own",
         "tests/test_ask_data_rls.py::test_setup_runs_twice_to_the_same_wall_and_the_owner_is_untouched",
         # 2026-11-21 问数第 2 步:评测种子上的离线整套(真闸门 + 真执行器,以只读角色过 RLS;「忘了租户过滤」的题判 ok

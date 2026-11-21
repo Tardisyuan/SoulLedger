@@ -75,7 +75,7 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 | 根不是查询,或树里有 Insert/Update/Delete/Merge/Create/Drop/Alter/Command/Copy/Set/Into/TruncateTable | `not_a_select` |
 | `FOR UPDATE` / `FOR SHARE` 等锁子句 | `locking_clause` |
 | 黑名单函数(`pg_sleep*`、`dblink*`、`pg_read_file`、`set_config`、`current_setting`、`lo_*`、`txid_*`、`pg_advisory*` …) | `forbidden_function` |
-| 函数不在放行清单(sqlglot 解析成 `Anonymous` 的一律拒) | `unknown_function` |
+| 函数不在放行清单(按类;sqlglot 解析成 `Anonymous` 的只放 `age`、`make_date` 两个名字,且不带 schema 前缀) | `unknown_function` |
 | 表不在白名单、带 schema 前缀;CTE 名只在它的作用域里算 CTE | `table_not_allowed` |
 | `SELECT *` 或 `t.*`(`count(*)` 放行) | `star_not_allowed` |
 
@@ -85,9 +85,12 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 **实测结果:** `backend/tests/test_ask_data_gate.py`(SQLite 也跑,不碰库),§3 列的全部拒绝用例按错误码常量断言,放行用例断言表集合
 不多不少。子代理 A 做过变异(去掉表白名单 → 对应用例红),记在它的提交说明里。闸门之后还有两道,见 §4。
 
-**待用户决定(未拍板,这里不替你定):** sqlglot 不建模的无害 PG 函数 —— `age()`、`make_date()`、`generate_series()` 等 —— 今天被判
-`unknown_function`。要不要放?放的话是逐个确认 sqlglot 把它解析成哪个类(多数是 `Anonymous`),再按名字放行;代价是放行清单从「按类」
-变成「按类 + 按名字」,名字放行要防同名的危险重载(未核实有没有)。
+**sqlglot 不建模的无害函数(2026-11-21 用户决定:放)。** sqlglot 30.29 实测:`date_part` / `date_trunc` / `extract` / `to_char`
+原本就解析成放行清单里的类;`make_interval`、`generate_series`、`justify_interval`(连同 `justify_days` / `justify_hours`)有类而原先不在清单里,
+按类加进去;只有 `age`、`make_date` 是 `Anonymous`,按名字放(`_ALLOWED_BY_NAME`),两者所有重载都是纯计算。按名字放的只认不带前缀的写法
+(`public.age(…)`、`j.age(…)` 是别的模式里的函数,仍拒),黑名单先于放行判,所以 `pg_sleep_for(make_interval(…))` 照旧 `forbidden_function`。
+`generate_series` 在 FROM 里是表函数(`Table.this`),表循环只对它跳过白名单;别的表函数照旧拒。执行器的单语句与 `set_config` 检查不读放行清单,不受影响。
+代价:`generate_series(1, 1e9)` 让「结果很大」更容易写出来(以前要靠多表笛卡尔积),仍由 3 s 超时兜着(§8「截断只截返回的部分」)。
 
 ## 4. 只读执行与库里的墙(`setup.py`、`executor.py`)
 
@@ -191,7 +194,6 @@ UPDATE / DELETE / 未授权列 / 未授权表全被库拒且什么都没写、`p
 - **`not_on_this_database` 答 409**:这是实现时定的状态码(需求里没写),分库上的问数本身不做。
 - 分库上的问数(`SHARD_READ_CIVS`);ADMIN 跨殿问数;多轮追问;模型看结果再总结;图表;Web 页面与官员 App。
 - pgbouncer 本身没在测试里:和 ADR 0006 一样,用同一连接 COMMIT 后复查来代替。
-- **sqlglot 不认的无害函数**(`age()`、`make_date()`、`generate_series()`)今天被拒,要不要放等用户定(§3)。
 
 ## 9. 已拍板(2026-11-21,均取推荐项)
 

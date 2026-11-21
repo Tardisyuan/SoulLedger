@@ -83,8 +83,22 @@ REJECTED = [
     # 不在放行清单(sqlglot 认不出的一律拒)
     ("SELECT my_udf(id) FROM judgment_judgment", gate.UNKNOWN_FUNCTION),
     ("SELECT public.my_udf(1)", gate.UNKNOWN_FUNCTION),
-    ("SELECT age(created_at) FROM judgment_judgment", gate.UNKNOWN_FUNCTION),
-    ("SELECT n FROM generate_series(1, 1000000) AS n", gate.UNKNOWN_FUNCTION),
+    # 按名字放的 age / make_date 只认不带前缀、拼写完全一样的那个(2026-11-21 决定 1)
+    ("SELECT ages(created_at) FROM judgment_judgment", gate.UNKNOWN_FUNCTION),
+    ("SELECT age_in_days(created_at) FROM judgment_judgment", gate.UNKNOWN_FUNCTION),
+    ("SELECT make_dates(2026, 1, 1)", gate.UNKNOWN_FUNCTION),
+    ("SELECT public.age(created_at) FROM judgment_judgment", gate.UNKNOWN_FUNCTION),
+    ("SELECT j.age(created_at) FROM judgment_judgment j", gate.UNKNOWN_FUNCTION),
+    ("SELECT make_timestamp(2026, 1, 1, 0, 0, 0)", gate.UNKNOWN_FUNCTION),
+    # 放行的名字不给黑名单开后门:前缀与精确名照旧先判
+    ("SELECT age(created_at), pg_sleep(1) FROM judgment_judgment", gate.FORBIDDEN_FUNCTION),
+    ("SELECT set_config('app.tenant_id', make_date(2026, 1, 1)::text, true)", gate.FORBIDDEN_FUNCTION),
+    ("SELECT lo_unlink(age(now())::int)", gate.FORBIDDEN_FUNCTION),
+    ("SELECT dblink_connect('x'), make_interval(days => 1)", gate.FORBIDDEN_FUNCTION),
+    ("SELECT pg_sleep_for(make_interval(secs => 10))", gate.FORBIDDEN_FUNCTION),
+    ("SELECT count(*) FROM pg_sleep(age(now())::int)", gate.FORBIDDEN_FUNCTION),
+    # 表函数只放 generate_series;FROM 里别的函数照旧
+    ("SELECT n FROM my_srf(1) AS n", gate.UNKNOWN_FUNCTION),
     # 表
     ("SELECT table_name FROM information_schema.tables", gate.TABLE_NOT_ALLOWED),
     ("SELECT rolname FROM pg_catalog.pg_roles", gate.TABLE_NOT_ALLOWED),
@@ -158,6 +172,21 @@ ALLOWED = [
         "FROM judgment_judgment GROUP BY court, verdict, created_at",
         {J},
     ),
+    # 2026-11-21 决定 1:sqlglot 不建模(Anonymous)或建了类但原先不在清单里的日期 / 序列函数
+    ("SELECT age(created_at) FROM judgment_judgment", {J}),
+    ("SELECT AGE(now(), created_at), \"age\"(created_at) FROM judgment_judgment", {J}),
+    ("SELECT count(*) FROM judgment_judgment WHERE created_at >= make_date(2026, 1, 1)", {J}),
+    ("SELECT count(*) FROM judgment_judgment WHERE created_at > now() - make_interval(days => 30)", {J}),
+    ("SELECT date_part('year', created_at), to_char(created_at, 'YYYY-MM') FROM judgment_judgment", {J}),
+    ("SELECT justify_interval(now() - created_at), justify_days(now() - created_at), "
+     "justify_hours(now() - created_at) FROM judgment_judgment", {J}),
+    ("SELECT n FROM generate_series(1, 12) AS n", set()),
+    (
+        "SELECT m, count(j.id) FROM generate_series(make_date(2026, 1, 1), make_date(2026, 12, 1), "
+        "interval '1 month') AS m LEFT JOIN judgment_judgment j ON date_trunc('month', j.created_at) = m GROUP BY m",
+        {J},
+    ),
+    ("SELECT generate_series(1, 3)", set()),
     # 四张表
     (
         "SELECT count(*) FROM judgment_judgment j JOIN souls_soul s ON s.id = j.soul_id "
