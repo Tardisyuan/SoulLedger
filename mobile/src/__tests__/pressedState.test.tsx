@@ -15,11 +15,11 @@ import path from "path";
 import type { ReactElement } from "react";
 import { StyleSheet, Text } from "react-native";
 
-import { themeFor } from "../theme";
-import { Press, ThemeContext, pressedFace, shade, styles as uiStyles } from "../ui";
+import { themeFor } from "@soulledger/mobile-ui/src/theme";
+import { Press, ThemeContext, pressedFace, shade, styles as uiStyles } from "@soulledger/mobile-ui/src/ui";
 
 const REPO = path.join(__dirname, "..", "..", "..");
-const DIRS = [path.join("mobile", "src"), path.join("mobile-officer", "src")];
+const DIRS = [path.join("mobile", "src"), path.join("mobile-officer", "src"), path.join("packages", "mobile-ui", "src")];
 
 type Why = "SCRIM" | "FULL_SCREEN_SKIP" | "VIEWER_PAGE" | "HIDDEN_FIELD_TAP" | "HOLD_FILLS_ITSELF";
 
@@ -33,10 +33,10 @@ const PLAIN: Record<string, Why[]> = {
   "mobile/src/screens/circlePeople.tsx": ["SCRIM"],
   "mobile/src/screens/conversation.tsx": ["SCRIM", "SCRIM"],
   // 底页在减少动态效果时自己的遮罩(第六十批 P4:与底页同一个 80 淡入淡出)。
-  "mobile/src/feedback.tsx": ["SCRIM"],
+  "packages/mobile-ui/src/feedback.tsx": ["SCRIM"],
   // 欢迎层 / 冷启动:整屏点一下跳过。
   "mobile/src/welcome.tsx": ["FULL_SCREEN_SKIP"],
-  "mobile/src/coldStartView.tsx": ["FULL_SCREEN_SKIP"],
+  "packages/mobile-ui/src/coldStartView.tsx": ["FULL_SCREEN_SKIP"],
   // 看大图时的一整页(点一下关)。
   "mobile/src/screens/chatImages.tsx": ["VIEWER_PAGE"],
   "mobile-officer/src/screens/letterImages.tsx": ["VIEWER_PAGE"],

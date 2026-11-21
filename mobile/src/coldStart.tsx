@@ -8,13 +8,13 @@ import { useContext, useMemo } from "react";
 import { useColorScheme } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 
-import { LOGIN_MARK } from "./brandMark";
-import { ColdStartView } from "./coldStartView";
+import { LOGIN_MARK } from "@soulledger/mobile-ui/src/brandMark";
+import { ColdStartView } from "@soulledger/mobile-ui/src/coldStartView";
 import type { SessionState } from "./session";
-import { splash } from "./theme";
+import { splash } from "@soulledger/mobile-ui/src/theme";
 import { welcomeFrom } from "./welcome";
 
-export { coldStart } from "./coldStartView";
+export { coldStart } from "@soulledger/mobile-ui/src/coldStartView";
 
 /**
  * The ground and the mark (Design v4 第六十一批 一): the app's canvas in each scheme (`splash-ground`), so the start

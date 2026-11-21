@@ -104,7 +104,7 @@ export function shouldAskBio(o: { hasPassword: boolean; enrolled: boolean; enabl
   return o.hasPassword && o.enrolled && !o.enabled && !o.asked && !o.welcomePending;
 }
 
-export { IOS_LOCKOUT_MS, classifyCredentialError, credentialReadFailure, type CredentialFailure } from "./credentialFailure";
+export { IOS_LOCKOUT_MS, classifyCredentialError, credentialReadFailure, type CredentialFailure } from "@soulledger/mobile-ui/src/credentialFailure";
 
 /** Where "面容 / 指纹 login is on" is kept on the phone: `face` or `finger`. Here, not in deviceLogin, so a module
  *  the officer app shares (feedback) can read it without pulling in the native credential store. */

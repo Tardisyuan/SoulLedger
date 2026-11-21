@@ -639,9 +639,10 @@ TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
 # of those can break it without touching mobile/.
 TOUCHES_MOBILE=$(echo "$CHANGED" | grep -cE '^(mobile/|frontend/app/globals\.css$)' || true)
 # `mobile-officer/` (灵魂簿 · 官员, the officer app, Expo; package @soulledger/officer) is the same
-# shape as mobile/ and ALSO imports mobile/src's leaf modules in place
-# (mobile-officer/src/shared.ts: ui, theme, fonts, i18n, feedback ...), so a change under mobile/
-# can break it without touching mobile-officer/ -- both directories trigger it. (Not `officer/`:
+# shape as mobile/ and ALSO uses the soul app's jest.setup.shared.js, metro.base.js, plugins/ and
+# modules/, so a change under mobile/ can break it without touching mobile-officer/ -- both directories
+# trigger it. What the two apps share as code (ui, theme, fonts, i18n, feedback ...) is the package
+# packages/mobile-ui (mobile-officer/src/shared.ts); `^packages/` above (TOUCHES_CORE) runs both apps. (Not `officer/`:
 # backend/tests/test_reads_outside_backend_list.py derives list entries from top-level directory
 # names quoted in test sources, and "officer" is a word a dozen backend tests already contain.)
 TOUCHES_OFFICER=$(echo "$CHANGED" | grep -cE '^(mobile-officer/|mobile/)' || true)
@@ -785,8 +786,8 @@ READS_FILES_RE="readFileSync|readdirSync|existsSync|statSync|execSync|execFileSy
 #   - it names top-level entries (`"backend"`, `/frontend/`)  → yes when one of them changed;
 #   - it names none but climbs to the repository root         → yes;
 #   - it names none and stays inside its own app              → no: its app did not change.
-# OFFICER: mobile-officer has 3 file-reading tests and no branch here. They read mobile-officer/, mobile/
-# and packages/core, and a change to any of those sets RUN_OFFICER=1 (app_jest runs them), so with
+# OFFICER: mobile-officer has 3 file-reading tests and no branch here. They read mobile-officer/, mobile/,
+# packages/core and packages/mobile-ui, and a change to any of those sets RUN_OFFICER=1 (app_jest runs them), so with
 # RUN_OFFICER=0 nothing they read changed. If one starts reading frontend/ or backend/, give the officer
 # app the same readers branch as mobile.
 TOP_ENTRIES=$(git -C "$ROOT" ls-tree --name-only HEAD 2>/dev/null)
@@ -917,7 +918,7 @@ fi
 # A LANGUAGE PACK IS SELECTIVE (2026-10-27, user decision). It forced a full run
 # until then, and 204 of the 497 commits from 10-13 to 10-27 touched one. Every
 # runtime use is a static `import … from "@soulledger/core/messages/<lang>.json"`
-# (I18nContext, slipTexts, mobile/src/i18n.tsx), which --findRelatedTests
+# (I18nContext, slipTexts, packages/mobile-ui/src/i18n.tsx), which --findRelatedTests
 # follows: measured that day, en.json selects 204 of 312 test files, egy.json
 # 205, zh-Hans.json 209. Parity and lexicon tests read the packs and are
 # always-run. A pack loaded by a computed path would not be traced — keep them
@@ -959,7 +960,7 @@ unset PREPUSH_TO_MAIN
 # follows their imports. Only the jest full run goes; tsc / eslint / vitest for the area are untouched.
 #
 # AND THE DESIGN TOKENS (2026-11-14, user decision). packages/core/tokens/*.tokens.json is the source of
-# globals.css's token block and of mobile/src/theme.generated.ts (scripts/build-tokens.mjs), and no jest
+# globals.css's token block and of packages/mobile-ui/src/theme.generated.ts (scripts/build-tokens.mjs), and no jest
 # test imports it. Its one reader, designTokensAreGenerated.test.ts (runs the generator's --check), is
 # always-run; the outputs it writes are what the tests read: globals.css through the always-run contract
 # tests, theme.generated.ts as code that jest follows. Other JSON under packages/core (creditsOss.json …)
@@ -988,21 +989,21 @@ done <<<"$CHANGED"
 #
 # Same scheme as the web jest above: --findRelatedTests from the changed files,
 # plus the app's tests that read files (grep, below). Both app configs root jest
-# at <app>/src, so only a code file under <app>/src or packages/core (added with
-# --roots) is in the graph; anything else an app changed cannot be traced and
+# at <app>/src, so only a code file under <app>/src, packages/core or
+# packages/mobile-ui/src (added with --roots) is in the graph; anything else an app changed cannot be traced and
 # runs that app's suite. Measured 2026-10-27: mobile navigation.tsx selects 20 of
 # 58 test files, screens/letters.tsx 25; officer judgmentActions.tsx 16 of 39.
 APP_FULL_F="$FULL_F"
-hit=$(echo "$CHANGED" | grep -E '^(mobile|mobile-officer)/' | grep -vE '^(mobile|mobile-officer)/src/.*\.(ts|tsx|js|jsx)$' | head -1)
+hit=$(echo "$CHANGED" | grep -E '^(mobile|mobile-officer|packages/mobile-ui)/' | grep -vE '^(mobile|mobile-officer|packages/mobile-ui)/src/.*\.(ts|tsx|js|jsx)$' | head -1)
 [ -n "$hit" ] && APP_FULL_F="${APP_FULL_F}an app file outside src/, or not code: $hit"$'\n'
 # A MODULE THE SETUP FILE LOADS runs before or after every test, and no test imports it for that
 # (2026-11-13, test review 3.2): mobile/jest.setup.js and mobile-officer/jest.setup.js both require
-# mobile/src/platform, and the officer's also ./src/keptText. --findRelatedTests picks only their importers.
+# packages/mobile-ui/src/platform, and the officer's also ./src/keptText. --findRelatedTests picks only their importers.
 # (frontend/lib/platform/web, which frontend/jest.setup.js requires, is in FULL_RULES above.)
-hit=$(echo "$CHANGED" | grep -E '^(mobile/src/platform|mobile-officer/src/keptText)([./]|$)' | head -1)
+hit=$(echo "$CHANGED" | grep -E '^(packages/mobile-ui/src/platform|mobile-officer/src/keptText)([./]|$)' | head -1)
 [ -n "$hit" ] && APP_FULL_F="${APP_FULL_F}a module the app's jest.setup.js loads for every test changed: $hit"$'\n'
 while IFS= read -r f; do
-    case "$f" in mobile/*|mobile-officer/*) [ ! -e "$ROOT/$f" ] && { APP_FULL_F="${APP_FULL_F}an app file was deleted or renamed: $f"$'\n'; break; } ;; esac
+    case "$f" in mobile/*|mobile-officer/*|packages/mobile-ui/*) [ ! -e "$ROOT/$f" ] && { APP_FULL_F="${APP_FULL_F}an app file was deleted or renamed: $f"$'\n'; break; } ;; esac
 done <<<"$CHANGED"
 }  # classify
 
@@ -1874,15 +1875,15 @@ app_jest() {
 if [ "$RUN_MOBILE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
-    app_jest mobile "^(mobile|packages/core)/" "--roots <rootDir>/../packages/core" \
-        "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
+    app_jest mobile "^(mobile|packages/core|packages/mobile-ui)/" "--roots <rootDir>/../packages/core --roots <rootDir>/../packages/mobile-ui/src" \
+        "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that packages/mobile-ui/src/theme.ts copies — copy the new triple, do not delete the check."
 fi
 
 if [ "$RUN_OFFICER" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
-    app_jest mobile-officer "^(mobile-officer|mobile|packages/core)/" "--roots <rootDir>/../packages/core --roots <rootDir>/../mobile/src" \
-        "officer jest failed. officer/ imports mobile/src's leaf modules in place (mobile-officer/src/shared.ts): a failure here after a change under mobile/ is that change reaching the officer app."
+    app_jest mobile-officer "^(mobile-officer|mobile|packages/core|packages/mobile-ui)/" "--roots <rootDir>/../packages/core --roots <rootDir>/../packages/mobile-ui/src" \
+        "officer jest failed. The officer app shares packages/mobile-ui with the soul app (mobile-officer/src/shared.ts): a failure here after a change there is that change reaching the officer app."
 fi
 
 if [ -n "$MOBILE_READERS" ]; then

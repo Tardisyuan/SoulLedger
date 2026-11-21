@@ -3,7 +3,7 @@
  * each only open a page; `soulledger://post/<id>` and `soulledger://conversation/<id>` open that one post or letter
  * (audit 2026-10-17 #12); and `soulledger://ask?q=<question>` opens 问一问 with the question typed into the box -- never sent.
  */
-import { createLinkInbox, pathOf, queryOf } from "./deepLink";
+import { createLinkInbox, pathOf, queryOf } from "@soulledger/mobile-ui/src/deepLink";
 
 export const SOUL_SCHEME = "soulledger";
 export type SoulPage =

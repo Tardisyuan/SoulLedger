@@ -7,7 +7,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 import { useEffect, useState, type ReactNode } from "react";
 import { AccessibilityInfo, Animated, AppState, StyleSheet } from "react-native";
 
-import { OnlineContext, type Online } from "../../../mobile/src/online";
+import { OnlineContext, type Online } from "@soulledger/mobile-ui/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
 import { RefreshFailed, Row, TAB_CODES, TabBar, doorOf, visibleTabs } from "../kit";
 import { EASE, ToastProvider, motion, themeFor, useI18n } from "../shared";

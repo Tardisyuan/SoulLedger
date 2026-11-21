@@ -11,9 +11,9 @@ import { act, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, Animated, StyleSheet, Text, View } from "react-native";
 import * as Reanimated from "react-native-reanimated";
 
-import { Sheet } from "../feedback";
-import { motion } from "../theme";
-import { EASE, FadeModal, containRect, photoShrinkTo, thumbRef } from "../ui";
+import { Sheet } from "@soulledger/mobile-ui/src/feedback";
+import { motion } from "@soulledger/mobile-ui/src/theme";
+import { EASE, FadeModal, containRect, photoShrinkTo, thumbRef } from "@soulledger/mobile-ui/src/ui";
 import { inSoulFrame, renderSoul } from "./harness";
 
 const reduce = (on: boolean) => jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(on);

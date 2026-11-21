@@ -15,7 +15,7 @@ import { AppState } from "react-native";
 import { LOCK_AFTER_MS } from "../appLock";
 import { APP_LOCK_KEY, BIO_KEY, appLockOn, rememberAccount, spendAutoPrompt } from "../deviceLogin";
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";
 import { PROFILE, life, resetLoginMemory, stubApi } from "./stubApi";

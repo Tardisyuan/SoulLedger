@@ -7,9 +7,9 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { useCallback } from "react";
 import { AccessibilityInfo, StyleSheet, Text } from "react-native";
 
-import { OnlineContext } from "../online";
-import { motion } from "../theme";
-import { StaleLine, useRemote } from "../ui";
+import { OnlineContext } from "@soulledger/mobile-ui/src/online";
+import { motion } from "@soulledger/mobile-ui/src/theme";
+import { StaleLine, useRemote } from "@soulledger/mobile-ui/src/ui";
 import { inSoulFrame, renderSoul } from "./harness";
 
 const AT = new Date(2026, 10, 21, 9, 42).getTime();

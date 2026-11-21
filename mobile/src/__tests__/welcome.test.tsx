@@ -7,8 +7,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, Animated, StyleSheet } from "react-native";
 
 import { headerSeal, lifeEntrance } from "../entrance";
-import { I18nProvider } from "../i18n";
-import { motion, seal, themeFor, v4 } from "../theme";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
+import { motion, seal, themeFor, v4 } from "@soulledger/mobile-ui/src/theme";
 import { OutlineSeal } from "../seal";
 import { WELCOME, Welcome, flightTo, useArrival } from "../welcome";
 import { PROFILE, stubApi } from "./stubApi";

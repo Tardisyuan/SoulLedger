@@ -10,9 +10,9 @@ import { act, screen } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
-import { Screen } from "../ui";
+import { Screen } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 import { PROFILE, life, resetLoginMemory, stubApi } from "./stubApi";
 

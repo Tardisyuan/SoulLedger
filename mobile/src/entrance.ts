@@ -10,7 +10,7 @@
  */
 import { Animated, type View } from "react-native";
 
-import { EASE } from "./ui";
+import { EASE } from "@soulledger/mobile-ui/src/ui";
 
 export const lifeEntrance = { opacity: new Animated.Value(1), rise: new Animated.Value(1) };
 

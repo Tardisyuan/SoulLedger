@@ -5,9 +5,9 @@ require("../mobile/jest.setup.shared");
 afterEach(() => require("./src/keptText").clearKeptText());
 
 jest.mock("expo-secure-store", () => {
-  // The app's secure port reads through a memory copy (mobile/src/platform.ts); a test that writes this store
+  // The app's secure port reads through a memory copy (packages/mobile-ui/src/platform.ts); a test that writes this store
   // directly drops that copy, as a fresh process would start without one.
-  const changed = () => require("../mobile/src/platform").forgetSecureCache?.();
+  const changed = () => require("@soulledger/mobile-ui/src/platform").forgetSecureCache?.();
   class Store extends Map {
     set(key, value) {
       super.set(key, value);

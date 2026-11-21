@@ -9,10 +9,10 @@ import type { ReactElement } from "react";
 import { StyleSheet } from "react-native";
 import Svg, { Path, Text as SvgText } from "react-native-svg";
 
-import { HeadMark, Topline, diyuMark, hallNameFor, headTextureShape, markFits, toplineBars } from "../civHead";
-import { installMobilePlatform } from "../platform";
-import { themeFor, type CivKey } from "../theme";
-import { ThemeContext } from "../ui";
+import { HeadMark, Topline, diyuMark, hallNameFor, headTextureShape, markFits, toplineBars } from "@soulledger/mobile-ui/src/civHead";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
+import { themeFor, type CivKey } from "@soulledger/mobile-ui/src/theme";
+import { ThemeContext } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 
 const mockWindow = { width: 390, height: 844, scale: 3, fontScale: 1 };

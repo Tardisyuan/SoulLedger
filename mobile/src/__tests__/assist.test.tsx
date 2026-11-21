@@ -18,15 +18,15 @@ import path from "path";
 import { AssistProvider, assistAckKey, useAssist } from "../assist";
 import { AssistPanel } from "../assistPanel";
 import { AppHeader } from "../chrome";
-import { I18nProvider } from "../i18n";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { PROFILE, heldReply, life, stubApi, resetLoginMemory } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccessibilityInfo, Pressable, StyleSheet } from "react-native";
-import { motion, themeFor, v4, type Theme } from "../theme";
-import { ThemeContext } from "../ui";
+import { motion, themeFor, v4, type Theme } from "@soulledger/mobile-ui/src/theme";
+import { ThemeContext } from "@soulledger/mobile-ui/src/ui";
 
 /** Wait out the drawer's 200ms exit (v3 MotionSpec 问一问抽屉 出场). */
 const afterExit = () =>

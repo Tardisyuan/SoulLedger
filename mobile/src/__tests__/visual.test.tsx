@@ -14,14 +14,14 @@ import { useState, type ReactNode } from "react";
 import { AccessibilityInfo, Animated, DeviceEventEmitter, Easing, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { LogoutProvider, useAskLogout } from "../logout";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
-import { FONT_ASSETS, quoteFamily, titleFamily } from "../fonts";
+import { FONT_ASSETS, quoteFamily, titleFamily } from "@soulledger/mobile-ui/src/fonts";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
-import { RememberedCard } from "../rememberedCard";
-import { motion, radius, themeFor } from "../theme";
+import { RememberedCard } from "@soulledger/mobile-ui/src/rememberedCard";
+import { motion, radius, themeFor } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   DataRow,
@@ -39,7 +39,7 @@ import {
   Txt,
   shade,
   useReducedMotionDurations,
-} from "../ui";
+} from "@soulledger/mobile-ui/src/ui";
 import { inSoulFrame } from "./harness";
 import { application, life } from "./stubApi";
 
@@ -150,7 +150,7 @@ describe("the Han serif", () => {
   it("bundles exactly the two Han serif weights and the three interface weights, each within the 1.5 MB budget (scripts/build-cjk-fonts.py)", () => {
     const fs = jest.requireActual<typeof import("fs")>("fs");
     const path = jest.requireActual<typeof import("path")>("path");
-    const dir = path.join(__dirname, "..", "..", "assets", "fonts");
+    const dir = path.join(__dirname, "..", "..", "..", "packages", "mobile-ui", "assets", "fonts");
     // Beside them the 5 KB status-glyph face (Design E 组). SoulLedger Sans is Geist with the Noto Sans SC
     // subset merged in (v4's `Geist, "Noto Sans SC"` as one file). v2's seal face went with v2's seal (2026-10-03).
     // Sorted: readdir order is the file system's (ext4 on the gate box is not alphabetical).

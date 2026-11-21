@@ -2,11 +2,11 @@ import { soulApi, soulErrorMessage, type MeRebirthApplicationList, type SoulErro
 import { useState, type ReactNode } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
-import { useToast } from "../feedback";
-import { useI18n } from "../i18n";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { daysLeft, formatStamp } from "../rules";
-import { HIGHLIGHT_ALPHA, radius, space } from "../theme";
-import { Button, Input, Interp, Notice, Txt, useLandingFade, useReducedMotion, useTheme } from "../ui";
+import { HIGHLIGHT_ALPHA, radius, space } from "@soulledger/mobile-ui/src/theme";
+import { Button, Input, Interp, Notice, Txt, useLandingFade, useReducedMotion, useTheme } from "@soulledger/mobile-ui/src/ui";
 
 /** Ink at `HIGHLIGHT_ALPHA` (10%, 第五十九批) over the page, as the alpha of an 8-digit hex (the theme's ink is `#RRGGBB`). */
 const WASH = Math.round(HIGHLIGHT_ALPHA * 255).toString(16).padStart(2, "0").toUpperCase();

@@ -8,7 +8,7 @@ import * as Notifications from "expo-notifications";
 import { Linking, Platform } from "react-native";
 
 import { LIVE_ASKED_KEY, LIVE_HINT_SEEN_KEY, dismissNotifySettingsHint, shouldOfferNotifySettings, showLiveProgress } from "../liveProgress";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { NotifySettingsHint, setBioSettled } from "../screens/notifyHint";
 import { renderSoul } from "./harness";
 import type { LiveContent } from "@soulledger/core/domain/soulRoute";

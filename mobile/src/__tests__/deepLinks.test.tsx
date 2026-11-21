@@ -8,10 +8,10 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { Linking } from "react-native";
 
-import { createLinkInbox, pathOf, queryOf } from "../deepLink";
+import { createLinkInbox, pathOf, queryOf } from "@soulledger/mobile-ui/src/deepLink";
 import { ASK_MAX_LENGTH, parseSoulLink, soulLinks } from "../links";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";

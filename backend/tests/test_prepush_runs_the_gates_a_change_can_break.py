@@ -902,7 +902,7 @@ class TestJestSelection:
             ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml", "packages/core/src/api/generated/schema.ts"],
             # 2026-11-14: the tokens JSON's reader (designTokensAreGenerated) is always-run; its outputs are read or traced.
             ["packages/core/tokens/semantic.tokens.json"],
-            ["packages/core/tokens/primitive.tokens.json", "frontend/app/globals.css", "mobile/src/theme.generated.ts"],
+            ["packages/core/tokens/primitive.tokens.json", "frontend/app/globals.css", "packages/mobile-ui/src/theme.generated.ts"],
             # 2026-11-15: middleware and Next's runtime hooks are code at frontend/'s top level, not config.
             ["frontend/proxy.ts"],
             ["frontend/instrumentation.ts", "frontend/instrumentation-client.ts"],
@@ -1014,6 +1014,7 @@ class TestAppJestSelection:
         [
             ["mobile/src/navigation.tsx"],
             ["mobile-officer/src/shared.ts"],
+            ["packages/mobile-ui/src/ui.tsx"],
             ["packages/core/messages/en.json"],
             ["packages/core/src/index.ts"],
             ["frontend/app/globals.css"],
@@ -1027,6 +1028,7 @@ class TestAppJestSelection:
         [
             ["mobile/jest.config.js"],
             ["mobile-officer/package.json"],
+            ["packages/mobile-ui/package.json"],
             ["mobile/app.json"],
             ["mobile/plugins/withBuildTuning.js"],
             ["mobile/src/locales.json"],
@@ -1041,8 +1043,8 @@ class TestAppJestSelection:
         assert full == 1, out
 
     @pytest.mark.parametrize("changed, setup, needle", [
-        ("mobile/src/platform.ts", "mobile/jest.setup.js", 'require("./src/platform")'),
-        ("mobile/src/platform.ts", "mobile-officer/jest.setup.js", 'require("../mobile/src/platform")'),
+        ("packages/mobile-ui/src/platform.ts", "mobile/jest.setup.js", 'require("@soulledger/mobile-ui/src/platform")'),
+        ("packages/mobile-ui/src/platform.ts", "mobile-officer/jest.setup.js", 'require("@soulledger/mobile-ui/src/platform")'),
         ("mobile-officer/src/keptText.ts", "mobile-officer/jest.setup.js", 'require("./src/keptText")'),
     ])
     def test_a_module_the_apps_setup_file_loads_forces_a_full_run(self, hook, changed, setup, needle):
@@ -1311,7 +1313,8 @@ class TestReadersOfAnotherArea:
 # A new top-level workspace is invisible to this hook until it is named: before it was, a push that
 # changed only mobile-officer/ printed `core:0 frontend:0 backend:0` and ran nothing (the same hole mobile/
 # once had, see run-gates.sh). The runner prints `classify-officer: officer=<0|1>`. mobile-officer/ also
-# imports mobile/src's leaf modules in place, so a change under mobile/ must run it too.
+# uses the soul app's jest setup, Metro config, plugins and native modules, so a change under mobile/ must run it
+# too; the code both apps share is packages/mobile-ui, which `^packages/` runs.
 
 
 class TestMobileReadersFollowWhatChanged:
@@ -1329,7 +1332,7 @@ class TestMobileReadersFollowWhatChanged:
 
     ASSIST = "mobile/src/__tests__/assist.test.tsx"     # reads backend/apps/soul_assist
     THEME = "mobile/src/__tests__/theme.test.ts"        # reads frontend/app/globals.css
-    VISUAL = "mobile/src/__tests__/visual.test.tsx"     # reads the app's own fonts
+    VISUAL = "mobile/src/__tests__/visual.test.tsx"     # reads the fonts (packages/mobile-ui/assets)
 
     def test_the_examples_read_what_this_class_says(self):
         assert '"backend"' in (REPO_ROOT / self.ASSIST).read_text() or "/backend/" in (REPO_ROOT / self.ASSIST).read_text()
@@ -1416,8 +1419,8 @@ class TestTheOfficerAppIsGated:
         [
             ["mobile-officer/src/shell.tsx"],
             ["mobile-officer/package.json"],
-            # Shared in place: mobile/src's ui / theme / i18n are the officer app's too.
-            ["mobile/src/ui.tsx"],
+            # The shared package: its ui / theme / i18n are the officer app's too.
+            ["packages/mobile-ui/src/ui.tsx"],
             # It consumes packages/core's sources, and the root JS files decide every install.
             ["packages/core/src/api/officer-app.ts"],
             ["package-lock.json"],

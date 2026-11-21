@@ -14,9 +14,9 @@ import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
 
-import { NODE } from "../emblems";
+import { NODE } from "@soulledger/mobile-ui/src/emblems";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { landingOf } from "../push";
 import { ApplicationsScreen } from "../screens/applications";
 import { SentenceScreen, SentenceSection, useSentencePlan, type SentenceLanding } from "../screens/sentence";

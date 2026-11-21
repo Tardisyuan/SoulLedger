@@ -31,13 +31,13 @@ import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
 import { clearOutbox } from "./chat";
 import { bioEnabled, readCredential, rememberAccount, rememberedAccount, spendAutoPrompt } from "./deviceLogin";
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { deviceTokenFor, forgetDevice, rememberDevice } from "./mfa";
-import { onForeground, setUnauthorizedHandler } from "./platform";
+import { onForeground, setUnauthorizedHandler } from "@soulledger/mobile-ui/src/platform";
 import { PUSH_TOKEN_KEY, hasRegisteredDevice, unregisterDevice } from "./push";
-import { clearVoiceNumbers } from "./voiceCache";
+import { clearVoiceNumbers } from "@soulledger/mobile-ui/src/voiceCache";
 import { clearSocialStatus } from "./socialStatus";
-import { markWritten } from "./ui";
+import { markWritten } from "@soulledger/mobile-ui/src/ui";
 
 // Every change this soul makes on the server ends the refocus throttle's "fresh" (ui.tsx `useReloadOnRefocus`).
 soulHttp.interceptors.response.use((res) => {

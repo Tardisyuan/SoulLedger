@@ -6,7 +6,7 @@ import { act, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, Animated, StyleSheet } from "react-native";
 
 import { ConfessionCard } from "../screens/lifeProgress";
-import { motion } from "../theme";
+import { motion } from "@soulledger/mobile-ui/src/theme";
 import { inSoulFrame, renderSoul } from "./harness";
 
 const tally = (marks: string) => ({

@@ -8,7 +8,7 @@ import { fireEvent, screen } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import type { ReactNode } from "react";
 
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { landOn, landingOf } from "../push";
 import { ApplicationsScreen } from "../screens/applications";
 import { renderSoul } from "./harness";

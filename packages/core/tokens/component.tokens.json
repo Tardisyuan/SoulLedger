@@ -1,5 +1,5 @@
 {
-  "$description": "L2. Sizes, motion and faces owned by one component family (dossier seal, spine, desk, doors, toasts). Source of truth for the token block of frontend/app/globals.css (between the @tokens markers) and for mobile/src/theme.generated.ts: edit here, then `node scripts/build-tokens.mjs` (`--check` fails when the outputs are stale). Values were exported mechanically from globals.css on 2026-11-14, unchanged. DTCG 2025.10 format; $extensions.org.soulledger: modes, emit (\"value\": an alias written out as its value, not var()), bare (group name not part of the CSS name), css (false: app only), pendingDesign.",
+  "$description": "L2. Sizes, motion and faces owned by one component family (dossier seal, spine, desk, doors, toasts). Source of truth for the token block of frontend/app/globals.css (between the @tokens markers) and for packages/mobile-ui/src/theme.generated.ts: edit here, then `node scripts/build-tokens.mjs` (`--check` fails when the outputs are stale). Values were exported mechanically from globals.css on 2026-11-14, unchanged. DTCG 2025.10 format; $extensions.org.soulledger: modes, emit (\"value\": an alias written out as its value, not var()), bare (group name not part of the CSS name), css (false: app only), pendingDesign.",
   "seal-size": {
     "$type": "dimension",
     "$value": {

@@ -19,10 +19,10 @@ import { platform } from "@soulledger/core/platform";
 import type { NavigationProp } from "@react-navigation/native";
 
 import type { AppStackParams, LifeFocus } from "./navTypes";
-import { pushCore } from "./pushCore";
+import { pushCore } from "@soulledger/mobile-ui/src/pushCore";
 import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./sentenceKinds";
 
-export { easProjectId, installNotificationHandler, permission, type Permission, type Registration } from "./pushCore";
+export { easProjectId, installNotificationHandler, permission, type Permission, type Registration } from "@soulledger/mobile-ui/src/pushCore";
 
 /** The Expo token this device last registered — what sign-out must unregister. */
 export const PUSH_TOKEN_KEY = "soul_push_token";

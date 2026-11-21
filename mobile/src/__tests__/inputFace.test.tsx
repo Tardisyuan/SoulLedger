@@ -8,8 +8,8 @@
 import { render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 
-import { family } from "../fonts";
-import { Input } from "../ui";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { Input } from "@soulledger/mobile-ui/src/ui";
 
 const noop = () => {};
 const style = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style);

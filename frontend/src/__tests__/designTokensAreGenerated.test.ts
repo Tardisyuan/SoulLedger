@@ -2,7 +2,7 @@
  * @jest-environment node
  *
  * One source for the design tokens (fe-tokens §3.2, 2026-11-14): packages/core/tokens/*.tokens.json.
- * The token block of app/globals.css and mobile/src/theme.generated.ts are written from it by
+ * The token block of app/globals.css and packages/mobile-ui/src/theme.generated.ts are written from it by
  * scripts/build-tokens.mjs. This runs the script's `--check`, which writes nothing and exits 1 when
  * either output differs from what the JSON says — a value changed by hand in globals.css, a JSON edit
  * without a regeneration, or a name declared in the block that no token defines.

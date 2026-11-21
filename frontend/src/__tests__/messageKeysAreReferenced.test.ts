@@ -44,6 +44,7 @@ const ROOTS = [
   "mobile/App.tsx",
   "mobile-officer/src",
   "mobile-officer/App.tsx",
+  "packages/mobile-ui/src",
   "backend/apps",
   "backend/config",
 ];

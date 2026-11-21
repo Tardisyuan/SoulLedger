@@ -10,7 +10,7 @@ import { DESIRED_REBIRTH_FORMS, SOUL_ERROR_CODES } from "@soulledger/core/api/so
 import fs from "fs";
 import path from "path";
 
-import { BUNDLES, translate } from "../i18n";
+import { BUNDLES, translate } from "@soulledger/mobile-ui/src/i18n";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES, lexiconKey, type LexiconWord } from "../rules";
 
 const LEXICON_WORDS: LexiconWord[] = [
@@ -46,7 +46,8 @@ function sources(dir: string): string[] {
 }
 
 const SRC = path.join(__dirname, "..");
-const files = [...sources(SRC), path.join(SRC, "..", "App.tsx")];
+// The shared modules (packages/mobile-ui) are the soul app's too: their keys count as used here.
+const files = [...sources(SRC), ...sources(path.join(SRC, "..", "..", "packages", "mobile-ui", "src")), path.join(SRC, "..", "App.tsx")];
 const text = files.map((f) => fs.readFileSync(f, "utf8")).join("\n");
 const locales = Object.keys(BUNDLES) as (keyof typeof BUNDLES)[];
 const flat = Object.fromEntries(locales.map((l) => [l, flatten(BUNDLES[l])]));

@@ -9,10 +9,10 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { BIO_KEY, logoutBody } from "./loginRules";
-import { radius } from "./theme";
-import { Button, FadeModal, GUTTER, Txt, useTheme } from "./ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
+import { Button, FadeModal, GUTTER, Txt, useTheme } from "@soulledger/mobile-ui/src/ui";
 
 const LogoutContext = createContext<() => void>(() => {});
 /** Opens the sign-out confirmation. Signing out is never one tap away. */

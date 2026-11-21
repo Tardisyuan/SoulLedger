@@ -5,7 +5,7 @@ import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 
 import { readCredential, storeCredential } from "../deviceLogin";
-import { hydratePersistentStore, installMobilePlatform, mobilePlatform, onForeground, persistentStore, secureStore, sessionStore } from "../platform";
+import { hydratePersistentStore, installMobilePlatform, mobilePlatform, onForeground, persistentStore, secureStore, sessionStore } from "@soulledger/mobile-ui/src/platform";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 

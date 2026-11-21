@@ -1,4 +1,4 @@
-import { compareVersions, fetchVersionPolicy, isBelowMinimum } from "../appVersion";
+import { compareVersions, fetchVersionPolicy, isBelowMinimum } from "@soulledger/mobile-ui/src/appVersion";
 
 describe("compareVersions", () => {
   test.each([

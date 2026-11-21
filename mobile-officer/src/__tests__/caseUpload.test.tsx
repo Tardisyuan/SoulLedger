@@ -1,7 +1,7 @@
 /** 案卷附件上传(第五十四批 P-1/P-2):入口、进度行、失败重试 / 移除、离线置灰、没认领一行、结案无入口。 */
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
-import { OnlineContext } from "../../../mobile/src/online";
+import { OnlineContext } from "@soulledger/mobile-ui/src/online";
 import { CaseUpload } from "../screens/caseUpload";
 import { JudgmentCase } from "../screens/judgmentCase";
 import { OFFICER, httpError, renderOfficer } from "./harness";

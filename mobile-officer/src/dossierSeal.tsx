@@ -1,6 +1,6 @@
 /**
  * 卷宗的印与功过记号(Design 第三十批 第 3 步 八.3 / 八.4)在官员端的用法。图形本身与灵魂端共用
- * (`mobile/src/dossierMarks.tsx`,经 shared.ts);这里只把审判的 `civilization` / `court` 换成它要的参数,
+ * (`packages/mobile-ui/src/dossierMarks.tsx`,经 shared.ts);这里只把审判的 `civilization` / `court` 换成它要的参数,
  * 并加上落印动效:全站同一下 `SEAL_MOTION`(@soulledger/core/config/motion,第五十三批 G1)—— 200 ms,从 1.18 倍落到 1 倍,
  * 透明度 0 → 1,只播一次,没有光晕;减少动效时不缩放,120 ms 淡入。
  */

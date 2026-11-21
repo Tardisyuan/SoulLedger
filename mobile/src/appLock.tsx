@@ -15,12 +15,12 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler } from "react-native";
 
-import { BrandMark } from "./brandMarkView";
+import { BrandMark } from "@soulledger/mobile-ui/src/brandMarkView";
 import { appLockOn } from "./deviceLogin";
-import { useI18n } from "./i18n";
-import { LockView } from "./lockView";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { LockView } from "@soulledger/mobile-ui/src/lockView";
 import { takeRestoredSession, useSession } from "./session";
-import { useTheme } from "./ui";
+import { useTheme } from "@soulledger/mobile-ui/src/ui";
 import { useBiometry } from "./useBiometry";
 
 export const LOCK_AFTER_MS = 5 * 60 * 1000;

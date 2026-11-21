@@ -12,12 +12,12 @@ import type { ReactNode } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Dimensions, StyleSheet } from "react-native";
 
-import { ToastProvider } from "../feedback";
-import { installMobilePlatform } from "../platform";
+import { ToastProvider } from "@soulledger/mobile-ui/src/feedback";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { CircleScreen, ComposePostScreen } from "../screens/circle";
 import { gridColumns } from "../screens/circleMedia";
-import { themeFor, type ColorScheme } from "../theme";
-import { ThemeContext } from "../ui";
+import { themeFor, type ColorScheme } from "@soulledger/mobile-ui/src/theme";
+import { ThemeContext } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 import { heldReply, stubApi } from "./stubApi";
 

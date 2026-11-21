@@ -19,14 +19,14 @@ import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@r
 import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from "react-native";
 
-import { BrandMark } from "../brandMarkView";
-import { Icon } from "../emblems";
+import { BrandMark } from "@soulledger/mobile-ui/src/brandMarkView";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { AppHeader } from "../chrome";
-import { family } from "../fonts";
-import { useI18n } from "../i18n";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { recoveryOf, stateOfFailure, type StepState } from "../mfa";
 import { useSession, type MfaChallenge } from "../session";
-import { Button, Input, Screen, Txt, useTheme, Press } from "../ui";
+import { Button, Input, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { CheckRow, CoverRule, DigitField, Heading, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 

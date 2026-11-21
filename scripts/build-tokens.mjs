@@ -4,7 +4,7 @@
  *
  *   packages/core/tokens/{primitive,semantic,component}.tokens.json   (DTCG 2025.10)
  *     → frontend/app/globals.css     the declarations between `@tokens:start` and `@tokens:end`
- *     → mobile/src/theme.generated.ts  the hex / rgba values (and the one radius) theme.ts re-exports
+ *     → packages/mobile-ui/src/theme.generated.ts  the hex / rgba values (and the one radius) theme.ts re-exports
  *
  *   node scripts/build-tokens.mjs          write both outputs
  *   node scripts/build-tokens.mjs --check  write nothing; exit 1 if either output is stale
@@ -29,7 +29,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EXT = "org.soulledger";
 const SOURCES = ["primitive", "semantic", "component"].map((n) => `packages/core/tokens/${n}.tokens.json`);
 const CSS = "frontend/app/globals.css";
-const APP = "mobile/src/theme.generated.ts";
+const APP = "packages/mobile-ui/src/theme.generated.ts";
 const ROOT_SEL = ":root";
 const LIGHT = ".light";
 
@@ -180,7 +180,7 @@ function buildCss(css) {
   return lines.join("\n");
 }
 
-// ── mobile/src/theme.generated.ts ─────────────────────────────────────────
+// ── packages/mobile-ui/src/theme.generated.ts ─────────────────────────────────────────
 function appValue(p, sel) {
   const e = byPath.get(p);
   if (!e) throw new Error(`app: no token ${p}`);

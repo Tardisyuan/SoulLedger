@@ -1,0 +1,43 @@
+{
+  "name": "@soulledger/mobile-ui",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "What the two React Native apps (mobile/ = soul, mobile-officer/ = officer) share: ui primitives, theme and tokens, fonts, i18n, feedback, network, the mobile platform ports, push core, the brand and dossier marks, the cold start view, deep links, the voice cache. TypeScript source, imported as @soulledger/mobile-ui/src/<module>; each app's Metro and jest compile it.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile node_modules/.cache/tsc.tsbuildinfo",
+    "lint": "eslint . --max-warnings 0 --cache --cache-location node_modules/.cache/eslint/"
+  },
+  "dependencies": {
+    "@soulledger/core": "0.0.0"
+  },
+  "peerDependencies": {
+    "@expo-google-fonts/eb-garamond": "^0.4.3",
+    "@expo-google-fonts/geist-mono": "^0.4.3",
+    "@expo-google-fonts/noto-sans-egyptian-hieroglyphs": "^0.4.1",
+    "@gorhom/bottom-sheet": "^5.2.14",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-navigation/native": "^7.4.1",
+    "@sentry/react-native": "~7.11.0",
+    "expo": "~57.0.23",
+    "expo-constants": "~57.0.18",
+    "expo-local-authentication": "~57.0.3",
+    "expo-network": "~57.0.2",
+    "expo-notifications": "~57.0.19",
+    "expo-secure-store": "~57.0.4",
+    "expo-splash-screen": "~57.0.9",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "@types/react": "~19.2.2",
+    "eslint": "^9.39.4",
+    "eslint-config-expo": "~57.0.2",
+    "typescript": "~6.0.3"
+  }
+}

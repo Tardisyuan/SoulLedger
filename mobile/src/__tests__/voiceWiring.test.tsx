@@ -9,18 +9,18 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import * as SecureStore from "expo-secure-store";
 import { Pressable, Text } from "react-native";
 
-import { I18nProvider } from "../i18n";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 import { soulLinks } from "../links";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider, useSession } from "../session";
 import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockPublish = jest.fn();
 const mockClear = jest.fn();
-jest.mock("../voiceCache", () => ({
-  ...jest.requireActual("../voiceCache"),
+jest.mock("@soulledger/mobile-ui/src/voiceCache", () => ({
+  ...jest.requireActual("@soulledger/mobile-ui/src/voiceCache"),
   publishVoiceNumber: (...a: unknown[]) => mockPublish(...a),
   clearVoiceNumbers: (...a: unknown[]) => mockClear(...a),
 }));

@@ -35,8 +35,8 @@ import { fetch as expoFetch } from "expo/fetch";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useI18n } from "./i18n";
-import { useTheme } from "./ui";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { useTheme } from "@soulledger/mobile-ui/src/ui";
 
 /**
  * Decision A4: the same page within 30 minutes continues the last conversation — the one this

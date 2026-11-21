@@ -10,7 +10,7 @@ import { JudgmentFlowBlock, flowWaitingText } from "../screens/judgmentFlow";
 import { ServingFact, defaultTermOf, servingOf } from "../screens/servingFact";
 import { TodoTab } from "../screens/todo";
 import { WangsiReview, wangsiMode } from "../screens/wangsi";
-import { OnlineContext } from "../../../mobile/src/online";
+import { OnlineContext } from "@soulledger/mobile-ui/src/online";
 import { ToastProvider, translate } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 

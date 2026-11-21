@@ -8,9 +8,9 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { useChat } from "../chat";
-import { useToast } from "../feedback";
-import { useI18n } from "../i18n";
-import { Empty, Press, Screen, SectionError, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { Empty, Press, Screen, SectionError, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
 
 function BlockRow({ block, busy, onUnblock }: { block: SoulChatBlock; busy: boolean; onUnblock: () => void }) {
   const theme = useTheme();

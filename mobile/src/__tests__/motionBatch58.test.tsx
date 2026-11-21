@@ -10,11 +10,11 @@ import { act, fireEvent, renderHook, screen } from "@testing-library/react-nativ
 import { useEffect } from "react";
 import { AccessibilityInfo, Animated, StyleSheet, Text } from "react-native";
 
-import { Topline } from "../civHead";
-import { ToastProvider, TOAST_RISE_PT, useToast } from "../feedback";
+import { Topline } from "@soulledger/mobile-ui/src/civHead";
+import { ToastProvider, TOAST_RISE_PT, useToast } from "@soulledger/mobile-ui/src/feedback";
 import { HereRing } from "../screens/life";
-import { HIGHLIGHT_ALPHA, motion } from "../theme";
-import { Button, EASE, FadeIn, FadeModal, LandingWash, Skeleton, runTopline, skeletonHoldLeft, useRemote } from "../ui";
+import { HIGHLIGHT_ALPHA, motion } from "@soulledger/mobile-ui/src/theme";
+import { Button, EASE, FadeIn, FadeModal, LandingWash, Skeleton, runTopline, skeletonHoldLeft, useRemote } from "@soulledger/mobile-ui/src/ui";
 import { inSoulFrame, renderSoul } from "./harness";
 
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;

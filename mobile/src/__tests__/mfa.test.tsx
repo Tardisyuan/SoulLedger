@@ -13,7 +13,7 @@ import { MFA_DEVICES_KEY, clockOf, deviceTokenFor, digitsOf, forgetDevice, recov
 import { navigationHeld } from "../navLock";
 import { recoveryFileBody, recoveryFileName, shareRecoveryFile, sweepRecoveryFiles } from "../recoveryFile";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
+import { installMobilePlatform, persistentStore, sessionStore } from "@soulledger/mobile-ui/src/platform";
 import { PUSH_TOKEN_KEY } from "../push";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";

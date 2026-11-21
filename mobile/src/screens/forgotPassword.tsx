@@ -48,12 +48,12 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { family } from "../fonts";
-import { radius } from "../theme";
-import { useI18n } from "../i18n";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { radius } from "@soulledger/mobile-ui/src/theme";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { RESEND_AFTER_SECONDS, RESET_CODE, RESET_CODE_TTL_SECONDS, formatCountdown, isPlausibleEmail } from "../rules";
-import { Button, GUTTER, Input, Screen, Txt, useTheme, Press } from "../ui";
-import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
+import { Button, GUTTER, Input, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { PasswordMatch, PasswordRules, usePasswordForm } from "@soulledger/mobile-ui/src/passwordRulesView";
 
 /**
  * What a failed step-1 request says. `null` means "say what a 200 says": a 400

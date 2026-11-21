@@ -11,11 +11,11 @@ import * as SecureStore from "expo-secure-store";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, sessionStore } from "../platform";
+import { installMobilePlatform, sessionStore } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
-import { motion } from "../theme";
+import { motion } from "@soulledger/mobile-ui/src/theme";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const net = Network as unknown as {
@@ -231,7 +231,7 @@ describe("no require cycle between ui.tsx and network.tsx", () => {
   const { readFileSync } = require("fs") as typeof import("fs");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { join } = require("path") as typeof import("path");
-  const src = (f: string) => readFileSync(join(__dirname, "..", f), "utf8");
+  const src = (f: string) => readFileSync(join(__dirname, "../../../packages/mobile-ui/src", f), "utf8");
   const imports = (f: string) => [...src(f).matchAll(/from "\.\/([\w-]+)"/g)].map((m) => m[1]);
 
   it("ui.tsx does not import network.tsx, and online.ts imports neither", () => {

@@ -11,12 +11,12 @@ import type { ReactNode } from "react";
 import { AccessibilityInfo, ActivityIndicator, StyleSheet } from "react-native";
 
 import { AppHeader } from "../chrome";
-import { HERO } from "../emblems";
-import { I18nProvider } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { HERO } from "@soulledger/mobile-ui/src/emblems";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { LifeSections } from "../screens/life";
-import { motion, themeFor, type CivKey } from "../theme";
-import { Button, Loader, ThemeContext } from "../ui";
+import { motion, themeFor, type CivKey } from "@soulledger/mobile-ui/src/theme";
+import { Button, Loader, ThemeContext } from "@soulledger/mobile-ui/src/ui";
 import { Welcome, welcomeFrom } from "../welcome";
 import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi } from "./stubApi";

@@ -23,7 +23,7 @@ src/__tests__/a11yEngineBaseline.test.tsx frontend
 src/__tests__/accessTokenNeverBecomesACookie.test.ts frontend packages
 src/__tests__/apiEndpointContract.test.ts packages
 src/__tests__/arrowNotDoubled.test.ts packages
-src/__tests__/brandTokensMatchIcon.test.ts docs frontend mobile scripts
+src/__tests__/brandTokensMatchIcon.test.ts docs frontend mobile packages scripts
 src/__tests__/chartColourContract.test.ts packages
 src/__tests__/civInkWhitelist.test.ts frontend
 src/__tests__/civilizationMapCoverage.test.ts config frontend packages
@@ -66,7 +66,7 @@ src/__tests__/menuIconTable.test.ts backend
 src/__tests__/messageKeysAreReferenced.test.ts backend config frontend mobile-officer mobile packages
 src/__tests__/moduleCssTokenEscapes.test.ts frontend
 src/__tests__/motionBatch58.test.tsx frontend
-src/__tests__/motionBatch60.test.ts mobile packages
+src/__tests__/motionBatch60.test.ts packages
 src/__tests__/motionParity.test.ts mobile-officer mobile packages
 src/__tests__/motionTokens.test.ts packages
 src/__tests__/notificationTarget.test.tsx backend
@@ -86,7 +86,7 @@ src/__tests__/sentenceNodeStateByCivilization.test.ts backend
 src/__tests__/soulCodeMatchesBackend.test.ts backend
 src/__tests__/soulLifecycleEventCopy.test.tsx packages
 src/__tests__/soulStateBadgeContract.test.ts packages
-src/__tests__/statusGlyphFont.test.ts frontend mobile
+src/__tests__/statusGlyphFont.test.ts frontend mobile packages
 src/__tests__/statusTokenLayering.test.ts packages
 src/__tests__/suiteShape.test.ts frontend
 src/__tests__/tabClassContract.test.ts frontend

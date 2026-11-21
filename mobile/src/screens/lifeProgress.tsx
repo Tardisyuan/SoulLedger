@@ -10,10 +10,10 @@ import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { Animated, StyleSheet, View, useWindowDimensions } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
-import { useI18n } from "../i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp } from "../rules";
-import { motion } from "../theme";
-import { EASE, SectionLabel, Txt, useLayout, useReducedMotion, useTheme } from "../ui";
+import { motion } from "@soulledger/mobile-ui/src/theme";
+import { EASE, SectionLabel, Txt, useLayout, useReducedMotion, useTheme } from "@soulledger/mobile-ui/src/ui";
 
 type Ferry = NonNullable<MeProfile["greek_ferry"]>;
 type Confession = NonNullable<MeProfile["negative_confession"]>;

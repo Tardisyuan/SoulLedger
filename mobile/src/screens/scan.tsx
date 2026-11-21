@@ -21,11 +21,11 @@ import { Linking, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
-import { family } from "../fonts";
-import { useI18n } from "../i18n";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { INVALID_BANNER_MS } from "../loginRules";
-import { radius } from "../theme";
-import { Button, Screen, Txt, useTheme, Press } from "../ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
+import { Button, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** What the sign-in page receives: a fresh `at` per scan, so the same code twice still lands. */
 export type ScannedParams = { scanned: string; at: number };

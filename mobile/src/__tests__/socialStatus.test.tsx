@@ -8,8 +8,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { act, renderHook, screen, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
 
-import { ToastProvider } from "../feedback";
-import { installMobilePlatform } from "../platform";
+import { ToastProvider } from "@soulledger/mobile-ui/src/feedback";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { CircleInboxScreen, useUnreadInteractions } from "../screens/circleInbox";
 import { clearSocialStatus, invalidateSocialStatus, useSocialStatus } from "../socialStatus";
 import { renderSoul } from "./harness";

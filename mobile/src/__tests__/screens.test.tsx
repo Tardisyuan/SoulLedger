@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { StyleSheet } from "react-native";
 
 import { clearGone } from "../gone";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { ApplicationDetailScreen, ApplicationsScreen, NewApplicationScreen } from "../screens/applications";
 import { PastLivesSection } from "../screens/life";
 import { SessionContext } from "../session";

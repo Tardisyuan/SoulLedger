@@ -6,7 +6,11 @@
 import fs from "fs";
 import path from "path";
 
-const ROOTS = [path.join(__dirname, ".."), path.join(__dirname, "..", "..", "..", "mobile-officer", "src")];
+const ROOTS = [
+  path.join(__dirname, ".."),
+  path.join(__dirname, "..", "..", "..", "mobile-officer", "src"),
+  path.join(__dirname, "..", "..", "..", "packages", "mobile-ui", "src"),
+];
 const EMOJI_CAPABLE = /↗(?!\\uFE0E|︎)/;
 
 function files(dir: string): string[] {
@@ -26,7 +30,7 @@ it("every ↗ in the apps asks for text presentation", () => {
 
 it("an arrow that comes from a language bundle is given text presentation by translate()", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { translate } = require("../i18n") as typeof import("../i18n");
+  const { translate } = require("@soulledger/mobile-ui/src/i18n") as typeof import("@soulledger/mobile-ui/src/i18n");
   for (const locale of ["zh-Hans", "en", "egy"] as const) {
     const text = translate(locale, "soul_app.scan.open_settings");
     expect(text).toContain("↗\uFE0E");

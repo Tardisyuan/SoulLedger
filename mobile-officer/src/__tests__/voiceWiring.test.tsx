@@ -17,8 +17,8 @@ jest.mock("@soulledger/core/api/officer-app", () => ({
 }));
 const mockPublish = jest.fn();
 const mockClear = jest.fn();
-jest.mock("../../../mobile/src/voiceCache", () => ({
-  ...jest.requireActual("../../../mobile/src/voiceCache"),
+jest.mock("@soulledger/mobile-ui/src/voiceCache", () => ({
+  ...jest.requireActual("@soulledger/mobile-ui/src/voiceCache"),
   publishVoiceNumber: (...a: unknown[]) => mockPublish(...a),
   clearVoiceNumbers: (...a: unknown[]) => mockClear(...a),
 }));

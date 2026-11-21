@@ -25,13 +25,13 @@ import { Animated, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollV
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
-import { SHEET_CLOSE_DRAG_PT } from "./feedback";
-import { radius } from "./theme";
-import { Icon } from "./emblems";
-import { quoteFamily } from "./fonts";
-import { useI18n } from "./i18n";
+import { SHEET_CLOSE_DRAG_PT } from "@soulledger/mobile-ui/src/feedback";
+import { radius } from "@soulledger/mobile-ui/src/theme";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
+import { quoteFamily } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useCurrentHall } from "./useCurrentHall";
-import { Button, EASE, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./ui";
+import { Button, EASE, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */
 const PAGE_PEEK = 56;

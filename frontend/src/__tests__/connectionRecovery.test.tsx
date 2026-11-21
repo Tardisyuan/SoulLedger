@@ -136,7 +136,7 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
 
   describe("第六十批 P1: the timing", () => {
     it("the numbers are the tokens: grace 1000, hold 3000, in / out 160", () => {
-      const { motionTokens } = require("../../../mobile/src/theme.generated") as { motionTokens: Record<string, number> };
+      const { motionTokens } = require("../../../packages/mobile-ui/src/theme.generated") as { motionTokens: Record<string, number> };
       expect([DROP_GRACE_MS, CONNECTED_HOLD_MS, FADE_MS]).toEqual([motionTokens.connectionGrace, motionTokens.connectionHold, motionTokens.connectionChip]);
       expect([DROP_GRACE_MS, CONNECTED_HOLD_MS, FADE_MS]).toEqual([1000, 3000, 160]);
     });

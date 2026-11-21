@@ -23,10 +23,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Outgoing } from "../chat";
 import { bubbleStamp } from "../chatRules";
-import { Icon } from "../emblems";
-import { useI18n } from "../i18n";
-import { ON_PLAQUE } from "../theme";
-import { AlertTxt, FadeModal, Loader, OneLine, Txt, thumbRef, useFrontPhoto, useTheme, Press } from "../ui";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { ON_PLAQUE } from "@soulledger/mobile-ui/src/theme";
+import { AlertTxt, FadeModal, Loader, OneLine, Txt, thumbRef, useFrontPhoto, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
 export const CHAT_IMAGE_MAX = 4;

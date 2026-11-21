@@ -2,8 +2,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { StyleSheet } from "react-native";
 
-import { useI18n } from "../i18n";
-import { Button, Txt } from "../ui";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { Button, Txt } from "@soulledger/mobile-ui/src/ui";
 import { ButtonPair, MfaSheet } from "./mfaParts";
 
 /**

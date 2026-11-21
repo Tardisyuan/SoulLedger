@@ -5,7 +5,7 @@
 import { Platform } from "react-native";
 import { render, screen } from "@testing-library/react-native";
 
-import { Input } from "../ui";
+import { Input } from "@soulledger/mobile-ui/src/ui";
 
 const noop = () => {};
 

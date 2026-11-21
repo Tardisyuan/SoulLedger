@@ -17,13 +17,13 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useContext, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { useToast } from "../feedback";
-import { family } from "../fonts";
-import { useI18n } from "../i18n";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { stateOfFailure, type StepState } from "../mfa";
 import type { AppStackParams } from "../navTypes";
 import { SessionContext } from "../session";
-import { Button, Input, Notice, Screen, Skeleton, Txt, useLayout, useRemote, useTheme } from "../ui";
+import { Button, Input, Notice, Screen, Skeleton, Txt, useLayout, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
 import { DigitField, StepNotice } from "./mfaParts";
 
 type Step = "verify" | "email" | "code";

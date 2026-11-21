@@ -10,8 +10,8 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 
 import { ACCOUNT_KEY, APP_LOCK_KEY, ASKED_PREFIX, BIO_KEY, BIO_OWNER_KEY, resetColdStart } from "../deviceLogin";
-import { persistentStore } from "../platform";
-import { REFOCUS_FRESH_MS } from "../ui";
+import { persistentStore } from "@soulledger/mobile-ui/src/platform";
+import { REFOCUS_FRESH_MS } from "@soulledger/mobile-ui/src/ui";
 
 /**
  * Wait out a bottom-tab switch. After the (zero-length) transition, BottomTabView

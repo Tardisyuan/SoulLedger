@@ -11,7 +11,7 @@ import { render } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 
 export function inSoulFrame(ui: ReactElement) {
   return (

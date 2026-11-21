@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
  * A timed poll or a push's invalidation does not run it -- nobody is waiting, and a line every few seconds reads as the
  * page being in trouble; a changed row says so with its row-changed highlight. So it is asked for by name, here, and
  * no longer inferred from "some query with data is fetching" (which every poll and push satisfied).
- * The apps have the same port: mobile/src/ui.tsx `runTopline`.
+ * The apps have the same port: packages/mobile-ui/src/ui.tsx `runTopline`.
  */
 let runs = 0;
 const listeners = new Set<() => void>();

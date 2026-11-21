@@ -7,9 +7,9 @@ import Constants from "expo-constants";
 import { useSyncExternalStore } from "react";
 import { Linking, StyleSheet } from "react-native";
 
-import { useI18n } from "../i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { dismissNotifySettingsHint, useNotifySettingsHint } from "../liveProgress";
-import { Button, Txt } from "../ui";
+import { Button, Txt } from "@soulledger/mobile-ui/src/ui";
 import { SheetTitle } from "./bio";
 import { ButtonPair, MfaSheet } from "./mfaParts";
 

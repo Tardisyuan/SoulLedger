@@ -14,7 +14,7 @@ import * as SecureStore from "expo-secure-store";
 import { Linking, StyleSheet } from "react-native";
 
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { PRIMER_SEEN_KEY, PUSH_TOKEN_KEY, landingOf, registerDevice, requestPermission } from "../push";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";

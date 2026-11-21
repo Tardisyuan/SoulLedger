@@ -9,8 +9,8 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 import type { ReactNode } from "react";
 import { FlatList, ScrollView, StyleSheet } from "react-native";
 
-import { family } from "../fonts";
-import { installMobilePlatform } from "../platform";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionContext } from "../session";
 import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, SoulProfileScreen } from "../screens/circlePeople";
 import { renderSoul } from "./harness";

@@ -14,9 +14,9 @@ import * as SecureStore from "expo-secure-store";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform, sessionStore } from "../platform";
+import { installMobilePlatform, sessionStore } from "@soulledger/mobile-ui/src/platform";
 import { maskEmail } from "../screens/forgotPassword";
 import { SessionProvider } from "../session";
 import { stubApi, type Reply, resetLoginMemory } from "./stubApi";

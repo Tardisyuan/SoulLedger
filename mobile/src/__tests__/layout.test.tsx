@@ -8,12 +8,12 @@ import type { ReactNode } from "react";
 import { Alert, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { ApplicationDetailScreen } from "../screens/applications";
 import { SignInsScreen } from "../screens/signIns";
-import { themeFor } from "../theme";
-import { DataRow, Input, OneLine, ThemeContext } from "../ui";
+import { themeFor } from "@soulledger/mobile-ui/src/theme";
+import { DataRow, Input, OneLine, ThemeContext } from "@soulledger/mobile-ui/src/ui";
 import { application, stubApi } from "./stubApi";
 
 const mockWindow = { width: 393, height: 852, scale: 3, fontScale: 1 };

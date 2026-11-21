@@ -9,14 +9,14 @@ import * as SecureStore from "expo-secure-store";
 import { AccessibilityInfo, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { landOn, landingOf } from "../push";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { ferryWait } from "../screens/lifeProgress";
 import { SessionProvider } from "../session";
-import { motion } from "../theme";
+import { motion } from "@soulledger/mobile-ui/src/theme";
 import { PROFILE, life, resetLoginMemory, stubApi } from "./stubApi";
 
 const mockWindow = { width: 393, height: 852, scale: 3, fontScale: 1 };

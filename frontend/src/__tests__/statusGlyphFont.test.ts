@@ -24,11 +24,11 @@ import { APPEAL_STATUS_GLYPHS } from "@/src/components/judgment/appealDisplay";
 
 const REPO = path.join(__dirname, "..", "..", "..");
 const WEB_FONT = path.join(REPO, "frontend/public/fonts/SoulLedgerGlyphs.ttf");
-const APP_FONT = path.join(REPO, "mobile/assets/fonts/SoulLedgerGlyphs.ttf");
+const APP_FONT = path.join(REPO, "packages/mobile-ui/assets/fonts/SoulLedgerGlyphs.ttf");
 const CSS = readFileSync(path.join(REPO, "frontend/app/globals.css"), "utf8");
 // The badge glyphs live in two files since 2026-10-30: domain badges in rules.ts, the shared shape (UNKNOWN_BADGE "?")
 // in layout.ts, which the officer app also bundles.
-const APP_RULES = ["mobile/src/rules.ts", "mobile/src/layout.ts"].map((f) => readFileSync(path.join(REPO, f), "utf8")).join("\n");
+const APP_RULES = ["mobile/src/rules.ts", "packages/mobile-ui/src/layout.ts"].map((f) => readFileSync(path.join(REPO, f), "utf8")).join("\n");
 
 /** Code points in a TrueType font's format-4 (BMP) cmap subtable. Enough for these glyphs. */
 function cmapCodepoints(buf: Buffer): Set<number> {

@@ -6,7 +6,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { fireEvent, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { formatIsoDay } from "@soulledger/core/domain/dates";
 import { WangsiGrievanceScreen, WangsiLine } from "../screens/wangsi";

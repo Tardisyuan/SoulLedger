@@ -12,7 +12,7 @@
 import { useEffect } from "react";
 import { soulSocialApi, type SoulSocialStatus } from "@soulledger/core/api/soul-social";
 
-import { useRemote } from "./ui";
+import { useRemote } from "@soulledger/mobile-ui/src/ui";
 
 /**
  * Why the hall muted this soul: `muted_reason` (feat-letters, 2026-11-01). Typed by hand until the OpenAPI schema is

@@ -25,12 +25,12 @@ import { AppState, FlatList, Platform, StyleSheet, TextInput, type AppStateStatu
 import { ChatContext, ChatProvider, OUTBOX_KEY, clearOutbox, readOutbox, useChat, useChatStatus, type Chat, type ChatStatus } from "../chat";
 import { dayOf, normalizeCode } from "../chatRules";
 import { AppHeader } from "../chrome";
-import { translate } from "../i18n";
+import { translate } from "@soulledger/mobile-ui/src/i18n";
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
-import { family } from "../fonts";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
+import { family } from "@soulledger/mobile-ui/src/fonts";
 import { formatStamp } from "../rules";
-import { themeFor } from "../theme";
+import { themeFor } from "@soulledger/mobile-ui/src/theme";
 import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
@@ -1679,7 +1679,7 @@ describe("the fourth tab", () => {
 describe("letters after the network comes back", () => {
   const net = jest.requireMock("expo-network") as { __set: (s: object) => void; __reset: () => void };
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { NetworkProvider } = require("../network") as typeof import("../network");
+  const { NetworkProvider } = require("@soulledger/mobile-ui/src/network") as typeof import("@soulledger/mobile-ui/src/network");
   // The provider's first `getNetworkStateAsync` answers after mount; let it land before the
   // test changes the network, or its stale "connected" reads as a return.
   const online = async (chat: Chat) => {

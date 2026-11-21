@@ -14,13 +14,13 @@ import { State, type PanGesture } from "react-native-gesture-handler";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 
 import { clearGone } from "../gone";
-import { ToastProvider } from "../feedback";
-import { installMobilePlatform } from "../platform";
+import { ToastProvider } from "@soulledger/mobile-ui/src/feedback";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { CircleScreen, ComposePostScreen, MutedLock, PostScreen } from "../screens/circle";
 import { mutedReasonOf } from "../socialStatus";
 import { usePaged } from "../paged";
-import { themeFor, type ColorScheme } from "../theme";
-import { ThemeContext } from "../ui";
+import { themeFor, type ColorScheme } from "@soulledger/mobile-ui/src/theme";
+import { ThemeContext } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 import { heldReply, stubApi } from "./stubApi";
 import * as Haptics from "expo-haptics";

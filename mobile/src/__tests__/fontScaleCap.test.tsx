@@ -5,7 +5,7 @@
  */
 import { render, screen } from "@testing-library/react-native";
 
-import { Badge, Button, MAX_FONT_SCALE, Txt } from "../ui";
+import { Badge, Button, MAX_FONT_SCALE, Txt } from "@soulledger/mobile-ui/src/ui";
 
 const props = (id: string) => screen.getByTestId(id).props;
 

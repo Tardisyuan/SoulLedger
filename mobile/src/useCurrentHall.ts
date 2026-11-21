@@ -1,6 +1,6 @@
 import { useContext } from "react";
 
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { SessionContext } from "./session";
 
 /** The hall this soul is in now (`/me/`'s tenant), by its hall name — not the tenant's admin name. */

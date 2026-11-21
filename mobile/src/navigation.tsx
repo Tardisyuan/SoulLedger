@@ -31,17 +31,17 @@ import { AssistPanel } from "./assistPanel";
 import { ChatProvider, useChatStatus } from "./chat";
 import { ColdStart } from "./coldStart";
 import { AppHeader, PlaqueHeader, TabBar } from "./chrome";
-import { ToastProvider } from "./feedback";
+import { ToastProvider } from "@soulledger/mobile-ui/src/feedback";
 import { LogoutProvider } from "./logout";
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { soulLinks } from "./links";
 import { navigationHeld, useNavigationHeld } from "./navLock";
-import { NetworkProvider } from "./network";
+import { NetworkProvider } from "@soulledger/mobile-ui/src/network";
 import { takeRestoredSession, useSession } from "./session";
 import { useResidence } from "./residence";
 import { hasRebirth } from "./rules";
-import { preLoginTheme, themeFor, type ColorScheme } from "./theme";
-import { Block, Screen, ScreenError, Skeleton, ThemeContext, useReducedMotionDurations } from "./ui";
+import { preLoginTheme, themeFor, type ColorScheme } from "@soulledger/mobile-ui/src/theme";
+import { Block, Screen, ScreenError, Skeleton, ThemeContext, useReducedMotionDurations } from "@soulledger/mobile-ui/src/ui";
 import { Welcome, useArrival, welcomeFrom } from "./welcome";
 import {
   ApplicationDetailScreen,

@@ -3,7 +3,7 @@
 
     python3 mobile/scripts/build-cjk-fonts.py      # needs fonttools and npm
 
-Writes to mobile/assets/fonts/:
+Writes to packages/mobile-ui/assets/fonts/:
 
   SoulLedgerSans-{400,500,600}.ttf   Geist with Noto Sans SC's Han merged in behind it — the App's
                                      `ui` face. React Native has no font-fallback list, so the web's
@@ -47,7 +47,7 @@ PKGS = {
 BASE = "U+0020-007E,U+00A0-00BF,U+00D7,U+00F7,U+2010-2027,U+2030-203B,U+2E3A-2E3B,U+3000-303F,U+FF00-FFEF"
 GREEK = "U+0370-03FF"
 WEIGHTS = {400: "400Regular", 500: "500Medium", 600: "600SemiBold"}
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "fonts")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "packages", "mobile-ui", "assets", "fonts")
 
 
 def fetch(work: str) -> dict:

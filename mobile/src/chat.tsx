@@ -62,7 +62,7 @@ import {
   type TimelineState,
 } from "@soulledger/core/api/matrix";
 import { platform } from "@soulledger/core/platform";
-import { fileField } from "./platform";
+import { fileField } from "@soulledger/mobile-ui/src/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 

@@ -15,11 +15,11 @@ import { Linking, StyleSheet, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ACCOUNTS_KEPT, ACCOUNT_KEY, ASKED_PREFIX, BIO_KEY, BIO_OWNER_KEY, rememberAccount, rememberedAccount, rememberedAccounts, spendAutoPrompt } from "../deviceLogin";
-import { I18nProvider } from "../i18n";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 import { SoulCodeField } from "../soulCodeView";
 import { deviceTokenFor, rememberDevice } from "../mfa";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
+import { installMobilePlatform, persistentStore, sessionStore } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";
 import { PROFILE, heldReply, life, resetLoginMemory, stubApi, type Reply } from "./stubApi";

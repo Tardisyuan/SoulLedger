@@ -6,7 +6,7 @@
 import { act, render } from "@testing-library/react-native";
 import * as Notifications from "expo-notifications";
 
-import { useReloadOnRefocus } from "../ui";
+import { useReloadOnRefocus } from "@soulledger/mobile-ui/src/ui";
 
 jest.mock("@react-navigation/native", () => {
   const actual = jest.requireActual("@react-navigation/native");

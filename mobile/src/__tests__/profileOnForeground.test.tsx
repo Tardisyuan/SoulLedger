@@ -8,8 +8,8 @@ import { act, render, screen } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { AppState, Text } from "react-native";
 
-import { I18nProvider } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider, useSession, withProfile } from "../session";
 import { PROFILE, resetLoginMemory, stubApi } from "./stubApi";
 

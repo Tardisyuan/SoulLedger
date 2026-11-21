@@ -9,9 +9,9 @@ import { soulSocialApi, type SoulPost } from "@soulledger/core/api/soul-social";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { useToast } from "./feedback";
-import { useI18n } from "./i18n";
-import { Skeleton, SmallButton, useLayout } from "./ui";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { Skeleton, SmallButton, useLayout } from "@soulledger/mobile-ui/src/ui";
 
 /** A refusal as copy: the circle's own codes first, then the app's shared table. */
 const REFUSALS: Record<string, string> = {

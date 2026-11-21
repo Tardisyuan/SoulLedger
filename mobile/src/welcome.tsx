@@ -35,12 +35,12 @@ import { soulApi, type Civilization, type MeProfile } from "@soulledger/core/api
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, Pressable, StyleSheet, View, useWindowDimensions, type LayoutRectangle } from "react-native";
 
-import { Topline } from "./civHead";
+import { Topline } from "@soulledger/mobile-ui/src/civHead";
 import { headerSeal, hide, rise, settleEntrance } from "./entrance";
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { OutlineSeal } from "./seal";
-import { civKeyOf, motion, themeFor, type CivKey, type ColorScheme } from "./theme";
-import { EASE, Txt } from "./ui";
+import { civKeyOf, motion, themeFor, type CivKey, type ColorScheme } from "@soulledger/mobile-ui/src/theme";
+import { EASE, Txt } from "@soulledger/mobile-ui/src/ui";
 
 type Welcomable = Pick<MeProfile, "civilization" | "home_civilization" | "welcomed_civilizations">;
 

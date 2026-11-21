@@ -1,5 +1,5 @@
 /**
- * 指纹登录 (2026-11-15 便捷度研究 O5): the soul app's 面容登录 store (`mobile/src/deviceCredential.ts`) with the
+ * 指纹登录 (2026-11-15 便捷度研究 O5): the soul app's 面容登录 store (`packages/mobile-ui/src/deviceCredential.ts`) with the
  * officer's keys and endpoints. The password is stored nowhere; the server issues a credential for this phone only
  * (`backend/apps/authentication/device_login.py`) and revokes it on a password change, a reset, a forced sign-out
  * of that device or of the officer, and deactivation.

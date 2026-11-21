@@ -5,7 +5,7 @@
  *
  * The durations and curves come from packages/core/tokens/semantic.tokens.json (`ease`, `transition-duration`,
  * `motion`): scripts/build-tokens.mjs writes the web's --ease-* / --transition-duration-* in globals.css and the apps'
- * `motionTokens` in mobile/src/theme.generated.ts (`build-tokens --check` fails on a stale output). What this holds is
+ * `motionTokens` in packages/mobile-ui/src/theme.generated.ts (`build-tokens --check` fails on a stale output). What this holds is
  * what the generator cannot see: that each named use the web composes in an --animate-* line or a component rule is
  * the number the apps' `motion` plays for the same use, that no app transition sits off the web's set, and that the
  * apps carry no curve of their own.
@@ -25,7 +25,7 @@ const CSS = readFileSync(GLOBALS_CSS, "utf8");
 const REPO = path.join(__dirname, "..", "..", "..");
 // The apps' table, as they play it (theme.ts maps the generated values onto the names the screens read). Required by
 // path: the frontend tsconfig's rootDir stops a static import of mobile/, and jest transforms the file either way.
-const { curves, motion, HIGHLIGHT_ALPHA } = require(path.join(REPO, "mobile", "src", "theme")) as {
+const { curves, motion, HIGHLIGHT_ALPHA } = require(path.join(REPO, "packages", "mobile-ui", "src", "theme")) as {
   curves: Record<string, readonly number[]>;
   motion: Record<string, number>;
   HIGHLIGHT_ALPHA: number;
@@ -136,11 +136,12 @@ describe("curves", () => {
     };
     walk(path.join(REPO, "mobile", "src"));
     walk(path.join(REPO, "mobile-officer", "src"));
+    walk(path.join(REPO, "packages", "mobile-ui", "src"));
     expect(files.length).toBeGreaterThan(50);
     const own = files.flatMap((f) =>
       [...readFileSync(f, "utf8").matchAll(/^.*bezier\(\s*\d.*$/gm)].map((m) => `${path.relative(REPO, f)}: ${m[0].trim()}`)
     );
-    expect(own).toEqual(["mobile/src/coldStartView.tsx: const EASE_WRITE = Easing.bezier(0.4, 0, 0.2, 1);"]);
+    expect(own).toEqual(["packages/mobile-ui/src/coldStartView.tsx: const EASE_WRITE = Easing.bezier(0.4, 0, 0.2, 1);"]);
   });
 });
 
