@@ -7,7 +7,8 @@ random suffix (roles are cluster-wide), connects as that role through a throwawa
 policies, the RLS switch and the role after the test -- the same clean-up shape as
 `test_row_level_security_probe.py`.
 
-PostgreSQL only, apart from the first three tests (no database / no hall / a cut-over hall): SQLite has no RLS.
+PostgreSQL only, apart from the first four tests (no database / no hall / the alias of a sharded hall / the shard
+aliases' settings): SQLite has no RLS.
 Proven red 2026-11-21 (setup.py mutated, then restored): policy `USING (true)`, RLS never enabled, and a
 table-wide `GRANT SELECT` each turned the tests that guard them red; see ADR 0007.
 """
@@ -48,13 +49,42 @@ def test_no_hall_runs_nothing():
 
 
 @pytest.mark.django_db
-def test_a_hall_whose_reads_are_cut_over_is_not_on_this_database():
-    hall = Tenant.objects.create(code="ASK_GR", display_name="ASK_GR", declared_civilization="GREEK")
-    with override_settings(SHARD_READ_CIVS=["GREEK"]), pytest.raises(executor.ExecutionError) as err:
-        executor.run("SELECT 1", hall.pk, using="default")
-    assert err.value.code == executor.NOT_ON_THIS_DATABASE
-    with override_settings(SHARD_READ_CIVS=["EGYPTIAN"]):  # another civilization's cut-over changes nothing here
-        executor._check_hall(hall.pk)
+def test_sharded_a_hall_reads_through_its_shards_alias_and_one_not_configured_is_503():
+    """Decision 2 (2026-11-21): sharded, `<alias>_<the hall's shard>`; a hall of no known civilization keeps its rows
+    on control (D2) and reads `<alias>`; not sharded, `<alias>` with no lookup. A shard alias that does not exist is
+    a misconfiguration: NOT_CONFIGURED (503), nothing sent. The real-PG run is tests/test_ask_data_sharded.py."""
+    greek = Tenant.objects.create(code="ASK_GR", display_name="ASK_GR", declared_civilization="GREEK")
+    nowhere = Tenant.objects.create(code="ASK_XX", display_name="ASK_XX")
+    assert nowhere.civilization == "UNKNOWN"
+    assert executor.alias_for(greek.pk, "ask_x") == "ask_x"
+    with override_settings(SHARDED=True):
+        assert executor.alias_for(greek.pk, "ask_x") == "ask_x_civ_greek"
+        assert executor.alias_for(nowhere.pk, "ask_x") == "ask_x"
+        with pytest.raises(executor.ExecutionError) as err:
+            executor.alias_for(greek.pk + nowhere.pk + 1000)
+        assert err.value.code == executor.NO_TENANT
+        with pytest.raises(executor.ExecutionError) as err:
+            executor.run("SELECT 1", greek.pk, using="default")  # there is no `default_civ_greek`
+        assert err.value.code == executor.NOT_CONFIGURED
+
+
+def test_one_ask_data_url_serves_every_shard_and_keeps_its_password_out_of_theirs():
+    from config.shard_db import ask_data_shard_databases
+
+    def db(user, name, host):
+        return {"ENGINE": "django.db.backends.postgresql", "USER": user, "PASSWORD": f"{user}-pw", "NAME": name,
+                "HOST": host, "PORT": "5432", "OPTIONS": {"sslmode": "require"}}
+
+    databases = {"default": db("owner", "sl", "control"), "ask_data": db("soulledger_ask_data", "sl", "control"),
+                 "civ_greek": db("owner", "sl_gr", "gr-host"), "civ_chinese": db("owner", "sl_cn", "cn-host")}
+    derived = ask_data_shard_databases(databases)
+    assert sorted(derived) == ["ask_data_civ_chinese", "ask_data_civ_greek"]
+    gr = derived["ask_data_civ_greek"]
+    assert (gr["USER"], gr["PASSWORD"], gr["NAME"], gr["HOST"]) == ("soulledger_ask_data", "soulledger_ask_data-pw",
+                                                                     "sl_gr", "gr-host")
+    assert gr["TEST"] == {"MIRROR": "civ_greek"} and gr["OPTIONS"] is not databases["ask_data"]["OPTIONS"]
+    assert all(d["PASSWORD"] == "owner-pw" for a, d in databases.items() if a.startswith("civ_"))
+    assert ask_data_shard_databases({k: v for k, v in databases.items() if k != "ask_data"}) == {}
 
 
 def _rows(sql, hall, alias):

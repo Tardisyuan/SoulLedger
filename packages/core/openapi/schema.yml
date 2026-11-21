@@ -177,12 +177,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AskDataError'
           description: ''
-        '409':
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AskDataError'
-          description: ''
         '429':
           content:
             application/problem+json:
@@ -43603,7 +43597,6 @@ components:
       - not_inbox
       - not_initiator
       - not_next
-      - not_on_this_database
       - not_original_judge
       - not_pending
       - not_picked
@@ -44132,7 +44125,6 @@ components:
         * `not_inbox` - not_inbox
         * `not_initiator` - not_initiator
         * `not_next` - not_next
-        * `not_on_this_database` - not_on_this_database
         * `not_original_judge` - not_original_judge
         * `not_pending` - not_pending
         * `not_picked` - not_picked

@@ -109,7 +109,7 @@ def test_a_refused_sql_is_400_with_the_code_and_the_sql(cn_tenant, judge_user, s
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(("code", "status"), [(executor.TIMEOUT, 400), (executor.PERMISSION_DENIED, 400),
-                                              (executor.NOT_ON_THIS_DATABASE, 409)])
+                                              (executor.NOT_CONFIGURED, 503)])
 def test_an_executor_refusal_keeps_its_code(cn_tenant, judge_user, stub, monkeypatch, code, status):
     enable(cn_tenant)
     stub.reply = staticmethod(lambda s, f, p: REPLY)
@@ -139,6 +139,121 @@ def test_the_demo_command_refuses_without_the_database(cn_tenant):
         call_command("ask_data", "--tenant", "CN_DIYU", "--sql", "SELECT count(*) FROM judgment_judgment")
     with pytest.raises(CommandError, match="ask_data_not_configured"):
         call_command("ask_data_eval", "--offline")
+
+
+# --- 每次调用一行审计(2026-11-21 决定 3)---
+
+#: 只在结果里出现的值:审计行里一个都不能有(结果只回给官员)。
+SECRET_CELL, SECRET_NUMBER, SECRET_COLUMN = "结果里才有的殿名", 31337, "only_in_the_result"
+
+
+@pytest.fixture
+def ran_secret(monkeypatch):
+    def run(sql, tenant_id, *, using):
+        return executor.Result(columns=[SECRET_COLUMN], rows=[[SECRET_CELL, SECRET_NUMBER]] * 3, truncated=True,
+                               elapsed_ms=4)
+
+    monkeypatch.setattr(service, "ALIAS", "default")
+    monkeypatch.setattr(executor, "run", run)
+
+
+def _audit_rows():
+    from apps.audit.models import AuditLog
+
+    return list(AuditLog.objects.filter(resource=service.AUDIT_RESOURCE))
+
+
+def _the_one_row(user, tenant, outcome, sql, rows=None, truncated=None):
+    from apps.audit.models import AuditAction
+
+    found = _audit_rows()
+    assert len(found) == 1, [r.changes for r in found]
+    row = found[0]
+    assert (row.user_id, row.tenant_id, row.action) == (user.pk, getattr(tenant, "pk", None), AuditAction.READ)
+    changes = dict(row.changes)
+    assert isinstance(changes.pop("elapsed_ms"), int)
+    assert changes == {"question": "几件案子", "sql": sql, "outcome": outcome, "rows": rows, "truncated": truncated}
+    written = json.dumps([row.changes, row.description, row.resource_id], ensure_ascii=False)
+    assert SECRET_CELL not in written and str(SECRET_NUMBER) not in written and SECRET_COLUMN not in written
+    return row
+
+
+@pytest.mark.django_db
+def test_an_answered_call_writes_one_row_without_the_result(cn_tenant, judge_user, stub, ran_secret):
+    enable(cn_tenant)
+    stub.reply = staticmethod(lambda s, f, p: REPLY)
+    response = officer_client(judge_user).post(URL, {"question": "几件案子"}, format="json")
+    assert response.status_code == 200 and response.data["rows"][0] == [SECRET_CELL, SECRET_NUMBER]
+    _the_one_row(judge_user, cn_tenant, "ok", response.data["sql"], rows=3, truncated=True)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(("reply", "code"), [
+    ("```sql\nSELECT 1; DROP TABLE souls_soul\n```", gate.MULTIPLE_STATEMENTS),
+    ("SELECT * FROM judgment_judgment", gate.STAR_NOT_ALLOWED),
+    ("", gate.UNPARSEABLE),
+])
+def test_a_gate_refusal_writes_one_row_with_the_gates_code(cn_tenant, judge_user, stub, ran_secret, reply, code):
+    enable(cn_tenant)
+    stub.reply = staticmethod(lambda s, f, p: reply)
+    assert officer_client(judge_user).post(URL, {"question": "几件案子"}, format="json").status_code == 400
+    _the_one_row(judge_user, cn_tenant, code, service.evals.extract_sql(reply) or "")
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("code", [executor.TIMEOUT, executor.PERMISSION_DENIED, executor.EXECUTION_ERROR,
+                                  executor.NOT_CONFIGURED])
+def test_an_executor_refusal_writes_one_row_with_the_executors_code(cn_tenant, judge_user, stub, monkeypatch, code):
+    enable(cn_tenant)
+    stub.reply = staticmethod(lambda s, f, p: REPLY)
+    monkeypatch.setattr(service, "ALIAS", "default")
+
+    def refuse(sql, tenant_id, *, using):
+        raise executor.ExecutionError(code)
+
+    monkeypatch.setattr(executor, "run", refuse)
+    officer_client(judge_user).post(URL, {"question": "几件案子"}, format="json")
+    _the_one_row(judge_user, cn_tenant, code, service.evals.extract_sql(REPLY))
+
+
+@pytest.mark.django_db
+def test_a_call_refused_before_the_model_writes_one_row_too(admin_user, cn_tenant, judge_user, stub, monkeypatch):
+    officer_client(admin_user).post(URL, {"question": "几件案子"}, format="json")  # no hall
+    _the_one_row(admin_user, None, executor.NO_TENANT, None)
+    _audit_rows()[0].delete()
+    enable(cn_tenant, False)
+    monkeypatch.setattr(service, "ALIAS", "default")  # a database, but no model
+    officer_client(judge_user).post(URL, {"question": "几件案子"}, format="json")
+    _the_one_row(judge_user, cn_tenant, "assistant_not_configured", None)
+    _audit_rows()[0].delete()
+    enable(cn_tenant)
+    monkeypatch.setattr(service, "ALIAS", "ask_data_never_configured")
+    officer_client(judge_user).post(URL, {"question": "几件案子"}, format="json")  # no database
+    _the_one_row(judge_user, cn_tenant, executor.NOT_CONFIGURED, None)
+
+
+@pytest.mark.django_db
+def test_a_request_refused_before_the_service_writes_no_row(cn_tenant, judge_user, stub, ran_secret):
+    """Serializer and permission refusals never reach `service.ask`: no call was made, nothing to record."""
+    enable(cn_tenant)
+    officer_client(judge_user).post(URL, {"question": " "}, format="json")
+    assert _audit_rows() == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_when_the_audit_row_cannot_be_written_the_officer_gets_no_result(cn_tenant, judge_user, stub, ran_secret):
+    """The repo's audit rule (apps/audit/signals.py `_write_row`, tests/test_audit_inside_transactions.py): the row is
+    part of the record and its failure reaches the caller. A read has nothing to roll back, so the call fails and the
+    result is not sent -- as an export does (apps/core/exports.py `record_export`)."""
+    from django.db import OperationalError
+
+    from tests.test_audit_inside_transactions import failing_audit_insert
+
+    enable(cn_tenant)
+    stub.reply = staticmethod(lambda s, f, p: REPLY)
+    with failing_audit_insert("READ") as hits, pytest.raises(OperationalError, match="injected"):
+        officer_client(judge_user).post(URL, {"question": "几件案子"}, format="json")
+    assert hits and _audit_rows() == []
 
 
 # --- 真 PostgreSQL:接口与命令走只读角色与 RLS ---

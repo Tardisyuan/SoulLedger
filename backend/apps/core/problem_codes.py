@@ -549,7 +549,6 @@ class ProblemCode(StrEnum):
     TIMEOUT = "timeout"
     READ_ONLY = "read_only"
     EXECUTION_ERROR = "execution_error"
-    NOT_ON_THIS_DATABASE = "not_on_this_database"
 
 
 PROBLEM_CODES = frozenset(c.value for c in ProblemCode)

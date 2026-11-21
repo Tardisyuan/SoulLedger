@@ -1481,6 +1481,10 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "tests/test_ask_data_rls.py::test_the_date_and_series_functions_the_gate_allows_run_as_the_read_only_role",
         "tests/test_ask_data_rls.py::test_a_statement_that_sets_another_hall_still_sees_only_its_own",
         "tests/test_ask_data_rls.py::test_setup_runs_twice_to_the_same_wall_and_the_owner_is_untouched",
+        # 2026-11-21 决定 2:分库时问数读殿所在的分库,同一个只读角色、列授权与策略由 ask_data_setup 建在每个分库上;
+        # 同一分库里的两个殿各见各的(RLS)。只在 `--ds=config.settings_sharded -m sharded` 下跑。
+        "tests/test_ask_data_sharded.py::test_sharded_a_hall_reads_its_shard_and_sees_only_its_own_rows",
+        "tests/test_ask_data_sharded.py::test_sharded_the_calls_audit_row_is_on_the_halls_shard",
         # 2026-11-21 问数第 2 步:评测种子上的离线整套(真闸门 + 真执行器,以只读角色过 RLS;「忘了租户过滤」的题判 ok
         # 才说明墙兜住),和接口 + 演示命令走同一堵墙。比对、分类、用例集自检与接口的其余验收每个引擎都跑
         # (test_ask_data_evals.py / test_ask_data_api.py,执行器在 SQLite 上换成替身)。

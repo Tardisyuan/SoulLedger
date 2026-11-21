@@ -40,7 +40,7 @@ class AskDataView(OfficerAssistBaseView):
 
     @extend_schema(operation_id="ask_data", request=AskDataRequestSerializer,
                    responses={200: AskDataResultSerializer, 400: AskDataErrorSerializer,
-                              403: AskDataErrorSerializer, 409: AskDataErrorSerializer,
+                              403: AskDataErrorSerializer,
                               429: AskDataErrorSerializer, 503: AskDataErrorSerializer})
     def post(self, request):
         body = AskDataRequestSerializer(data=request.data)

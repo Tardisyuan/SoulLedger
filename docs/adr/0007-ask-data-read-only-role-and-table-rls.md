@@ -29,15 +29,26 @@ request and an explicit way to cross halls. None of that is done.
 3. **The executor** (`ask_data/executor.py`) opens one transaction per question and runs `SET TRANSACTION READ
    ONLY`. It sets `statement_timeout` (`ASK_DATA_TIMEOUT_MS`, 3 s) and `app.tenant_id` as transaction-local settings,
    runs the statement, and keeps at most `ASK_DATA_MAX_ROWS` (200) rows, flagging the result as truncated when
-   there are more. The hall comes from `request.tenant` only. With no hall nothing runs, and a hall whose
-   civilization's reads have been cut over to a shard gets `not_on_this_database`.
+   there are more. The hall comes from `request.tenant` only. With no hall nothing runs.
+6. **Sharded, the hall's shard** (user decision 2026-11-21, replacing the earlier `not_on_this_database` 409). When
+   `settings.SHARDED`, the four tables' rows live on the hall's civilization shard and control holds none of them,
+   so the executor connects to `ask_data_civ_<civ>`, the same role on that shard (a hall of no known civilization
+   keeps its rows on control, D2, and reads `ask_data`). `ask_data_setup` builds the same role, password, column
+   grants and policy on control and on every `civ_*` alias. **Connection settings: one URL.** The shard aliases are
+   derived in `config/settings.py` by `config/shard_db.ask_data_shard_databases`: the `ASK_DATA_DATABASE_URL` entry
+   (its user, password and options) with the shard's `HOST` / `PORT` / `NAME` from `SHARD_DATABASE_URL_<CIV>`. So the
+   role's password is written once, in `ASK_DATA_DATABASE_URL`, and never in a shard owner's URL; there is no
+   `ASK_DATA_DATABASE_URL_<CIV>`. Chosen over per-shard URLs because it needs no new variable and cannot drift from
+   the shard list. Its limit: the role has to reach each shard at the shard owner's host and port (the same
+   pgbouncer, if any, must know the role). A shard with no derived alias would be a misconfiguration and answers
+   503 `ask_data_not_configured` before the model is called.
 4. **Not a migration.** `manage.py ask_data_setup` runs `setup.apply` once per environment, as the table owner,
    with `CREATEROLE`. The password comes from `ASK_DATA_DB_PASSWORD`, never from the command line. The reasons it is
    not a migration: a role belongs to the whole cluster, not to one database; creating one needs a password and a
    privilege that `migrate` should not need; and a policy has to name the role, which does not exist where
-   `migrate` runs first (CI, a fresh test database). The `ask_data` alias is never migrated
-   (`ShardRouter.allow_migrate`), and under tests it mirrors `default` instead of getting a test database of its
-   own.
+   `migrate` runs first (CI, a fresh test database). The `ask_data` aliases (`ask_data`, `ask_data_civ_*`) are never
+   migrated (`ShardRouter.allow_migrate`), and under tests each mirrors its database (`default`, the shard) instead of
+   getting a test database of its own.
 5. **Idempotent.** Each run sets the role's attributes and password again, runs `REVOKE ALL` on the four tables
    (column grants go with it) and grants the current column list, so a column removed from `schema.yaml` loses its
    grant on the next run. Each run also drops and recreates the policy.
@@ -85,22 +96,27 @@ request and an explicit way to cross halls. None of that is done.
 
 ## How to run
 
-    # once per environment, after migrate (as the owner, with CREATEROLE)
+    # once per environment, after migrate / migrate_shards (as the owner, with CREATEROLE): control and every shard
     ASK_DATA_DB_PASSWORD=… manage.py ask_data_setup
-    # then point the alias at the same database as that role
+    # then point the alias at control as that role; sharded, ask_data_civ_* follow from it and the shard URLs
     ASK_DATA_DATABASE_URL=postgres://soulledger_ask_data:…@host:5432/soulledger
 
-The wall tests need real PostgreSQL. On SQLite only the ones that do not depend on RLS run (no alias, no hall, a cut-over hall, and the executor's refusals before sending):
+The wall tests need real PostgreSQL. On SQLite only the ones that do not depend on RLS run (no alias, no hall, the
+alias a sharded hall reads through, the derived shard settings, and the executor's refusals before sending):
 
     scripts/run-gates.sh --real-pg --tests tests/test_ask_data_rls.py
+    # the sharded form (four shards)
+    scripts/run-gates.sh --real-pg --tests --ds=config.settings_sharded -m sharded tests/test_ask_data_sharded.py
 
 ## Evidence
 
 - `backend/apps/soul_assist/ask_data/setup.py` (the role, grants and policy, one function)
 - `backend/apps/soul_assist/ask_data/executor.py` (the transaction, the limits, the error codes, `_one_statement`)
 - `backend/apps/soul_assist/management/commands/ask_data_setup.py`
-- `backend/config/settings.py` (`ASK_DATA_DATABASE_URL`, `ASK_DATA_TIMEOUT_MS`, `ASK_DATA_MAX_ROWS`), `backend/config/sharding.py` (`allow_migrate`)
+- `backend/config/settings.py` (`ASK_DATA_DATABASE_URL`, `ASK_DATA_TIMEOUT_MS`, `ASK_DATA_MAX_ROWS`), `backend/config/shard_db/__init__.py` (`ask_data_shard_databases`), `backend/config/sharding.py` (`allow_migrate`)
 - `backend/tests/ask_data_wall.py` (the test role and alias, shared by the RLS, eval and API tests)
+- `backend/tests/test_ask_data_sharded.py` (decision 6: two halls on one shard and one on another, as the role,
+  through the walls `ask_data_setup` built on every shard)
 - `backend/tests/test_ask_data_rls.py`. Its PG-only tests are listed in
   `tests/test_concurrency.py::test_the_postgres_only_set_is_the_set_we_think_it_is`. Each guard was checked by
   breaking what it protects and watching it fail: a policy of `USING (true)`, RLS never enabled, and a

@@ -4,7 +4,8 @@
     pgbouncer transaction pooling)  ->  the SQL  ->  fetchmany(MAX_ROWS + 1)  ->  COMMIT
 
 The hall comes from the caller (`request.tenant`), never from the question or the model; no hall = nothing
-runs. The SQL is not rewritten (no LIMIT added): a result longer than ASK_DATA_MAX_ROWS is cut and flagged.
+runs. Sharded (`settings.SHARDED`), the statement runs on the hall's shard, as the same role: `ask_data_<shard
+alias>` (config/shard_db `ask_data_shard_databases`), where the same grants and policy are built (setup.py). The SQL is not rewritten (no LIMIT added): a result longer than ASK_DATA_MAX_ROWS is cut and flagged.
 What stops a bad statement is, in order, the gate (gate.py), then `_one_statement` here, then this
 connection's role and the RLS policy (setup.py): column-level SELECT only, rows of the current hall only.
 
@@ -32,7 +33,6 @@ ALIAS = "ask_data"
 # Error codes: a contract with the view and the evals, asserted by constant.
 NOT_CONFIGURED = "ask_data_not_configured"
 NO_TENANT = "no_tenant"
-NOT_ON_THIS_DATABASE = "not_on_this_database"
 TIMEOUT = "timeout"
 PERMISSION_DENIED = "permission_denied"
 READ_ONLY = "read_only"
@@ -56,18 +56,22 @@ class Result:
     elapsed_ms: int
 
 
-def _check_hall(tenant_id) -> None:
+def alias_for(tenant_id, using: str = ALIAS) -> str:
+    """The alias the hall's rows are read through: `using` itself, or sharded, `<using>_<the hall's shard>`
+    (`using` is the control alias; tests pass a throwaway one and name its shard aliases the same way). A hall of
+    no known civilization keeps its rows on control (D2), so it reads `using`. No hall = nothing runs."""
     if not tenant_id:
         raise ExecutionError(NO_TENANT)  # fail closed: never run without a hall
-    if settings.SHARD_READ_CIVS:
-        from apps.tenants.models import Tenant
+    if not settings.SHARDED:
+        return using
+    from apps.core.shard_reads import CONTROL_ALIAS, alias_for_reads
+    from apps.tenants.models import Tenant
 
-        tenant = Tenant.objects.filter(pk=tenant_id).first()
-        if tenant is None:
-            raise ExecutionError(NO_TENANT)
-        if tenant.civilization in settings.SHARD_READ_CIVS:
-            # The hall's rows are read from its shard, which has no ask_data role (§8: not this version).
-            raise ExecutionError(NOT_ON_THIS_DATABASE)
+    tenant = Tenant.objects.filter(pk=tenant_id).only("code", "declared_civilization").first()
+    if tenant is None:
+        raise ExecutionError(NO_TENANT)
+    shard = alias_for_reads(tenant.civilization)
+    return using if shard == CONTROL_ALIAS else f"{using}_{shard}"
 
 
 #: Roots the executor sends on: a query, or a write the role and READ ONLY refuse in the database (the wall
@@ -94,9 +98,9 @@ def _one_statement(sql: str) -> None:
 
 
 def run(sql: str, tenant_id, *, using: str = ALIAS) -> Result:
+    using = alias_for(tenant_id, using)
     if using not in connections:
-        raise ExecutionError(NOT_CONFIGURED)
-    _check_hall(tenant_id)
+        raise ExecutionError(NOT_CONFIGURED)  # also a shard with no ask_data alias: a misconfiguration, 503
     _one_statement(sql)
     tenant = str(int(tenant_id))
     max_rows = settings.ASK_DATA_MAX_ROWS

@@ -86,8 +86,8 @@ class ShardRouter:
         return not (placement(obj1) == SHARD and placement(obj2) == SHARD)
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        if db == "ask_data":
-            return False  # the read-only 问数 role on the same database (ADR 0007): never migrated through it
+        if db == "ask_data" or db.startswith("ask_data_"):
+            return False  # the read-only 问数 role on control or a shard (ADR 0007): never migrated through it
         if not is_shard_alias(db):
             return None
         if model_name is None:

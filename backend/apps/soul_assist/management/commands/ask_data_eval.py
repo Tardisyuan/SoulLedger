@@ -33,7 +33,7 @@ class Command(BaseCommand):
         tenant = Tenant.objects.filter(code=code).first()
         if tenant is None:
             raise CommandError(f"no hall with code {code!r}")
-        if not service.configured():
+        if not service.configured(tenant.pk):
             raise CommandError("ask_data_not_configured: run ask_data_setup, then set ASK_DATA_DATABASE_URL")
         check, execute = service.eval_hooks(tenant.pk)
         try:

@@ -30,12 +30,14 @@
 ```
 POST /api/v1/ask-data/ {"question": "…"}            官员令牌,TenantPermission + CodenamePermission(judgment.read)
   → 没有 request.tenant → 403 no_tenant              不调模型
-  → 没有 ask_data 别名  → 503 ask_data_not_configured 不调模型(先于模型:没有库就不花模型的钱)
+  → 没有这个殿要读的 ask_data 别名(分库时是殿所在分库的 `ask_data_civ_*`)→ 503 ask_data_not_configured
+                                                    不调模型(先于模型:没有库就不花模型的钱)
   → schema.recall(question)                         召回表说明(§5)
   → features.complete("ask_data", …)                模型出一条 SQL(取 ```sql 围栏里的,没有围栏取整段)
   → gate.check(sql) → 拒绝:400 {"code", "sql"}      §3
-  → executor.run(sql, request.tenant.pk)            §4;拒绝:400 {"code", "sql"},分库切读的殿 409
+  → executor.run(sql, request.tenant.pk)            §4;拒绝:400 {"code", "sql"};分库时读殿所在的分库
   → 200 {"sql", "columns", "rows", "truncated", "elapsed_ms"}
+  ↳ 以上每一步的结果(200 或任何一个错误码)都写一行审计;写不进去整次调用 500、不回结果(§2「留痕」)
 ```
 
 演示命令:`manage.py ask_data "问题" --tenant CN_DIYU [--sql "…"]`。`--sql` 跳过召回与模型,直接把给定 SQL 送进闸门和执行器,
@@ -61,6 +63,18 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 `SELECT count(*) FROM judgment_judgment` 在 CN 殿得 1、EU 殿得 2,`; DROP TABLE souls_soul` 以 `multiple_statements` 失败。
 这条就是 §11 第 3 条的本地演示,跑在 unRAID 的一次性测试库上,不是本机 PG(本机没有 `psql`,也没有起本地 PG)。
 运行与计数见 §11。
+
+**留痕(2026-11-21 决定 3)。** `service.ask` 每次调用恰好写一行审计(`write_audit_row`,仓库唯一的审计入口,
+`tests/test_audit_rows_have_one_entry.py` 的 AST 守卫禁止直接写 `AuditLog`):`user` 是官员、`tenant` 是殿(没绑殿时为空)、
+`action=READ`、`resource="ask_data"`,`changes` = `question`、模型的 `sql`(没出 SQL 时为空)、`outcome`(`ok`,或闸门 /
+执行器 / 模型不可用的错误码)、`rows`(返回给官员的行数)、`truncated`、`elapsed_ms`(整次调用,含召回与模型;响应里的
+`elapsed_ms` 只是执行那一段);再加 IP 与 UA。**不存结果数据**:列名与行只回给官员。分库时行写在殿的主库上(`_write_row` 按殿选库)。
+审计写失败按仓库的规矩(`_write_row`:写在业务事务里,失败抛给调用方):读没有可回滚的业务,所以整次调用失败(500)、结果不回 ——
+和 CSV 导出(`apps/core/exports.py::record_export`)一样,没有留痕就没有数据。序列化器或权限在 `service.ask` 之前拒的请求
+(空问题、超长、没有 `judgment.read`、限流)没有调用发生,不写。演示命令与评测命令不经接口,不写审计。
+代码:`backend/apps/soul_assist/ask_data/service.py`(`ask`、`_audit`)。测试:`backend/tests/test_ask_data_api.py` 里「每次调用一行审计」一段:
+成功、三种闸门码、四种执行器码、没绑殿 / 没配模型 / 没配库各恰好一行且字段逐项相等、结果里才有的值一个都不在行里、序列化器拒的不写;
+注入审计 INSERT 失败 → 请求抛出注入的错误、不回结果、没有行。分库时行在殿的分库上:`tests/test_ask_data_sharded.py`。
 
 **范围(已定,§9):** 只做后端接口 + 演示命令;没绑殿的 ADMIN 不开放;白名单四张表(§6)。
 
@@ -102,7 +116,17 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 
 **执行。** 别名 `ask_data` 读 `ASK_DATA_DATABASE_URL`(未设 = 没有这个别名,答 503),不迁移、测试里镜像 `default`。每次一个事务:
 `SET TRANSACTION READ ONLY` → `set_config('statement_timeout', ASK_DATA_TIMEOUT_MS, true)` 与 `set_config('app.tenant_id', 殿, true)` →
-SQL → `fetchmany(ASK_DATA_MAX_ROWS + 1)` → COMMIT。殿只来自调用方;没有殿不执行;殿的文明在 `SHARD_READ_CIVS` 里 → `not_on_this_database`。
+SQL → `fetchmany(ASK_DATA_MAX_ROWS + 1)` → COMMIT。殿只来自调用方;没有殿不执行。
+
+**分库时(2026-11-21 决定 2,取代原来的 409 `not_on_this_database`)。** `settings.SHARDED` 时四张表的行都在殿所在文明的分库上,
+控制库一行没有,所以执行器连 `ask_data_civ_<文明>`(`executor.alias_for`:殿的文明 → `shard_reads.alias_for_reads` → 分库别名;
+文明未知的殿行留在控制库,D2,读 `ask_data`)。`ask_data_setup` 在控制库和每个 `civ_*` 上各跑一次 `setup.apply`:同一个角色、
+同一个密码、同样的列授权与策略(角色是集群级的,同一集群上第二次是 ALTER)。**连接设置只有一个变量**:分库别名由
+`config/shard_db.ask_data_shard_databases` 在 settings 里推出 —— `ASK_DATA_DATABASE_URL` 的用户、密码、OPTIONS,换上
+`SHARD_DATABASE_URL_<CIV>` 的主机 / 端口 / 库名。所以角色的密码只写在 `ASK_DATA_DATABASE_URL` 里,不进分库表主的 URL;
+没有 `ASK_DATA_DATABASE_URL_<CIV>`。选它是因为不加变量、也不会和分库清单不一致;限制是角色得能用分库表主的主机和端口连上
+(中间有 pgbouncer 的话,它也得认这个角色)。某个分库推不出别名(配置错)→ 503 `ask_data_not_configured`,不调模型。
+单库形态不变。
 库错按 SQLSTATE 归成 `timeout`(57014)、`permission_denied`(42501)、`read_only`(25006),其余 `execution_error`(原文进日志)。
 
 **执行器自己的单语句检查(第 2 步加的,纵深防御)。** 库墙信任 `app.tenant_id`,而这是任何角色都能写的设置;psycopg2 用简单查询协议,
@@ -189,10 +213,9 @@ UPDATE / DELETE / 未授权列 / 未授权表全被库拒且什么都没写、`p
   在这里的取值是否合适未核实。
 - **截断只截返回的部分**:psycopg2 的普通游标在 `execute` 时把整份结果取到客户端,`fetchmany` 只决定回给官员多少行。大结果由 3 s 超时兜着,
   内存上限未量过。
-- **没有留痕**:接口不写 `AIDraft`,也不写审计日志;只有 `AssistUsage` 记一行用量。谁在什么时候跑了哪条 SQL,现在只在执行器出错时进日志。
+- **留痕只在接口上**:接口每次调用写一行审计(§2「留痕」),不写 `AIDraft`;演示命令与评测命令不写。
 - **离线分数只在种子上成立**:`ask_data_eval --offline` 在别的库上会得到别的数字;种子只由测试加载,没有加载命令。
-- **`not_on_this_database` 答 409**:这是实现时定的状态码(需求里没写),分库上的问数本身不做。
-- 分库上的问数(`SHARD_READ_CIVS`);ADMIN 跨殿问数;多轮追问;模型看结果再总结;图表;Web 页面与官员 App。
+- ADMIN 跨殿问数;多轮追问;模型看结果再总结;图表;Web 页面与官员 App。
 - pgbouncer 本身没在测试里:和 ADR 0006 一样,用同一连接 COMMIT 后复查来代替。
 
 ## 9. 已拍板(2026-11-21,均取推荐项)
