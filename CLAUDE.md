@@ -101,7 +101,7 @@ npx playwright test --project=chromium
 - App(`mobile/`、`mobile-officer/`):dev client,不能用 Expo Go。改了原生依赖或 `app.json` 的 plugins 要
   `npx expo prebuild` 再重编(`scripts/build-mobile-dev.sh <mobile|mobile-officer> <ios|android>`,按原生指纹判断是否需要);
   改 JS 只要 Metro。换了文件而 App 没变,先 `npx expo start --clear`(不带 `CI=1`)。只收字母数字的输入框用
-  `mobile/src/ui.tsx` 的 `Input` 并设 `keyboardType="ascii-capable"`。界面改动合并后要上一次模拟器,jest 全绿不够。
+  `packages/mobile-ui/src/ui.tsx` 的 `Input` 并设 `keyboardType="ascii-capable"`。界面改动合并后要上一次模拟器,jest 全绿不够。
 
 **SQLITE HIDES A WHOLE CLASS OF DEFECT.** 本地与推送门禁默认跑 SQLite,而它:
 - 不会因失败语句**中止事务**:`except Exception: pass` 包住的查询在测试里无害,在 PostgreSQL 上会让后续语句全报
