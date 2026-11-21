@@ -11,10 +11,10 @@ import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
 import Svg, { Path, Stop } from "react-native-svg";
 
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { ON_PLAQUE, motion, themeFor, v4 } from "../theme";
+import { ON_PLAQUE, motion, themeFor, v4 } from "@soulledger/mobile-ui/src/theme";
 import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 

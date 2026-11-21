@@ -3,7 +3,7 @@
  * what it refuses, and that it never throws into the screen that fetched the number.
  */
 import { daysLeft } from "../rules";
-import { createVoiceCache, type VoiceNative } from "../voiceCache";
+import { createVoiceCache, type VoiceNative } from "@soulledger/mobile-ui/src/voiceCache";
 
 const fake = () => ({ setNumber: jest.fn(), clear: jest.fn() }) satisfies VoiceNative;
 

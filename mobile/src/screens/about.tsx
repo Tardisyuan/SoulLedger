@@ -19,8 +19,8 @@ import {
 import { useState, type ReactNode } from "react";
 import { Linking, StyleSheet, View } from "react-native";
 
-import { useI18n } from "../i18n";
-import { Screen, Section, SectionLabel, Txt, useLayout, useTheme, Press } from "../ui";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { Screen, Section, SectionLabel, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** 18 高的字 + 上下各 13 的 hitSlop = 44,App 点击区下限(补足 A1)。 */
 function Link({ label, url, testID }: { label: string; url: string; testID?: string }) {

@@ -339,9 +339,9 @@ jobs:
           path: ${{ runner.temp }}/soul_app.json
           retention-days: 7
 
-  # The officer app (灵魂簿 · 官员, mobile-officer/). Same JS gates as `mobile`. It imports
-  # mobile/src's leaf modules in place (mobile-officer/src/shared.ts), so it is a separate job:
-  # a change to the soul app's shared files shows here as its own red.
+  # The officer app (灵魂簿 · 官员, mobile-officer/). Same JS gates as `mobile`. It shares
+  # packages/mobile-ui with the soul app (mobile-officer/src/shared.ts), so it is a separate job:
+  # a change to the shared package shows here as its own red.
   officer:
     runs-on: ubuntu-latest
     timeout-minutes: 20

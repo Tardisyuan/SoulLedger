@@ -7,10 +7,10 @@
 import type { Locale } from "@soulledger/core/config/locale";
 import { useContext } from "react";
 
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { residenceOf, type Residence } from "./rules";
 import { SessionContext } from "./session";
-import { enumText, useTheme } from "./ui";
+import { enumText, useTheme } from "@soulledger/mobile-ui/src/ui";
 
 export function realmName(realm: { name_zh: string; name_en: string; name_local: string }, locale: Locale): string {
   return (locale === "zh-Hans" ? realm.name_zh : realm.name_en) || realm.name_local;

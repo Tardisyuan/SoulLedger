@@ -18,10 +18,10 @@ import { Image, StyleSheet, View } from "react-native";
 
 import { type Outgoing, useChat } from "../chat";
 import { chatSections } from "@soulledger/core/domain/soulChat";
-import { Icon } from "../emblems";
-import { useToast } from "../feedback";
-import { useI18n } from "../i18n";
-import { Button, Input, Notice, Screen, Txt, useLayout, useTheme, Press } from "../ui";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { Button, Input, Notice, Screen, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { compressWithSize, pickImages } from "./circleMedia";
 import { useDiscardGuard } from "./discardGuard";

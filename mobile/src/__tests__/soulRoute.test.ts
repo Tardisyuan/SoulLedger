@@ -4,7 +4,7 @@
  */
 import type { MeProfile, MeSentencePlan } from "@soulledger/core/api/soul";
 
-import { translate } from "../i18n";
+import { translate } from "@soulledger/mobile-ui/src/i18n";
 import { liveContent, soulRoute } from "@soulledger/core/domain/soulRoute";
 import { PROFILE } from "./stubApi";
 

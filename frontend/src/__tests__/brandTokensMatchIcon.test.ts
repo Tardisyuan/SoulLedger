@@ -42,8 +42,8 @@ describe("brand tokens", () => {
   });
 
   it("cold start paints the mark in the same gold on dark (the App's splash token, 第六十一批 一)", () => {
-    expect(read("mobile/src/theme.ts")).toMatch(new RegExp(`mark: "${mark}"`, "i"));
-    const generated = read("mobile/src/theme.generated.ts");
+    expect(read("packages/mobile-ui/src/theme.ts")).toMatch(new RegExp(`mark: "${mark}"`, "i"));
+    const generated = read("packages/mobile-ui/src/theme.generated.ts");
     const dark = generated.match(/export const splash = \{\s*"dark": \{\s*"ground": "(#[0-9A-F]{6})",\s*"mark": "(#[0-9A-F]{6})"/i);
     expect(dark?.[2]?.toUpperCase()).toBe(mark);
     expect(read("mobile/src/coldStart.tsx")).toMatch(/mark=\{pair\.mark\}/);

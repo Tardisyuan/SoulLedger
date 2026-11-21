@@ -3,8 +3,8 @@
  * 同一句规则):文明色只用在顶线、印、行程脊、焦点环四处;例外是选文明的卡片与「一条系列一个文明」的图(App 里今天都没有)。
  *
  * App 里的文明色是主题的四个槽:`plaque`(v4 civT)、`plaqueFill`(v4 solid)、`glow`,以及第四十九批加进来的 `metal`
- * (只放行行程脊的当前点:「此生」里「你现在在这里」那一个金属色环;用在文字上就红)。扫 "mobile" 与 "mobile-officer" 的 src
- * (注释先剥掉;theme.ts / theme.generated.ts 定义这些槽，不算;官员端经 shared.ts 引用的 mobile/src 文件已在 mobile/src 里):
+ * (只放行行程脊的当前点:「此生」里「你现在在这里」那一个金属色环;用在文字上就红)。扫 "mobile"、"mobile-officer" 与 packages/mobile-ui 的 src
+ * (注释先剥掉;theme.ts / theme.generated.ts 定义这些槽，不算;两个 App 共用的文件在 packages/mobile-ui/src):
  *   `x.plaque` / `x?.glow` / `useTheme().plaqueFill` / `x["metal"]`,以及从主题解构出来的 `const { glow } = useTheme()`。
  * 记「文件 :: 槽」→ 次数。结果必须**等于**名单:名单外多一处就红;名单上的一处改掉了也红，直到从名单删掉 —— 名单只会变短。
  * 名单每一格是一个数组，逐处写明属于哪一类，数组长度就是次数。
@@ -28,16 +28,16 @@
 import { readFileSync, readdirSync } from "fs";
 import path from "path";
 
-import { TEXTURE_ALPHA } from "../civHead";
-import { GLOW_ALPHA, STAGE_MOTIF_OPACITY } from "../emblems";
-import { seal, themeOf } from "../theme";
+import { TEXTURE_ALPHA } from "@soulledger/mobile-ui/src/civHead";
+import { GLOW_ALPHA, STAGE_MOTIF_OPACITY } from "@soulledger/mobile-ui/src/emblems";
+import { seal, themeOf } from "@soulledger/mobile-ui/src/theme";
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const LIVE_CARD: Record<"light" | "dark", Record<string, string>> = require("../../plugins/liveActivity").CARD;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const REPO = path.join(__dirname, "..", "..", "..");
-const DIRS = [path.join("mobile", "src"), path.join("mobile-officer", "src")];
+const DIRS = [path.join("mobile", "src"), path.join("mobile-officer", "src"), path.join("packages", "mobile-ui", "src")];
 
 type Kind = "TOPLINE" | "TOPLINE_RUN" | "SEAL" | "SPINE" | "SPINE_HERE" | "FOCUS" | "GLOW_TOP_HEAD" | "TOPLINE_LOADER";
 
@@ -45,7 +45,7 @@ type Kind = "TOPLINE" | "TOPLINE_RUN" | "SEAL" | "SPINE" | "SPINE_HERE" | "FOCUS
 const ALLOWED: Record<string, Kind[]> = {
   // 顶线四形(两个 App 页头都用它)。
   // …and its one run on a refresh of what is on screen (第五十八批 M8): it takes the top line, so it keeps the colour (A9).
-  "mobile/src/civHead.tsx :: plaque": ["TOPLINE", "TOPLINE_RUN"],
+  "packages/mobile-ui/src/civHead.tsx :: plaque": ["TOPLINE", "TOPLINE_RUN"],
   // 灵魂端页头:晕光 + 殿印(38)。
   "mobile/src/chrome.tsx :: glow": ["GLOW_TOP_HEAD"],
   "mobile/src/chrome.tsx :: plaque": ["SEAL"],

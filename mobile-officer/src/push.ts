@@ -18,7 +18,7 @@ export const PUSH_TOKEN_KEY = "officer_push_token";
 
 /**
  * Permission (the system dialog only from the settings switch, never at launch), registration, and sign-out's
- * unregistration: the soul app's core (`mobile/src/pushCore.ts`) with this app's key, channel and endpoints.
+ * unregistration: the soul app's core (`packages/mobile-ui/src/pushCore.ts`) with this app's key, channel and endpoints.
  * The channel is PRIVATE: the lock screen shows the generic count only, whatever the title / body say. Unregister
  * asks the server first and clears the local copy after (A16); a failed request is not retried -- what stops the
  * pushes is the logout that follows: since 2026-10-23 it ends this device's sign-in session on the server, and

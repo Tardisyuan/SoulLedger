@@ -12,13 +12,13 @@ import * as SecureStore from "expo-secure-store";
 import { StyleSheet } from "react-native";
 import Svg, { Stop } from "react-native-svg";
 
-import { LOGIN_MARK } from "../brandMark";
+import { LOGIN_MARK } from "@soulledger/mobile-ui/src/brandMark";
 import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
-import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
+import { installMobilePlatform, persistentStore, sessionStore } from "@soulledger/mobile-ui/src/platform";
 import { PUSH_TOKEN_KEY } from "../push";
 import { PENDING_LOGOUT_KEY, SessionProvider } from "../session";
-import { NEUTRAL_CIV, v4 } from "../theme";
+import { NEUTRAL_CIV, v4 } from "@soulledger/mobile-ui/src/theme";
 import { renderSoul } from "./harness";
 import { PROFILE, ageAnswers, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 

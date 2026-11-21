@@ -9,9 +9,9 @@ import path from "path";
 import * as Notifications from "expo-notifications";
 
 import { LIVE_ASKED_KEY, LIVE_CHANNEL, LIVE_NOTIFICATION, LOCK_GROUND, androidContent, endLiveProgress, liveAccent, liveChannel, liveTint, nativeState, showLiveProgress } from "../liveProgress";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { PRIMER_SEEN_KEY } from "../push";
-import { contrastRatio, seal, themeOf } from "../theme";
+import { contrastRatio, seal, themeOf } from "@soulledger/mobile-ui/src/theme";
 import type { LiveContent } from "@soulledger/core/domain/soulRoute";
 
 // The local module: absent (null) unless a test installs one, as in jest and Expo Go.
@@ -176,7 +176,7 @@ describe("the Live Activity's two halves", () => {
     const { AndroidNotificationVisibility } = jest.requireMock("expo-notifications") as { AndroidNotificationVisibility: Record<string, number> };
     expect(liveChannel("x").lockscreenVisibility).toBe(AndroidNotificationVisibility.PUBLIC);
     // pushCore's channel (书信 and every server push) stays PRIVATE.
-    const pushCore = fs.readFileSync(path.join(ROOT, "src/pushCore.ts"), "utf8");
+    const pushCore = fs.readFileSync(path.join(ROOT, "../packages/mobile-ui/src/pushCore.ts"), "utf8");
     expect(pushCore).toContain("lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE");
     expect(pushCore).not.toContain("AndroidNotificationVisibility.PUBLIC");
   });

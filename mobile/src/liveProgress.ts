@@ -26,11 +26,11 @@ import * as Notifications from "expo-notifications";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Appearance, Platform } from "react-native";
 
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { PRIMER_SEEN_KEY, permission, registerDevice, requestPermission, type Permission } from "./push";
 import { liveContent, type LiveContent, type SoulRoute } from "@soulledger/core/domain/soulRoute";
-import { contrastRatio, seal, themeOf, type CivKey, type ColorScheme } from "./theme";
-import { useTheme } from "./ui";
+import { contrastRatio, seal, themeOf, type CivKey, type ColorScheme } from "@soulledger/mobile-ui/src/theme";
+import { useTheme } from "@soulledger/mobile-ui/src/ui";
 
 interface LiveNative {
   /**

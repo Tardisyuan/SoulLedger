@@ -5,7 +5,7 @@
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import { Linking, Text } from "react-native";
 
-import { VersionGate } from "../versionGate";
+import { VersionGate } from "@soulledger/mobile-ui/src/versionGate";
 import { renderSoul } from "./harness";
 
 // jest.setup pins the app version to 0.1.0.

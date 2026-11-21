@@ -17,15 +17,15 @@ import type { AssistScreen } from "@soulledger/core/api/soul-assist";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 import { AssistEntry, useAssist } from "./assist";
-import { HeadTexture, Topline } from "./civHead";
-import { GlowTop, Icon, type IconName } from "./emblems";
-import { family, quoteFamily, titleFamily } from "./fonts";
-import { useI18n } from "./i18n";
+import { HeadTexture, Topline } from "@soulledger/mobile-ui/src/civHead";
+import { GlowTop, Icon, type IconName } from "@soulledger/mobile-ui/src/emblems";
+import { family, quoteFamily, titleFamily } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useCurrentHall } from "./useCurrentHall";
 import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
-import { radius, type Theme } from "./theme";
-import { MAX_FONT_SCALE, Txt, enumText, useLayout, useTheme, Press } from "./ui";
+import { radius, type Theme } from "@soulledger/mobile-ui/src/theme";
+import { MAX_FONT_SCALE, Txt, enumText, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /**
  * The page's theme, for what a bar's control opens away from the bar. Since v4 the bar is on the page's own

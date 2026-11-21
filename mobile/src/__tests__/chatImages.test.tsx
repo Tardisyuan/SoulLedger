@@ -20,8 +20,8 @@ import { AccessibilityInfo, Dimensions, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, OUTBOX_KEY, type Chat, type Outgoing, useChat } from "../chat";
-import { I18nProvider } from "../i18n";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { ConversationScreen } from "../screens/conversation";
 import { forgetChatImageUrls } from "../screens/chatImages";
 import { heldReply, stubApi, type Reply } from "./stubApi";

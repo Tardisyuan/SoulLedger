@@ -6,16 +6,16 @@ import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { initCrashReporting } from "./src/crashReport";
-import { RootErrorBoundary } from "./src/errorBoundary";
-import { FONT_ASSETS } from "./src/fonts";
-import { I18nProvider } from "./src/i18n";
+import { initCrashReporting } from "@soulledger/mobile-ui/src/crashReport";
+import { RootErrorBoundary } from "@soulledger/mobile-ui/src/errorBoundary";
+import { FONT_ASSETS } from "@soulledger/mobile-ui/src/fonts";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
 import { soulLinks } from "./src/links";
 import { RootNavigator } from "./src/navigation";
-import { hydratePersistentStore, installMobilePlatform } from "./src/platform";
+import { hydratePersistentStore, installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { installNotificationHandler } from "./src/push";
 import { SessionProvider } from "./src/session";
-import { VersionGate } from "./src/versionGate";
+import { VersionGate } from "@soulledger/mobile-ui/src/versionGate";
 
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();

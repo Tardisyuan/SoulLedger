@@ -11,16 +11,16 @@ import * as SecureStore from "expo-secure-store";
 import { useState, type ReactNode } from "react";
 import { AccessibilityInfo, StyleSheet, Text } from "react-native";
 
-import { Sheet, SHEET_CLOSE_DRAG_PT, SHEET_CLOSE_SPEED_PT_PER_MS, sheetReleaseCloses, useSheetGestures } from "../feedback";
-import { translate } from "../i18n";
+import { Sheet, SHEET_CLOSE_DRAG_PT, SHEET_CLOSE_SPEED_PT_PER_MS, sheetReleaseCloses, useSheetGestures } from "@soulledger/mobile-ui/src/feedback";
+import { translate } from "@soulledger/mobile-ui/src/i18n";
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { defaultLifeSection, lifePath, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
 import { LIFE_OPEN_PREFIX, stageWordFit } from "../screens/life";
 import { SessionProvider } from "../session";
-import { family } from "../fonts";
-import { GUTTER_PT, radius, space, themeFor, v4 } from "../theme";
-import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { GUTTER_PT, radius, space, themeFor, v4 } from "@soulledger/mobile-ui/src/theme";
+import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
@@ -378,6 +378,8 @@ describe("spacing sits on the v2 scale (补足 A2)", () => {
       }
     };
     walk(root);
+    // The shared modules (packages/mobile-ui: ui, feedback, civHead …) are on the same scale.
+    walk(path.join(root, "..", "..", "packages", "mobile-ui", "src"));
     const allowed = new Set<number>([0, ...space, GUTTER_PT]);
     const off = files.flatMap((f) =>
       [...fs.readFileSync(f, "utf8").matchAll(/\b((?:padding|margin)(?:Horizontal|Vertical|Top|Bottom|Left|Right)?|gap|rowGap|columnGap): (\d+(?:\.\d+)?)\b(?!\s*[-+*/])/g)]

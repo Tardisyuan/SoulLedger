@@ -12,11 +12,11 @@
  */
 import { soulApi } from "@soulledger/core/api/soul";
 import { BIO_KEY } from "./loginRules";
-import { deviceCredential, resetBiometryCache } from "./deviceCredential";
-import { storedLocale, translate } from "./i18n";
+import { deviceCredential, resetBiometryCache } from "@soulledger/mobile-ui/src/deviceCredential";
+import { storedLocale, translate } from "@soulledger/mobile-ui/src/i18n";
 import { platform } from "@soulledger/core/platform";
 
-export { CredentialStoreError, readBiometry, type Biometry, type CredentialRead } from "./deviceCredential";
+export { CredentialStoreError, readBiometry, type Biometry, type CredentialRead } from "@soulledger/mobile-ui/src/deviceCredential";
 
 export const ACCOUNT_KEY = "soulledger.login.account";
 export { BIO_KEY };

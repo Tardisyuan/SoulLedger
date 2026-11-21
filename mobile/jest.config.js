@@ -25,6 +25,9 @@ module.exports = {
   // The denominator is every source file, not just the ones a test loads. Measured on unRAID 2026-10-31
   // (1142 tests): statements 93.00 / branches 86.76 / functions 88.81 / lines 95.20. Ratchet: about two points
   // under the reading; raise it when the reading rises, never lower it to make a red run green.
+  // packages/mobile-ui (moved out of src/ on 2026-11-21) is NOT in this denominator, though its tests are this app's:
+  // babel-plugin-istanbul instruments only files under rootDir, so a `../packages/...` glob here matches and still
+  // collects nothing (tried). The reading above was taken with those files inside src/.
   collectCoverageFrom: ["src/**/*.{ts,tsx}", "!src/**/__tests__/**"],
   coverageDirectory: "<rootDir>/node_modules/.cache/coverage",
   coverageThreshold: { global: { statements: 91, branches: 84, functions: 86, lines: 93 } },

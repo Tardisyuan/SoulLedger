@@ -9,11 +9,11 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { useToast } from "../feedback";
-import { family } from "../fonts";
-import { useI18n } from "../i18n";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp } from "../rules";
-import { Button, Empty, FadeModal, OneLine, Press, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, FadeModal, OneLine, Press, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
 import { useBiometry } from "../useBiometry";
 import type { AppStackParams } from "../navTypes";
 

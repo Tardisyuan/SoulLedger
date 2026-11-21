@@ -25,8 +25,8 @@ import {
   type CivKey,
   type ColorScheme,
   type Theme,
-} from "../theme";
-import { seal } from "../theme.generated";
+} from "@soulledger/mobile-ui/src/theme";
+import { seal } from "@soulledger/mobile-ui/src/theme.generated";
 
 /** [dark OKLCH, light OKLCH], exactly as the 灵魂簿 App handoff's table prints them. */
 const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string] }[] = [
@@ -279,7 +279,7 @@ describe("brand (v3 第三批 品牌色令牌): the mark's gold and ground, one 
   });
   it("the cold start takes its colours from the splash tokens rather than its own literals (第六十一批 一)", () => {
     const cold = src("../coldStart.tsx");
-    expect(cold).toMatch(/import \{ splash \} from "\.\/theme";/);
+    expect(cold).toMatch(/import \{ splash \} from "@soulledger\/mobile-ui\/src\/theme";/);
     expect(cold).toMatch(/ground=\{pair\.ground\} mark=\{pair\.mark\}/);
     expect(cold).not.toMatch(/#[0-9A-F]{6}/i);
     // On dark the mark is still the brand gold; the ground is the app's canvas, no longer the brand ground.

@@ -1,6 +1,6 @@
 /**
  * The S-and-L balance mark's outline (A7), the one copy both clients draw from: the web's
- * `BrandMark` (frontend/src/components/brand/BrandMark.tsx) and the app's (mobile/src/brandMarkView.tsx,
+ * `BrandMark` (frontend/src/components/brand/BrandMark.tsx) and the app's (packages/mobile-ui/src/brandMarkView.tsx,
  * and the cold start's clip, mobile/src/coldStart.tsx).
  *
  * SHAPE is assets/brand/soulledger-mark.svg's outline, copied (mobile coldStart.test.tsx holds it to

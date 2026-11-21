@@ -5,7 +5,7 @@
  */
 import { act, renderHook } from "@testing-library/react-native";
 
-import { useRemote } from "../ui";
+import { useRemote } from "@soulledger/mobile-ui/src/ui";
 
 type Props = { f: () => Promise<string> };
 

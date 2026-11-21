@@ -13,13 +13,13 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, View, useWindowDim
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist } from "../assist";
-import { HeadMark, HeadTexture, Topline, markFits } from "../civHead";
-import { Emblem, GlowTop, Icon, StageMotif } from "../emblems";
-import { DossierSeal, MeritMark } from "../dossierMarks";
-import { family, titleFamily } from "../fonts";
-import { useToast } from "../feedback";
+import { HeadMark, HeadTexture, Topline, markFits } from "@soulledger/mobile-ui/src/civHead";
+import { Emblem, GlowTop, Icon, StageMotif } from "@soulledger/mobile-ui/src/emblems";
+import { DossierSeal, MeritMark } from "@soulledger/mobile-ui/src/dossierMarks";
+import { family, titleFamily } from "@soulledger/mobile-ui/src/fonts";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useGone } from "../gone";
-import { useI18n } from "../i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import {
   APPLICATION_BADGES,
   LIFE_SECTIONS,
@@ -38,7 +38,7 @@ import {
 import { useSession } from "../session";
 import { OutlineSeal } from "../seal";
 import { entranceStyle, headerSeal } from "../entrance";
-import { radius, sealedTheme, type CivKey } from "../theme";
+import { radius, sealedTheme, type CivKey } from "@soulledger/mobile-ui/src/theme";
 import {
   Block,
   Button,
@@ -70,7 +70,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
-} from "../ui";
+} from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams, LifeFocus, LifeParams } from "../navTypes";
 import { realmName, useResidence } from "../residence";
 import { AppealDeadlineNote, AppealLine, roundsOf } from "./appeals";

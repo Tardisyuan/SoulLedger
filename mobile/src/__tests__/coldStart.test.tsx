@@ -13,10 +13,10 @@ import { Path } from "react-native-svg";
 
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { LOGIN_MARK, MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "../brandMark";
+import { LOGIN_MARK, MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "@soulledger/mobile-ui/src/brandMark";
 import { ColdStart, coldStart } from "../coldStart";
 import type { SessionState } from "../session";
-import { brand, motion, splash as SPLASH } from "../theme";
+import { brand, motion, splash as SPLASH } from "@soulledger/mobile-ui/src/theme";
 import { PROFILE } from "./stubApi";
 
 // Every other suite gets jest.setup's inert double; this one tests the real thing.

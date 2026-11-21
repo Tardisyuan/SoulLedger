@@ -22,10 +22,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { useAssist } from "../assist";
-import { Emblem, Icon, type IconName } from "../emblems";
-import { useToast } from "../feedback";
+import { Emblem, Icon, type IconName } from "@soulledger/mobile-ui/src/emblems";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useAskLogout } from "../logout";
-import { translate, useI18n } from "../i18n";
+import { translate, useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { PRIMER_SEEN_KEY, easProjectId, hasRegisteredDevice, permission, registerDevice, requestPermission, type Permission } from "../push";
 import { useSession } from "../session";
 import {
@@ -50,7 +50,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
-} from "../ui";
+} from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 import { BioRow } from "./bio";

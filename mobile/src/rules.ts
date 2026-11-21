@@ -7,8 +7,8 @@ import type { MeRebirthApplication } from "@soulledger/core/api/soul";
 
 import { daysLeft, termFraction } from "@soulledger/core/domain/term";
 import { localDateString, pad2 } from "@soulledger/core/domain/dates";
-import { civKeyOf, type CivKey } from "./theme";
-import type { BadgeSpec } from "./layout";
+import { civKeyOf, type CivKey } from "@soulledger/mobile-ui/src/theme";
+import type { BadgeSpec } from "@soulledger/mobile-ui/src/layout";
 
 // The layout thresholds and the badge shape live in layout.ts, a leaf `ui.tsx` (and so the officer
 // app) can import without this file (cq-apps 2026-10-30 #2b). Screens keep importing them from here.
@@ -24,7 +24,7 @@ export {
   stacksLabel,
   type BadgeSpec,
   type Layout,
-} from "./layout";
+} from "@soulledger/mobile-ui/src/layout";
 
 // One countdown for every screen (core/domain/term.ts); a mute still on screen passes `min` 1.
 export { daysLeft };

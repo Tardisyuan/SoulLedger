@@ -8,10 +8,10 @@ import { type ReactNode } from "react";
 import { KeyboardAvoidingView, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { family } from "../fonts";
-import { useI18n } from "../i18n";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { clockOf, digitsOf, type StepState } from "../mfa";
-import { FadeModal, Interp, Input, Txt, useTheme, Press } from "../ui";
+import { FadeModal, Interp, Input, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** A plain hairline at the top of every screen in this flow (第四十八批 A10; it was 3px in the civilization's colour). */
 export function CoverRule() {

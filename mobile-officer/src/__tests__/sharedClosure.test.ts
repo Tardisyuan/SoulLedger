@@ -1,15 +1,16 @@
 /**
- * Which of the soul app's files (`mobile/src/`) end up in the officer app's bundle.
+ * Which of the shared package's files (`packages/mobile-ui/src/`) end up in the officer app's bundle,
+ * and that none of the soul app's own files (`mobile/`) does.
  *
- * The officer app imports the soul app's leaf modules in place (`src/shared.ts`). A leaf that
- * later imports `session` or a screen would quietly pull the soul's accounts into this bundle,
- * and no other check would notice: the import compiles, and both apps' tests stay green. So this
- * reads the files as text (it imports no app code) and walks every relative import, starting
- * from each non-test file under `mobile-officer/src/` and continuing through `mobile/src/`'s own
- * relative imports, and pins the set of `mobile/src/` files that walk reaches.
+ * The officer app imports what it shares with the soul app from `@soulledger/mobile-ui` (`src/shared.ts`).
+ * A package file that later imports the soul's `session` or a screen would quietly pull the soul's accounts
+ * into this bundle, and no other check would notice: the import compiles, and both apps' tests stay green.
+ * So this reads the files as text (it imports no app code) and walks every relative and
+ * `@soulledger/mobile-ui/src/*` import, starting from each non-test file under `mobile-officer/src/` and
+ * continuing through the package's own imports, and pins the set of package files that walk reaches.
  *
- * The set must EQUAL the list below, not merely avoid the forbidden ones: a new file in it is a
- * change to what both apps share, and should be seen in review. Adding one is fine -- add it here.
+ * The set must EQUAL the list below, not merely avoid the forbidden ones: a new file in it is a change to
+ * what both apps share, and should be seen in review. Adding one is fine -- add it here.
  * `import type` counts too (the walk does not tell it apart), which is stricter than the bundle.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
@@ -17,13 +18,19 @@ import { dirname, join, relative, resolve as resolvePath, sep } from "path";
 
 const ROOT = resolvePath(__dirname, "../../..");
 const OFFICER = join(ROOT, "mobile-officer/src");
-const MOBILE = join(ROOT, "mobile/src");
+const SHARED = join(ROOT, "packages/mobile-ui/src");
+const MOBILE = join(ROOT, "mobile");
 
-const SPEC = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'](\.{1,2}\/[^"']+)["']/g;
+const SPEC = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'](\.{1,2}\/[^"']+|@soulledger\/(?:mobile|officer)[^"']*)["']/g;
 const EXTS = ["", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js"];
+const PACKAGE = "@soulledger/mobile-ui/src/";
 
 function resolve(from: string, spec: string): string {
-  const base = resolvePath(dirname(from), spec);
+  if (spec.startsWith("@soulledger/") && !spec.startsWith(PACKAGE)) {
+    // @soulledger/mobile (the soul app) or @soulledger/officer: never a dependency of either side.
+    throw new Error(`${relative(ROOT, from)}: imports ${spec}`);
+  }
+  const base = spec.startsWith(PACKAGE) ? join(SHARED, spec.slice(PACKAGE.length)) : resolvePath(dirname(from), spec);
   for (const e of EXTS) {
     const f = base + e;
     if (existsSync(f) && statSync(f).isFile()) return f;
@@ -38,18 +45,23 @@ const walk = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
     d.isDirectory() ? walk(join(dir, d.name)) : /\.[jt]sx?$/.test(d.name) ? [join(dir, d.name)] : []
   );
+const inShared = (f: string) => f.startsWith(SHARED + sep);
 const inMobile = (f: string) => f.startsWith(MOBILE + sep);
 
 const STARTS = walk(OFFICER).filter((f) => !isTest(relative(OFFICER, f)));
 const seen = new Set<string>();
-const queue = STARTS.flatMap(imports).filter(inMobile);
+const reached = STARTS.flatMap(imports);
+const queue = reached.filter(inShared);
+const mobileReached = reached.filter(inMobile);
 while (queue.length) {
   const f = queue.pop()!;
   if (seen.has(f)) continue;
   seen.add(f);
-  queue.push(...imports(f).filter(inMobile));
+  const next = imports(f);
+  mobileReached.push(...next.filter(inMobile));
+  queue.push(...next.filter(inShared));
 }
-const CLOSURE = [...seen].map((f) => relative(MOBILE, f).split(sep).join("/")).sort();
+const CLOSURE = [...seen].map((f) => relative(SHARED, f).split(sep).join("/")).sort();
 
 const EXPECTED = [
   "appVersion.ts",
@@ -82,7 +94,7 @@ const EXPECTED = [
   "voiceCache.ts",
 ];
 
-describe("the soul-app files the officer app reaches", () => {
+describe("the shared files the officer app reaches", () => {
   it("walks real files, so the checks below are not vacuous", () => {
     expect(STARTS.length).toBeGreaterThan(10);
     expect(STARTS).toContain(join(OFFICER, "shared.ts"));
@@ -92,12 +104,19 @@ describe("the soul-app files the officer app reaches", () => {
     expect(CLOSURE).toEqual(EXPECTED);
   });
 
-  // rules / loginRules: the soul's presentation and sign-in rules; ui.tsx reads layout.ts and the
-  // sign-out sheet lives in logout.tsx so neither comes along (cq-apps 2026-10-30 #2).
-  it("never includes the soul's session, chrome, navigation, push, cold start, rules or screens", () => {
-    const forbidden = CLOSURE.filter((f) =>
-      /^(session|chrome|navigation|push|coldStart|rules|loginRules|logout)\.[jt]sx?$/.test(f) || f.startsWith("screens/")
+  // The soul's session, chrome, navigation, push, cold start, rules, screens ... all live in mobile/.
+  it("never includes a file of the soul app itself", () => {
+    expect(mobileReached.map((f) => relative(ROOT, f))).toEqual([]);
+  });
+
+  // The package is what both apps import, so it reaches back into neither (a relative path out of it would
+  // put a mobile/ or mobile-officer/ file in both bundles). Its own assets (fonts) are inside it.
+  it("no shared file imports anything outside the package by a relative path", () => {
+    const out = walk(SHARED).flatMap((f) =>
+      imports(f)
+        .filter((t) => !t.startsWith(join(ROOT, "packages/mobile-ui") + sep))
+        .map((t) => `${relative(ROOT, f)} -> ${relative(ROOT, t)}`)
     );
-    expect(forbidden).toEqual([]);
+    expect(out).toEqual([]);
   });
 });

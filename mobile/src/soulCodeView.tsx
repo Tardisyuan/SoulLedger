@@ -13,10 +13,10 @@ import { useRef, useState, type Ref } from "react";
 import { Platform, StyleSheet, TextInput, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { family } from "./fonts";
-import { useI18n } from "./i18n";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { SOUL_CODE_PROBLEM_KEY, isEmailEntry, soulCodeStep } from "./loginRules";
-import { FocusRing, LATIN_KEYBOARD, Txt, useTheme, Press } from "./ui";
+import { FocusRing, LATIN_KEYBOARD, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import type { SoulCodeProblem } from "@soulledger/core/domain/soulCode";
 
 export function useSpelled() {

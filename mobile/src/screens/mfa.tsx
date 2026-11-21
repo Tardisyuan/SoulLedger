@@ -20,17 +20,17 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { KeyboardAvoidingView, Linking, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import { CLEAR_AFTER_MS, copySecret } from "../copySecret";
-import { Icon } from "../emblems";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { AppHeader } from "../chrome";
-import { useToast } from "../feedback";
-import { family } from "../fonts";
-import { useI18n } from "../i18n";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { holdNavigation } from "../navLock";
 import { shareRecoveryFile, sweepRecoveryFiles } from "../recoveryFile";
 import { secretLines, stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { useSession } from "../session";
-import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme, Press } from "../ui";
+import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";

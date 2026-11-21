@@ -9,12 +9,12 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Icon } from "../emblems";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { landingGoneKey, useGone } from "../gone";
-import { useI18n } from "../i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { landOn, landingOf } from "../push";
 import { formatStamp } from "../rules";
-import { Button, Empty, Notice, OneLine, Screen, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, OneLine, Screen, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 
 /** Statuses where the lock screen never showed it; the content is still readable. */

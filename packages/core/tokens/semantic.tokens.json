@@ -1,5 +1,5 @@
 {
-  "$description": "L1. The ground, ink, line, status and brand-slot tokens every component reads, plus the register (type.juan.* = records, serif; type.tai.* = controls, sans). Modes are CSS selectors, in $extensions.org.soulledger.modes: `.light`, `[data-civ=\"cn\"]` … `[data-civ]`, `[data-skin=\"neutral\"]`; $value is `:root` (dark). Source of truth for the token block of frontend/app/globals.css (between the @tokens markers) and for mobile/src/theme.generated.ts: edit here, then `node scripts/build-tokens.mjs` (`--check` fails when the outputs are stale). Values were exported mechanically from globals.css on 2026-11-14, unchanged. DTCG 2025.10 format; $extensions.org.soulledger: modes, emit (\"value\": an alias written out as its value, not var()), bare (group name not part of the CSS name), css (false: app only), pendingDesign.",
+  "$description": "L1. The ground, ink, line, status and brand-slot tokens every component reads, plus the register (type.juan.* = records, serif; type.tai.* = controls, sans). Modes are CSS selectors, in $extensions.org.soulledger.modes: `.light`, `[data-civ=\"cn\"]` … `[data-civ]`, `[data-skin=\"neutral\"]`; $value is `:root` (dark). Source of truth for the token block of frontend/app/globals.css (between the @tokens markers) and for packages/mobile-ui/src/theme.generated.ts: edit here, then `node scripts/build-tokens.mjs` (`--check` fails when the outputs are stale). Values were exported mechanically from globals.css on 2026-11-14, unchanged. DTCG 2025.10 format; $extensions.org.soulledger: modes, emit (\"value\": an alias written out as its value, not var()), bare (group name not part of the CSS name), css (false: app only), pendingDesign.",
   "color": {
     "$type": "color",
     "canvas": {
@@ -1106,7 +1106,7 @@
     }
   },
   "motion": {
-    "$description": "The named uses every surface shares, as aliases of the tiers above. App only (motionTokens in mobile/src/theme.generated.ts); on the web the same tiers are composed into the --animate-* lines, and motionParity.test.ts holds each pair equal.",
+    "$description": "The named uses every surface shares, as aliases of the tiers above. App only (motionTokens in packages/mobile-ui/src/theme.generated.ts); on the web the same tiers are composed into the --animate-* lines, and motionParity.test.ts holds each pair equal.",
     "$type": "duration",
     "$extensions": {
       "org.soulledger": {

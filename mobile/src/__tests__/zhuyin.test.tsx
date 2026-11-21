@@ -9,12 +9,12 @@ import { StyleSheet } from "react-native";
 
 import egy from "@soulledger/core/messages/egy.json";
 import { AppHeader, PlaqueHeader, TabBar, tabGlyphSize } from "../chrome";
-import { installMobilePlatform } from "../platform";
-import { FONT_ASSETS, HIEROGLYPH_FONT, family } from "../fonts";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
+import { FONT_ASSETS, HIEROGLYPH_FONT, family } from "@soulledger/mobile-ui/src/fonts";
 import { DEFAULT_GLYPHS, OutlineSeal, sealGlyphs } from "../seal";
 import { SessionContext, type SessionState } from "../session";
-import { themeFor, v4 } from "../theme";
-import { ThemeContext } from "../ui";
+import { themeFor, v4 } from "@soulledger/mobile-ui/src/theme";
+import { ThemeContext } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 import { PROFILE } from "./stubApi";
 

@@ -13,8 +13,8 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { HIEROGLYPH_FONT, family, quoteFamily } from "./fonts";
-import type { CivKey } from "./theme";
+import { HIEROGLYPH_FONT, family, quoteFamily } from "@soulledger/mobile-ui/src/fonts";
+import type { CivKey } from "@soulledger/mobile-ui/src/theme";
 
 export type SealCiv = Exclude<CivKey, "neutral">;
 

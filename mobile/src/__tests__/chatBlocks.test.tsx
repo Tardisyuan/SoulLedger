@@ -12,8 +12,8 @@ import type { ReactNode } from "react";
 
 import { ChatContext, type Chat } from "../chat";
 import { CLOSED_REASONS, chatMode } from "@soulledger/core/domain/soulChat";
-import { translate } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { translate } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { ChatBlocksScreen } from "../screens/chatBlocks";
 import { ConversationScreen } from "../screens/conversation";
 import { inSoulFrame } from "./harness";

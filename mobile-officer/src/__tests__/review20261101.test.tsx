@@ -5,7 +5,7 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 
-import { OnlineContext } from "../../../mobile/src/online";
+import { OnlineContext } from "@soulledger/mobile-ui/src/online";
 import { TabBar } from "../kit";
 import { TODO_GROUPS, reasonMaxLength } from "../rules";
 import { CityGodCase } from "../screens/cityGod";

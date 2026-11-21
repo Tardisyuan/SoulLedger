@@ -9,9 +9,9 @@ import * as SecureStore from "expo-secure-store";
 import { StyleSheet } from "react-native";
 
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
-import { NEUTRAL_CIV, v4 } from "../theme";
+import { NEUTRAL_CIV, v4 } from "@soulledger/mobile-ui/src/theme";
 import { renderSoul } from "./harness";
 import { resetLoginMemory } from "./stubApi";
 

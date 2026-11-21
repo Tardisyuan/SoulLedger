@@ -9,7 +9,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 import * as SecureStore from "expo-secure-store";
 
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, sessionStore } from "../platform";
+import { installMobilePlatform, sessionStore } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";
 import { PROFILE, life, resetLoginMemory, stubApi } from "./stubApi";

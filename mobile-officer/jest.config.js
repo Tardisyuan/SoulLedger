@@ -22,8 +22,8 @@ module.exports = {
   // AfterEnv, not setupFiles: the act guard at the bottom needs afterEach.
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   // Coverage floor (review 2026-10-31 C22): evaluated only with --coverage (`npm run test:coverage`), like the web's.
-  // The denominator is every source file under src/, not just the ones a test loads (the shared soul-app code
-  // it imports from ../mobile is counted there, not here). Measured on unRAID 2026-10-31 (1034 tests): statements
+  // The denominator is every source file under src/, not just the ones a test loads (the shared code it
+  // imports from packages/mobile-ui is counted in the soul app's run, not here). Measured on unRAID 2026-10-31 (1034 tests): statements
   // 87.72 / branches 80.59 / functions 80.68 / lines 89.59. Ratchet: about two points under the reading; raise it
   // when the reading rises, never lower it to make a red run green.
   collectCoverageFrom: ["src/**/*.{ts,tsx}", "!src/**/__tests__/**"],

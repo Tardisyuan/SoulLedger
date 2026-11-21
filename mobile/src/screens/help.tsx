@@ -13,11 +13,11 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 
 import { useChat } from "../chat";
-import { Icon } from "../emblems";
-import { family } from "../fonts";
-import { useI18n } from "../i18n";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
+import { family } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useSession } from "../session";
-import { Button, Screen, SectionLabel, Txt, useLayout, useTheme } from "../ui";
+import { Button, Screen, SectionLabel, Txt, useLayout, useTheme } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 

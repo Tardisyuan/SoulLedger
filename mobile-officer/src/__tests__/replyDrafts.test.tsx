@@ -7,7 +7,7 @@ import { Pressable, Text } from "react-native";
 
 import { REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
 import { DRAFTS_KEY, DRAFT_KEEP, clearDraft, clearDrafts, draftIds, flushDraft, mergeServerDraft, pushDrafts, readDraft, saveDraft, scheduleDraft, settleDraft } from "../drafts";
-import { OnlineContext } from "../../../mobile/src/online";
+import { OnlineContext } from "@soulledger/mobile-ui/src/online";
 import { clearOutbox, discardReply, enqueueReply, flushOutbox } from "../outbox";
 import { Detail } from "../screens/detail";
 import { SessionProvider, USER_KEY, useSession } from "../session";

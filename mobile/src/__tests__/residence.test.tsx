@@ -14,10 +14,10 @@ import { StyleSheet } from "react-native";
 import Svg, { Stop } from "react-native-svg";
 
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { LIFE_OPEN_PREFIX, RESIDENCE_MEMO_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { v4 } from "../theme";
+import { v4 } from "@soulledger/mobile-ui/src/theme";
 import { renderSoul } from "./harness";
 import { PROFILE, application, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 

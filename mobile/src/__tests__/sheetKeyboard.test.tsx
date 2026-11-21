@@ -1,7 +1,7 @@
 /** A sheet's fields tell the sheet which one has focus (so it lifts above the keyboard), and a multiline field can finish. */
 import { render, screen } from "@testing-library/react-native";
 
-import { InSheetContext, Input } from "../ui";
+import { InSheetContext, Input } from "@soulledger/mobile-ui/src/ui";
 
 function Probe({ inSheet, multiline }: { inSheet?: boolean; multiline?: boolean }) {
   const field = <Input label="理由" value="" onChangeText={() => {}} multiline={multiline} />;

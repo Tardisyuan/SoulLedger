@@ -16,14 +16,14 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 
-import { Icon } from "../emblems";
-import { useToast } from "../feedback";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { GoneScreen, useGone } from "../gone";
-import { useI18n } from "../i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, stateNote, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
-import { publishVoiceNumber } from "../voiceCache";
-import { radius, space } from "../theme";
+import { publishVoiceNumber } from "@soulledger/mobile-ui/src/voiceCache";
+import { radius, space } from "@soulledger/mobile-ui/src/theme";
 import {
   Block,
   Button,
@@ -53,7 +53,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
-} from "../ui";
+} from "@soulledger/mobile-ui/src/ui";
 import { CooldownShorteningBlock } from "./cooldown";
 import { useDiscardGuard } from "./discardGuard";
 import { useResidenceNames } from "../residence";

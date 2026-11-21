@@ -20,7 +20,7 @@ const CSS = readFileSync(GLOBALS_CSS, "utf8");
 const DESK = readFileSync(path.join(FRONTEND, "src/components/desk/desk.module.css"), "utf8");
 // SEAL_LEAVE_MS, read from source: importing CaseDesk pulls the whole desk into a node test.
 const SEAL_LEAVE_MS = Number(/export const SEAL_LEAVE_MS = (\d+);/.exec(readFileSync(path.join(FRONTEND, "src/components/desk/CaseDesk.tsx"), "utf8"))?.[1]);
-const { motionTokens } = require(path.join(FRONTEND, "..", "mobile", "src", "theme.generated")) as { motionTokens: Record<string, number> };
+const { motionTokens } = require(path.join(FRONTEND, "..", "packages", "mobile-ui", "src", "theme.generated")) as { motionTokens: Record<string, number> };
 
 const TIERS = new Set([80, 160, 240, 320]);
 const SEAL = 200;

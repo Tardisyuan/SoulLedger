@@ -5,8 +5,8 @@
 import { fireEvent, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 
-import { initCrashReporting, scrubBreadcrumb, scrubEvent, scrubString, setCrashUser } from "../crashReport";
-import { RootErrorBoundary } from "../errorBoundary";
+import { initCrashReporting, scrubBreadcrumb, scrubEvent, scrubString, setCrashUser } from "@soulledger/mobile-ui/src/crashReport";
+import { RootErrorBoundary } from "@soulledger/mobile-ui/src/errorBoundary";
 import { renderSoul } from "./harness";
 
 const mockSdk = { init: jest.fn(), setTag: jest.fn(), setUser: jest.fn(), captureException: jest.fn() };

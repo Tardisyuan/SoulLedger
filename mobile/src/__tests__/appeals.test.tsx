@@ -7,9 +7,9 @@ import { fireEvent, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { StyleSheet } from "react-native";
 
-import { ToastProvider } from "../feedback";
-import { translate } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { ToastProvider } from "@soulledger/mobile-ui/src/feedback";
+import { translate } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { AppealDeadlineNote, AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
 import { renderSoul } from "./harness";
 import { stubApi } from "./stubApi";

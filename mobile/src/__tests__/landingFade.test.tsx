@@ -11,8 +11,8 @@ import path from "node:path";
 import { renderHook } from "@testing-library/react-native";
 import { Animated } from "react-native";
 
-import { motion } from "../theme";
-import { EASE, useLandingFade } from "../ui";
+import { motion } from "@soulledger/mobile-ui/src/theme";
+import { EASE, useLandingFade } from "@soulledger/mobile-ui/src/ui";
 
 describe("useLandingFade", () => {
   beforeEach(() => jest.useFakeTimers());
@@ -47,7 +47,7 @@ describe("useLandingFade", () => {
 describe("one recipe: every landing in both apps uses it", () => {
   const read = (...p: string[]) => readFileSync(path.join(__dirname, "..", "..", "..", ...p), "utf8");
   it.each([
-    ["mobile/src/ui.tsx", "LandingWash"],
+    ["packages/mobile-ui/src/ui.tsx", "LandingWash"],
     ["mobile/src/screens/cooldown.tsx", "LandingWash"],
     ["mobile/src/screens/applications.tsx", "LandingHighlight"],
     ["mobile/src/screens/conversation.tsx", "Bubble"],

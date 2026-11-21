@@ -24,10 +24,10 @@ import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Icon } from "../emblems";
-import { useI18n } from "../i18n";
-import { fileField } from "../platform";
-import { AlertTxt, FadeModal, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "../ui";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { fileField } from "@soulledger/mobile-ui/src/platform";
+import { AlertTxt, FadeModal, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */

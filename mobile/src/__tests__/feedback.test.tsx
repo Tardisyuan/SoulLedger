@@ -11,7 +11,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 
 import { ChatProvider, OUTBOX_KEY } from "../chat";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { FEEDBACK_SHOT_MAX, FeedbackScreen } from "../screens/writeToHall";
 import { renderSoul } from "./harness";
 import { heldReply, stubApi, type Reply } from "./stubApi";

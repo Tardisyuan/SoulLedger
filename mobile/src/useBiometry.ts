@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { knownBiometry, readBiometry, type Biometry } from "./deviceLogin";
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 
 /** What this phone has enrolled, read once when the screen appears, and `{{bio}}` ready for a sentence (面容 / 指纹). */
 export function useBiometry(): Biometry & { ready: boolean; word: string } {

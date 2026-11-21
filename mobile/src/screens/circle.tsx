@@ -34,13 +34,13 @@ import * as Haptics from "expo-haptics";
 
 import { AppHeader } from "../chrome";
 import { useCommittedSend } from "../composing";
-import { Icon } from "../emblems";
-import { Sheet, useToast } from "../feedback";
+import { Icon } from "@soulledger/mobile-ui/src/emblems";
+import { Sheet, useToast } from "@soulledger/mobile-ui/src/feedback";
 import { GoneScreen, useGone } from "../gone";
-import { quoteFamily } from "../fonts";
-import { useI18n } from "../i18n";
+import { quoteFamily } from "@soulledger/mobile-ui/src/fonts";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
-import { radius } from "../theme";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   FadeModal,
@@ -63,7 +63,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
-} from "../ui";
+} from "@soulledger/mobile-ui/src/ui";
 import { invalidateSocialStatus, mutedReasonOf, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, useFailure, useFeed, usePaged } from "../paged";

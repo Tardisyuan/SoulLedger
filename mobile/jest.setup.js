@@ -5,7 +5,7 @@ require("./jest.setup.shared");
 jest.mock("expo-secure-store", () => {
   // The app's secure port reads through a memory copy (platform.ts); a test that writes this store directly
   // (`__store.set`, `clear()`) drops that copy, as a fresh process would start without one.
-  const changed = () => require("./src/platform").forgetSecureCache?.();
+  const changed = () => require("@soulledger/mobile-ui/src/platform").forgetSecureCache?.();
   class Store extends Map {
     set(key, value) {
       super.set(key, value);

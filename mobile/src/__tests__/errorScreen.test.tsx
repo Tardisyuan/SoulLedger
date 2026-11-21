@@ -6,10 +6,10 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 
-import { initCrashReporting } from "../crashReport";
-import { RootErrorBoundary } from "../errorBoundary";
-import { I18nProvider } from "../i18n";
-import { ScreenError } from "../ui";
+import { initCrashReporting } from "@soulledger/mobile-ui/src/crashReport";
+import { RootErrorBoundary } from "@soulledger/mobile-ui/src/errorBoundary";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
+import { ScreenError } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 
 type Listener = (event: { event_id?: string }, response: unknown) => void;

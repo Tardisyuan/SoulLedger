@@ -7,9 +7,9 @@ import { NavigationContainer } from "@react-navigation/native";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 
-import { ToastProvider } from "../feedback";
-import { translate } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { ToastProvider } from "@soulledger/mobile-ui/src/feedback";
+import { translate } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { PostScreen } from "../screens/circle";
 import { CircleInboxScreen, interactionStamp, mergedSentence } from "../screens/circleInbox";
 import { renderSoul } from "./harness";

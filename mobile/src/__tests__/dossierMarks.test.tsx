@@ -6,9 +6,9 @@ import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { render as rtlRender } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 
-import { DossierSeal, MeritMark } from "../dossierMarks";
-import { I18nProvider } from "../i18n";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { DossierSeal, MeritMark } from "@soulledger/mobile-ui/src/dossierMarks";
+import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { APPLICATION_BADGES } from "../rules";
 
 const render = (ui: ReactElement) => rtlRender(<I18nProvider>{ui}</I18nProvider>);

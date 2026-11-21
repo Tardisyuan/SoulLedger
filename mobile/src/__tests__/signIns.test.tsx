@@ -8,7 +8,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react-nativ
 import * as SecureStore from "expo-secure-store";
 
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";
 import { PROFILE, life, resetLoginMemory, stubApi, type Reply } from "./stubApi";

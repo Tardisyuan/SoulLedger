@@ -8,9 +8,9 @@
 import { useNavigation, type NavigationState } from "@react-navigation/native";
 import { useEffect, useSyncExternalStore } from "react";
 
-import { useI18n } from "./i18n";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import type { Landing } from "./push";
-import { GoneState } from "./ui";
+import { GoneState } from "@soulledger/mobile-ui/src/ui";
 
 let gone: ReadonlySet<string> = new Set();
 const listeners = new Set<() => void>();

@@ -8,7 +8,7 @@
  * It opens over 160 and folds away over 160, the soul app's bar and the web's alike (第五十八批 M13): the restored line
  * stands its 3 s, then folds. Reduce motion: in and out at once.
  *
- * The soul app's own bar (mobile/src/network.tsx) is off here (`<NetworkProvider bar={false}>`): it says
+ * The soul app's own bar (packages/mobile-ui/src/network.tsx) is off here (`<NetworkProvider bar={false}>`): it says
  * "offline" and nothing about cached content, which is the opposite of what this app promises.
  */
 import { hhmm } from "@soulledger/core/domain/dates";

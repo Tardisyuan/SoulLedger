@@ -14,7 +14,7 @@ Windows, Roboto/Noto Symbols on Android) while its neighbours came from Noto San
 In the App, Archivo has none of them either, so all fell back to the OS per glyph.
 One small font, first in every stack for exactly these code points, ends that.
 
-Writes the same bytes to frontend/public/fonts/ and mobile/assets/fonts/;
+Writes the same bytes to frontend/public/fonts/ and packages/mobile-ui/assets/fonts/;
 `frontend/src/__tests__/statusGlyphFont.test.ts` checks the two are identical and that
 each covers every glyph the status tables use.
 """
@@ -35,7 +35,7 @@ ROOT = Path(__file__).resolve().parent.parent
 GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄■□‖⊘"
 FAMILY = "SoulLedger Glyphs"
 PS_NAME = "SoulLedgerGlyphs-Regular"
-OUT = [ROOT / "frontend/public/fonts/SoulLedgerGlyphs.ttf", ROOT / "mobile/assets/fonts/SoulLedgerGlyphs.ttf"]
+OUT = [ROOT / "frontend/public/fonts/SoulLedgerGlyphs.ttf", ROOT / "packages/mobile-ui/assets/fonts/SoulLedgerGlyphs.ttf"]
 
 
 def main(src: str) -> None:

@@ -13,9 +13,9 @@ import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@r
 import { useState, type Ref } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { useToast } from "../feedback";
-import { useI18n } from "../i18n";
-import { Button, FieldError, Input, Quote, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { Button, FieldError, Input, Quote, Screen, SmallButton, Txt, useLayout, useTheme } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { useDiscardGuard } from "./discardGuard";
 import { useDay } from "./lifeProgress";

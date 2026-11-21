@@ -23,11 +23,11 @@ import { StyleSheet, View } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
 import { AppHeader } from "../chrome";
-import { Emblem, Node } from "../emblems";
-import { useI18n } from "../i18n";
+import { Emblem, Node } from "@soulledger/mobile-ui/src/emblems";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { termServed } from "../rules";
 import { SessionContext } from "../session";
-import { civKeyOf } from "../theme";
+import { civKeyOf } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   Empty,
@@ -46,7 +46,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
-} from "../ui";
+} from "@soulledger/mobile-ui/src/ui";
 import type { SentenceLanding } from "../sentenceKinds";
 import type { AppStackParams } from "../navTypes";
 import { realmName, useResidenceNames } from "../residence";

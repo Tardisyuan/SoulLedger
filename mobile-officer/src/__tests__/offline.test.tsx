@@ -7,7 +7,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text } from "react-native";
 
-import { OnlineContext, type Online } from "../../../mobile/src/online";
+import { OnlineContext, type Online } from "@soulledger/mobile-ui/src/online";
 import { DRAFTS_KEY, clearDrafts, readDraft, saveDraft } from "../drafts";
 import { FOLD_MS, OfflineBanner } from "../offlineBanner";
 import { OUTBOX_KEY, clearOutbox, discardReply, enqueueReply, flushOutbox, outboxEntries, outboxEntry, retryReply } from "../outbox";

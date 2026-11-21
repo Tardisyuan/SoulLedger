@@ -14,10 +14,10 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useEffect, useRef } from "react";
 import { Pressable, SectionList, StyleSheet, View } from "react-native";
 
-import { family } from "../fonts";
+import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useGone } from "../gone";
-import { useI18n } from "../i18n";
-import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useTheme } from "../ui";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useTheme } from "@soulledger/mobile-ui/src/ui";
 import { invalidateSocialStatus, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, usePaged } from "../paged";

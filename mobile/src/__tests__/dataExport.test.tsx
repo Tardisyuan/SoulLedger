@@ -15,7 +15,7 @@ import * as SecureStore from "expo-secure-store";
 import { BIO_KEY } from "../deviceLogin";
 import { formatBytes, safeFileName } from "../dataExport";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform, persistentStore } from "../platform";
+import { installMobilePlatform, persistentStore } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";
 import { PROFILE, life, resetLoginMemory, stubApi, type Reply } from "./stubApi";

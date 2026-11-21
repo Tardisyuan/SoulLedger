@@ -40,10 +40,10 @@ import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@r
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { useToast } from "../feedback";
-import { useI18n } from "../i18n";
+import { useToast } from "@soulledger/mobile-ui/src/feedback";
+import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useDay } from "./lifeProgress";
-import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme, Press } from "../ui";
+import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { useDiscardGuard } from "./discardGuard";
 import { ButtonPair, MfaSheet } from "./mfaParts";
