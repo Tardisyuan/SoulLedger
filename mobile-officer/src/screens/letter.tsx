@@ -32,7 +32,7 @@ import {
 } from "@soulledger/core/domain/letters";
 import { hhmm } from "@soulledger/core/domain/dates";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 
 import { clearDraft, flushDraft, mergeServerDraft, readDraft, scheduleDraft, settleDraft } from "../drafts";
 import { enqueueReply, newReplyTxn, removeFromOutbox, retryReply, useOutbox, type OutboxEntry } from "../outbox";
@@ -109,6 +109,16 @@ export function LetterThread({
     marked.current = true;
     void soulInboxApi.markRead(id).catch(() => undefined);
   }, [id, thread.data, thread.cached]);
+  // Design 第六十四批: the screen opens at the bottom, on the newest letter, where the status line and the actions are.
+  // Once per letter, when its letters first land; 「更早」 then adds above without jumping back down.
+  const scroll = useRef<ScrollView>(null);
+  const landedAt = useRef<string | null>(null);
+  useEffect(() => {
+    if (!thread.data?.messages.length || landedAt.current === id) return;
+    landedAt.current = id;
+    const frameId = requestAnimationFrame(() => scroll.current?.scrollToEnd({ animated: false }));
+    return () => cancelAnimationFrame(frameId);
+  }, [id, thread.data]);
   // 「更早」: the server sends the newest LETTER_PAGE; older pages hang under them until the thread reloads.
   const [earlier, setEarlier] = useState<{ base: unknown; rows: InboxMessage[]; more: boolean; state: "busy" | "failed" | null }>({
     base: null,
@@ -401,7 +411,7 @@ export function LetterThread({
             {offline ? null : <SmallButton testID="letter-unarchive" title={t("officer_app.letter.unarchive")} onPress={() => pick("unarchive")} />}
           </View>
         ) : null}
-        <Screen edges={["left", "right"]}>
+        <Screen edges={["left", "right"]} scrollRef={scroll}>
           <View style={{ padding: space[5], gap: 20 }}>
             {older.more && older.state === "failed" ? (
               <Notice tone="neg" onRetry={loadEarlier} testID="letter-earlier-failed">
@@ -477,19 +487,13 @@ export function LetterThread({
         ) : (
           footer(
           <View testID="letter-composer" style={{ padding: space[4], gap: space[3] }}>
-            {templates.data && !templates.error ? (
-              <View style={{ flexDirection: "row" }}>
-                <SmallButton
-                  testID="letter-template"
-                  title={t("soul_inbox.template.label")}
-                  onPress={() => setPicking(true)}
-                />
-              </View>
-            ) : null}
             <Input
               testID="letter-input"
               label={t("soul_inbox.reply_label")}
               multiline
+              // Two lines high, growing as typed (Design 第六十四批: a compact box, so the letters keep the screen).
+              // The app's multiline default is 128, which on this screen left two letters visible above the footer.
+              style={{ minHeight: 64 }}
               maxLength={INBOX_REPLY_MAX}
               value={text}
               editable={!queued}
@@ -501,9 +505,19 @@ export function LetterThread({
                 testID="letter-failed"
               >{t(failure)}</Notice>
             ) : null}
-            <Txt variant="caption" tone="muted" testID="letter-irreversible">
-              {t("officer_app.letter.irreversible")}
-            </Txt>
+            {/* 「模板」 shares the line of 「发出后不能撤回」 (Design 第六十四批: a compact footer, so the letters keep the screen). */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] }}>
+              <Txt variant="caption" tone="muted" testID="letter-irreversible" style={{ flexShrink: 1 }}>
+                {t("officer_app.letter.irreversible")}
+              </Txt>
+              {templates.data && !templates.error ? (
+                <SmallButton
+                  testID="letter-template"
+                  title={t("soul_inbox.template.label")}
+                  onPress={() => setPicking(true)}
+                />
+              ) : null}
+            </View>
             <ActionButton
               testID="letter-send"
               kind="primary"
