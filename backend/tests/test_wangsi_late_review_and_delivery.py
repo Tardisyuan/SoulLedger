@@ -85,7 +85,9 @@ def test_an_archived_case_takes_no_grievance(cn_tenant, admin_user):
     soul = Soul.objects.create(name="枉死", tenant=cn_tenant, fated_death_year=date.today().year + 2,
                                fated_death_month=1, fated_death_day=1)
     case = soul.die(death_date=date.today())
-    Judgment.all_objects.filter(pk=case.pk).update(is_archived=True)
+    # An archived case is a concluded one: the archive endpoint refuses a case with no verdict, and the admin
+    # shows these columns read-only (refactor/judgment-is-open). So the open check needs no is_archived branch.
+    Judgment.all_objects.filter(pk=case.pk).update(verdict="PASSED", is_final=True, is_archived=True)
     assert wangsi.filing_refusal(Judgment.all_objects.get(pk=case.pk)).code == "not_pending"
 
 
