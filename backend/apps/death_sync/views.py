@@ -68,8 +68,12 @@ class DeathRegistrationFilter(django_filters.FilterSet):
         value = value.strip()
         if not value:
             return queryset
+        from apps.core.shard_reads import crossing_q
+
+        # `soul__name` through the crossing key DeathRegistrationRequest.soul, read by ids (`crossing_q`).
         return queryset.filter(
-            Q(soul__name__icontains=value) | Q(source_reference_id__icontains=value) | Q(idempotency_key=value)
+            crossing_q(queryset.model, "soul__name__icontains", value) | Q(source_reference_id__icontains=value)
+            | Q(idempotency_key=value)
         )
 
 
