@@ -5,11 +5,12 @@
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { useCallback } from "react";
-import { Text } from "react-native";
+import { AccessibilityInfo, StyleSheet, Text } from "react-native";
 
 import { OnlineContext } from "../online";
+import { motion } from "../theme";
 import { StaleLine, useRemote } from "../ui";
-import { renderSoul } from "./harness";
+import { inSoulFrame, renderSoul } from "./harness";
 
 const AT = new Date(2026, 10, 21, 9, 42).getTime();
 
@@ -79,3 +80,31 @@ it("useRemote: a failed refresh over data shows the line; the next refresh that 
   await act(async () => void fireEvent.press(screen.getByTestId("stale-retry")));
   await waitFor(() => expect(screen.queryByTestId("stale-line")).toBeNull());
 });
+
+it.each([false, true])(
+  "第六十三批 E6: the answer folds the line away over 160 (height and opacity), not at once (reduce motion %s: at once)",
+  async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    const failed = { data: {}, error: new Error("x"), at: AT };
+    const view = renderSoul(<StaleLine state={failed} onRetry={() => {}} />);
+    await act(async () => {});
+    // It appears at once: no growing in.
+    expect(screen.queryByTestId("grow")).toBeNull();
+    fireEvent(screen.getByTestId("stale-line").parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 32 } } });
+    view.rerender(inSoulFrame(<StaleLine state={{ data: {}, error: null, at: AT + 1 }} onRetry={() => {}} />));
+    if (reduced) {
+      expect(screen.queryByTestId("stale-line")).toBeNull();
+    } else {
+      expect(motion.staleOut).toBe(160);
+      // Still there, clipped, on its way to 0, still saying the time it said.
+      expect(screen.getByTestId("stale-line")).toBeTruthy();
+      expect(screen.getByText(/09:42/)).toBeTruthy();
+      expect(StyleSheet.flatten(screen.getByTestId("grow").props.style)).toMatchObject({ overflow: "hidden" });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, motion.staleOut + 150));
+      });
+      expect(screen.queryByTestId("stale-line")).toBeNull();
+    }
+    spy.mockRestore();
+  }
+);

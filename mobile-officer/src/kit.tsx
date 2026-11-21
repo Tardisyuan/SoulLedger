@@ -212,12 +212,38 @@ export type RowLine = string | { one: string };
  * becomes two lines -- the value moves under the title. `right` (a ›, a ✓, a button) stays where it is.
  * `below`: content under the title and lines at the text column's full width (我的数's three numbers).
  */
+/**
+ * Design v4 第六十三批 二 e (E1): opacity 0 → 1 over `unreadIn` (160, enter curve) as it mounts, so a row turning back
+ * reads as an answer, not as nothing having happened. `on` false, or reduce motion: there at once, no wrapper.
+ */
+function FadeIn({ on, testID, children }: { on: boolean; testID?: string; children: ReactNode }) {
+  const { unreadIn } = useReducedMotionDurations();
+  const run = on && unreadIn > 0;
+  const [opacity] = useState(() => new Animated.Value(run ? 0 : 1));
+  useEffect(() => {
+    if (!run) {
+      opacity.setValue(1);
+      return;
+    }
+    const fade = Animated.timing(opacity, { toValue: 1, duration: unreadIn, easing: EASE.enter, useNativeDriver: true });
+    fade.start();
+    return () => fade.stop();
+  }, [run, opacity, unreadIn]);
+  if (!on) return <>{children}</>;
+  return (
+    <Animated.View testID={testID} style={{ opacity }}>
+      {children}
+    </Animated.View>
+  );
+}
+
 export function Row({
   title,
   lines = [],
   value,
   glyph,
   glyphLabel,
+  glyphFadeIn,
   strong,
   onPress,
   right,
@@ -235,6 +261,8 @@ export function Row({
   glyph?: string;
   /** What the glyph means, when no other text on the row says it; without one the glyph is decoration and screen readers skip it. */
   glyphLabel?: string;
+  /** The glyph fades in as it mounts (`unreadIn`, enter curve; reduce motion: at once) -- a notice's ● coming back. */
+  glyphFadeIn?: boolean;
   strong?: boolean;
   onPress?: () => void;
   right?: ReactNode;
@@ -263,14 +291,16 @@ export function Row({
     >
       {highlight ? <Highlight /> : null}
       {glyph ? (
-        <Txt
-          variant="bodyLg"
-          tone="muted"
-          style={styles.glyph}
-          {...(glyphLabel ? { accessibilityLabel: glyphLabel } : { accessibilityElementsHidden: true, importantForAccessibility: "no" as const })}
-        >
-          {glyph}
-        </Txt>
+        <FadeIn key={glyph} on={!!glyphFadeIn} testID={testID ? `${testID}-glyph-fade` : undefined}>
+          <Txt
+            variant="bodyLg"
+            tone="muted"
+            style={styles.glyph}
+            {...(glyphLabel ? { accessibilityLabel: glyphLabel } : { accessibilityElementsHidden: true, importantForAccessibility: "no" as const })}
+          >
+            {glyph}
+          </Txt>
+        </FadeIn>
       ) : null}
       {/* Named only on a row with a value (where the value goes is what a test asks); lists count rows by testID prefix. */}
       <View testID={testID && value ? `${testID}-text` : undefined} style={styles.rowText}>

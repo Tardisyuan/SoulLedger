@@ -136,6 +136,7 @@ export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.
  *   fade                     content arriving after its skeleton: the web's reveal, 160 (第五十八批 M7; was 200, before that 120)
  *   reduced                  under reduce motion, the one opacity-only fade pages / dialogs / toasts / content keep (M3), 80
  *   bandCompact / offlineBar / pullRelease  160 (第五十九批: the last three 200s)
+ *   staleOut / unreadIn      160: the stale line folds away; an officer notice's ● fades back in (第六十三批 E6 / E1)
  *   skeletonDelay / skeletonHold  a skeleton shows only after 400, then stays at least 300 (M6): waits, not transitions
  *   busyDelay                a busy button's bottom-edge line shows only after 160 (M10)
  *   loadingLine              one pass of the 2px loading line, 1200 as the web's (it ran on `breath`, 1600, until 2026-11-16)
@@ -176,6 +177,10 @@ export const motion = {
   offlineBar: m.offlineBar,
   // v3 B2 App「下拉刷新」: released, the content goes back (or to the 56 hold) over 160 (第五十九批, was 200).
   pullRelease: m.pullRelease,
+  // 第六十三批 二 e: the stale line folds away once the page answers (E6, the web's collapse out) and an officer
+  // notice's unread dot fades back in when a mark fails (E1, the web's reveal). Both 160; reduce motion: at once.
+  staleOut: m.collapseOut,
+  unreadIn: m.reveal,
   // The 56 hold with ↻ stays at least this long, even when the reload answers in 40ms (a local
   // backend does): shorter, the hold is a one-frame flash and reads as "did not refresh" (真机 2026-10-03).
   pullMinHold: 600,

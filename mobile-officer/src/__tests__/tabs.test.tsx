@@ -5,12 +5,12 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { AccessibilityInfo, AppState, StyleSheet } from "react-native";
+import { AccessibilityInfo, Animated, AppState, StyleSheet } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
 import { RefreshFailed, Row, TAB_CODES, TabBar, doorOf, visibleTabs } from "../kit";
-import { ToastProvider, themeFor, useI18n } from "../shared";
+import { EASE, ToastProvider, motion, themeFor, useI18n } from "../shared";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, overviewParts } from "../screens/queue";
@@ -346,6 +346,42 @@ describe("the other tabs have the same four states", () => {
     fireEvent.press(screen.getByTestId("notices-mark-all"));
     expect((await screen.findByTestId("toast")).props.children).toBe("全部标记已读失败");
     expect(screen.getAllByText("●")).toHaveLength(2);
+    // 第六十三批 E1: both dots fade back in.
+    expect(screen.getByTestId("notice-1-glyph-fade")).toBeTruthy();
+    expect(screen.getByTestId("notice-2-glyph-fade")).toBeTruthy();
+  });
+
+  it.each([false, true])("第六十三批 E1: the ● a failed mark puts back fades in over 160, opacity only (reduce motion %s: at once)", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    const timing = jest.spyOn(Animated, "timing");
+    const { notificationsApi } = jest.requireMock("@soulledger/core/api/notifications") as { notificationsApi: Record<string, jest.Mock> };
+    notificationsApi.markRead.mockRejectedValueOnce(new Error("offline"));
+    mockNotices.mockResolvedValue({ data: { results: [{ id: 1, title: "新审批", message: "", is_read: false, created_at: "2026-10-09T01:00:00Z" }] } });
+    renderOfficer(
+      <ToastProvider>
+        <NoticesTab />
+      </ToastProvider>
+    );
+    await screen.findByText("●");
+    await act(async () => {});
+    // The ● on arrival just is: no fade.
+    expect(screen.queryByTestId("notice-1-glyph-fade")).toBeNull();
+    timing.mockClear();
+    fireEvent.press(screen.getByTestId("notice-1"));
+    await screen.findByTestId("toast");
+    expect(screen.getByText("●")).toBeTruthy();
+    const fades = timing.mock.calls.filter(([, config]) => config.duration === motion.unreadIn);
+    if (reduced) {
+      expect(screen.queryByTestId("notice-1-glyph-fade")).toBeNull();
+      expect(fades).toEqual([]);
+    } else {
+      expect(motion.unreadIn).toBe(160);
+      expect(screen.getByTestId("notice-1-glyph-fade")).toBeTruthy();
+      expect(fades).toHaveLength(1);
+      expect(fades[0][1]).toMatchObject({ toValue: 1, easing: EASE.enter, useNativeDriver: true });
+    }
+    timing.mockRestore();
+    spy.mockRestore();
   });
 
   it("notices: no big 「通知」 title under the top bar; 全部已读 stays", async () => {
