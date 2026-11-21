@@ -1899,7 +1899,8 @@ class TestRealPostgres:
         assert "--create-db" in args and "faulthandler_timeout=600" in args, args
         assert self.PG_ONLY in args and "tests/test_souls.py" in args, args
         assert "-m" in args and "not migration" in args, args
-        assert "→ ruff, makemigrations: skipped — --real-pg runs pytest only" in proc.stdout
+        # 2026-11-21: the backend side's static checks run too, so a green run counts for that side.
+        assert "→ ruff" in proc.stdout and "→ makemigrations --check" in proc.stdout, proc.stdout
 
     def test_full_also_runs_the_sharded_group_that_the_suite_skips(self, checkouts, fake_backend):
         """C21 (2026-10-31): a test that exists only under its own settings is skipped by every ordinary run.
@@ -2056,9 +2057,10 @@ class TestTheWholeRunOnAnotherMachine:
         assert (tmp_path / "passed-backend").read_text().rstrip().endswith("\tbackend/x.py")
         assert (tmp_path / "passed-js").read_text().rstrip().endswith("\tbackend/x.py")
 
-    def test_a_green_real_pg_run_is_recorded_in_its_own_ledger_only(self, checkouts, tmp_path):
-        """2026-11-20: a hook reads `-realpg` before a whole real-PG run (is it needed?). A real-PG pass must never
-        reach the push ledgers, which are the SQLite side's. Mutation: drop `file="$STAMP-realpg"` → red."""
+    def test_a_green_real_pg_run_is_recorded_for_the_backend_side(self, checkouts, tmp_path):
+        """2026-11-20: a hook reads `-realpg` before a whole real-PG run (is it needed?). 2026-11-21: the run also
+        does the backend side's ruff and makemigrations, so it is that side's pass too (`-backend`), never the JS
+        side's. Mutation: drop `files+=("$STAMP-realpg")` or write only `-realpg` → red."""
         main, _ = checkouts
         (main / "backend" / "x.py").write_text("X = 1\n")
         _git(main, "add", "-A")
@@ -2066,7 +2068,39 @@ class TestTheWholeRunOnAnotherMachine:
         proc = self._run(main, tmp_path, "--real-pg", "--base", "HEAD~1", prepush=False)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert (tmp_path / "passed-realpg").read_text().rstrip().endswith("\tbackend/x.py"), proc.stdout
-        assert not (tmp_path / "passed-backend").exists() and not (tmp_path / "passed-js").exists(), proc.stdout
+        assert (tmp_path / "passed-backend").read_text().rstrip().endswith("\tbackend/x.py"), proc.stdout
+        assert not (tmp_path / "passed-js").exists(), proc.stdout
+
+    def _push_of_head(self, main, tmp_path, changed):
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=main, env=_clean_env(), capture_output=True,
+                              text=True, check=True).stdout.strip()
+        (tmp_path / "remote-run").unlink(missing_ok=True)
+        return self._run(main, tmp_path, PREPUSH_CHANGED=changed, PREPUSH_RANGE=f"{'0' * 40}..{head}")
+
+    def test_a_js_pass_and_a_real_pg_pass_of_the_pushed_tree_let_the_push_through(self, checkouts, tmp_path):
+        """2026-11-21: `GATES_SIDES=js run-gates.sh` then `run-gates.sh --real-pg`, both green on one clean tree, then
+        the push of that tree ran both sides again: the real-PG pass went only to `-realpg`, which no push reads,
+        and one unproven side reran the other too. Mutation: record a real-PG pass only in `-realpg` → the push
+        runs (red); make the push all-or-nothing again → the JS-only case below runs JS too (red)."""
+        main, _ = checkouts
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "x")
+        js = self._run(main, tmp_path, "--base", "HEAD~1", prepush=False, GATES_SIDES="js")
+        assert "recorded a selective pass (js)" in js.stdout and not (tmp_path / "passed-backend").exists(), js.stdout
+        # One side proven: only the other runs there.
+        push = self._push_of_head(main, tmp_path, "backend/x.py")
+        assert push.returncode == 0 and "running the backend side only" in push.stdout, push.stdout
+        assert "GATES_SIDES=backend" in (tmp_path / "remote-run").read_text(), push.stdout
+        pg = self._run(main, tmp_path, "--real-pg", "--base", "HEAD~1", prepush=False)
+        assert "recorded a selective pass (backend)" in pg.stdout, pg.stdout
+        push = self._push_of_head(main, tmp_path, "backend/x.py")
+        assert push.returncode == 0 and "already passed" in push.stdout, push.stdout
+        assert not (tmp_path / "remote-run").exists(), "the push ran the gates for a tree both sides passed"
+        # Sound: a pushed file neither pass covered still runs both sides.
+        push = self._push_of_head(main, tmp_path, "backend/x.py\nfrontend/y.ts")
+        assert "already passed" not in push.stdout and "side only" not in push.stdout, push.stdout
+        assert "GATES_SIDES=both" in (tmp_path / "remote-run").read_text(), push.stdout
 
 
 class TestEndToEndOnAnotherMachine:
@@ -3461,7 +3495,7 @@ class TestGatesSidesRunsOneSide:
         main, _ = checkouts
         self._red_backend_and_a_js_reader(main)
         proc = self._run_red_backend(main, tmp_path, "--prepush", GATES_SIDES="js", PREPUSH_CHANGED="backend/x.py")
-        assert "GATES_SIDES=js ignored on a push — both sides run" in proc.stdout, proc.stdout
+        assert "GATES_SIDES=js ignored on a push — the sides the ledgers do not vouch for run" in proc.stdout, proc.stdout
         assert proc.returncode != 0, proc.stdout
 
 
