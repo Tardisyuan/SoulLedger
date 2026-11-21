@@ -1,0 +1,14 @@
+{
+  "souls.diyu_station.reason_label": "Reason",
+  "souls.diyu_station.reason_required_mark": "Required",
+  "souls.diyu_station.reason_hint_back": "Moving back needs a reason.",
+  "souls.diyu_station.reason_hint_forward": "Optional when moving forward.",
+  "souls.diyu_station.reason_placeholder": "e.g. the last station was recorded wrongly",
+  "souls.diyu_station.error.reason_required": "A reason is needed to move back.",
+  "souls.diyu_station.error.soul_settled": "This soul is settled; its station can no longer be moved.",
+  "souls.diyu_station.timeline_back": "Moved back · {{station}}",
+  "souls.diyu_station.timeline_reason": "Reason: {{reason}}",
+  "soul_app.timeline.reconsidered": "Looked at again",
+  "soul_app.life.confession.none": "None recorded yet",
+  "soul_app.life.confession.count": "{{recorded}} / {{total}} recorded"
+}
