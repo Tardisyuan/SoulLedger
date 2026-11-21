@@ -1,0 +1,15 @@
+{
+  "letters.state.awaiting_hall": "The hall's turn to reply · the letter has waited {{wait}}",
+  "letters.state.awaiting_soul": "Replied · waiting for the soul",
+  "letters.state.closed": "This exchange is closed · read-only",
+  "letters.state.archived": "Archived · read-only",
+  "letters.side.soul": "Letter",
+  "letters.side.hall": "Reply",
+  "letters.queued": "Waiting to send",
+  "letters.not_sent": "Not sent",
+  "letters.image_alt": "An image, with no text",
+  "soul_app.chat.side.hall": "The hall",
+  "soul_app.chat.side.me": "Me",
+  "soul_app.chat.state.awaiting_hall": "Sent · waiting for the hall",
+  "soul_app.chat.state.awaiting_me": "The hall has replied"
+}

@@ -1,0 +1,15 @@
+{
+  "letters.state.awaiting_hall": "轮到殿司回 · 来信已等 {{wait}}",
+  "letters.state.awaiting_soul": "已回 · 等灵魂来信",
+  "letters.state.closed": "往来已结束 · 只能看",
+  "letters.state.archived": "已归档 · 只能看",
+  "letters.side.soul": "来信",
+  "letters.side.hall": "回信",
+  "letters.queued": "待发出",
+  "letters.not_sent": "没发出",
+  "letters.image_alt": "一张图，没有附字",
+  "soul_app.chat.side.hall": "殿司",
+  "soul_app.chat.side.me": "我",
+  "soul_app.chat.state.awaiting_hall": "已寄出 · 等殿司回",
+  "soul_app.chat.state.awaiting_me": "殿司回信了"
+}
