@@ -204,7 +204,7 @@ def queue_counts_of(queryset, user) -> dict:
         returned=Count("pk", filter=RETURNED),
         # 第六十三批 二 f:「待认领」里此刻谁都认领不了的(`claims.held_q`,与认领的拒绝同一条规则)。
         # 组头读 `claimable_count`,组尾「候着的 · N」读 `held_count`;两者相加等于 `unclaimed`。
-        held_count=Count("pk", filter=group_q(QueueGroup.UNCLAIMED, user) & claims.held_q(timezone.localdate())),
+        held_count=Count("pk", filter=group_q(QueueGroup.UNCLAIMED, user) & claims.held_q(timezone.localdate(), queryset)),
         **_source_aggregates(),
     )
     counts["claimable_count"] = counts[QueueGroup.UNCLAIMED] - counts["held_count"]

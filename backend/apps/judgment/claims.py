@@ -95,14 +95,25 @@ def ferry_barred(judgment) -> str:
     return ""
 
 
-def held_q(today) -> Q:
+def held_q(today, queryset) -> Q:
     """`_assert_not_held` as a filter on Judgment: the cases nobody can claim yet — barred from the hall, held on
     the bank of Acheron (`ferry_barred`), or held until a day still ahead. 待认领的组头只数能认领的(第六十三批 二 f,
     `queue_counts_of` 的 `claimable_count` / `held_count`);`tests/test_queue_claimable_count.py` holds the two
-    readers to the same answer."""
-    ferry = (Q(civilization="GREEK", kind=JudgmentKind.ORIGINAL) & ~Q(soul__ferry_passage="")
-             & ~acheron.crossed_q(today, "soul__"))
-    return Q(duat_stage__in=DUAT_BARRED) | ferry | Q(held_until__gt=today)
+    readers to the same answer.
+
+    `queryset`: the judgments the filter will run on. The souls on Acheron's bank are read by id -- the Greek
+    originals' souls first, then those souls from every leg -- not `soul__ferry_passage`, a join through the
+    crossing key Judgment.soul that a shard refuses (CrossShardJoin; the same read as `apps/tenants/overview.py`).
+    ponytail: reads the soul ids of every open Greek original in `queryset`; a queue of hundreds of thousands wants
+    the ferry state denormalized onto the judgment."""
+    from apps.core.shard_reads import with_fanout
+    from apps.souls.models import Soul
+
+    greek_original = Q(civilization="GREEK", kind=JudgmentKind.ORIGINAL)
+    souls = list(queryset.filter(greek_original).order_by().values_list("soul_id", flat=True))
+    waiting = list(with_fanout(Soul._base_manager.filter(pk__in=souls).exclude(ferry_passage="")
+                               .exclude(acheron.crossed_q(today))).values_list("pk", flat=True))
+    return Q(duat_stage__in=DUAT_BARRED) | (greek_original & Q(soul_id__in=waiting)) | Q(held_until__gt=today)
 
 
 def _assert_not_held(judgment: Judgment) -> None:
