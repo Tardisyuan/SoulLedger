@@ -96,6 +96,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR = REPO_ROOT / "scripts" / "install-hooks.sh"
 RUNNER = REPO_ROOT / "scripts" / "run-gates.sh"
+# The remote executor run-gates.sh sources (2026-11-21): routing, the Windows PC, locks, sync, containers.
+REMOTE = REPO_ROOT / "scripts" / "gates-remote.sh"
 READERS = REPO_ROOT / "backend" / "tests" / "reads-outside-backend.txt"
 
 
@@ -214,7 +216,7 @@ class TestTheExistingPrefixesStillWork:
         assert _classify(hook, ["docs/README.md", "scripts/status.sh"]) == NONE
 
     @pytest.mark.parametrize(
-        "name", ["scripts/run-gates.sh", "scripts/install-hooks.sh", "scripts/gate-lock.sh"]
+        "name", ["scripts/run-gates.sh", "scripts/gates-remote.sh", "scripts/install-hooks.sh", "scripts/gate-lock.sh"]
     )
     def test_the_gate_machinery_runs_the_backend_suite_that_tests_it(self, hook, name):
         """This file is the machinery's only test, and it reads the scripts
@@ -262,7 +264,7 @@ def checkouts(tmp_path):
     (main / "backend").mkdir(parents=True)
     (main / "backend" / "manage.py").write_text("")
     (main / "scripts").mkdir()
-    for name in ("install-hooks.sh", "run-gates.sh", "gate-lock.sh"):
+    for name in ("install-hooks.sh", "run-gates.sh", "gates-remote.sh", "gate-lock.sh"):
         (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
     (main / "backend" / "tests").mkdir()
     (main / "backend" / "tests" / READERS.name).write_text(READERS.read_text(encoding="utf-8"))
@@ -380,6 +382,8 @@ class TestFromAWorktree:
         # The copy a branch without scripts/run-gates.sh falls back to.
         copy = main / ".git" / "hooks" / "soulledger-gates" / "run-gates.sh"
         assert copy.read_text(encoding="utf-8") == RUNNER.read_text(encoding="utf-8")
+        # ... and the remote executor that copy sources from beside itself.
+        assert (copy.parent / REMOTE.name).read_text(encoding="utf-8") == REMOTE.read_text(encoding="utf-8")
 
 
 def _fake_venv(checkout: Path, python_body: str) -> Path:
@@ -2286,7 +2290,7 @@ class TestRemoteLocksSayWhenTheyWait:
     """2026-11-13 (test review 3.5): a remote `flock 9` waited without a word. Each lock is now tried without
     waiting first; when it is taken the run prints who has it (the containers by name) and then waits."""
 
-    SCRIPTS = ("run-gates.sh", "demo-remote.sh", "mobile-remote.sh")
+    SCRIPTS = ("gates-remote.sh", "demo-remote.sh", "mobile-remote.sh")
 
     @staticmethod
     def _definition(script: str) -> str:
@@ -2309,7 +2313,7 @@ class TestRemoteLocksSayWhenTheyWait:
         (b / "docker").write_text(f'#!/bin/bash\necho "docker $*" >> "{tmp_path}/docker.log"\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
-        script = (f"P=gates\n{self._definition('run-gates.sh')}"
+        script = (f"P=gates\n{self._definition('gates-remote.sh')}"
                   f'eval "( $(remote_flock 9 run.lock sl-gates-); echo RAN ) 9>{tmp_path}/lock"\n')
         env = _clean_env()
         env["PATH"] = f"{b}:{env['PATH']}"
@@ -2340,8 +2344,8 @@ class TestTwoGateSlots:
 
     @staticmethod
     def _definition(name: str) -> str:
-        m = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", RUNNER.read_text(encoding="utf-8"), re.M | re.S)
-        assert m, f"no {name} in run-gates.sh"
+        m = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", REMOTE.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, f"no {name} in gates-remote.sh"
         return m.group(0)
 
     def _take(self, tmp_path, free: set[str], frees_later: str = "", slots: str = "2", orphaned: bool = False, show: str = ""):
@@ -2359,7 +2363,7 @@ class TestTwoGateSlots:
         (b / "docker").write_text('#!/bin/bash\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
-        script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition('run-gates.sh')}"
+        script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition('gates-remote.sh')}"
                   f"{self._definition('remote_slots')}"
                   f'eval "( $(remote_slots sl-gates-); echo RAN{show} ) 8>{tmp_path}/lock2 9>{tmp_path}/lock"\n')
         env = _clean_env()
@@ -2388,7 +2392,7 @@ class TestTwoGateSlots:
             (tmp_path / str(i)).mkdir()
             proc, log = self._take(tmp_path / str(i), free, frees_later=later, show="\\$S")
             assert proc.stdout.endswith(f"RAN{want}\n"), (free, later, proc.stdout, log)
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         assert "-e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\\${S:-1} " in text
 
     def test_a_waiter_whose_ssh_is_gone_gives_up(self, tmp_path):
@@ -2402,10 +2406,10 @@ class TestTwoGateSlots:
         assert "waiting for run.lock" in proc.stdout and log == "flock -n 9\nflock 9\n", proc.stdout + log
 
     def test_a_gate_run_opens_both_slots_and_a_bad_count_is_refused(self, tmp_path):
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         assert '"( $(remote_slots sl-gates-);' in text and ") 8>$RDIR/run.2.lock 9>$RDIR/run.lock\"" in text
         sizing = re.search(r'^case "\$\{GATES_REMOTE_SLOTS:-2\}" in .*?esac$', text, re.M | re.S)
-        assert sizing, "no slot sizing in run-gates.sh"
+        assert sizing, "no slot sizing in gates-remote.sh"
         for slots, rc in (("3", 2), ("1", 0), ("2", 0)):
             proc = subprocess.run(["bash", "-c", f"GATES_REMOTE_SLOTS={slots}\n{sizing.group(0)}\necho $SLOT_CPUS"],
                                   env=_clean_env(), capture_output=True, text=True, timeout=60)
@@ -2529,11 +2533,11 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
 
     @staticmethod
     def _definitions(*names: str) -> str:
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         out = []
         for n in names:
             m = re.search(rf"^{n}\(\) \{{\n.*?^\}}\n", text, re.M | re.S)
-            assert m, f"no {n} in run-gates.sh"
+            assert m, f"no {n} in gates-remote.sh"
             out.append(m.group(0))
         return "".join(out)
 
@@ -2618,8 +2622,8 @@ class TestUnusedRemoteTreesAreDeleted:
 
     @staticmethod
     def _function() -> str:
-        m = re.search(r"^remote_prune\(\) \{.*?^\}\n", RUNNER.read_text(encoding="utf-8"), re.M | re.S)
-        assert m, "no remote_prune in run-gates.sh"
+        m = re.search(r"^remote_prune\(\) \{.*?^\}\n", REMOTE.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, "no remote_prune in gates-remote.sh"
         return m.group(0)
 
     def _tree(self, rdir: Path, rel: str, used_days_ago: float | None) -> Path:
@@ -2705,7 +2709,7 @@ class TestUnusedRemoteTreesAreDeleted:
         assert proc.returncode == 1 and all(p.is_dir() for p in t.values()) and "what is mounted is unknown" in proc.stdout, proc.stdout
 
     def test_a_refusal_stops_the_run_before_its_container_starts(self):
-        run = RUNNER.read_text(encoding="utf-8")
+        run = REMOTE.read_text(encoding="utf-8")
         assert "$PRUNE_MIN_KB ) 7>$RDIR/prune.lock || exit 75; $(win_bg" in run
 
     def test_only_a_tree_no_run_has_used_for_the_period_is_deleted(self, tmp_path):
@@ -3033,7 +3037,7 @@ class TestTheRemoteDependencyHashes:
         assert js3 == js2 and py3 != py2
 
     def test_the_venv_is_synced_not_rebuilt(self):
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         deps = text[text.index("REMOTE_DEPS='"):]
         deps = deps[: deps.index("fi'") + 3]
         assert "rm -rf backend/.venv" not in deps
@@ -3074,7 +3078,7 @@ class TestTheJestCacheSurvivesTheNight:
         assert re.search(r"cacheDirectory: ['\"]<rootDir>/node_modules/\.cache/jest['\"]", text), config
 
     def test_the_sync_keeps_node_modules(self):
-        assert "--filter='P **/node_modules/'" in RUNNER.read_text(encoding="utf-8")
+        assert "--filter='P **/node_modules/'" in REMOTE.read_text(encoding="utf-8")
 
 
 class TestTwoSidesAtOnce:
@@ -3132,7 +3136,7 @@ class TestTwoSidesAtOnce:
         assert "backend exit 1, JS exit 0" in proc.stdout and "  backend: pytest failed" in proc.stdout, proc.stdout
 
     def test_the_container_splits_its_cpus_between_the_sides(self):
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         assert "-e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS}" in text
         assert "-e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS}" in text
         assert "--cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM}" in text
@@ -3183,7 +3187,7 @@ class TestTheE2eReport:
 
 
 class TestMobileRemoteMetroFollowsTheDependencies:
-    """The dependency hash is run-gates.sh's deps_hash_js (dependency fields + lockfile + image), and a Metro
+    """The dependency hash is gates-remote.sh's deps_hash_js (dependency fields + lockfile + image), and a Metro
     started under another hash is restarted by `metro sync` / `metro open` — on 2026-10-31 a dependency change
     followed by only `metro sync` bundled against a node_modules that was gone. ssh and rsync are fakes; the
     fake ssh answers `docker inspect` with the environment in `metro-env` (absent = no Metro running)."""
