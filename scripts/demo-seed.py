@@ -798,7 +798,7 @@ def seed_rebirth_states(admin):
     from apps.soul_accounts.models import RebirthApplication
 
     shown = {name for names in SOUL_VIEW.values() for name in names}
-    rows = list(RebirthApplication.objects.filter(status="UNDER_REVIEW", soul__civilization="CHINESE")
+    rows = list(RebirthApplication.objects.filter(status="UNDER_REVIEW", soul__tenant__code="CN_DIYU")
                 .exclude(soul__name__in=shown).select_related("workflow", "soul").order_by("created_at")[:3])
     if len(rows) < 3:
         print("  rebirth states stuck: only", len(rows), "applications under review")
