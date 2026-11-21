@@ -677,7 +677,7 @@ function OutboxLetter({ entry, name, offline, onRetry }: { entry: OutboxEntry; n
         {entry.text}
       </Txt>
       {failed ? (
-        <View testID="letter-outbox-failed" style={styles.outboxLine}>
+        <View testID="letter-not-sent" style={styles.outboxLine}>
           <Txt variant="label" tone="neg" style={styles.small}>
             {retryable ? `${t("letters.not_sent")} · ` : `${t("letters.not_sent")} · ${t(`officer_app.outbox.${entry.reason}`)}`}
           </Txt>

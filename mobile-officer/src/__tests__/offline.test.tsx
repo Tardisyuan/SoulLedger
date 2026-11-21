@@ -3,7 +3,7 @@
  * replies queued on the phone and sent when the network returns.
  */
 import { REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text } from "react-native";
 
@@ -405,7 +405,7 @@ describe("a reply written offline", () => {
     expect(outboxEntry("c-1")).toMatchObject({ state: "failed", reason: "retry" });
     await openThread(false);
     expect(screen.getByTestId("letter-outbox-failed")).toBeTruthy();
-    expect(screen.getByText("没发出 ·")).toBeTruthy();
+    expect(within(screen.getByTestId("letter-not-sent")).getByText("没发出 ·")).toBeTruthy();
     expect(screen.queryByTestId("letter-queued")).toBeNull();
     await act(async () => {
       fireEvent.press(screen.getByTestId("letter-outbox-retry"));
@@ -423,6 +423,7 @@ describe("a reply written offline", () => {
     });
     await openThread(false);
     expect(screen.getByTestId("letter-outbox-failed")).toBeTruthy();
+    expect(within(screen.getByTestId("letter-not-sent")).getByText("没发出 · 这封信已由别的官员经办，没有发出。写好的内容还留着。")).toBeTruthy();
     expect(screen.queryByTestId("letter-outbox-retry")).toBeNull();
   });
 
