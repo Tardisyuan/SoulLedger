@@ -442,7 +442,7 @@ const STATUS_MOVES: [RegExp, string, (body: Row, me: ReturnType<typeof meOf>) =>
     lifted_by: { user_id: me.id, display_name: me.name },
   })],
   [/^\/judgment\/appeals\/([^/]+)\/claim\/$/, "/judgment/appeals/", (_b, me) => ({ status: "IN_REVIEW", reviewer: me.id, claimed_at: now() })],
-  [/^\/judgment\/appeals\/([^/]+)\/decide\/$/, "/judgment/appeals/", (b) => ({ status: b.outcome === "UPHELD" || b.outcome === "upheld" ? "UPHELD" : "OVERTURNED", decision_note: b.note ?? "", decided_at: now() })],
+  [/^\/judgment\/appeals\/([^/]+)\/decide\/$/, "/judgment/appeals/", (b) => ({ status: b.outcome === "UPHELD" || b.outcome === "upheld" ? "UPHELD" : "AMENDED", decision_note: b.note ?? "", decided_at: now() })],
   [/^\/judgment\/city-god-cases\/([^/]+)\/send_on\/$/, "/judgment/city-god-cases/", () => ({ city_god_status: "SENT_ON", sent_on_at: now() })],
   [/^\/judgment\/city-god-cases\/([^/]+)\/return\/$/, "/judgment/city-god-cases/", (b) => ({ city_god_status: "RETURNED", city_god_note: b.note ?? "" })],
 ];
@@ -916,8 +916,8 @@ function officerAppRead(rec: Recording, path: string, query: URLSearchParams): A
       concluded_this_month: concluded.filter((r) => typeof r.concluded_at === "string" && Date.parse(r.concluded_at) >= monthStart).length,
       concluded_total: concluded.length,
       open_claims: cases.filter((r) => isPending(r) && r.claimed_by === me).length,
-      // OVERTURNED: what the demo's own decide writes for 改判.
-      appeals_reviewed: appeals.filter((a) => ["UPHELD", "AMENDED", "OVERTURNED"].includes(String(a.status))).length,
+      // AMENDED is 改判 (backend AppealStatus); the demo's decide writes it too.
+      appeals_reviewed: appeals.filter((a) => ["UPHELD", "AMENDED"].includes(String(a.status))).length,
       appeals_in_review: appeals.filter((a) => a.status === "IN_REVIEW").length,
     });
   }
