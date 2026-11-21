@@ -12,6 +12,7 @@ from apps.judgment import claims
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul
 from tests.test_judgment_claim import BASE, _case, world  # noqa: F401  (world is a fixture)
+from tests.test_shard_sync import sharded
 
 
 def _held_by_rule(judgment) -> bool:
@@ -58,7 +59,8 @@ class TestClaimableCount:
 
     def test_the_count_and_the_claim_refusal_read_one_rule(self, world, cases):  # noqa: F811
         today = timezone.localdate()
-        by_count = set(Judgment.all_objects.filter(claims.held_q(today)).values_list("pk", flat=True))
+        everything = Judgment.all_objects.all()
+        by_count = set(everything.filter(claims.held_q(today, everything)).values_list("pk", flat=True))
         by_claim = {j.pk for j in cases.values() if _held_by_rule(j)}
         assert by_count == by_claim
         assert {n for n, j in cases.items() if j.pk in by_count} == {
@@ -68,3 +70,28 @@ class TestClaimableCount:
     def test_counts_follow_the_filters_like_the_groups(self, world, cases):  # noqa: F811
         data = world.clients["a"].get(f"{BASE}queue-counts/", {"search": "nameless"}).data
         assert (data["unclaimed"], data["claimable_count"], data["held_count"]) == (1, 0, 1)
+
+
+@sharded
+def test_queue_counts_on_a_shard_split_a_held_greek_case_from_a_claimable_one():
+    """Sharded (2026-11-21, found on the simulator): `held_q` read the ferry state through `soul__`, a join
+    through the crossing key Judgment.soul that a shard refuses (CrossShardJoin -> queue-counts 500). It reads
+    the souls by id now. Mutation: put `soul__ferry_passage` back in `held_q` -> CrossShardJoin, red."""
+    from apps.authentication.models import User
+    from apps.core.shard_reads import read_context
+    from apps.judgment.views import QueueGroup, queue_counts_of
+    from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
+
+    hall = _halls()["GREEK"]
+    judge = User.objects.create_user(username="q-sharded-judge", password="x", role="JUDGE", tenant=hall)
+    _assign("GREEK")
+    today = timezone.localdate()
+    with cut():
+        with _in_hall(hall):
+            for name, passage in (("on the bank", "UNBURIED"), ("ferried", "")):
+                soul = Soul.objects.create(name=name, tenant=hall, ferry_passage=passage, death_year=today.year - 5)
+                Judgment.objects.create(soul=soul, civilization="GREEK", court="Minos", tenant=hall, evidence_json={})
+        with _in_hall(hall), read_context(hall):
+            counts = queue_counts_of(Judgment.objects.filter(tenant=hall, verdict__isnull=True), judge)
+    assert counts[QueueGroup.UNCLAIMED] == 2
+    assert (counts["held_count"], counts["claimable_count"]) == (1, 1)
