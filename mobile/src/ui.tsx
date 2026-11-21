@@ -1955,14 +1955,15 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
         if (wait > 0) setTimeout(go, wait);
         else go();
       });
+    // Resolves true when the fetch answered, false when it failed -- whoever refreshed may need to know (life.tsx).
     return fetcher().then(
       (value) =>
         settle(() => {
           setData(value);
           setError(null);
           setAt(Date.now());
-        }),
-      (e: unknown) => settle(() => setError(e))
+        }).then(() => true),
+      (e: unknown) => settle(() => setError(e)).then(() => false)
     );
   }, [fetcher]);
   useEffect(() => {
