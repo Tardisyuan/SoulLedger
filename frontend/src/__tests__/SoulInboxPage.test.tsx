@@ -538,6 +538,17 @@ it("a thread whose last letter is the soul's says it awaits a reply; one the hal
   expect(within(thread).getByText(/^待回复 · \d+ 天$/)).toBeInTheDocument();
 });
 
+// 与后端 `inbox.awaiting_reply` 同一条规则(@soulledger/core/domain/letters):灵魂调走了,殿司回不了,就不算待回复。
+it("a soul's letter last, but the soul moved to another hall: no awaiting badge", async () => {
+  asRole("soul_inbox.read");
+  apiMock.list.mockResolvedValue(page([conversation({ can_reply: false })]));
+  apiMock.messages.mockResolvedValue({ data: [...MESSAGES].reverse() });
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("我想申诉");
+  expect(within(thread).queryByText(/^待回复 · /)).toBeNull();
+});
+
 it("the hall's reply being last leaves no awaiting badge", async () => {
   asRole("soul_inbox.read");
   renderPage();

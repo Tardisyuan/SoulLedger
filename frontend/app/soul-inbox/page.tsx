@@ -12,6 +12,7 @@ import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { newReplyTxn, renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
+import { awaitingReply, inboxReplyGate } from "@soulledger/core/domain/letters";
 import {
   useInboxArchive,
   useInboxAssign,
@@ -413,12 +414,15 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   const [viewing, setViewing] = useState<number | null>(null);
   const [managing, setManaging] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const canReply = hasPermission("soul_inbox.reply") && !conversation.closed_at;
   // 灵魂已调往别处(`can_reply: false`,或回信答 409 `not_current_hall`):不再画回复框,说一句为什么。
   const [movedAway, setMovedAway] = useState(false);
-  const replyBlocked = canReply && (conversation.can_reply === false || movedAway);
+  // 能不能回:与官员 App 同一份(`@soulledger/core/domain/letters`);权限码是看信的人的事,在这里相与。
   // 指派给别人的信先「转给我」才能回(用户 2026-11-02,三端一致,后端答 409 `assigned_to_other`)。已归档的也一样。
-  const othersAssignee = conversation.assignee && conversation.assignee.user_id !== user?.id ? conversation.assignee : null;
+  const gate = inboxReplyGate(conversation, { userId: user?.id, movedSeen: movedAway });
+  const mayReply = hasPermission("soul_inbox.reply");
+  const canReply = mayReply && gate !== "closed";
+  const replyBlocked = mayReply && gate === "moved";
+  const othersAssignee = gate === "others" ? conversation.assignee : null;
   const draft = useDraft(conversation.id, canReply);
   const templates = useInboxTemplates(canReply);
   const input = useRef<HTMLTextAreaElement | null>(null);
@@ -427,9 +431,9 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   const last = rows.at(-1);
   // 全屏查看翻的是整个线程里灵魂来信的图,从旧到新。
   const gallery = rows.flatMap((r) => (r.image ? [r.image] : []));
-  // 最后一封是灵魂写的、会话还开着 → 待回复,天数从那一封算。
+  // 最后一封是灵魂写的、殿司此刻回得了(未关闭、灵魂没调走)→ 待回复,天数从那一封算。
   const waitingDays =
-    last && !last.from_officer && !conversation.closed_at
+    last && !last.from_officer && awaitingReply(conversation, "soul")
       ? Math.max(0, Math.floor((Date.now() - last.timestamp) / 86_400_000))
       : null;
   // 最新一封全尺寸,前一封缩小;再早的收起,点开才出。

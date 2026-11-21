@@ -15,6 +15,7 @@ import {
   soulInboxApi,
   type InboxMessage,
 } from "@soulledger/core/api/soul-inbox";
+import { inboxReplyGate } from "@soulledger/core/domain/letters";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 
@@ -27,6 +28,7 @@ import {
   hallLabel,
   lettersUnavailable,
   ASSIGNED_TO_OTHER,
+  MOVED,
   replyFailureKey,
   replyReady,
   withTemplate,
@@ -290,18 +292,19 @@ export function LetterThread({
     return <StateView state={view ?? "loading"} onRetry={thread.reload} />;
 
   const { conversation } = thread.data;
-  const closed = conversation.closed_at != null;
-  // feat-letters: `can_reply` false = the soul was dispatched to another hall. Typed by hand until the schema is
-  // regenerated; absent (an older server) means the old rules below.
-  const moved = (conversation as { can_reply?: boolean }).can_reply === false;
+  const meId = user?.id;
+  // The web's rule (@soulledger/core/domain/letters): closed, then the soul dispatched to another hall (`can_reply`
+  // false, or this phone's last reply answered 409 `not_current_hall`), then someone else holds it.
+  const gate = inboxReplyGate(conversation, { userId: meId, movedSeen: failure === MOVED });
+  const closed = gate === "closed";
   // The server always sends `assignee` (null = nobody); only that explicit null is "unassigned".
   const assigned = conversation.assignee !== null;
-  const flags = { archived: conversation.archived, closed, assigned };
-  const unassigned = isUnassigned(flags);
-  const meId = user?.id;
+  const flags = { archived: conversation.archived, closed: conversation.closed_at != null, assigned };
+  // Without `soul_inbox.reply` the server takes neither a reply nor 由我来回 (`assign`): no box, no TakeBar.
+  const unassigned = canHandOn && isUnassigned(flags);
   // O-e: someone else holds it -- the box gives way to one line saying so (not greyed, no confirm: a greyed box reads as
   // stuck, a confirm does not stop two people answering). Who may hand letters on gets 「转给我」, the same assign call.
-  const othersLetter = conversation.assignee != null && conversation.assignee.user_id !== meId;
+  const othersLetter = gate === "others";
   const values = {
     soul_name: conversation.soul_name,
     hall_name: hallLabel(t, user?.tenant) ?? "",
@@ -389,7 +392,7 @@ export function LetterThread({
               testID="letter-closed"
             >{`○ ${t("soul_inbox.closed")}`}</Notice>
           </View>
-        ) : moved ? (
+        ) : gate === "moved" ? (
           <View style={{ padding: space[4] }}>
             <Notice tone="neutral" testID="letter-moved">{`○ ${t("officer_app.letter.moved")}`}</Notice>
           </View>
@@ -416,7 +419,7 @@ export function LetterThread({
               />
             ) : null}
           </View>
-        ) : (
+        ) : !canHandOn ? null : (
           <View
             testID="letter-composer"
             style={{
