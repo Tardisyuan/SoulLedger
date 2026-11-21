@@ -107,10 +107,17 @@ describe("the loader (1h)", () => {
 
   // 第五十八批 M10 replaced the breathing emblem in a busy button with a line along its foot (buttonBusy.test.tsx).
   it("a busy button waits with neither a spinner nor the breathing emblem", async () => {
-    wrap(<Button title="正在核验…" busy onPress={jest.fn()} />, "cn");
-    await act(async () => {});
-    expect(screen.UNSAFE_queryAllByType(ActivityIndicator)).toEqual([]);
-    expect(screen.queryByRole("progressbar")).toBeNull();
+    // Fake timers: BusyLine shows after a real 160 (`useAfter`). Left real, a slow machine fired it between this
+    // test's last act and the cleanup -- an act() warning, so a red test now and then. Past the 160, inside act.
+    jest.useFakeTimers();
+    try {
+      wrap(<Button title="正在核验…" busy onPress={jest.fn()} />, "cn");
+      await act(async () => void jest.advanceTimersByTime(motion.busyDelay + 1));
+      expect(screen.UNSAFE_queryAllByType(ActivityIndicator)).toEqual([]);
+      expect(screen.queryByRole("progressbar")).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
