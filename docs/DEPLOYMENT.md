@@ -35,7 +35,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 2. **生产覆盖文件的 backend 启动命令没有 `seed_mythology`**(`docker-compose.production.yml:62-66`),而基础文件有(`docker-compose.yml:88-93`;compose 合并时 `command` 被整条替换)。
    全新生产库里没有租户、界域、冥界人物。首次上线要手动跑一次(见第 6 节),之后不用。
 3. **没有 `eas.json`,两个 `app.json` 也没有 `extra.eas.projectId`**(`mobile/app.json`、`mobile-officer/app.json`;`ls mobile/eas.json mobile-officer/eas.json` 均不存在)。
-   没有 projectId,App 拿不到 Expo 推送 token(两个 App 共用的 `mobile/src/pushCore.ts`(2026-10-30 起)读 projectId:返回 `no_project_id`,不报错)。见第 9 节。
+   没有 projectId,App 拿不到 Expo 推送 token(两个 App 共用的 `packages/mobile-ui/src/pushCore.ts`(2026-10-30 起)读 projectId:返回 `no_project_id`,不报错)。见第 9 节。
 
 ### 1. 环境变量(按服务)
 

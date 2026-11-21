@@ -298,7 +298,7 @@ npm run --workspace packages/core test      # vitest，不是 jest
 `npm run --workspace @soulledger/officer …`）；CI 里是 `mobile` 与 `officer` 两个 job，
 `mobile-officer` 原样引用 `mobile/src` 的叶子模块，所以改 `mobile/` 也会触发它。
 
-两个 App 的写法（2026-10-30 第二轮）：「回到前台就刷新」用 `onForeground`（`mobile/src/platform.ts`，只认 `background → active`；
+两个 App 的写法（2026-10-30 第二轮）：「回到前台就刷新」用 `onForeground`（`packages/mobile-ui/src/platform.ts`，只认 `background → active`；
 iOS 面容弹框、系统提示之后的 `inactive → active` 不算）。有意的例外是设置页读通知权限那处（从系统设置回来也要读）；
 进后台就停的轮询（书信长轮询、导出状态）各自监听 `AppState`。不常进的屏在 `navigation.tsx` 里用
 `getComponent` 按需加载；官员端刷新一个 tab 用 `useOnBump` 原地重拉，不用 `key={version}` 整个重挂；
