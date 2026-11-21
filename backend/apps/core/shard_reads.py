@@ -545,7 +545,8 @@ def crossing_q(model, lookup, value):
     """`Q(**{lookup: value})` on `model`, but a crossing key on the path is read by ids instead of joined (sharded;
     not sharded, the plain Q). `soul__name__icontains="x"` on a judgment -> `soul_id__in=<the souls named x, every
     leg>`; the reverse of one (`participants__participant_tenant=t` on a bench) -> `pk__in=<those seats' bench ids>`.
-    For the filters a caller passes through a crossing key: `?search=` (`ShardSearchFilter`), `?soul_name=`, a data
+    A forward key from a shard model's table to a CONTROL row (`user__username` on an audit row: no shard has the
+    user table) is read the same way, from control. For the filters a caller passes through such a key: `?search=` (`ShardSearchFilter`), `?soul_name=`, a data
     scope. A path that only compares the key's column (`soul`, `soul__in`, `soul__id`) is left as it is.
     ponytail: the ids go into the SQL as a list -- a filter matching a whole hall's souls (`?civilization=`, a data
     scope on a big organization) wants the column denormalized onto the row."""
@@ -555,6 +556,7 @@ def crossing_q(model, lookup, value):
     if not settings.SHARDED:
         return Q(**{lookup: value})
     parts, m, crossing = lookup.split("__"), model, set(crossing_keys())
+    on_shard = placement(model) == SHARD
     for i, name in enumerate(parts):
         try:
             f = m._meta.pk if name == "pk" else m._meta.get_field(name)
@@ -564,7 +566,8 @@ def crossing_q(model, lookup, value):
             break
         key, rest = (f if f.concrete else f.field), "__".join(parts[i + 1:])
         nxt = parts[i + 1] if i + 1 < len(parts) else None
-        if key in crossing and nxt is not None:
+        # A crossing key, or (on a shard model's table) a key to a CONTROL row no shard has (AuditLog.user).
+        if nxt is not None and (key in crossing or (f.concrete and on_shard and f.name in _unreachable(m))):
             prefix = "__".join(parts[:i] + [""])
             other = f.related_model
             if f.concrete:  # forward: our column names the other row
@@ -577,11 +580,37 @@ def crossing_q(model, lookup, value):
                 mine, theirs = f.attname, f.target_field.attname
             else:  # reverse: the other row's column names ours
                 mine, theirs = key.target_field.attname, key.attname
-            ids = with_fanout(other._base_manager.filter(crossing_q(other, rest, value)).order_by()
-                              ).values_list(theirs, flat=True)
+            q = crossing_q(other, rest, value)
+            ids = (with_fanout(other._base_manager.filter(q).order_by()) if placement(other) == SHARD
+                   else other._base_manager.filter(q).order_by()).values_list(theirs, flat=True)
             return Q(**{f"{prefix}{mine}__in": list(set(ids))})
         m = f.related_model
     return Q(**{lookup: value})
+
+
+def orders_across(model, path):
+    """Whether `order_by(path)` on a shard model joins through a crossing key or to a CONTROL row (`soul__name`, and
+    `soul` itself: Django orders a key by the other model's ordering). An order cannot be read by ids; the caller
+    drops it (`ShardOrderingFilter`)."""
+    from django.core.exceptions import FieldDoesNotExist
+
+    if not settings.SHARDED or placement(model) != SHARD:
+        return False
+    parts, m, crossing = path.lstrip("-").split("__"), model, set(crossing_keys())
+    for i, name in enumerate(parts):
+        try:
+            f = m._meta.get_field(name)
+        except FieldDoesNotExist:
+            return False
+        if not f.is_relation:
+            return False
+        nxt = parts[i + 1] if i + 1 < len(parts) else None
+        if f.concrete and (f in crossing or f.name in _unreachable(m)):
+            return name != f.attname and nxt not in ("pk", f.target_field.name)
+        if not f.concrete and f.field in crossing:
+            return True
+        m = f.related_model
+    return False
 
 
 def related_of(instance, name):

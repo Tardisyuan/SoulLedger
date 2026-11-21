@@ -348,7 +348,7 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "apps.core.shard_search.ShardSearchFilter",  # DRF's SearchFilter; sharded, a crossing key read by ids
-        "rest_framework.filters.OrderingFilter",
+        "apps.core.shard_search.ShardOrderingFilter",  # DRF's OrderingFilter; sharded, no order across a crossing key
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",

@@ -63,7 +63,7 @@ class AuditLogFilter(filters.FilterSet):
     tenant = filters.CharFilter(method="filter_tenant")
     #: 审计页的「操作人」(review-2026-11-01 Web 6):按用户名精确匹配。行上带的是 `username`
     #: 不是 id,所以页面只能按名字筛;`search` 也搜用户名,但它是模糊的、还连带资源与描述。
-    username = filters.CharFilter(field_name="user__username", lookup_expr="exact")
+    username = filters.CharFilter(method="filter_username")
 
     class Meta:
         model = AuditLog
@@ -83,6 +83,13 @@ class AuditLogFilter(filters.FilterSet):
         if tenant is None or not reaches_hall(user, tenant.pk):  # 别文明的殿对文明管理员与不存在的同样答
             raise ValidationError({"tenant": "Unknown hall."})
         return queryset.filter(tenant=tenant)
+
+    def filter_username(self, queryset, name, value):
+        """Sharded, an audit row is on its hall's shard and the user table on control only: the users are read by
+        name first (`crossing_q`), not joined (no such table on a shard -> 500)."""
+        from apps.core.shard_reads import crossing_q
+
+        return queryset.filter(crossing_q(queryset.model, "user__username", value)) if value else queryset
 
     def filter_resource(self, queryset, name, value):
         if value == "tenant":
