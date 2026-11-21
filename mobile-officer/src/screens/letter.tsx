@@ -300,7 +300,10 @@ export function LetterThread({
   const assigned = conversation.assignee !== null;
   const flags = { archived: conversation.archived, closed: conversation.closed_at != null, assigned };
   // Without `soul_inbox.reply` the server takes neither a reply nor 由我来回 (`assign`): no box, no TakeBar.
-  const unassigned = canHandOn && isUnassigned(flags);
+  // 由我来回 makes the viewer the assignee, and the server takes only an officer of this hall (`is_assignable`). A
+  // civilization admin belongs to no hall: assign 400s (simulator 2026-11-21, 「没取到」). For them an unassigned letter
+  // shows the box -- the server lets anyone with soul_inbox.reply answer one nobody holds -- and 转给别人 stays in ⋯.
+  const unassigned = canHandOn && isUnassigned(flags) && user?.tenant != null;
   // O-e: someone else holds it -- the box gives way to one line saying so (not greyed, no confirm: a greyed box reads as
   // stuck, a confirm does not stop two people answering). Who may hand letters on gets 「转给我」, the same assign call.
   const othersLetter = gate === "others";

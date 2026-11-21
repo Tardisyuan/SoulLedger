@@ -405,6 +405,14 @@ describe("who handles the letter", () => {
     expect(screen.getByTestId("letter-take-bar")).toBeTruthy();
   });
 
+  it("unassigned, read by an officer of no hall (a civilization admin): the box, not 由我来回 -- assign would refuse them", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: null } });
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user: { ...OFFICER, tenant: null } });
+    await screen.findByTestId("letter-thread");
+    expect(screen.getByTestId("letter-composer")).toBeTruthy();
+    expect(screen.queryByTestId("letter-take-bar")).toBeNull();
+  });
+
   it("someone else's: one line instead of the box (not greyed, nothing to confirm), and 转给我 for who may hand letters on", async () => {
     mockAssign.mockResolvedValue({ data: {} });
     mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
