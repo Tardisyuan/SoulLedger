@@ -124,11 +124,15 @@ describe("App 的文明色只在名单上(Design 第四十八批第三节)", () 
   it("全色徽记只在欢迎层:别处 <Hero> 的 stroke 不取文明色(空态规则：墨)", () => {
     const heroes = SOURCES.flatMap(({ rel, code }) => [...strip(code).matchAll(/<Hero\b[^>]*?stroke=\{([^}]+)\}/g)].map((m) => ({ rel, stroke: m[1].trim() })));
     expect(heroes.length).toBeGreaterThan(0);
-    // 第六十二批: the welcome no longer draws a <Hero>; its emblem is the stamped seal in the seal colour. No <Hero> anywhere
-    // takes a civilization colour now, and the welcome's one full-colour mark reads `seal[civ]`.
+    // 第六十二批: the welcome no longer draws a <Hero>; its emblem is the stamped seal. No <Hero> anywhere takes a
+    // civilization colour now. 第六十三批 三 d: the welcome's seal is the 本世 header seal's colour, `plaque` (civT) —
+    // it shrinks into that seal, so it must not change colour on the way — and no longer the `seal` token.
     expect(heroes.filter((h) => /\.(plaqueFill|plaque|glow|metal)\b/.test(h.stroke)).map((h) => `${h.rel} :: ${h.stroke}`)).toEqual([]);
     const welcome = strip(SOURCES.find((s) => s.rel === "mobile/src/welcome.tsx")!.code);
-    expect(welcome).toMatch(/seal\[to\.civ\]\[scheme\]/);
+    expect(welcome).toMatch(/const color = to\.plaque;/);
+    expect(welcome).not.toMatch(/\bseal\[/);
+    const header = strip(SOURCES.find((s) => s.rel === "mobile/src/chrome.tsx")!.code);
+    expect(header).toMatch(/<OutlineSeal\b[^>]*color=\{[^}]*\.plaque\}/);
   });
 
   it("plaqueFill(实心的文明色底)一处都没有了:实心按钮一律墨底", () => {

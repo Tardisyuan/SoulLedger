@@ -3,9 +3,9 @@
  * replies queued on the phone and sent when the network returns.
  */
 import { REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useEffect, useState } from "react";
-import { Image, Pressable, Text } from "react-native";
+import { Image, Pressable, StyleSheet, Text } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { DRAFTS_KEY, clearDrafts, readDraft, saveDraft } from "../drafts";
@@ -366,7 +366,13 @@ describe("a reply written offline", () => {
     expect(mockReply).not.toHaveBeenCalled();
     expect(outboxEntry("c-1")).toMatchObject({ name: "李白", text: "先答应下来", state: "queued", seen: [] });
     expect(readDraft("c-1")).toBe("先答应下来");
-    expect(screen.getByTestId("letter-queued")).toBeTruthy();
+    // 第六十四批: the reply sits at the end of the thread as the hall's panel, unfilled, in a 1px dashed frame.
+    expect(screen.getByTestId("letter-queued").props.children).toBe("◌ 待发出");
+    const panel = StyleSheet.flatten(screen.getByTestId("letter-outbox-queued").props.style);
+    expect(panel).toMatchObject({ borderWidth: 1, borderStyle: "dashed", borderRadius: 6 });
+    expect(panel.backgroundColor).toBeUndefined();
+    expect(screen.getByText("先答应下来")).toBeTruthy();
+    expect(screen.queryByTestId("letter-outbox-failed")).toBeNull();
     expect(screen.getByTestId("letter-send").props.accessibilityState.disabled).toBe(true);
     expect(screen.getByTestId("letter-input").props.editable).toBe(false);
     expect(screen.getByTestId("outbox-pending-c-1")).toBeTruthy();
@@ -388,6 +394,37 @@ describe("a reply written offline", () => {
     expect(mockReply).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("letter-input").props.value).toBe("");
     expect(screen.queryByTestId("letter-queued")).toBeNull();
+  });
+
+  it("failed with a reason trying again may fix: 「没发出 · 重试」 in neg, and 重试 sends it again; once sent, no dashed panel", async () => {
+    enqueueReply({ id: "c-1", name: "李白", text: "先答应下来", seen: [] });
+    mockReply.mockRejectedValueOnce(httpError(500));
+    await act(async () => {
+      await flushOutbox();
+    });
+    expect(outboxEntry("c-1")).toMatchObject({ state: "failed", reason: "retry" });
+    await openThread(false);
+    expect(screen.getByTestId("letter-outbox-failed")).toBeTruthy();
+    expect(within(screen.getByTestId("letter-not-sent")).getByText("没发出 ·")).toBeTruthy();
+    expect(screen.queryByTestId("letter-queued")).toBeNull();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("letter-outbox-retry"));
+    });
+    await waitFor(() => expect(mockReply).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId("letter-outbox-failed")).toBeNull());
+    expect(screen.queryByTestId("letter-outbox-queued")).toBeNull();
+  });
+
+  it("failed for a reason retrying cannot fix: 「没发出 · <why>」 and no 重试", async () => {
+    enqueueReply({ id: "c-1", name: "李白", text: "先答应下来", seen: [] });
+    mockReply.mockRejectedValueOnce(httpError(409, { code: "assigned_to_other" }));
+    await act(async () => {
+      await flushOutbox();
+    });
+    await openThread(false);
+    expect(screen.getByTestId("letter-outbox-failed")).toBeTruthy();
+    expect(within(screen.getByTestId("letter-not-sent")).getByText("没发出 · 这封信已由别的官员经办，没有发出。写好的内容还留着。")).toBeTruthy();
+    expect(screen.queryByTestId("letter-outbox-retry")).toBeNull();
   });
 
   it("goes out on reconnect: the entry and the draft are gone", async () => {

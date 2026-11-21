@@ -1432,6 +1432,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # `--ds=config.settings_sharded -m sharded` 下跑)。单线程的投递与重投在 test_cross_civilization_saga.py,两个引擎都跑。
         "tests/test_cross_civilization_saga_limits.py::"
         "test_two_relays_at_once_deliver_each_message_once_and_fail_none",
+        # 2026-11-21 状态机审计第 14 条:一个 relay 被目标拒收(回滚了收件箱行),它关源行之前另一个 relay 投同一条、
+        # 目标此时收下了 —— 源侧 REFUSED 并补偿、目标侧已到,灵魂两边都是主行。拒收现在也写进目标收件箱,后到的读到答复、
+        # 不再应用(只在 `--ds=config.settings_sharded -m sharded` 下跑)。单线程的拒收补偿在 test_cross_civilization_saga.py。
+        "tests/test_cross_civilization_saga_limits.py::"
+        "test_a_message_one_relay_saw_refused_is_not_applied_by_the_other",
         # 2026-11-17 分库第 4 阶段复查 must-fix 2:写切殿的业务事务也开控制库事务;另一个连接握着官员行时,停用请求在
         # 控制库的行锁上等(只在 `--ds=config.settings_sharded -m sharded` 下跑)。同文件其余各条(锁在事务里、
         # 分库提交失败时控制库一起回滚)两个引擎都跑。

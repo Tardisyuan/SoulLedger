@@ -27,6 +27,8 @@ export function NoticesTab({ onRead, onLand, gone, version }: { onRead?: () => v
   // Marking is local first (the row turns ○ at once). A failure puts the row(s) back as they were and says so, with
   // 重试 (Design v4 第六十一批 E1) -- only telling would leave the screen wrong.
   const [read, setRead] = useState<ReadonlySet<number>>(new Set());
+  // Rows a failed mark put back to unread: their ● fades back in (第六十三批 二 e, E1) rather than jumping back.
+  const [back, setBack] = useState<ReadonlySet<number>>(new Set());
   const toast = useToast();
   const view = viewStateOf({ data, error }, (rows) => rows.length === 0, isDenied);
   const isUnread = (n: Notification) => !n.is_read && !read.has(n.id);
@@ -41,6 +43,7 @@ export function NoticesTab({ onRead, onLand, gone, version }: { onRead?: () => v
           next.delete(n.id);
           return next;
         });
+        setBack((prev) => new Set(prev).add(n.id));
         toast(t("notifications.mark_read_error"), "info", "notice-read", { label: t("common.retry"), onPress: () => markOne(n) });
       }
     );
@@ -59,6 +62,7 @@ export function NoticesTab({ onRead, onLand, gone, version }: { onRead?: () => v
       () => {
         // Every row back to what it was before the local mark.
         setRead(before);
+        setBack(new Set((data ?? []).filter((n) => !n.is_read && !before.has(n.id)).map((n) => n.id)));
         toast(t("notifications.mark_all_error"), "info", "notice-read", { label: t("common.retry"), onPress: markAll });
       }
     );
@@ -97,6 +101,7 @@ export function NoticesTab({ onRead, onLand, gone, version }: { onRead?: () => v
             testID={`notice-${n.id}`}
             glyph={isUnread(n) ? "●" : "○"}
             glyphLabel={isUnread(n) ? t("soul_inbox.unread") : undefined}
+            glyphFadeIn={isUnread(n) && back.has(n.id)}
             strong={isUnread(n)}
             minHeight={88}
             title={n.title}

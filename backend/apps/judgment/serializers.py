@@ -1043,6 +1043,9 @@ class JudgmentQueueCountsSerializer(serializers.Serializer):
     #: v4:已过期限(D10,待定中的不算)与退回重审(判了 RETRY 另开的一件)。与上面四组不互斥,不计入 `total` 的分解。
     overdue = serializers.IntegerField()
     returned = serializers.IntegerField()
+    #: 「待认领」拆成能认领的与候着的(候至未到、到不了殿、过不了阿刻戎;`claims.held_q`),相加等于 `unclaimed`。
+    claimable_count = serializers.IntegerField()
+    held_count = serializers.IntegerField()
     #: 案卷台的三个来源(`apps/judgment/sources.py`),互斥,相加等于不带 `source` 时的 `total`。
     sources = JudgmentQueueSourceCountsSerializer()
     #: 别处等着办的(不是队列里的行,不随筛选走);null = 调用者不持对应读码。

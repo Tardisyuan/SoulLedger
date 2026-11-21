@@ -28,14 +28,10 @@
   "scheduler.jobs.sharding_relay_outbox",
   "scheduler.jobs.sharding_sync_shards",
   "social_moderation.scope_civilization",
-  "soul_app.life.confession.none",
   "soul_app.login.email",
   "soul_app.login.email_hint",
   "soul_app.login.reset_filled",
   "soul_app.login.use_code",
   "soul_app.login.use_email",
-  "souls.diyu_station.error.reason_required",
-  "souls.diyu_station.error.soul_settled",
-  "souls.diyu_station.reason_label",
   "users.roles.SYSTEM_ADMIN"
 ]

@@ -130,17 +130,48 @@ it("a letter from the soul app's feedback form shows 「反馈 · 类别」 on i
   expect(within(row("王五")).queryByText(/from-a-newer-server/)).toBeNull();
 });
 
-it("reads a thread oldest first, marking the hall's replies", async () => {
+// 第六十四批:一栏、按人分组;殿司(这一端的「自己」)的回信组放 surface-2 面板,灵魂的来信直接是正文。
+it("reads a thread oldest first in one column: the hall's group on the panel, the soul's plain, one header per group", async () => {
   asRole("soul_inbox.read", "soul_inbox.reply");
   renderPage();
   const thread = await openThread();
   expect(apiMock.messages).toHaveBeenCalledWith("c1");
   const items = await within(thread).findAllByRole("listitem");
   expect(items.map((li) => li.getAttribute("data-event-id"))).toEqual(["$1", "$2"]);
-  // 署名:殿司展示名(不是租户管理名)· 职位 · 官员。灵魂的信没有这一行。
-  expect(within(items[1]).getByText(/第五殿 · 判官 崔珏/)).toBeInTheDocument();
-  expect(within(items[0]).queryByText(/第五殿 ·/)).toBeNull();
+  const groups = [...thread.querySelectorAll("[data-letter-group]")] as HTMLElement[];
+  expect(groups.map((g) => g.getAttribute("data-letter-group"))).toEqual(["soul", "hall"]);
+  const [soul, hall] = groups;
+  expect(hall.className).toMatch(/\brounded-panel\b/);
+  expect(hall.className).toContain("bg-[oklch(var(--color-surface-2))]");
+  expect(hall.className).toMatch(/\bp-3\b/);
+  // The soul's letters: no panel, no fill. And nothing on either side is pushed right or narrowed (the old layout).
+  expect(soul.className).not.toMatch(/rounded|bg-/);
+  for (const el of [soul, hall, ...items]) expect(el.className).not.toMatch(/ml-auto|text-right|justify-end|self-end|items-end/);
+  expect(thread.querySelector("[data-letter-thread]")!.className).toContain("max-w-[680px]");
+  // 组头:名字 · 来信 / 回信,右边时:分。殿司那一组写回信的官员,不再拼殿名与职位。
+  expect(within(hall).getByText("崔珏")).toBeInTheDocument();
+  expect(within(hall).getByText(/· 回信$/)).toBeInTheDocument();
+  expect(within(soul).getByText("张三")).toBeInTheDocument();
+  expect(within(soul).getByText(/· 来信$/)).toBeInTheDocument();
+  expect(within(hall).getAllByText(/^\d{2}:\d{2}$/)).toHaveLength(1);
+  expect(thread.querySelectorAll("[data-letter-day]")).toHaveLength(1);
   expect(screen.queryByText(/中国地府/)).toBeNull();
+});
+
+it("consecutive letters from one person are one group; a 30+ minute gap adds a time above the later one", async () => {
+  asRole("soul_inbox.read");
+  const at = (h: number, m: number) => new Date(2026, 9, 9, h, m).getTime();
+  const soulAt = (id: string, ts: number) => ({ event_id: id, from_officer: false, sender_name: "张三", officer_title: "", body: `信${id}`, image: null, timestamp: ts });
+  apiMock.messages.mockResolvedValue({ data: [soulAt("$2", at(11, 0)), soulAt("$1", at(10, 0))] });
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("信$2");
+  const groups = thread.querySelectorAll("[data-letter-group]");
+  expect(groups).toHaveLength(1);
+  expect(within(groups[0] as HTMLElement).getAllByText(/^\d{2}:\d{2}$/).map((n) => n.textContent)).toEqual(["10:00", "11:00"]);
+  const [first, second] = within(thread).getAllByRole("listitem");
+  expect(within(first).queryByText(/^\d{2}:\d{2}$/)).toBeNull();
+  expect(within(second).getByText("11:00")).toBeInTheDocument();
 });
 
 it("replies with the typed text", async () => {
@@ -169,6 +200,9 @@ it("a closed conversation (the soul was reborn) is read-only and says so", async
   await within(thread).findByText("我想申诉");
   expect(within(thread).getByText(tZh("soul_inbox.closed"))).toBeInTheDocument();
   expect(within(thread).queryByLabelText(tZh("soul_inbox.reply_label"))).toBeNull();
+  // Read-only: one grey line, and no whose-turn line.
+  expect(within(thread).getByTestId("inbox-closed")).toHaveTextContent("往来已结束 · 只能看");
+  expect(within(thread).queryByTestId("inbox-state")).toBeNull();
 });
 
 it("a refusal says what the server's code means", async () => {
@@ -368,6 +402,10 @@ it("第六十一批 E3: a draft that did not load locks the box, says so with �
   await waitFor(() => expect(box.value).toBe("上次没写完"));
   expect(within(thread).queryByTestId("draft-load-failed")).toBeNull();
   expect(box.readOnly).toBe(false);
+  // 取到之后照常存(审计 2026-11-20 §5:此前取失败一次就再也不存)。
+  fireEvent.change(box, { target: { value: "上次没写完,补一句" } });
+  fireEvent.focusOut(box);
+  await waitFor(() => expect(apiMock.saveDraft).toHaveBeenCalledWith("c1", "上次没写完,补一句"));
 });
 
 it("a draft that loads leaves the box editable and shows no load-failed line", async () => {
@@ -529,21 +567,50 @@ it("one page of rows draws no pager", async () => {
   expect(screen.queryByRole("button", { name: new RegExp(tZh("common.next")) })).toBeNull();
 });
 
-it("a thread whose last letter is the soul's says it awaits a reply; one the hall answered last does not", async () => {
+// 第六十四批第三节:底部状态行说轮到谁、等了多久,从最后一封来信算起;没回的那组来信左边一道 2px 墨线。
+it("the soul's letter last: 「轮到殿司回 · 来信已等 …」 from the last soul letter, the open group's ink line, and no warning badge", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  const now = jest.spyOn(Date, "now").mockReturnValue(1000 + 3 * 86_400_000 + 5 * 3_600_000);
+  try {
+    apiMock.messages.mockResolvedValue({ data: [{ ...MESSAGES[1], timestamp: 1000 }] });
+    renderPage();
+    const thread = await openThread();
+    await within(thread).findByText("我想申诉");
+    expect(within(thread).getByTestId("inbox-state")).toHaveTextContent("轮到殿司回 · 来信已等 3 天");
+    expect(within(thread).getByTestId("inbox-state").className).toContain("font-semibold");
+    const open = thread.querySelector("[data-letter-group='soul']") as HTMLElement;
+    expect(open).toHaveAttribute("data-open");
+    expect(open.className).toMatch(/\bborder-l-2\b/);
+    expect(open.className).toContain("border-[oklch(var(--color-ink))]");
+    expect(within(thread).queryByText(/^待回复 · /)).toBeNull();
+    // The status line sits right above the box.
+    const state = within(thread).getByTestId("inbox-state");
+    expect(state.compareDocumentPosition(within(thread).getByLabelText(tZh("soul_inbox.reply_label"))) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  } finally {
+    now.mockRestore();
+  }
+});
+
+// 与后端 `inbox.awaiting_reply` 同一条规则(@soulledger/core/domain/letters):灵魂调走了,殿司回不了,就不算待回复。
+it("a soul's letter last, but the soul moved to another hall: no whose-turn line, no ink line", async () => {
   asRole("soul_inbox.read");
+  apiMock.list.mockResolvedValue(page([conversation({ can_reply: false })]));
   apiMock.messages.mockResolvedValue({ data: [...MESSAGES].reverse() });
   renderPage();
   const thread = await openThread();
   await within(thread).findByText("我想申诉");
-  expect(within(thread).getByText(/^待回复 · \d+ 天$/)).toBeInTheDocument();
+  expect(within(thread).queryByTestId("inbox-state")).toBeNull();
+  expect(thread.querySelector("[data-open]")).toBeNull();
 });
 
-it("the hall's reply being last leaves no awaiting badge", async () => {
+it("the hall's reply being last: 「已回 · 等灵魂来信」 in the secondary ink, and no group keeps the ink line", async () => {
   asRole("soul_inbox.read");
   renderPage();
   const thread = await openThread();
   await within(thread).findByText("我想申诉");
-  expect(within(thread).queryByText(/^待回复 · /)).toBeNull();
+  expect(within(thread).getByTestId("inbox-state")).toHaveTextContent("已回 · 等灵魂来信");
+  expect(within(thread).getByTestId("inbox-state").className).not.toContain("font-semibold");
+  expect(thread.querySelector("[data-open]")).toBeNull();
 });
 
 it("letters before the previous one are folded behind a count", async () => {
@@ -690,7 +757,8 @@ describe("images in a soul's letter (2026-10-10)", () => {
     { event_id: "$1", from_officer: false, sender_name: "张三", officer_title: "", body: "[图片]", image: IMG_A, timestamp: 1000 },
   ];
 
-  it("draws each image as its own message, at its ratio and at most 60% wide — and not the placeholder line", async () => {
+  // 第六十四批:图片信跟其他信一样进组,按原比例放进 160×120,圆角 6,发丝线边;读屏写「一张图，没有附字」。
+  it("draws each image as its own letter in the group, within 160×120 — and not the placeholder line", async () => {
     asRole("soul_inbox.read", "soul_inbox.reply");
     apiMock.messages.mockResolvedValue({ data: WITH_IMAGES });
     renderPage();
@@ -699,8 +767,13 @@ describe("images in a soul's letter (2026-10-10)", () => {
     fireEvent.click(await within(thread).findByRole("button", { name: /更早的/ }));
     const tiles = thread.querySelectorAll("[data-letter-image]");
     expect(tiles).toHaveLength(2);
-    expect((tiles[0] as HTMLElement).style.width).toBe("60%");
-    expect((tiles[0] as HTMLElement).style.aspectRatio).toBe("800 / 600");
+    expect((tiles[0] as HTMLElement).style.width).toBe("160px");
+    expect((tiles[0] as HTMLElement).style.height).toBe("120px");
+    expect((tiles[1] as HTMLElement).style.width).toBe("90px");
+    expect((tiles[0] as HTMLElement).className).toMatch(/\brounded-panel\b/);
+    expect(tiles[0].querySelector("img")!.getAttribute("alt")).toBe("一张图，没有附字");
+    // Three letters from 张三 in a row: one group.
+    expect(thread.querySelectorAll("[data-letter-group]")).toHaveLength(1);
     const img = tiles[0].querySelector("img")!;
     expect(img.getAttribute("src")).toMatch(/\/api\/v1\/chat-images\/1b9e8f2a-0000-4000-8000-00000000000a\/\?t=sigA$/);
     // The words and the pictures are separate rows; an image row has no "[图片]" of its own.

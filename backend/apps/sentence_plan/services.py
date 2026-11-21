@@ -483,7 +483,7 @@ class SentencePlanService:
             return None
         now = timezone.now()
         if disposition.is_eternal:
-            node.status = SentenceNodeStatus.ETERNAL
+            node.move(SentenceNodeStatus.ETERNAL)
             node.completed_at = now
             _save(node, "status", "completed_at")
             # 外地的永久刑期:灵魂留在那里,计划 HELD(今天「永久刑期不自动回归」)。
@@ -520,7 +520,7 @@ class SentencePlanService:
 
         now = timezone.now()
         if open_judgments(soul).exists():
-            node.status = SentenceNodeStatus.WAITING
+            node.move(SentenceNodeStatus.WAITING)
             _save(node, "status")
             record_event(soul, EventType.SENTENCE_NODE_WAITING, {
                 "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
@@ -529,7 +529,7 @@ class SentencePlanService:
             notify_judges({_tenant_id(node.tenant_code), plan.tenant_id}, "sentence_node_waiting",
                           _node_params(soul, node), plan.pk)
         else:
-            node.status = SentenceNodeStatus.COMPLETED
+            node.move(SentenceNodeStatus.COMPLETED)
             node.completed_at = now
             _save(node, "status", "completed_at")
             SentencePlanService._node_finished(soul, plan, node)
@@ -578,7 +578,7 @@ class SentencePlanService:
         # 行程拓扑:这一站的处置建好,灵魂就在这一站的界域里(同一事务)。
         from apps.realms.path import SoulPathService
         SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
-        node.status = SentenceNodeStatus.ACTIVE
+        node.move(SentenceNodeStatus.ACTIVE)
         node.disposition_id = disposition.pk
         node.activated_at = timezone.now()
         _save(node, "status", "disposition_id", "activated_at")
@@ -601,7 +601,7 @@ class SentencePlanService:
         node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
         if node.status != SentenceNodeStatus.DISPATCHING:
             return None
-        node.status = SentenceNodeStatus.PENDING
+        node.move(SentenceNodeStatus.PENDING)
         node.dispatch_record_id = None
         _save(node, "status", "dispatch_record_id")
         record_event(soul, EventType.SENTENCE_NODE_REFUSED, {
@@ -625,7 +625,7 @@ class SentencePlanService:
         if node.status not in (SentenceNodeStatus.ACTIVE, SentenceNodeStatus.WAITING, SentenceNodeStatus.ETERNAL):
             return None
         was_eternal = node.status == SentenceNodeStatus.ETERNAL
-        node.status = SentenceNodeStatus.ABORTED
+        node.move(SentenceNodeStatus.ABORTED)
         node.completed_at = timezone.now()
         _save(node, "status", "completed_at")
         pardon_term(soul, node, node.completed_at)
@@ -692,7 +692,7 @@ class SentencePlanService:
                 return False
             released = False
             if here.status == SentenceNodeStatus.WAITING and not has_open:
-                here.status = SentenceNodeStatus.COMPLETED
+                here.move(SentenceNodeStatus.COMPLETED)
                 here.completed_at = timezone.now()
                 _save(here, "status", "completed_at")
                 SentencePlanService._node_finished(locked, plan, here)
@@ -726,7 +726,7 @@ class SentencePlanService:
             node = occupying[0]
             if not (node.status == SentenceNodeStatus.WAITING and node.is_home):
                 return False  # DISPATCHING 等执行地执行;ACTIVE 在受刑
-            node.status = SentenceNodeStatus.COMPLETED
+            node.move(SentenceNodeStatus.COMPLETED)
             node.completed_at = timezone.now()
             _save(node, "status", "completed_at")
             SentencePlanService._node_finished(locked, plan, node)
@@ -849,7 +849,7 @@ class SentencePlanService:
         # 行程拓扑:这一站的处置建好,灵魂就在这一站的界域里(同一事务)。
         from apps.realms.path import SoulPathService
         SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
-        node.status = SentenceNodeStatus.ACTIVE
+        node.move(SentenceNodeStatus.ACTIVE)
         node.disposition_id = disposition.pk
         node.activated_at = timezone.now()
         _save(node, "status", "disposition_id", "activated_at")
@@ -882,7 +882,7 @@ class SentencePlanService:
             logger.warning("sentence_plan: plan %s node %s not dispatched: %s", plan.pk, node.pk, exc)
             SentencePlanService._dispatch_not_started(soul, plan, node)
             return
-        node.status = SentenceNodeStatus.DISPATCHING
+        node.move(SentenceNodeStatus.DISPATCHING)
         node.dispatch_record_id = record.pk
         _save(node, "status", "dispatch_record_id")
 

@@ -16,8 +16,10 @@
 #     side passed (a full pass, or selective passes covering that commit's changes against the merge-base
 #     with origin/main), else the merge-base. The first lines say which base each side took and why.
 #   - A push (the hook passes --prepush, and the pushed files in PREPUSH_CHANGED) is let through when both
-#     sides' ledgers vouch for the pushed tree and its files. The older whole-tree ledgers
-#     (soulledger-gates-passed, ...-selective) are still read, for both sides.
+#     sides' ledgers vouch for the pushed tree and its files; when only one side's do, only the other side
+#     runs (2026-11-21). A green --real-pg run is recorded for the backend side too (record_side).
+#     The whole-tree ledgers before 2026-11-15 (soulledger-gates-passed, ...-selective) are no longer read
+#     (2026-11-21, user decision): none of their trees was among HEAD's last 300 commits.
 #
 # WHAT RUNS. Each side decides from its own changed files (the diff from its base, plus untracked files).
 #   - backend: pytest by app (scripts/select-backend-tests.py) plus the tests listed in
@@ -31,7 +33,8 @@
 # FULL: `--full` or GATES_FULL=1 - everything, with the coverage floors. A push to main is NOT full
 # (2026-10-24). `--affected` is the default spelled out; nothing forces selective (GATES_FULL=0 does not).
 # ONE SIDE: GATES_SIDES=js or GATES_SIDES=backend (default both, 2026-11-15) runs that side only; the other
-# prints that it was skipped and records nothing. Ignored on a push (both run); GATES_SIDES=js with
+# prints that it was skipped and records nothing. Ignored on a push (a push runs the sides its ledgers do
+# not vouch for); GATES_SIDES=js with
 # --real-pg is refused. E.g. GATES_SIDES=js while a `--real-pg --full` covers the backend.
 # --real-pg --full also runs the sharded group (--ds=config.settings_sharded -m sharded: four civilization
 # shards, sharding stage 2; it replaced the multi-database guard and its test-only settings in stage 2), at
@@ -119,14 +122,15 @@ done
 P="gates"; [ "$PREPUSH" = 1 ] && P="pre-push"
 # GATES_SIDES (2026-11-15, user decision): js | backend | both (default). The other side does not run, says
 # so, and records nothing — e.g. GATES_SIDES=js while a `--real-pg --full` covers the backend. Not on a
-# push: the hook runs both sides (a delegated run, GATES_IN_REMOTE=1, takes what the caller passed it).
+# push: the hook runs the sides the ledgers do not vouch for (A PUSH OF A TREE ... below sets it), never by
+# request (a delegated run, GATES_IN_REMOTE=1, takes what the caller passed it).
 GATES_SIDES="${GATES_SIDES:-both}"
 case "$GATES_SIDES" in
     both|js|backend) ;;
     *) echo "run-gates: GATES_SIDES must be js, backend or both, got '$GATES_SIDES'"; exit 2 ;;
 esac
 if [ "$GATES_SIDES" != both ] && [ "$PREPUSH" = 1 ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
-    echo "$P: GATES_SIDES=$GATES_SIDES ignored on a push — both sides run"; GATES_SIDES=both
+    echo "$P: GATES_SIDES=$GATES_SIDES ignored on a push — the sides the ledgers do not vouch for run"; GATES_SIDES=both
 fi
 if [ "$GATES_SIDES" = js ] && [ "$REAL_PG" = 1 ]; then
     echo "run-gates: --real-pg runs only the backend; GATES_SIDES=js leaves it nothing to run"; exit 2
@@ -173,357 +177,12 @@ if [ -n "$PREPUSH_ENV" ]; then
     . "$PREPUSH_ENV"
 fi
 
-# ── THE REMOTE MACHINE (GATES_REMOTE): shared by the delegated gates and --e2e ─────────────────
-RDIR="${GATES_REMOTE_DIR:-/srv/appdata/sl-gates}"
-RIMG="${GATES_REMOTE_IMAGE:-sl-gates-all:1}"
-RID="$(basename "$ROOT")-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
-RWORK="$RDIR/work/$RID"
-# remote_sync — this tree to $GATES_REMOTE:$RWORK. Owned by the remote user, not this machine's uid:
-# git there refuses a repository another user owns once the tests turn the system config off
-# (GIT_CONFIG_NOSYSTEM), and four gate tests went red. node_modules, the venv, caches and the Next
-# build survive the --delete.
-remote_sync() {
-    # In a linked worktree `.git` is a FILE ("gitdir: /Users/…/.git/worktrees/<name>"), a path that does not
-    # exist on the remote: every git command there died with "not a repository" before any test ran
-    # (2026-11-07, a subagent's push from .claude/worktrees/…). So a worktree sends a real .git instead: the
-    # common dir (objects, refs, config; not the other worktrees) plus this worktree's own HEAD and index.
-    local dotgit='.git\0' keepgit=()
-    # Room first (2026-11-19): a full work dir (the PC's 14 GB tmpfs) failed the rsync below, or `npm ci` after it.
-    # Only the space rule here (days 0): the least recently used unmounted trees go until it fits, never this one.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "$(declare -f remote_prune); mkdir -p $RDIR; ( flock 7; remote_prune $RDIR $RWORK 0 ${PRUNE_DRY:-0} ${PRUNE_MIN_KB:-3145728} ) 7>$RDIR/prune.lock" \
-        || { echo "$P: $GATES_REMOTE has no room for this tree under $RDIR, and none to make (see above). Not syncing."; return 1; }
-    [ -f "$ROOT/.git" ] && { dotgit=''; keepgit=(--filter='P .git/'); }
-    { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf "$dotgit"; } \
-        | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
-            --filter='P frontend/.next/' --filter='P .sl-*' ${keepgit[@]+"${keepgit[@]}"} --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" \
-        || return 1
-    if [ -f "$ROOT/.git" ]; then
-        local common gitdir
-        common="$(git rev-parse --path-format=absolute --git-common-dir)"
-        gitdir="$(git rev-parse --path-format=absolute --git-dir)"
-        ssh "$GATES_REMOTE" "rm -f '$RWORK/.git' 2>/dev/null; mkdir -p '$RWORK/.git'" || return 1
-        rsync -a --no-owner --no-group --delete --exclude='/worktrees/' --exclude='/soulledger-*' \
-            "$common/" "$GATES_REMOTE:$RWORK/.git/" || return 1
-        rsync -a --no-owner --no-group "$gitdir/HEAD" "$gitdir/index" "$GATES_REMOTE:$RWORK/.git/" || return 1
-    fi
-    # --delete never fires under --files-from: a file deleted here is simply absent from the list, so the
-    # remote copy stayed and kept running (2026-10-29: a test deleted by a merge failed the gates there).
-    # The synced .git no longer tracks it, so it shows up remotely as untracked; remove every such file
-    # that is not one of this machine's own untracked files (those were just sent on purpose).
-    local keep; keep=$(git ls-files -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts)
-    ssh "$GATES_REMOTE" "cd '$RWORK' && git ls-files -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts" \
-        | grep -vxF -f <(printf '%s\n' "$keep") \
-        | ssh "$GATES_REMOTE" "cd '$RWORK' && xargs -r -d '\n' rm -f --"
-}
-# ── TIME LIMITS ON THE REMOTE MACHINE (2026-11-12, user decision) ────────────────────────────────
-# Each delegated run has a total limit: selective gates 30 min, --full 90 min, E2E 20 min (and the demo
-# 25 min, scripts/demo-remote.sh). GATES_REMOTE_TIMEOUT / GATES_REMOTE_FULL_TIMEOUT / GATES_REMOTE_E2E_TIMEOUT
-# override, in GNU timeout's syntax (1800, 30m, 1.5h). The limit is enforced THERE, not here:
-#   - `timeout` is the container's own command (under --init), so the run ends at the limit whether or not
-#     this machine's ssh is still connected. It TERMs the run's whole process group, then KILLs after 60 s;
-#     the container exits 124 (137 after the KILL).
-#   - the lock is held by a subshell on that machine — `( flock 9; docker run …; docker rm -f <name> ) 9>lock`
-#     — not by `flock <lock> docker run`. When this machine's ssh drops, the docker client there dies on its
-#     next write (SIGPIPE) while the container runs on; before, flock then exited too and released the lock
-#     with the old container still holding 12 cores. Now the subshell goes on to `docker rm -f`, so the lock
-#     is released only once the container is gone. (No SIGHUP reaches it: ssh without a tty sends none.)
-# The time spent waiting for the lock does not count: `timeout` starts inside the container.
-#
-# remote_flock <fd> <lock name> <container name prefix>… — the remote shell's words for "take this lock; when
-# it is taken, say who has it, then wait" (2026-11-13, test review 3.5). The wait used to be silent — a plain
-# `flock 9` — while this machine's gate-lock.sh reports every minute; a demo server left up held e2e.lock for
-# hours and `--e2e` simply sat there. Who has it is read from the containers' names (sl-gates-, sl-e2e-,
-# sl-demo-, sl-android-). scripts/demo-remote.sh and scripts/mobile-remote.sh carry copies, kept identical
-# by TestRemoteLocksSayWhenTheyWait.
-remote_flock() {
-    local fd="$1" lock="$2" filters="" n; shift 2
-    for n in "$@"; do filters="$filters --filter name=$n"; done
-    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
-}
-# remote_slots <container name prefix> — the gates' lock, with GATES_REMOTE_SLOTS (default 2, 2026-11-16 user
-# decision) runs at once on that machine: slot 1 is fd 9 on run.lock, slot 2 fd 8 on run.2.lock (the caller opens
-# both). Free slot first, without waiting; both taken: say who holds them, then try both every 10 s. A copy of
-# this script from before the second slot takes run.lock only, so old and new share the machine correctly.
-# GATES_REMOTE_SLOTS=1 is the single lock as it was (remote_flock 9 run.lock).
-# The slot taken is left in $S (1 or 2; unset with one slot = 1) and goes to the container as SL_GATE_SLOT, which
-# names the kept PG templates (config/testdb.py): a slot prunes only its own.
-# A waiter whose ssh is gone gives up: ssh without a tty sends no SIGHUP, so on 2026-11-16 three runs whose agents
-# had stopped them still sat in `flock 9` on that machine (parent: init) and would have started the moment the
-# lock freed — one on the same tree as its agent's new run. Each retry checks the remote shell is not orphaned.
-# Why two: four agents' gates queued behind one lock for an hour (2026-11-16) while the box had 20 cores. Each
-# slot's container is capped lower (10 CPUs / 20 GB, 5 + 5 workers) so two fit beside Metro and the test PG.
-remote_slots() {
-    if [ "${WIN_BOTH:-0}" = 1 ]; then printf '%s; %s' "$(remote_flock 9 run.lock "$@")" "$(remote_flock 8 run.2.lock "$@")"; return; fi
-    if [ "${GATES_REMOTE_SLOTS:-2}" = 1 ]; then remote_flock 9 run.lock "$@"; return; fi
-    local filters="" n
-    for n in "$@"; do filters="$filters --filter name=$n"; done
-    printf '%s' "{ flock -n 9 && S=1; } || { flock -n 8 && S=2; } || { echo \"$P: both gate slots are taken on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; while :; do [ \"\$(ps -o ppid= -p \$\$ | tr -d ' ')\" != 1 ] || exit 1; sleep 10; { { flock -n 9 && S=1; } || { flock -n 8 && S=2; }; } && break; done; } || exit 1"
-}
-case "${GATES_REMOTE_SLOTS:-2}" in 1) SLOT_CPUS=12 SLOT_MEM=24g SLOT_WORKERS=6 ;; 2) SLOT_CPUS=10 SLOT_MEM=20g SLOT_WORKERS=5 ;;
-    *) echo "gates: GATES_REMOTE_SLOTS=${GATES_REMOTE_SLOTS} — 1 or 2"; exit 2 ;; esac
-remote_limit() {  # <value> <variable name>: refuse anything `timeout` would not read as a duration
-    [[ "$1" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: $2=$1 is not a time limit (e.g. 30m, 1800)"; exit 2; }
-}
-# remote_verdict <exit status> <limit> <variable> — say so when the remote run ended on the limit.
-remote_verdict() {
-    case "$1" in
-        124) echo "$P: TIMED OUT on $GATES_REMOTE after $2 ($3 overrides). The run was stopped there (its container" \
-                  "removed with docker rm -f) and the lock released; nothing of it is still running." ;;
-        137) echo "$P: killed on $GATES_REMOTE (exit 137): either the time limit's KILL, 60 s after it ran out ($2," \
-                  "$3), or the container's memory limit. The container is removed and the lock released." ;;
-        75) echo "$P: REFUSED by $GATES_REMOTE: its work dir is too full and no unmounted tree could be deleted to make room" \
-                  "(see the prune line above; GATES_REMOTE_MIN_FREE_MB). Nothing ran." ;;
-    esac
-}
-
-# ── THE WINDOWS PC: A THIRD HOST WHEN UNRAID IS FULL AND THE PC IS IDLE (2026-11-17, user decision) ──
-# GATES_REMOTE_WIN (.prepush.env) names an ssh host: sshd inside WSL on the PC, with docker, the same images and
-# its own sl-pg-test. A gate run goes there when unRAID's slot 1 is held right now (the order: win_route) and the
-# PC is idle: it answers, has the image, runs no other job of ours, and no game from GATES_REMOTE_WIN_GAMES runs
-# (--e2e: when unRAID's e2e.lock is held). Otherwise nothing changes: the run goes to GATES_REMOTE exactly as
-# before and takes a slot or waits there. A gate or an E2E run takes the whole PC: both its locks, run.lock and
-# run.2.lock. `--tests` runs take one lock each, so two run at once (2026-11-20, user decision), each at
-# GATES_REMOTE_WIN_TESTS_CPUS / _MEMORY (8 / 12g): a gate there is 16 CPUs and 24g, and WSL has 32 GB of which the
-# trees' tmpfs holds up to 14, so two gates would not fit; two small runs do.
-# The user's two conditions: (1) a game that starts during a run drops the run to nice 19 and
-# GATES_REMOTE_WIN_GAME_CPUS CPUs — never stops it — and restores it when the game exits (win_watch, beside
-# the container); a file `game-running` in GATES_REMOTE_WIN_DIR counts as a game, to prove that path.
-# (2) the SSD: GATES_REMOTE_WIN_DIR is a tmpfs there (trees, node_modules, venv, logs), sl-pg-test keeps its
-# data on tmpfs, and the container's /root and /tmp are tmpfs too (npm / pip caches, Chromium's profile).
-WIN_DIR="${GATES_REMOTE_WIN_DIR:-/srv/sl-gates}"
-WIN_GAMES="${GATES_REMOTE_WIN_GAMES:-YuanShen.exe GenshinImpact.exe}"
-ELOCK=e2e.lock RUN_EXTRA="" WIN_WATCH=0 WIN_BOTH=0
-# win_exe <program> <args…> — a Windows program from a shell sshd started, which has no WSL_INTEROP.
-win_exe() {
-    local s; for s in ${WSL_INTEROP:-} /run/WSL/*_interop; do
-        [ -S "$s" ] && WSL_INTEROP="$s" timeout 20 "$@" 2>/dev/null && return 0
-    done; return 1
-}
-# win_game <dir> <game.exe>… — prints the first listed game running on Windows (or the flag file); nothing if none.
-win_game() {
-    local d="$1" g tl; shift
-    [ -e "$d/game-running" ] && { echo "game-running flag"; return 0; }
-    tl=$(win_exe "${WIN_TASKLIST:-/mnt/c/Windows/System32/tasklist.exe}" /FO CSV /NH) || { echo "cannot ask Windows"; return 0; }
-    for g in "$@"; do grep -qi "^\"$g\"" <<<"$tl" && { echo "$g"; return 0; }; done; return 0
-}
-# win_probe <whole|one> <dir> <image> <game.exe>… — on the PC: "idle" (no game, and both locks free for a whole-PC
-# job, or one of them for a --tests run), or why not.
-win_probe() {
-    local want="$1" d="$2" img="$3" g; shift 3
-    docker image inspect "$img" >/dev/null 2>&1 || { echo "no $img image"; return; }
-    mkdir -p "$d" || { echo "no $d"; return; }
-    if [ "$want" = one ]; then
-        { ( flock -n 9 ) 9>"$d/run.lock" || ( flock -n 9 ) 9>"$d/run.2.lock"; } || { echo "already running two jobs of ours"; return; }
-    else
-        { ( flock -n 9 ) 9>"$d/run.lock" && ( flock -n 9 ) 9>"$d/run.2.lock"; } || { echo "already running a job of ours"; return; }
-    fi
-    g=$(win_game "$d" "$@"); [ -z "$g" ] || { echo "game: $g"; return; }
-    echo idle
-}
-# win_watch <container> <dir> <cpus> <cpus while a game runs> <game.exe>… — on the PC, beside the run, until the
-# container is gone. Processes forked later inherit nice 19 from their parents; each pass renices again anyway.
-win_watch() {
-    local c="$1" d="$2" hi="$3" lo="$4" low=0 seen=0 g; shift 4
-    while :; do
-        if docker inspect "$c" >/dev/null 2>&1; then seen=1; elif [ $seen = 1 ]; then return; fi
-        g=$(win_game "$d" "$@")
-        if [ -n "$g" ] && [ $seen = 1 ]; then
-            docker top "$c" -eo pid | tail -n +2 | xargs -r renice -n 19 -p >/dev/null 2>&1
-            [ $low = 1 ] || { docker update --cpus "$lo" "$c" >/dev/null && low=1 \
-                && echo "gates: $g on the PC — the run there drops to nice 19 and $lo CPUs until it exits"; }
-        elif [ $low = 1 ] && [ $seen = 1 ]; then
-            docker top "$c" -eo pid | tail -n +2 | xargs -r renice -n 0 -p >/dev/null 2>&1
-            docker update --cpus "$hi" "$c" >/dev/null && low=0 && echo "gates: no game on the PC — the run there is back to $hi CPUs"
-        fi
-        sleep "${WIN_WATCH_EVERY:-15}"
-    done
-}
-# win_bg <container> <cpus> — the remote shell's words that start win_watch beside the run (empty off the PC).
-win_bg() {
-    [ "$WIN_WATCH" = 1 ] || return 0
-    printf '%s\n( win_watch %s %s %s %s %s ) & W=$!; ' "$(declare -f win_exe win_game win_watch)" \
-        "$1" "$WIN_DIR" "$2" "${GATES_REMOTE_WIN_GAME_CPUS:-4}" "$WIN_GAMES"
-}
-win_bg_end() { [ "$WIN_WATCH" = 1 ] && printf '%s' 'kill $W 2>/dev/null; '; return 0; }
-# win_route <gate|tests|e2e> <image> — point GATES_REMOTE (and its dir, database, sizes) at the PC when the rule holds.
-# THE ORDER A GATE RUN TAKES (2026-11-17, user decision): unRAID slot 1 (run.lock) free → unRAID; else the PC if
-# idle → the PC; else unRAID, where remote_slots takes slot 2 or queues as before. A run the PC turned down (a game,
-# a job of ours there) goes to unRAID and stays there, even if the game ends. --e2e: the PC only when unRAID's
-# e2e.lock is held. Each run prints its choice: `slot: …`.
-win_route() {
-    [ -n "${GATES_REMOTE_WIN:-}" ] && [ -n "${GATES_REMOTE:-}" ] || return 1
-    local lock=e2e.lock what="e2e.lock" state why url where
-    [ "$1" != e2e ] && lock=run.lock what="slot 1"
-    local want=whole; [ "$1" = tests ] && want=one
-    state=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "flock -n $RDIR/$lock true && echo free || echo busy" 2>/dev/null)
-    if [ "$state" != busy ] && [ "${GATES_REMOTE_WIN_FORCE:-}" != 1 ]; then  # FORCE: try the PC whatever unRAID has free
-        echo "$P: slot: $GATES_REMOTE ($GATES_REMOTE $what ${state:-unknown})"; return 1
-    fi
-    why=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE_WIN" \
-        "$(declare -f win_exe win_game win_probe); win_probe $want $WIN_DIR $2 $WIN_GAMES" 2>/dev/null)
-    if [ "$why" != idle ]; then
-        [ "$1" != e2e ] && where="$GATES_REMOTE slot 2, or its queue" || where="$GATES_REMOTE, its e2e.lock queue"
-        echo "$P: slot: $where ($GATES_REMOTE $what $state, $GATES_REMOTE_WIN not used: ${why:-unreachable})"; return 1
-    fi
-    if [ "$1" != e2e ]; then
-        url="${GATES_REMOTE_WIN_DB_URL:-$(ssh -o BatchMode=yes "$GATES_REMOTE_WIN" cat /etc/sl-gates/pg.url 2>/dev/null)}"
-        [ -n "$url" ] || { echo "$P: not using $GATES_REMOTE_WIN: no GATES_REMOTE_WIN_DB_URL and no /etc/sl-gates/pg.url there"; return 1; }
-        GATES_REMOTE_DB_URL="$url"
-    fi
-    echo "$P: slot: $GATES_REMOTE_WIN ($GATES_REMOTE $what $state${GATES_REMOTE_WIN_FORCE:+, GATES_REMOTE_WIN_FORCE=1}, win idle)"
-    GATES_REMOTE="$GATES_REMOTE_WIN" RDIR="$WIN_DIR" RWORK="$WIN_DIR/work/$RID" GATES_REMOTE_SLOTS=1 ELOCK=run.lock WIN_WATCH=1
-    SLOT_CPUS="${GATES_REMOTE_WIN_CPUS:-16}" SLOT_MEM="${GATES_REMOTE_WIN_MEMORY:-24g}" SLOT_WORKERS="${GATES_REMOTE_WIN_WORKERS:-6}" WIN_BOTH=1
-    if [ "$1" = tests ]; then
-        GATES_REMOTE_SLOTS=2 WIN_BOTH=0
-        SLOT_CPUS="${GATES_REMOTE_WIN_TESTS_CPUS:-8}" SLOT_MEM="${GATES_REMOTE_WIN_TESTS_MEMORY:-12g}" SLOT_WORKERS="${GATES_REMOTE_WIN_TESTS_WORKERS:-4}"
-    fi
-    GATES_REMOTE_CPUS="$SLOT_CPUS" GATES_REMOTE_MEMORY="$SLOT_MEM" GATES_REMOTE_E2E_CPUS="$SLOT_CPUS" GATES_REMOTE_E2E_MEMORY="$SLOT_MEM"
-    GATES_REMOTE_PYTEST_WORKERS="$SLOT_WORKERS" GATES_REMOTE_JS_WORKERS="$SLOT_WORKERS"
-    RUN_EXTRA=" --tmpfs /root:rw,exec,size=4g --tmpfs /tmp:rw,exec,size=4g"
-}
-
-# ── SYNCED TREES NOBODY USES ARE DELETED THERE (2026-11-13, test review 3.5) ─────────────────────
-# Each checkout leaves up to four trees on the remote machine — work/<id> (the gates), work/<id>-e2e,
-# work/demo-<hash> and android/work/<id> — each with its own node_modules (and venv), and nothing ever
-# removed them: a worktree that pushed once left its trees there for good. A delegated gate run now deletes
-# the trees under $RDIR/work and $RDIR/android/work that no run has used for GATES_REMOTE_PRUNE_DAYS days
-# (default 14; 0 turns it off; GATES_REMOTE_PRUNE_DRY=1 only says what it would delete).
-#   - "Used" is the tree's .sl-last-use, touched by every run that uses the tree (here, --e2e,
-#     scripts/demo-remote.sh, scripts/mobile-remote.sh) BEFORE it syncs. Not the directory's own mtime: rsync
-#     sets that from this machine's. A tree with no mark yet (older than this rule) is marked now, not
-#     deleted, so it goes after the full period.
-#   - Never this run's own tree, and never a tree some container mounts, running or stopped (a Metro left up
-#     for weeks takes no lock and syncs nothing). If docker cannot be asked, nothing is deleted.
-#   - It runs on that machine inside the subshell that holds a gate slot, before the container starts, under its
-#     own prune.lock, so only one prune runs at a time even with two slots. It cannot fail the run.
-# remote_prune's text is sent as it stands (declare -f): it runs in the REMOTE host's shell, so it uses only
-# its arguments. ponytail: between reading a mark and `rm -rf`, another checkout's first run in two weeks
-# could touch that mark and start syncing — a window of milliseconds once per idle tree; that run would go
-# red on a half-deleted tree and pass on retry. A per-tree lock taken by every sync would close it.
-remote_prune() {  # <RDIR> <this run's tree> <days> <dry: 1 = only report> [<free KB the host must have; default 3 GB>]
-    local rdir="$1" keep="$2" days="$3" dry="$4" want="${5:-3145728}" ids used="" t real mark kept=0 have own marks m
-    case "$rdir" in /?*) ;; *) echo "    (prune: $rdir is not an absolute path — nothing deleted)"; return 0 ;; esac
-    ids=$(docker ps -aq) || { echo "    (prune: docker ps failed, so what is mounted is unknown — nothing deleted)"; ids=-; }
-    if [ "$ids" != - ] && [ -n "$ids" ]; then
-        # shellcheck disable=SC2086
-        used=$(docker inspect -f '{{range .Mounts}}{{println .Source}}{{end}}' $ids) \
-            || { echo "    (prune: docker inspect failed, so what is mounted is unknown — nothing deleted)"; ids=-; }
-    fi
-    if [ "$ids" != - ] && [ "$days" -gt 0 ] 2>/dev/null; then
-        for t in "$rdir"/work/* "$rdir"/android/work/*; do
-            [ -d "$t" ] && [ ! -L "$t" ] || continue
-            [ "$t" = "$keep" ] && continue
-            real=$(cd "$t" && pwd -P) || continue
-            if printf '%s\n' "$used" | grep -qxF -e "$t" -e "$real"; then
-                echo "    (prune: kept $t — a container mounts it)"; continue
-            fi
-            mark="$t/.sl-last-use"
-            if [ ! -e "$mark" ]; then
-                touch "$mark"; echo "    (prune: $t had no last-use mark — marked now; deleted after $days days without a run)"; continue
-            fi
-            if [ -z "$(find "$mark" -mmin +$((days * 1440)))" ]; then kept=$((kept + 1)); continue; fi
-            if [ "$dry" = 1 ]; then
-                echo "    (prune: would delete $t — no run for $days days; GATES_REMOTE_PRUNE_DRY=1, nothing deleted)"
-            else
-                rm -rf -- "$t" && echo "    (prune: deleted $t — no run for $days days)"
-            fi
-        done
-        echo "    (prune: $kept other synced trees used within $days days kept — GATES_REMOTE_PRUNE_DAYS)"
-    fi
-    # SPACE (2026-11-19): the Windows PC's work dir is a 14 GB tmpfs that about six trees fill, and a full disk
-    # fails mid-`npm ci` or kills pytest workers. Needed: $want KB, or this tree's size + 1 GB if that is more.
-    # Short of it, the least recently used trees no container mounts go first (the days rule above stays for
-    # unRAID's big disk), never this run's own, until it fits; if it cannot, the run is refused (return 1)
-    # before it starts. Under GATES_REMOTE_PRUNE_DRY=1 it only says what it would delete.
-    own=$(du -sk "$keep" 2>/dev/null | awk '{print $1}'); own=$(( ${own:-0} + 1048576 )); [ "$own" -gt "$want" ] && want="$own"
-    have=$(df -Pk "$rdir" 2>/dev/null | awk 'NR==2 {print $4}'); [ -n "$have" ] || return 0
-    [ "$have" -ge "$want" ] && return 0
-    if [ "$ids" = - ]; then
-        echo "    (prune: REFUSED — only $((have / 1024)) MB free under $rdir, $((want / 1024)) MB needed, and what is mounted is unknown)"; return 1
-    fi
-    marks=$(ls -1tr -- "$rdir"/work/*/.sl-last-use "$rdir"/android/work/*/.sl-last-use 2>/dev/null)
-    for t in "$rdir"/work/* "$rdir"/android/work/*; do  # unmarked trees count as the oldest
-        if [ -d "$t" ] && [ ! -e "$t/.sl-last-use" ]; then marks="$t/.sl-last-use
-$marks"; fi
-    done
-    while IFS= read -r m; do
-        [ -n "$m" ] || continue
-        t="${m%/.sl-last-use}"
-        { [ -d "$t" ] && [ ! -L "$t" ] && [ "$t" != "$keep" ]; } || continue
-        real=$(cd "$t" && pwd -P) || continue
-        if printf '%s\n' "$used" | grep -qxF -e "$t" -e "$real"; then continue; fi
-        if [ "$dry" = 1 ]; then
-            echo "    (prune: would delete $t — only $((have / 1024)) MB free, $((want / 1024)) MB needed; GATES_REMOTE_PRUNE_DRY=1, nothing deleted)"; continue
-        fi
-        rm -rf -- "$t" && echo "    (prune: deleted $t — only $((have / 1024)) MB free under $rdir, $((want / 1024)) MB needed)"
-        have=$(df -Pk "$rdir" 2>/dev/null | awk 'NR==2 {print $4}')
-        if [ -n "$have" ] && [ "$have" -ge "$want" ]; then return 0; fi
-    done <<EOF_MARKS
-$marks
-EOF_MARKS
-    [ "$dry" = 1 ] && return 0
-    echo "    (prune: REFUSED — $((have / 1024)) MB free under $rdir, $((want / 1024)) MB needed, and no unmounted tree but this run's own is left to delete; free space there, or lower GATES_REMOTE_MIN_FREE_MB)"
-    return 1
-}
-PRUNE_DAYS="${GATES_REMOTE_PRUNE_DAYS:-14}"
-[[ "$PRUNE_DAYS" =~ ^[0-9]+$ ]] || { echo "$P: GATES_REMOTE_PRUNE_DAYS=$PRUNE_DAYS is not a number of days (0 turns the pruning off)"; exit 2; }
-PRUNE_DRY=0; [ "${GATES_REMOTE_PRUNE_DRY:-}" = 1 ] && PRUNE_DRY=1
-PRUNE_MIN_KB=$(( ${GATES_REMOTE_MIN_FREE_MB:-3072} * 1024 ))  # free space the work dir must have (remote_prune)
-
-# Installed in the synced tree by whichever container runs first, and only when its inputs change — two
-# hashes, decided apart (2026-10-30): a version bump in one package.json used to reinstall node_modules AND
-# rebuild the venv from nothing. JS: the dependency fields of every package.json (not "version", "scripts"
-# …) and the lockfile. Python: requirements.lock and requirements-dev.txt; the venv is kept and synced to
-# them (pip install, then anything not in them uninstalled), not deleted. Both name the BASE image (RIMG),
-# so the E2E image built on it does not force a reinstall. deps_hash_js is a function for its test.
-deps_hash_js() {
-    git ls-files -z -- package-lock.json '*package.json' | xargs -0 python3 -I -c '
-import json, sys
-fields = ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies", "overrides", "workspaces")
-for path in sys.argv[1:]:
-    data = json.load(open(path, encoding="utf-8"))
-    if path.endswith("package-lock.json"):
-        print(path, json.dumps(data, sort_keys=True))
-    else:
-        print(path, json.dumps({k: data.get(k) for k in fields}, sort_keys=True))
-' || echo "unreadable $(date +%s%N)"
-    echo "$RIMG"
-}
-DEPS_JS=$(deps_hash_js | shasum | cut -c1-16)
-DEPS_PY=$( { git ls-files -z -- backend/requirements.lock backend/requirements-dev.txt | xargs -0 cat; echo "$RIMG"; } | shasum | cut -c1-16)
-# Runs inside the container (no single quotes: it is spliced into a single-quoted bash -c).
-REMOTE_DEPS='
-          if [ -n "$SL_DEPS_JS" ] && [ "$(cat .sl-deps-js 2>/dev/null)" != "$SL_DEPS_JS" ]; then  # empty: --tests, no JS
-            echo "    (installing node_modules — the JS dependencies changed)"
-            { npx -y npm@11 ci --no-audit --no-fund --loglevel=error && { npm rebuild @parcel/watcher unrs-resolver @sentry/cli >/dev/null 2>&1 || true; } \
-              && git checkout -- package-lock.json; } >/tmp/deps-js.log 2>&1 \
-              || { tail -20 /tmp/deps-js.log; echo "gates: could not install the JS dependencies"; exit 1; }
-            echo "$SL_DEPS_JS" > .sl-deps-js
-          fi
-          if [ "$(cat .sl-deps-py 2>/dev/null)" != "$SL_DEPS_PY" ]; then
-            echo "    (syncing backend/.venv — the Python requirements changed)"
-            { { [ -x backend/.venv/bin/python ] || python3 -m venv backend/.venv; } \
-              && backend/.venv/bin/pip install -q --no-deps -r backend/requirements.lock -r backend/requirements-dev.txt \
-              && backend/.venv/bin/python scripts/venv-extras.py backend/requirements.lock backend/requirements-dev.txt \
-                 | xargs -r backend/.venv/bin/pip uninstall -q -y; } >/tmp/deps-py.log 2>&1 \
-              || { tail -20 /tmp/deps-py.log; echo "gates: could not sync backend/.venv"; exit 1; }
-            echo "$SL_DEPS_PY" > .sl-deps-py
-          fi'
-
-# remote_gate_run <container name> <time limit> <commands> — run <commands> in /app of the synced tree, in a gate
-# slot on $GATES_REMOTE (remote_slots), under the limit, after the dependencies (REMOTE_DEPS). The delegated gates
-# and --tests share it, so a --tests run queues behind a gate run and never runs beside one in its slot.
-remote_gate_run() {
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_slots sl-gates-); $(declare -f remote_prune); ( flock 7; remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY $PRUNE_MIN_KB ) 7>$RDIR/prune.lock || exit 75; $(win_bg $1 ${GATES_REMOTE_CPUS:-$SLOT_CPUS})docker run --rm --init --name $1$RUN_EXTRA \
-        --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM} \
-        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\${S:-1} -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} -e GATES_SIDES=$GATES_SIDES \
-        -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS} \
-        -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
-        -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $2 bash -c '
-          find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
-          $REMOTE_DEPS
-          $3'; rc=\$?; $(win_bg_end)docker rm -f $1 >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/run.lock"
-}
+# ── THE REMOTE MACHINE (GATES_REMOTE): scripts/gates-remote.sh ─────────────────────────────────────
+# Routing (unRAID slot 1 → the idle Windows PC → slot 2 / queue), games, ssh + rsync + flock + time limits,
+# synced-tree pruning, the dependency hashes and the containers the delegated gates, --tests and --e2e run in.
+# Fail closed, as for a missing tool: without it there is no telling where the run should go.
+[ -f "$HERE/gates-remote.sh" ] || { echo "$P: no gates-remote.sh beside $HERE/run-gates.sh — run scripts/install-hooks.sh. Refusing."; exit 1; }
+. "$HERE/gates-remote.sh"
 
 # ── --e2e: PLAYWRIGHT ON THE REMOTE MACHINE (2026-10-28, user decision) ─────────────────────────
 #
@@ -555,30 +214,25 @@ tree_is_clean() {
 # The pass ledgers. GATES_STAMP_FILE is the test seam.
 #   $STAMP-backend, $STAMP-js   (2026-11-15) one per side, written by record_side at the end:
 #                               <tree> TAB <date, commit> TAB <covered files, |-separated, or * for --full>
-#   $STAMP, $STAMP-selective    the whole-tree ledgers before 2026-11-15 (a full pass; a selective pass and the
-#                               files it covered). No longer written; an entry still counts for both sides.
+#   $STAMP itself (no suffix) and $STAMP-selective were the whole-tree ledgers before 2026-11-15. Neither is
+#                               written or read any more (2026-11-21, user decision); $STAMP is only the prefix.
 #   $STAMP-e2e                  the browser suites' (--e2e), unchanged.
 STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}"
-SEL_STAMP="$STAMP-selective"
 E2E_STAMP="$STAMP-e2e"
 
 # side_proves <backend|js> <tree> <files, one per line | "-"> — do the ledgers vouch for this side on <tree>
-# for these changed files? A full pass always does (the old $STAMP, or `*` in the side's own); selective
-# passes do when the files they covered, all the tree's lines in $STAMP-selective and the side's ledger
-# united, include every one of <files>. "-" asks for a full pass only. Sets PROVEN_KIND (full / selective).
+# for these changed files? A full pass always does (`*` in the side's ledger); selective passes do when
+# the files they covered, all the tree's lines in the side's ledger united, include every one of <files>. "-" asks for a full pass only. Sets PROVEN_KIND (full / selective).
 side_proves() {
     PROVEN_KIND=""
-    grep -qs "^$2	" "$STAMP" && { PROVEN_KIND=full; return 0; }
-    local files=() f
-    for f in "$SEL_STAMP" "$STAMP-$1"; do [ -f "$f" ] && files+=("$f"); done
-    [ "${#files[@]}" -gt 0 ] || return 1
+    [ -f "$STAMP-$1" ] || return 1
     PROVEN_KIND="$(FILES="$3" awk -F'\t' -v t="$2" '
         BEGIN { n = split(ENVIRON["FILES"], want, "\n") }
         $1 == t { seen = 1; if ($3 == "*") all = 1; m = split($3, r, "|"); for (i = 1; i <= m; i++) have[r[i]] = 1 }
         END { if (all) { print "full"; exit }
               if (!seen || ENVIRON["FILES"] == "-") exit
               for (i = 1; i <= n; i++) if (want[i] != "" && !(want[i] in have)) exit
-              print "selective" }' "${files[@]}")"
+              print "selective" }' "$STAMP-$1")"
     [ -n "$PROVEN_KIND" ]
 }
 
@@ -610,9 +264,9 @@ side_proves() {
 side_base() {  # <backend|js> → SIDE_BASE (empty: none) and SIDE_WHY
     local sha tree
     SIDE_BASE=""; SIDE_WHY="; no pass recorded"
-    [ -f "$STAMP" ] || [ -f "$SEL_STAMP" ] || [ -f "$STAMP-$1" ] || return 0
+    [ -f "$STAMP-$1" ] || return 0
     while read -r sha tree; do
-        grep -qs "^$tree	" "$STAMP" "$SEL_STAMP" "$STAMP-$1" || continue
+        grep -qs "^$tree	" "$STAMP-$1" || continue
         if side_proves "$1" "$tree" "$(if [ -n "$MB" ]; then git diff --name-only --no-renames "$MB" "$sha"; else echo -; fi)"; then
             SIDE_BASE="$sha"; SIDE_WHY="last tree that passed, $PROVEN_KIND"; return 0
         fi
@@ -673,10 +327,10 @@ INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gi
 # origin/main, plus untracked files). E2E serves the frontend build with mocked API fixtures
 # (frontend/e2e/fixtures.ts, `next start` only — no backend), so what it can see is frontend/ (pages,
 # playwright.config.ts, e2e/, demo/), packages/core/ (compiled into the build; e2e reads its messages),
-# the JS dependency tree, its own runner (this script, e2e-report.py), and — failing closed — any
+# the JS dependency tree, its own runner (this script, gates-remote.sh, e2e-report.py), and — failing closed — any
 # root-level file not on INERT_ROOT_RE. Nothing of that changed → print why and exit 0. Something did →
 # chromium + mobile-chrome, the set CLAUDE.md asks for before main. An explicit list always runs.
-E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(run-gates\.sh|e2e-report\.py)$)'
+E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(run-gates\.sh|gates-remote\.sh|e2e-report\.py)$)'
 # ... EXCEPT WHAT NO BROWSER LOADS (2026-11-13, test review #10a): of the last 300 commits, 181 matched the
 # rule above and 39 of those changed only files below. Unit tests and their support files
 # (frontend/src/__tests__/, *.test.ts(x), packages/core's __tests__), the jest / vitest / eslint
@@ -718,12 +372,12 @@ if [ -n "$E2E" ]; then
         fi
     fi
     EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
-    win_route e2e "$EIMG" || :  # THE WINDOWS PC, near the top
+    win_route e2e "$EIMG" || :  # THE WINDOWS PC, scripts/gates-remote.sh
     # Its own synced tree and its own lock (2026-10-29): E2E builds .next and runs browsers in a tree of its
     # own, so it no longer waits for — or rsyncs under — a gate run on the same box. 8 CPUs here + 12 for a
     # gate run = the box's 20; the two used to queue on run.lock one after the other.
     RWORK="$RDIR/work/$RID-e2e"
-    # The tree is marked as in use before the sync (SYNCED TREES NOBODY USES, above).
+    # The tree is marked as in use before the sync (SYNCED TREES NOBODY USES, scripts/gates-remote.sh).
     ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1 && { mkdir -p $RWORK && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
         || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
     echo "$P: E2E on $GATES_REMOTE ($RWORK): ${E2E//,/ }"
@@ -733,22 +387,7 @@ if [ -n "$E2E" ]; then
     ELIMIT="${GATES_REMOTE_E2E_TIMEOUT:-20m}"; remote_limit "$ELIMIT" GATES_REMOTE_E2E_TIMEOUT
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $ENAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
-    # /tmp in memory, as in scripts/demo-remote.sh: Chromium's profile and cache on the shared btrfs image stalled
-    # frames for 5–19 s under load (2026-11-08 trace evidence there).
-    # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, above.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 $ELOCK sl-e2e- sl-demo-); $([ "${WIN_BOTH:-0}" = 1 ] && remote_flock 8 run.2.lock sl-gates- sl-e2e-; [ "${WIN_BOTH:-0}" = 1 ] && printf '; ')$(win_bg $ENAME ${GATES_REMOTE_E2E_CPUS:-8})docker run --rm --init --name $ENAME$RUN_EXTRA \
-        --tmpfs /tmp:rw,exec,size=8g --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
-        -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
-        -e PROJECTS='$E2E' $EIMG timeout -k 60 $ELIMIT bash -c '$REMOTE_DEPS
-          cd frontend && npm run build > /sl-tmp/e2e-build.log 2>&1 || { tail -30 /sl-tmp/e2e-build.log; echo \"e2e: next build failed\"; exit 1; }
-          PF=\"\"; for p in \$(echo \$PROJECTS | tr , \" \"); do PF=\"\$PF --project=\$p\"; done
-          T=\$(date +%s); rm -f /sl-tmp/e2e.json
-          PLAYWRIGHT_JSON_OUTPUT_NAME=/sl-tmp/e2e.json npx playwright test \$PF --reporter=line,json --retries=1 > /sl-tmp/e2e.log 2>&1
-          rc=\$?
-          echo \"  → \$PROJECTS in one run (\$(( \$(date +%s) - T ))s)\"
-          python3 /app/scripts/e2e-report.py /sl-tmp/e2e.json \$(echo \$PROJECTS | tr , \" \") \
-            || { tail -30 /sl-tmp/e2e.log; [ \$rc -eq 0 ] && rc=1; }
-          exit \$rc'; rc=\$?; $(win_bg_end)docker rm -f $ENAME >/dev/null 2>&1; exit \$rc ) 8>$RDIR/run.2.lock 9>$RDIR/$ELOCK"
+    remote_e2e_run "$ENAME" "$ELIMIT" "$EIMG"
     ERC=$?
     trap - EXIT
     remote_verdict "$ERC" "$ELIMIT" GATES_REMOTE_E2E_TIMEOUT
@@ -905,26 +544,30 @@ changed_since_base
 #     then pushed, and the hook ran the same tests a second time. A larger change set never selects less:
 #     each rule only adds tests or forces a full run.
 #   - 2026-11-15 (user decision): per side. The push passes when the backend's ledgers and the JS side's
-#     each vouch for the pushed tree (side_proves) — whether the two were green in one run or in two. The
-#     whole-tree ledgers written before that day count for both sides.
+#     each vouch for the pushed tree (side_proves) — whether the two were green in one run or in two.
 # --full / GATES_FULL=1 at push time accept only a full pass. Any change at all — one byte in any tracked
 # file — is a different tree and runs as before. The real-PostgreSQL run and E2E were never part of this.
 PUSHED_SHA=""
 case "${PREPUSH_RANGE:-}" in *..*) PUSHED_SHA="${PREPUSH_RANGE##*..}" ;; esac
 PUSHED_TREE=""
 [ -n "$PUSHED_SHA" ] && PUSHED_TREE="$(git rev-parse -q --verify "$PUSHED_SHA^{tree}" 2>/dev/null || true)"
+# 2026-11-21: one side proven is that side skipped, the other run (GATES_SIDES) — the same rule per side, not
+# all or nothing: a JS pass and a real-PG backend pass of one tree used to rerun both sides.
 if [ "$PREPUSH" = 1 ] && [ -n "$PUSHED_TREE" ]; then
     WANT="$CHANGED"; { [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ]; } && WANT=-
-    if side_proves backend "$PUSHED_TREE" "$WANT"; then
-        BE_KIND="$PROVEN_KIND"
-        if side_proves js "$PUSHED_TREE" "$WANT"; then
-            if [ "$BE_KIND" = full ] && [ "$PROVEN_KIND" = full ]; then
-                echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` — not running it again"
-            else
-                echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh\` for these changes (backend $BE_KIND, JS $PROVEN_KIND) — not running it again"
-            fi
-            exit 0
+    BE_KIND=""; JS_KIND=""
+    side_proves backend "$PUSHED_TREE" "$WANT" && BE_KIND="$PROVEN_KIND"
+    side_proves js "$PUSHED_TREE" "$WANT" && JS_KIND="$PROVEN_KIND"
+    if [ -n "$BE_KIND" ] && [ -n "$JS_KIND" ]; then
+        if [ "$BE_KIND" = full ] && [ "$JS_KIND" = full ]; then
+            echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` — not running it again"
+        else
+            echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh\` for these changes (backend $BE_KIND, JS $JS_KIND) — not running it again"
         fi
+        exit 0
+    elif [ -n "$BE_KIND" ] || [ -n "$JS_KIND" ]; then
+        if [ -n "$BE_KIND" ]; then GATES_SIDES=js; else GATES_SIDES=backend; fi
+        echo "$P: tree ${PUSHED_TREE:0:10}: the $([ -n "$BE_KIND" ] && echo backend || echo JS) side's ledgers vouch for these changes ($BE_KIND$JS_KIND) — running the $GATES_SIDES side only"
     fi
 fi
 
@@ -932,16 +575,19 @@ fi
 # green side is recorded in its own ledger whatever the other side did. --full covers `*` (any push of the
 # tree); a selective run, the files the side covered (COVERED_BE / COVERED_JS).
 # A green --real-pg run records its backend side in its own ledger, `$STAMP-realpg` (2026-11-20, user: before a
-# whole real-PG run, a hook asks whether it is needed — local-gates/test-scope-guard.py reads this ledger). It
-# never vouches for a push: the push ledgers are the SQLite side's.
+# whole real-PG run, a hook asks whether it is needed — local-gates/test-scope-guard.py reads this ledger), and
+# since 2026-11-21 in `$STAMP-backend` as well, so it vouches for a push: it runs the backend side's ruff and
+# makemigrations (static_backend) and the same pytest selection (plus the PostgreSQL-only tests, which a
+# delegated SQLite-side run adds as well), on PostgreSQL. `-realpg` lines written before that day ran no ruff
+# and no makemigrations, which is why they are not read as backend passes.
 record_side() {
     [ "$PREPUSH" = 0 ] && [ "$2" = 0 ] || return 0
     if [ "$REAL_PG" = 1 ]; then [ "$1" = backend ] && [ "$TESTS" = 0 ] || return 0; fi
     side_on "$1" || return 0  # GATES_SIDES left it out: nothing ran, nothing to vouch for
     cd "$ROOT" || return 0
     tree_is_clean || { echo "$P: not recording the $1 pass — $CLEAN_WHY"; return 0; }
-    local tree file="$STAMP-$1" cov kind=selective
-    [ "$REAL_PG" = 1 ] && file="$STAMP-realpg"
+    local tree files=("$STAMP-$1") file cov kind=selective
+    [ "$REAL_PG" = 1 ] && files+=("$STAMP-realpg")
     tree="$(git rev-parse HEAD^{tree})"
     [ "$tree" = "$START_TREE" ] || { echo "$P: not recording the $1 pass — HEAD moved during the run (tested ${START_TREE:0:10}, now ${tree:0:10})"; return 0; }
     if [ "$FULL_RUN" = 1 ]; then
@@ -951,8 +597,10 @@ record_side() {
     else
         cov="$(echo "$COVERED_JS" | grep -v '^$' | paste -sd'|' -)"
     fi
-    printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" "$cov" >>"$file"
-    tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+    for file in "${files[@]}"; do
+        printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" "$cov" >>"$file"
+        tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+    done
     echo "$P: recorded a $kind pass ($1) for tree ${tree:0:10}"
 }
 # Consumed: nothing below (pytest included) should inherit the hand-off.
@@ -968,7 +616,7 @@ TOUCHES_FRONTEND=$(echo "$CHANGED" | grep -cE '^frontend/' || true)
 # (test_prepush_runs_the_gates_a_change_can_break.py), which reads these files
 # rather than importing them. Before 2026-09-30 a push changing only the hook
 # generator ran nothing at all.
-TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/|^scripts/(run-gates|install-hooks|gate-lock)\.sh$' || true)
+TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/|^scripts/(run-gates|gates-remote|install-hooks|gate-lock)\.sh$' || true)
 # `packages/` had no gate at all, so a commit touching only @soulledger/core ran
 # nothing. That is the whole of the package's boundary: `lib: ["ES2020"]` with
 # no "dom", the `host-globals.d.ts` allowlist, and the `no-restricted-syntax`
@@ -1248,7 +896,8 @@ fi
 # round trips only when a migration changed. `--real-pg --full` runs everything,
 # round trips included — before merging into main. The full run took ~45 minutes
 # at -n 2 with the round trips (2026-10-28); 950 s at -n 4 without (2026-10-19).
-# No jest, no tsc/eslint, no ruff/makemigrations: the ordinary run covers those.
+# No jest, no tsc/eslint. ruff and makemigrations do run (2026-11-21, seconds): with them a green run is
+# the backend side's run on PostgreSQL, and it is recorded for that side (record_side).
 if [ "$REAL_PG" = 1 ]; then
     P="real-pg"
     RUN_CORE=0; RUN_FRONTEND=0; RUN_MOBILE=0; RUN_OFFICER=0; RUN_JEST_READERS=0; MOBILE_READERS=""
@@ -1273,7 +922,7 @@ fi
 # 205, zh-Hans.json 209. Parity and lexicon tests read the packs and are
 # always-run. A pack loaded by a computed path would not be traced — keep them
 # static imports. The data-file rule below therefore skips messages/.
-FULL_RULES='^scripts/(run-gates\.sh|install-hooks\.sh)$	the gate machinery itself changed
+FULL_RULES='^scripts/(run-gates\.sh|gates-remote\.sh|install-hooks\.sh)$	the gate machinery itself changed
 ^(package\.json|package-lock\.json|\.nvmrc)$	the JS dependency tree changed
 ^(frontend|packages/core)/[^/]+$	top-level config of frontend/ or packages/core/ changed (jest, ts, next, eslint, package.json)
 ^(frontend|packages/core)/.*\.(json|md|ya?ml)$	a data file under frontend/ or packages/core/ changed
@@ -1433,8 +1082,8 @@ static_fail() {
 # comment GATES_REMOTE out of .prepush.env; `SKIP_PREPUSH=1 git push` skips the hook.
 if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the gates on this machine."
-    win_route gate "$RIMG" || :  # THE WINDOWS PC, near the top
-    # ... and mark the tree as in use before anything is synced into it (SYNCED TREES NOBODY USES, above).
+    win_route gate "$RIMG" || :  # THE WINDOWS PC, scripts/gates-remote.sh
+    # ... and mark the tree as in use before anything is synced into it (SYNCED TREES NOBODY USES, scripts/gates-remote.sh).
     ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1 && { mkdir -p $RWORK && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
         || fail "$GATES_REMOTE is unreachable, or has no $RIMG image. Not running the gates on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
     echo "$P: on $GATES_REMOTE ($RWORK) — this machine only syncs and waits"
@@ -1478,7 +1127,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # named pid 7, the next container had a live pid 7, and that push waited 30 minutes (2026-10-28).
     # Workers: 5 for pytest + 5 for the JS runners = the slot's 10 CPUs (6 + 6 = 12 with one slot), because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
-    # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
+    # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, scripts/gates-remote.sh.
     remote_gate_run "$RNAME" "$RLIMIT" "export PREPUSH_CHANGED=\"\$(cat .sl-changed)\" PREPUSH_CHANGED_BACKEND=\"\$(cat .sl-changed-backend)\" PREPUSH_CHANGED_JS=\"\$(cat .sl-changed-js)\"
           exec bash scripts/run-gates.sh $RFLAGS" | tee "$RLOG"
     RSTATUS=${PIPESTATUS[0]}
@@ -1609,7 +1258,7 @@ static_backend() {
 STATIC_RED=0
 if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
-    if [ "$RUN_BACKEND" = 1 ] && [ "$REAL_PG" = 0 ]; then
+    if [ "$RUN_BACKEND" = 1 ]; then
         echo "  → ruff";  "$RUFF" check .          || static_fail "ruff failed"
         # `makemigrations --check` BEFORE pytest, because it is the cheap one and
         # because it catches a class the suite does not: a model `choices` list
@@ -1636,8 +1285,6 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
                 static_fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
             fi
         fi
-    elif [ "$REAL_PG" = 1 ]; then
-        echo "  → ruff, makemigrations: skipped — --real-pg runs pytest only"
     else
         echo "  → ruff, makemigrations: skipped — nothing under backend/ changed"
     fi

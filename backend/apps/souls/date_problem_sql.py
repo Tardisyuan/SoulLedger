@@ -119,7 +119,42 @@ def filter_has_date_problem(queryset, value):
         .filter(before_birth | (after_death & ~Q(date_warning_ack_fingerprint=F("_dp_fp"))))
     )
 
-    flagged = Q(soul_problem) | Q(Exists(records))
+    from django.conf import settings
+
+    # Sharded: SoulRecord.soul and Reincarnation.soul are crossing keys -- a record may be on another
+    # civilization's shard than its soul -- and a shard refuses the correlated subquery (CrossShardJoin).
+    record_problem = Q(pk__in=_flagged_by_records(queryset)) if settings.SHARDED else Q(Exists(records))
+    flagged = Q(soul_problem) | record_problem
     matched = queryset.alias(_dp_span=span).filter(flagged)
     return matched if value else queryset.exclude(pk__in=matched.values("pk"))
+
+
+def _flagged_by_records(queryset):
+    """Sharded, the record half of the filter by ids: the queryset's souls, their reincarnation counts (the life
+    index) and this life's dated records from every leg, judged as the list judges them (SoulListSerializer's
+    `has_record_error` / `has_date_warning`: an error, or a warning not acknowledged).
+    ponytail: reads every soul of the caller's scoped queryset and their dated records; a hall of hundreds of
+    thousands wants the flag stored on the soul."""
+    from apps.core.shard_reads import with_fanout
+    from apps.reincarnation.models import Reincarnation
+    from apps.souls.dates import ERROR, WARNING, check_record_date
+    from apps.souls.record_models import SoulRecord
+
+    dates = {pk: ((by, bm, bd), (dy, dm, dd)) for pk, by, bm, bd, dy, dm, dd in queryset.order_by().values_list(
+        "pk", "birth_year", "birth_month", "birth_day", "death_year", "death_month", "death_day")}
+    if not dates:
+        return []
+    lives = {row["soul_id"]: row["n"] for row in with_fanout(Reincarnation.objects.filter(soul_id__in=list(dates)))
+             .values("soul_id").annotate(n=Count("pk")).order_by()}
+    records = with_fanout(SoulRecord.objects.filter(soul_id__in=list(dates), event_year__isnull=False)).values_list(
+        "soul_id", "cycle", "event_year", "event_month", "event_day", "date_warning_ack_fingerprint")
+    out = set()
+    for soul, cycle, year, month, day, ack in records:
+        if soul in out or cycle != lives.get(soul, 0):
+            continue
+        birth, death = dates[soul]
+        if any(p.severity == ERROR or (p.severity == WARNING and not p.acknowledged)
+               for p in check_record_date((year, month, day), birth, death, ack_fingerprint=ack or None)):
+            out.add(soul)
+    return list(out)
 

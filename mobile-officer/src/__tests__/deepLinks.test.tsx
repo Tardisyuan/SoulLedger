@@ -3,7 +3,7 @@
  * parser, the inbox that holds a link while signed out, and the shell landing on the page the
  * way a tapped push does. A link only opens a page.
  */
-import { act, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { officerLinks, parseOfficerLink } from "../links";
 import { Shell } from "../shell";
@@ -157,6 +157,21 @@ describe("landing in the shell", () => {
     await act(async () => officerLinks.push("soulledger-officer://soul/s-1"));
     await waitFor(() => expect(mockSoulGet).toHaveBeenCalledWith("s-1"));
     expect(mockJudgmentGet).not.toHaveBeenCalled();
+  });
+
+  it("a notice opens its case; 返回 goes back to 通知, not to the tab the case lives under", async () => {
+    const { notificationsApi } = jest.requireMock("@soulledger/core/api/notifications") as { notificationsApi: { list: jest.Mock } };
+    notificationsApi.list.mockResolvedValue({
+      data: { results: [{ id: 1, title: "t", message: "", is_read: true, notification_type: "X", related_resource: "judgment", related_id: "j-1", created_at: "2026-11-21T01:00:00Z" }] },
+    });
+    renderOfficer(<Shell />);
+    await screen.findByTestId("tab-bar");
+    await act(async () => officerLinks.push("soulledger-officer://notices"));
+    fireEvent.press(await screen.findByTestId("notice-1"));
+    await waitFor(() => expect(mockJudgmentGet).toHaveBeenCalledWith("j-1"));
+    fireEvent.press(await screen.findByTestId("detail-back"));
+    expect(await screen.findByTestId("tab-notices-screen")).toBeTruthy();
+    expect(screen.queryByTestId("tab-queue-screen")).toBeNull();
   });
 
   it("an unknown link changes nothing", async () => {

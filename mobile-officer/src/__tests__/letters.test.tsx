@@ -1,6 +1,6 @@
 /**
- * 待回书信: the to-do group (present only with letters, always last), the thread (the soul's letters
- * left, the hall's right, no bubble colour), the template that is FILLED not sent, the send (once, the
+ * 待回书信: the to-do group (present only with letters, always last), the thread (第六十四批: one column,
+ * grouped, the hall's groups on a card2 panel, a whose-turn line above the footer), the template that is FILLED not sent, the send (once, the
  * words kept on a failure), and the quiet 503.
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
@@ -11,9 +11,12 @@ import { Detail } from "../screens/detail";
 import { INBOX_REPLY_MAX } from "@soulledger/core/api/soul-inbox";
 import { clearDrafts, flushDraft, readDraft } from "../drafts";
 import { outboxReasonOf } from "../outbox";
-import { ToastProvider, translate } from "../shared";
-import { TODO_GROUPS, noticeLanding, replyFailureKey, replyReady, withTemplate } from "../rules";
+import { ToastProvider, themeFor, translate } from "../shared";
+import { replyReady } from "@soulledger/core/domain/letters";
+import { TODO_GROUPS, noticeLanding, replyFailureKey, withTemplate } from "../rules";
 import { OFFICER, httpError, renderOfficer } from "./harness";
+
+const THEME = themeFor(OFFICER.tenant?.civilization, "light");
 
 const mockTodo = jest.fn();
 const mockGet = jest.fn();
@@ -153,34 +156,92 @@ describe("the to-do group", () => {
 });
 
 describe("the thread", () => {
-  it("reads oldest first; the soul's letter at the left, the hall's reply at the right, neither in a coloured bubble", async () => {
+  // 第六十四批: one full-width column; this side (the hall) on a neutral card2 panel, the soul's plain on the canvas.
+  it("reads oldest first in one column: the hall's group on the card2 panel, the soul's plain, nothing aligned left or right", async () => {
     await openThread();
     await screen.findByText("请问我的案子何时判？");
     const ids = screen.root.findAll((n) => typeof n.props.testID === "string" && /^letter-(soul|hall)-/.test(n.props.testID)).map((n) => n.props.testID);
     expect([...new Set(ids)]).toEqual(["letter-soul-e1", "letter-hall-e2"]);
-    const soul = StyleSheet.flatten(screen.getByTestId("letter-soul-e1").props.style);
-    const hall = StyleSheet.flatten(screen.getByTestId("letter-hall-e2").props.style);
-    expect(soul.alignSelf).toBe("flex-start");
-    expect(hall.alignSelf).toBe("flex-end");
+    const soul = StyleSheet.flatten(screen.getByTestId("letter-group-soul").props.style);
+    const hall = StyleSheet.flatten(screen.getByTestId("letter-group-hall").props.style);
+    expect(hall).toMatchObject({ backgroundColor: THEME.s2, borderRadius: 6, padding: 12, alignSelf: "stretch" });
     expect(soul.backgroundColor).toBeUndefined();
-    expect(hall.backgroundColor).toBeUndefined();
-    // Author and time on one line.
-    expect(screen.getByText(/^崔珏 · 判官 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeTruthy();
-    expect(screen.getByText(/^李白 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeTruthy();
+    expect(soul.borderRadius).toBeUndefined();
+    expect(soul.alignSelf).toBe("stretch");
+    // No half widths, no right-aligned replies (the old layout), on the group or on a letter.
+    for (const id of ["letter-group-soul", "letter-group-hall", "letter-soul-e1", "letter-hall-e2"]) {
+      const s = StyleSheet.flatten(screen.getByTestId(id).props.style);
+      expect(s.maxWidth).toBeUndefined();
+      expect(s.alignItems).toBeUndefined();
+      expect(["flex-end", "flex-start"]).not.toContain(s.alignSelf);
+    }
+    expect(StyleSheet.flatten(screen.getByText("已收到，容我细查。").props.style).textAlign).toBeUndefined();
+    // One header line per group: name · 来信 / 回信, and the time on its own (时:分).
+    expect(within(screen.getByTestId("letter-group-soul")).getByText("· 来信")).toBeTruthy();
+    expect(within(screen.getByTestId("letter-group-hall")).getByText("· 回信")).toBeTruthy();
+    expect(within(screen.getByTestId("letter-group-hall")).getAllByText(/^\d{2}:\d{2}$/)).toHaveLength(1);
+    // A day divider above the first group.
+    expect(screen.root.findAll((n) => typeof n.props.testID === "string" && /^letter-day-\d{4}-\d{2}-\d{2}$/.test(n.props.testID)).length).toBeGreaterThan(0);
+  });
+
+  it("consecutive letters from one person are one group under one header; a 30+ minute gap adds a small time above the later one", async () => {
+    const at = (h: number, m: number) => new Date(2026, 9, 9, h, m).getTime();
+    mockMessages.mockResolvedValue({
+      data: [
+        { ...MESSAGES[1], event_id: "s3", body: "第三封", timestamp: at(11, 0) },
+        { ...MESSAGES[1], event_id: "s2", body: "第二封", timestamp: at(10, 10) },
+        { ...MESSAGES[1], event_id: "s1", body: "第一封", timestamp: at(10, 0) },
+      ],
+    });
+    await openThread();
+    await screen.findByText("第三封");
+    expect(screen.getAllByTestId(/^letter-group-/)).toHaveLength(1);
+    const g = screen.getByTestId("letter-group-soul-open");
+    expect(within(g).getAllByText("· 来信")).toHaveLength(1);
+    // 10:00 in the head; 10:10 is 10 minutes on, no time; 11:00 is 50 minutes on, its own time.
+    expect(within(g).getAllByText(/^\d{2}:\d{2}$/).map((n) => n.props.children)).toEqual(["10:00", "11:00"]);
+    expect(within(screen.getByTestId("letter-soul-s3")).getByText("11:00")).toBeTruthy();
+    expect(within(screen.getByTestId("letter-soul-s2")).queryByText(/^\d{2}:\d{2}$/)).toBeNull();
+  });
+
+  it("awaiting the hall: 「轮到殿司回 · 来信已等 …」 above the box, counted from the last soul letter, and the open group has the ink line", async () => {
+    const now = jest.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 9, 12, 2, 30));
+    try {
+      mockMessages.mockResolvedValue({ data: [MESSAGES[1]] }); // the soul's, 2026-10-09 02:00Z: three days ago
+      await openThread();
+      await screen.findByText("请问我的案子何时判？");
+      expect(screen.getByTestId("letter-state").props.children).toBe("轮到殿司回 · 来信已等 3 天");
+      const footer = screen.getByTestId("letter-footer");
+      expect(within(footer).getByTestId("letter-composer")).toBeTruthy();
+      const open = StyleSheet.flatten(screen.getByTestId("letter-group-soul-open").props.style);
+      expect(open).toMatchObject({ borderLeftWidth: 2, borderLeftColor: THEME.ink, paddingLeft: 12 });
+      expect(open.backgroundColor).toBeUndefined();
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("answered: 「已回 · 等灵魂来信」, and no group keeps the ink line", async () => {
+    await openThread();
+    await screen.findByText("已收到，容我细查。");
+    expect(screen.getByTestId("letter-state").props.children).toBe("已回 · 等灵魂来信");
+    expect(screen.queryByTestId("letter-group-soul-open")).toBeNull();
+    for (const g of screen.getAllByTestId(/^letter-group-/)) expect(StyleSheet.flatten(g.props.style).borderLeftWidth).toBeUndefined();
+    expect(screen.getByTestId("letter-input")).toBeTruthy();
   });
 
   it("typing a reply does not draw the letters above it again (R2)", async () => {
     await openThread();
     await screen.findByText("请问我的案子何时判？");
     await act(async () => {}); // the opening's own requests (read mark, archive date) settle first
-    const soul = screen.getByTestId("letter-soul-e1").props.style;
-    const hall = screen.getByTestId("letter-hall-e2").props.style;
+    const soul = screen.getByTestId("letter-group-soul").props.style;
+    const hall = screen.getByTestId("letter-group-hall").props.style;
     fireEvent.changeText(screen.getByTestId("letter-input"), "稍");
     fireEvent.changeText(screen.getByTestId("letter-input"), "稍候");
     expect(screen.getByTestId("letter-input").props.value).toBe("稍候");
-    // The same style objects: neither line rendered again (each render builds a new one).
-    expect(screen.getByTestId("letter-soul-e1").props.style).toBe(soul);
-    expect(screen.getByTestId("letter-hall-e2").props.style).toBe(hall);
+    // The same style arrays: neither group rendered again (each render builds a new one).
+    expect(screen.getByTestId("letter-group-soul").props.style).toBe(soul);
+    expect(screen.getByTestId("letter-group-hall").props.style).toBe(hall);
   });
 
   it("opening it marks it read, once", async () => {
@@ -290,9 +351,14 @@ describe("the thread", () => {
   it("a closed thread has no box to write in", async () => {
     mockGet.mockResolvedValue({ data: { ...CONVO, closed_at: "2026-10-09T05:00:00Z" } });
     await openThread();
-    expect(screen.getByTestId("letter-closed")).toBeTruthy();
+    // Read-only: one grey line in the footer, and nothing else -- no whose-turn line, no buttons, no box.
+    expect(screen.getByTestId("letter-closed").props.children).toBe("往来已结束 · 只能看");
+    expect(within(screen.getByTestId("letter-footer")).getByTestId("letter-closed")).toBeTruthy();
+    expect(screen.queryByTestId("letter-state")).toBeNull();
     expect(screen.queryByTestId("letter-input")).toBeNull();
     expect(screen.queryByTestId("letter-send")).toBeNull();
+    expect(screen.queryByTestId("letter-take-bar")).toBeNull();
+    expect(screen.queryByTestId("letter-group-soul-open")).toBeNull();
   });
 
   it("without the template list (no permission, service down) the row is simply absent", async () => {
@@ -314,16 +380,20 @@ describe("a soul's pictures in the thread (2026-10-10)", () => {
     { event_id: "e1", from_officer: false, sender_name: "李白", officer_title: "", body: "[图片]", image: A, timestamp: Date.UTC(2026, 9, 9, 2, 0) },
   ];
 
-  it("draws each as its own letter, at its ratio and at most 60% of the thread's width, not the placeholder line", async () => {
+  // 第六十四批: a picture joins its group like any letter, fitted into 160×120, radius 6, a hairline, read as 「一张图，没有附字」.
+  it("draws each as its own letter in the group, at its ratio within 160×120, not the placeholder line", async () => {
     mockMessages.mockResolvedValue({ data: WITH_PICTURES });
     await openThread();
     await screen.findByText("附上一张");
     const tiles = screen.getAllByTestId("letter-image");
     expect(tiles).toHaveLength(2);
-    const style = StyleSheet.flatten(tiles[0].props.style);
-    const content = Dimensions.get("window").width - 2 * 24; // the thread pads 24 on each side
-    expect(style).toMatchObject({ width: Math.round(content * 0.6), aspectRatio: 800 / 600 });
-    expect(style.width).toBeLessThanOrEqual(content * 0.6);
+    expect(StyleSheet.flatten(tiles[0].props.style)).toMatchObject({ width: 160, height: 120, borderRadius: 6, borderWidth: StyleSheet.hairlineWidth });
+    expect(StyleSheet.flatten(tiles[1].props.style)).toMatchObject({ width: 90, height: 120 });
+    expect(StyleSheet.flatten(tiles[0].props.style).aspectRatio).toBeUndefined();
+    expect(tiles[0].props.accessibilityLabel).toBe("一张图，没有附字");
+    // Three letters from 李白 in a row: one group, the pictures inside it.
+    expect(screen.getAllByTestId(/^letter-group-/)).toHaveLength(1);
+    expect(within(screen.getByTestId("letter-soul-e1")).getByTestId("letter-image")).toBeTruthy();
     // The words are another letter; a picture's letter has none of its own.
     expect(screen.queryByText("[图片]")).toBeNull();
     const source = screen.UNSAFE_getAllByType(Image).find((n) => String(n.props.source?.uri).includes("sigA"))!;
@@ -404,12 +474,18 @@ describe("who handles the letter", () => {
     expect(screen.getByTestId("letter-take-bar")).toBeTruthy();
   });
 
+  it("unassigned, read by an officer of no hall (a civilization admin): the box, not 由我来回 -- assign would refuse them", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: null } });
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user: { ...OFFICER, tenant: null } });
+    await screen.findByTestId("letter-thread");
+    expect(screen.getByTestId("letter-composer")).toBeTruthy();
+    expect(screen.queryByTestId("letter-take-bar")).toBeNull();
+  });
+
   it("someone else's: one line instead of the box (not greyed, nothing to confirm), and 转给我 for who may hand letters on", async () => {
     mockAssign.mockResolvedValue({ data: {} });
     mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
-    const user = { ...OFFICER, permissions: [...(OFFICER.permissions ?? []), "soul_inbox.reply"] };
-    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user });
-    await screen.findByTestId("letter-thread");
+    await openThread();
     expect(screen.getByTestId("letter-handler").props.children).toBe("经办 · 钟书吏");
     expect(screen.queryByTestId("letter-composer")).toBeNull();
     expect(screen.queryByTestId("letter-input")).toBeNull();
@@ -418,11 +494,28 @@ describe("who handles the letter", () => {
     await waitFor(() => expect(mockAssign).toHaveBeenCalledWith("c-1", 7));
   });
 
+  const READER = { ...OFFICER, permissions: OFFICER.permissions.filter((code) => code !== "soul_inbox.reply") };
+  const openAsReader = async () => {
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user: READER });
+    await screen.findByTestId("letter-thread");
+  };
+
   it("someone else's, without soul_inbox.reply: the line, and no 转给我", async () => {
     mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
-    await openThread();
+    await openAsReader();
     expect(screen.getByTestId("letter-not-yours")).toBeTruthy();
     expect(screen.queryByTestId("letter-assign-to-me")).toBeNull();
+  });
+
+  // The web's rule: the server takes neither a reply nor 由我来回 without soul_inbox.reply, so neither is offered.
+  it.each([
+    ["mine", { user_id: 7, display_name: "阎罗" }],
+    ["unassigned", null],
+  ])("%s, without soul_inbox.reply: no box and no take bar", async (_name, assignee) => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee } });
+    await openAsReader();
+    expect(screen.queryByTestId("letter-composer")).toBeNull();
+    expect(screen.queryByTestId("letter-take-bar")).toBeNull();
   });
 });
 
@@ -487,9 +580,14 @@ describe("a soul moved to another hall", () => {
 
   it("can_reply false: no reply box, the line instead", async () => {
     mockGet.mockResolvedValue({ data: { ...CONVO, id: "c-m1", can_reply: false } });
+    mockMessages.mockResolvedValue({ data: [MESSAGES[1]] }); // the soul wrote last
     await open("c-m1");
+    await screen.findByTestId("letter-group-soul");
     expect(screen.getByTestId("letter-moved")).toBeTruthy();
     expect(screen.queryByTestId("letter-input")).toBeNull();
+    // Read-only like a closed one: the moved line alone, no whose-turn line, and the soul's last group without the ink line.
+    expect(screen.queryByTestId("letter-state")).toBeNull();
+    expect(screen.queryByTestId("letter-group-soul-open")).toBeNull();
   });
 
   it("can_reply true: the box, and no such line", async () => {
@@ -497,5 +595,18 @@ describe("a soul moved to another hall", () => {
     await open("c-m2");
     expect(screen.queryByTestId("letter-moved")).toBeNull();
     expect(screen.getByTestId("letter-input")).toBeTruthy();
+  });
+
+  // The web's rule: a send answered 409 not_current_hall (the list not yet told) takes the box away as well.
+  it("a send answered not_current_hall: the box gives way to the line, the words stay in the draft", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, id: "c-m3", can_reply: true } });
+    mockReply.mockRejectedValue(httpError(409, { code: "not_current_hall" }));
+    await open("c-m3");
+    fireEvent.changeText(screen.getByTestId("letter-input"), "调走之前写的");
+    fireEvent.press(screen.getByTestId("letter-send"));
+    expect(await screen.findByTestId("letter-moved")).toBeTruthy();
+    expect(screen.queryByTestId("letter-input")).toBeNull();
+    flushDraft();
+    expect(readDraft("c-m3")).toBe("调走之前写的");
   });
 });

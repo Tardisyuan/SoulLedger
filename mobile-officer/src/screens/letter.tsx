@@ -1,7 +1,11 @@
 /**
- * 待回书信's thread: one soul's letters, oldest at the top. The soul's letters sit at the left, the
- * hall's replies at the right -- told apart by alignment and a line of author and time, never by a
- * bubble colour. Below: 「模板」 (a bottom sheet whose pick is FILLED INTO the box, still editable,
+ * 待回书信's thread: one soul's letters, oldest at the top, in ONE full-width column (Design v4 第六十四批).
+ * Consecutive letters from the same person are one group under one line 「名字 · 来信/回信 … 时:分」; a new
+ * day gets a divider. The rule is one sentence: this side's (the hall's) groups sit on a neutral `card2`
+ * panel, the soul's are plain text on the canvas -- no alignment, no tail, no civilization colour. The
+ * unanswered group of the soul's letters has a 2px ink line on its left; a reply still in the outbox is a
+ * dashed, unfilled panel at the end. Above the footer, one line says whose turn it is and how long the
+ * letter has waited (`@soulledger/core/domain/letters`). Below: 「模板」 (a bottom sheet whose pick is FILLED INTO the box, still editable,
  * never sent), the box, 「发出后不能撤回」, and 「发送」. A reply cannot be taken back, so the line is
  * said above the button instead of asking again after it; there is no picture to attach here -- a soul's
  * picture is shown (letterImages.tsx) but a reply is text only.
@@ -15,11 +19,23 @@ import {
   soulInboxApi,
   type InboxMessage,
 } from "@soulledger/core/api/soul-inbox";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import {
+  groupLetters,
+  inboxReplyGate,
+  isReadOnlyLetterState,
+  lastSoulLetterAt,
+  letterState,
+  letterWait,
+  replyReady,
+  type LetterFacts,
+  type LetterGroup,
+} from "@soulledger/core/domain/letters";
+import { hhmm } from "@soulledger/core/domain/dates";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 
 import { clearDraft, flushDraft, mergeServerDraft, readDraft, scheduleDraft, settleDraft } from "../drafts";
-import { enqueueReply, newReplyTxn, removeFromOutbox, useOutbox } from "../outbox";
+import { enqueueReply, newReplyTxn, removeFromOutbox, retryReply, useOutbox, type OutboxEntry } from "../outbox";
 import { useCachedRemote } from "../readCache";
 import { formatWhen } from "../format";
 import { ActionButton, Row, StateView, detailStateOf } from "../kit";
@@ -27,8 +43,8 @@ import {
   hallLabel,
   lettersUnavailable,
   ASSIGNED_TO_OTHER,
+  MOVED,
   replyFailureKey,
-  replyReady,
   withTemplate,
 } from "../rules";
 import { useCan, useSession } from "../session";
@@ -39,7 +55,6 @@ import {
   Input,
   Loader,
   Notice,
-  OneLine,
   Screen,
   Sheet,
   SmallButton,
@@ -57,6 +72,8 @@ import {
 const LETTER_PAGE = 50;
 /** The same "no older page" every render, so the thread's memo below keeps its rows while the officer types. */
 const NO_ROWS: InboxMessage[] = [];
+/** What grouping reads of a letter: the hall's replies are grouped by officer, the soul's by sender. */
+const factsOf = (m: InboxMessage): LetterFacts => ({ ts: m.timestamp, side: m.from_officer ? "hall" : "soul", author: m.sender_name });
 
 export function LetterThread({
   id,
@@ -92,6 +109,16 @@ export function LetterThread({
     marked.current = true;
     void soulInboxApi.markRead(id).catch(() => undefined);
   }, [id, thread.data, thread.cached]);
+  // Design 第六十四批: the screen opens at the bottom, on the newest letter, where the status line and the actions are.
+  // Once per letter, when its letters first land; 「更早」 then adds above without jumping back down.
+  const scroll = useRef<ScrollView>(null);
+  const landedAt = useRef<string | null>(null);
+  useEffect(() => {
+    if (!thread.data?.messages.length || landedAt.current === id) return;
+    landedAt.current = id;
+    const frameId = requestAnimationFrame(() => scroll.current?.scrollToEnd({ animated: false }));
+    return () => cancelAnimationFrame(frameId);
+  }, [id, thread.data]);
   // 「更早」: the server sends the newest LETTER_PAGE; older pages hang under them until the thread reloads.
   const [earlier, setEarlier] = useState<{ base: unknown; rows: InboxMessage[]; more: boolean; state: "busy" | "failed" | null }>({
     base: null,
@@ -142,6 +169,8 @@ export function LetterThread({
       () => undefined,
     );
   }, [id, offline, outboxEntry]);
+  // 「来信已等 …」 is counted to when the thread was opened (render stays pure; a reopened thread counts again).
+  const [openedAt] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -273,6 +302,15 @@ export function LetterThread({
   const openImage = useCallback((imageId: string) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === imageId))), [gallery]);
   const { reload: reloadThread } = thread;
   const reloadImages = useCallback(() => void reloadThread(), [reloadThread]);
+  // The web's rule (@soulledger/core/domain/letters): closed, then the soul dispatched to another hall (`can_reply`
+  // false, or this phone's last reply answered 409 `not_current_hall`), then someone else holds it.
+  const shownConversation = thread.data?.conversation;
+  const gate = shownConversation ? inboxReplyGate(shownConversation, { userId: user?.id, movedSeen: failure === MOVED }) : "open";
+  const last = ordered[ordered.length - 1];
+  const turn = shownConversation ? letterState(gate, last ? factsOf(last).side : undefined) : null;
+  // The groups only change when the letters, or whether the hall still owes a reply, do -- not as the officer types.
+  const awaiting = turn === "awaiting_hall";
+  const rows = useMemo(() => groupLetters(ordered, factsOf, { open: awaiting }), [ordered, awaiting]);
 
   if (thread.error && lettersUnavailable(thread.error)) {
     return (
@@ -290,22 +328,44 @@ export function LetterThread({
     return <StateView state={view ?? "loading"} onRetry={thread.reload} />;
 
   const { conversation } = thread.data;
-  const closed = conversation.closed_at != null;
-  // feat-letters: `can_reply` false = the soul was dispatched to another hall. Typed by hand until the schema is
-  // regenerated; absent (an older server) means the old rules below.
-  const moved = (conversation as { can_reply?: boolean }).can_reply === false;
+  const meId = user?.id;
+  const readOnly = isReadOnlyLetterState(turn);
   // The server always sends `assignee` (null = nobody); only that explicit null is "unassigned".
   const assigned = conversation.assignee !== null;
-  const flags = { archived: conversation.archived, closed, assigned };
-  const unassigned = isUnassigned(flags);
-  const meId = user?.id;
+  const flags = { archived: conversation.archived, closed: conversation.closed_at != null, assigned };
+  // Without `soul_inbox.reply` the server takes neither a reply nor 由我来回 (`assign`): no box, no TakeBar.
+  // 由我来回 makes the viewer the assignee, and the server takes only an officer of this hall (`is_assignable`). A
+  // civilization admin belongs to no hall: assign 400s (simulator 2026-11-21, 「没取到」). For them an unassigned letter
+  // shows the box -- the server lets anyone with soul_inbox.reply answer one nobody holds -- and 转给别人 stays in ⋯.
+  const unassigned = canHandOn && isUnassigned(flags) && user?.tenant != null;
   // O-e: someone else holds it -- the box gives way to one line saying so (not greyed, no confirm: a greyed box reads as
   // stuck, a confirm does not stop two people answering). Who may hand letters on gets 「转给我」, the same assign call.
-  const othersLetter = conversation.assignee != null && conversation.assignee.user_id !== meId;
+  const othersLetter = gate === "others";
   const values = {
     soul_name: conversation.soul_name,
     hall_name: hallLabel(t, user?.tenant) ?? "",
   };
+  // 第六十四批第三节: whose turn, right above where the officer decides. No warning colour: there is no service target yet.
+  const since = awaiting ? lastSoulLetterAt(ordered, factsOf) : undefined;
+  const wait = since !== undefined ? letterWait(since, openedAt) : null;
+  const status =
+    turn === "awaiting_hall" && wait ? (
+      <Txt testID="letter-state" variant="section" style={styles.status}>
+        {t("letters.state.awaiting_hall", { wait: t(`common.duration.${wait.unit}`, { n: String(wait.n) }) })}
+      </Txt>
+    ) : turn === "awaiting_soul" ? (
+      <Txt testID="letter-state" variant="body" tone="muted" style={styles.status}>
+        {t("letters.state.awaiting_soul")}
+      </Txt>
+    ) : null;
+  // One footer: the status line, then what the officer can do. Read-only (closed, moved): one grey line, nothing else.
+  const footer = (body: ReactNode) => (
+    <View testID="letter-footer" style={{ borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
+      {status ? <View style={{ paddingHorizontal: space[4], paddingTop: space[4], paddingBottom: body ? 0 : space[4] }}>{status}</View> : null}
+      {body}
+    </View>
+  );
+  const ownName = user?.display_name || t("soul_inbox.officer_reply");
 
   return (
     <View
@@ -351,8 +411,8 @@ export function LetterThread({
             {offline ? null : <SmallButton testID="letter-unarchive" title={t("officer_app.letter.unarchive")} onPress={() => pick("unarchive")} />}
           </View>
         ) : null}
-        <Screen edges={["left", "right"]}>
-          <View style={{ padding: space[5], gap: space[4] }}>
+        <Screen edges={["left", "right"]} scrollRef={scroll}>
+          <View style={{ padding: space[5], gap: 20 }}>
             {older.more && older.state === "failed" ? (
               <Notice tone="neg" onRetry={loadEarlier} testID="letter-earlier-failed">
                 {t("officer_app.letter.earlier_failed")}
@@ -371,38 +431,43 @@ export function LetterThread({
                 {t("soul_inbox.no_messages")}
               </Txt>
             ) : null}
-            {ordered.map((m) => (
-              <LetterLine
-                key={m.event_id}
-                message={m}
-                soulName={conversation.soul_name}
-                onReloadImages={reloadImages}
-                onOpenImage={openImage}
-              />
-            ))}
+            {rows.map((row) =>
+              row.kind === "day" ? (
+                <DayDivider key={row.key} day={row.day} />
+              ) : (
+                <LetterGroupView
+                  key={row.key}
+                  group={row}
+                  soulName={conversation.soul_name}
+                  onReloadImages={reloadImages}
+                  onOpenImage={openImage}
+                />
+              )
+            )}
+            {outboxEntry ? <OutboxLetter entry={outboxEntry} name={ownName} offline={offline} onRetry={() => void retryReply(id)} /> : null}
           </View>
         </Screen>
-        {closed ? (
-          <View style={{ padding: space[4] }}>
-            <Notice
-              tone="neutral"
-              testID="letter-closed"
-            >{`○ ${t("soul_inbox.closed")}`}</Notice>
-          </View>
-        ) : moved ? (
-          <View style={{ padding: space[4] }}>
-            <Notice tone="neutral" testID="letter-moved">{`○ ${t("officer_app.letter.moved")}`}</Notice>
-          </View>
+        {readOnly ? (
+          footer(
+            <View style={{ padding: space[4] }}>
+              <Txt testID={turn === "closed" ? "letter-closed" : "letter-moved"} variant="body" tone="muted" style={styles.status}>
+                {t(turn === "closed" ? "letters.state.closed" : "officer_app.letter.moved")}
+              </Txt>
+            </View>
+          )
         ) : unassigned ? (
           // Nobody holds it: 由我来回 takes it (then the box appears), 转给别人 hands it on. No reply from here.
-          <TakeBar
-            busy={acting}
-            offline={offline}
-            onAssign={() => setSheet("assign")}
-            onTake={() => meId !== undefined && act(() => soulInboxApi.assign(id, meId), "")}
-          />
+          footer(
+            <TakeBar
+              busy={acting}
+              offline={offline}
+              onAssign={() => setSheet("assign")}
+              onTake={() => meId !== undefined && act(() => soulInboxApi.assign(id, meId), "")}
+            />
+          )
         ) : othersLetter ? (
-          <View testID="letter-not-yours" style={{ padding: space[4], gap: space[3], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
+          footer(
+          <View testID="letter-not-yours" style={{ padding: space[4], gap: space[3] }}>
             <Txt variant="body" tone="muted">{t("officer_app.letter.not_yours", { name: conversation.assignee?.display_name ?? "" })}</Txt>
             {canHandOn && meId !== undefined ? (
               <ActionButton
@@ -416,50 +481,43 @@ export function LetterThread({
               />
             ) : null}
           </View>
+          )
+        ) : !canHandOn ? (
+          status ? footer(null) : null
         ) : (
-          <View
-            testID="letter-composer"
-            style={{
-              padding: space[4],
-              gap: space[3],
-              borderTopWidth: 1,
-              borderTopColor: theme.hair,
-              backgroundColor: theme.s1,
-            }}
-          >
-            {templates.data && !templates.error ? (
-              <View style={{ flexDirection: "row" }}>
-                <SmallButton
-                  testID="letter-template"
-                  title={t("soul_inbox.template.label")}
-                  onPress={() => setPicking(true)}
-                />
-              </View>
-            ) : null}
+          footer(
+          <View testID="letter-composer" style={{ padding: space[4], gap: space[3] }}>
             <Input
               testID="letter-input"
               label={t("soul_inbox.reply_label")}
               multiline
+              // Two lines high, growing as typed (Design 第六十四批: a compact box, so the letters keep the screen).
+              // The app's multiline default is 128, which on this screen left two letters visible above the footer.
+              style={{ minHeight: 64 }}
               maxLength={INBOX_REPLY_MAX}
               value={text}
               editable={!queued}
               onChangeText={edit}
             />
-            {queued ? (
-              <Txt variant="caption" tone="muted" testID="letter-queued">{`${t("officer_app.outbox.pending")} · ${t("officer_app.outbox.auto")}`}</Txt>
-            ) : null}
-            {outboxEntry?.state === "failed" && !failure ? (
-              <Notice tone="neg" testID="letter-outbox-failed">{t(`officer_app.outbox.${outboxEntry.reason ?? "retry"}`)}</Notice>
-            ) : null}
             {failure ? (
               <Notice
                 tone="neg"
                 testID="letter-failed"
               >{t(failure)}</Notice>
             ) : null}
-            <Txt variant="caption" tone="muted" testID="letter-irreversible">
-              {t("officer_app.letter.irreversible")}
-            </Txt>
+            {/* 「模板」 shares the line of 「发出后不能撤回」 (Design 第六十四批: a compact footer, so the letters keep the screen). */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] }}>
+              <Txt variant="caption" tone="muted" testID="letter-irreversible" style={{ flexShrink: 1 }}>
+                {t("officer_app.letter.irreversible")}
+              </Txt>
+              {templates.data && !templates.error ? (
+                <SmallButton
+                  testID="letter-template"
+                  title={t("soul_inbox.template.label")}
+                  onPress={() => setPicking(true)}
+                />
+              ) : null}
+            </View>
             <ActionButton
               testID="letter-send"
               kind="primary"
@@ -469,6 +527,7 @@ export function LetterThread({
               onPress={send}
             />
           </View>
+          )
         )}
         <LetterMenuSheet open={sheet === "menu"} actions={menuActions(flags)} onPick={pick} onClose={() => setSheet(null)} />
         <AssignSheet
@@ -535,56 +594,138 @@ export function LetterThread({
   );
 }
 
-/** One letter: the author and time on a line, the words under it; the hall's go to the right. Memo: see `ordered`. */
-const LetterLine = memo(function LetterLine({
-  message,
+/** A new day: 11 faint on the left, a hairline to the right. Times in the groups are 时:分 only; the date is here. */
+function DayDivider({ day }: { day: string }) {
+  const theme = useTheme();
+  return (
+    <View testID={`letter-day-${day}`} style={styles.dayRow}>
+      <Txt variant="label" tone="subtle" style={styles.day}>
+        {day}
+      </Txt>
+      <View style={[styles.dayRule, { borderTopColor: theme.hair }]} />
+    </View>
+  );
+}
+
+/** The group's one line: 「名字 · 来信/回信」 at the left (13/20 500, the side word secondary), the first letter's 时:分 at the right. */
+function GroupHead({ name, side, ts }: { name: string; side: "soul" | "hall"; ts: number | null }) {
+  const { t } = useI18n();
+  return (
+    <View style={styles.head}>
+      <Txt variant="label" numberOfLines={1} style={[styles.headName, styles.fill]}>
+        {name}
+        <Txt variant="body" tone="muted" style={styles.headName}>{` · ${t(`letters.side.${side}`)}`}</Txt>
+      </Txt>
+      {ts !== null ? (
+        <Txt variant="label" tone="subtle" style={styles.time}>
+          {hhmm(new Date(ts))}
+        </Txt>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * One group of letters from one person. The hall's (this side's) on the `card2` panel; the soul's plain on the canvas,
+ * with the 2px ink line while it is unanswered (`open`). Full width either way. Memo: typing in the box re-renders
+ * the screen, not the thread (R2) -- `rows` keeps the same groups.
+ */
+const LetterGroupView = memo(function LetterGroupView({
+  group,
   soulName,
   onOpenImage,
   onReloadImages,
 }: {
-  message: InboxMessage;
+  group: LetterGroup<InboxMessage>;
   soulName: string;
   onOpenImage: (id: string) => void;
   onReloadImages: () => void;
 }) {
+  const theme = useTheme();
   const { t } = useI18n();
   const { back } = useOnline(); // a picture that failed offline tries again once the network is back
-  const mine = message.from_officer;
-  const who = mine
-    ? [
-        message.sender_name || t("soul_inbox.officer_reply"),
-        message.officer_title,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : message.sender_name || soulName;
+  const own = group.side === "hall";
+  const first = group.letters[0].item;
+  const name = own ? first.sender_name || t("soul_inbox.officer_reply") : first.sender_name || soulName;
   return (
     <View
-      testID={`letter-${mine ? "hall" : "soul"}-${message.event_id}`}
-      style={{
-        alignSelf: mine ? "flex-end" : "flex-start",
-        maxWidth: "85%",
-        gap: space[1],
-        alignItems: mine ? "flex-end" : "flex-start",
-      }}
+      testID={`letter-group-${group.side}${group.open ? "-open" : ""}`}
+      style={[styles.group, own && { backgroundColor: theme.s2, borderRadius: 6, padding: 12 }, group.open && { borderLeftWidth: 2, borderLeftColor: theme.ink, paddingLeft: 12 }]}
     >
-      <OneLine
-        variant="caption"
-        tone="muted"
-      >{`${who} · ${formatWhen(new Date(message.timestamp).toISOString())}`}</OneLine>
-      {message.image ? (
-        // A picture is its own letter, without words ("[图片]" is only what an older reader shows).
-        <LetterImage
-          key={`${message.image.url}:${back}`}
-          image={message.image}
-          onOpen={() => onOpenImage(message.image!.id)}
-          onReload={onReloadImages}
-        />
+      <GroupHead name={name} side={group.side} ts={group.ts} />
+      {group.letters.map(({ item: m, stamp }) => (
+        <View key={m.event_id} testID={`letter-${own ? "hall" : "soul"}-${m.event_id}`} style={styles.letter}>
+          {stamp ? (
+            <Txt variant="label" tone="subtle" style={[styles.time, styles.stamp]}>
+              {hhmm(new Date(m.timestamp))}
+            </Txt>
+          ) : null}
+          {m.image ? (
+            // A picture is its own letter, without words ("[图片]" is only what an older reader shows).
+            <LetterImage key={`${m.image.url}:${back}`} image={m.image} onOpen={() => onOpenImage(m.image!.id)} onReload={onReloadImages} />
+          ) : (
+            <Txt variant="body" style={styles.body}>
+              {m.body}
+            </Txt>
+          )}
+        </View>
+      ))}
+    </View>
+  );
+});
+
+/**
+ * A reply still on this phone (outbox.ts): the hall's panel, unfilled, in a 1px dashed frame -- not sent yet.
+ * 「◌ 待发出」 while it waits; 「没发出 · 重试」 when it failed and trying again may work, else 「没发出 · <why>」.
+ * Once it goes out the thread reloads and it is an ordinary panel in the group above. No animation either way.
+ */
+function OutboxLetter({ entry, name, offline, onRetry }: { entry: OutboxEntry; name: string; offline: boolean; onRetry: () => void }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const failed = entry.state === "failed";
+  const retryable = (entry.reason ?? "retry") === "retry";
+  return (
+    <View testID={`letter-outbox-${entry.state}`} style={[styles.group, { borderWidth: 1, borderStyle: "dashed", borderColor: theme.inkSubtle, borderRadius: 6, padding: 12 }]}>
+      <GroupHead name={name} side="hall" ts={null} />
+      <Txt variant="body" style={styles.body}>
+        {entry.text}
+      </Txt>
+      {failed ? (
+        <View testID="letter-not-sent" style={styles.outboxLine}>
+          <Txt variant="label" tone="neg" style={styles.small}>
+            {retryable ? `${t("letters.not_sent")} · ` : `${t("letters.not_sent")} · ${t(`officer_app.outbox.${entry.reason}`)}`}
+          </Txt>
+          {retryable ? (
+            <Press testID="letter-outbox-retry" accessibilityRole="button" disabled={offline} onPress={onRetry} hitSlop={12}>
+              <Txt variant="label" style={[styles.small, styles.link]}>
+                {t("common.retry")}
+              </Txt>
+            </Press>
+          ) : null}
+        </View>
       ) : (
-        <Txt variant="body" style={{ textAlign: mine ? "right" : "left" }}>
-          {message.body}
+        <Txt testID="letter-queued" variant="label" tone="muted" style={styles.small}>
+          {`◌ ${t("letters.queued")}`}
         </Txt>
       )}
     </View>
   );
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  group: { gap: 16, alignSelf: "stretch" },
+  letter: { gap: 8 },
+  head: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  headName: { fontSize: 13, lineHeight: 20, letterSpacing: 0 },
+  time: { fontSize: 12, lineHeight: 16, letterSpacing: 0, fontVariant: ["tabular-nums"] },
+  stamp: { textAlign: "right" },
+  body: { fontSize: 16, lineHeight: 24 },
+  dayRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  day: { fontSize: 11, lineHeight: 16, letterSpacing: 0 },
+  dayRule: { flex: 1, borderTopWidth: StyleSheet.hairlineWidth },
+  status: { fontSize: 13, lineHeight: 20 },
+  outboxLine: { flexDirection: "row", alignItems: "center" },
+  small: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
+  link: { textDecorationLine: "underline" },
 });

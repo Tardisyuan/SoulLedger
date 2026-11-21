@@ -86,7 +86,8 @@ def test_a_failure_is_recorded_not_swallowed(hook):
         deliver_event_webhook.apply(args=[str(row.id)])
 
     row.refresh_from_db()
-    assert row.status == EventWebhookStatus.FAILED
+    # eager 一路重试到上限,最后一次写 ABANDONED(真 worker 上第一次失败之后是 FAILED);两种都把原因记下。
+    assert row.status in (EventWebhookStatus.FAILED, EventWebhookStatus.ABANDONED)
     assert "connection refused" in row.error, (
         "失败的原因没有被记下来 —— 从前它只留一行 debug 日志"
     )
@@ -110,6 +111,38 @@ def test_it_gives_up_after_the_ceiling_and_says_so(hook):
         "超过上限还在试 —— 一个挂掉的端点会一直占着 worker"
     )
     assert "上限" in row.error
+
+
+@pytest.mark.django_db
+def test_the_last_failed_try_is_abandoned_on_the_spot_and_keeps_its_error(hook):
+    """状态机审计 2026-11-20 第 14 条:「不会再自动重试」只有一种写法。此前最后一次失败写 FAILED(次数到上限),
+    兜底任务过五分钟把它再入队,才翻成 ABANDONED,并把错误改写成「已试 N 次」;管理员调高上限后,它又会被自动重发。"""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    row = _record(_envelope())[0]
+    row.attempt = 2  # 上限 3:这是最后一次
+    row.save(update_fields=["attempt"])
+
+    with patch("requests.Session.post", side_effect=OSError("connection refused")), patch(
+        "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable", lambda url: None,
+    ):
+        deliver_event_webhook.apply(args=[str(row.id)])
+
+    row.refresh_from_db()
+    assert row.status == EventWebhookStatus.ABANDONED, row.status
+    assert row.status != EventWebhookStatus.FAILED
+    assert row.attempt == 3
+    assert "connection refused" in row.error and "上限" in row.error, row.error
+
+    EventWebhookDelivery.objects.filter(pk=row.pk).update(update_time=timezone.now() - timedelta(days=1))
+    hook.max_retries = 5
+    hook.save(update_fields=["max_retries"])
+    enqueued = []
+    with patch.object(deliver_event_webhook, "delay", side_effect=enqueued.append):
+        assert retry_pending_webhooks(older_than_seconds=300) == 0
+    assert enqueued == [], "an abandoned try came back when the ceiling was raised"
 
 
 @pytest.mark.django_db
@@ -237,5 +270,5 @@ def test_a_failure_stamps_the_time_its_backoff_counts_from(hook):
         deliver_event_webhook.apply(args=[str(row.id)])
 
     row.refresh_from_db()
-    assert row.status == EventWebhookStatus.FAILED
+    assert row.status in (EventWebhookStatus.FAILED, EventWebhookStatus.ABANDONED)  # eager: see above
     assert timezone.now() - row.update_time < timedelta(minutes=1)

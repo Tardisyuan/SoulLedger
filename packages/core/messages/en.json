@@ -901,20 +901,26 @@
       "error": {
         "not_diyu": "Only a soul of Diyu walks the thirteen stations.",
         "alive": "A living soul is not on the road.",
-        "reason_required": "Moving back needs a reason.",
-        "soul_settled": "This soul’s account is closed; it is no longer on the road."
+        "reason_required": "A reason is needed to move back.",
+        "soul_settled": "This soul is settled; its station can no longer be moved."
       },
       "move_title": "Move station · {{name}}",
       "move_current": "Now: station {{n}} · {{station}}",
       "move_to": "Move to",
-      "reason_label": "Reason for moving back",
+      "reason_label": "Reason",
       "move_body": "Moving changes only the recorded station; it goes into the soul ledger page.",
       "not_on_road": "Thirteen stations · not on the road",
       "move_confirm": "Move",
       "here_mark": "now",
       "now_card": "Now · station {{n}}",
       "state_passed": "passed",
-      "state_ahead": "ahead"
+      "state_ahead": "ahead",
+      "reason_required_mark": "Required",
+      "reason_hint_back": "Moving back needs a reason.",
+      "reason_hint_forward": "Optional when moving forward.",
+      "reason_placeholder": "e.g. the last station was recorded wrongly",
+      "timeline_back": "Moved back · {{station}}",
+      "timeline_reason": "Reason: {{reason}}"
     },
     "birth_continent": {
       "label": "Continent of birth",
@@ -5326,7 +5332,8 @@
         "none": "None recorded yet",
         "partial": "{{recorded}} of {{total}} recorded; the rest are not yet.",
         "complete": "All {{total}} are recorded.",
-        "strip_aria": "{{truthful}} true, {{untruthful}} false, {{unheard}} not recorded, of {{total}}"
+        "strip_aria": "{{truthful}} true, {{untruthful}} false, {{unheard}} not recorded, of {{total}}",
+        "count": "{{recorded}} / {{total}} recorded"
       },
       "delivered": "Delivered",
       "delivered_on": "Delivered · {{date}}",
@@ -5644,7 +5651,6 @@
         "hint": "Write to the hall; an officer replies in its name.",
         "title": "{{hall}} · Hall",
         "subtitle": "An officer replies in the hall’s name · not immediate",
-        "officer_byline": "{{hall}} · {{role}} {{name}}",
         "not_current": "You are no longer at {{hall}}. The old letters remain; nothing can be added.",
         "go_current": "Write to {{hall}}"
       },
@@ -5758,6 +5764,14 @@
           "images_unavailable": "Until they reply, only text can be sent"
         },
         "button": "Photo"
+      },
+      "side": {
+        "hall": "The hall",
+        "me": "Me"
+      },
+      "state": {
+        "awaiting_hall": "Sent · waiting for the hall",
+        "awaiting_me": "The hall has replied"
       }
     },
     "circle": {
@@ -7346,7 +7360,6 @@
     "thread_empty": "This letter has no messages yet",
     "closed": "Closed (reborn)",
     "no_messages": "No messages yet",
-    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Reply as the hall",
     "reply_hint": "The soul sees a reply from the hall, signed with your name.",
     "send": "Send",
@@ -7375,11 +7388,8 @@
     "by_hall": "By hall",
     "folder_empty": "No letters in this folder",
     "newest_first": "Newest first",
-    "from_soul": "From {{name}}",
     "officer_reply": "Hall reply",
-    "previous": "previous",
     "earlier": "{{n}} earlier letters",
-    "awaiting": "Awaiting reply · {{n}} d",
     "cite_hint": "/ cite a statute",
     "cite_label": "Statutes",
     "cite_results": "{{n}} statutes; ↑↓ to choose, Enter to insert",
@@ -10644,5 +10654,19 @@
       "title": "Couldn’t load permissions",
       "body": "This is not a refusal: the permissions just didn’t arrive from the server this time. Reload; if it still fails, come back a little later."
     }
+  },
+  "letters": {
+    "state": {
+      "awaiting_hall": "The hall’s turn to reply · the letter has waited {{wait}}",
+      "awaiting_soul": "Replied · waiting for the soul",
+      "closed": "This exchange is closed · read-only"
+    },
+    "side": {
+      "soul": "Letter",
+      "hall": "Reply"
+    },
+    "queued": "Waiting to send",
+    "not_sent": "Not sent",
+    "image_alt": "An image, with no text"
   }
 }

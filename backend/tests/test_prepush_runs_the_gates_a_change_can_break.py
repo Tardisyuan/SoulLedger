@@ -96,6 +96,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR = REPO_ROOT / "scripts" / "install-hooks.sh"
 RUNNER = REPO_ROOT / "scripts" / "run-gates.sh"
+# The remote executor run-gates.sh sources (2026-11-21): routing, the Windows PC, locks, sync, containers.
+REMOTE = REPO_ROOT / "scripts" / "gates-remote.sh"
 READERS = REPO_ROOT / "backend" / "tests" / "reads-outside-backend.txt"
 
 
@@ -214,7 +216,7 @@ class TestTheExistingPrefixesStillWork:
         assert _classify(hook, ["docs/README.md", "scripts/status.sh"]) == NONE
 
     @pytest.mark.parametrize(
-        "name", ["scripts/run-gates.sh", "scripts/install-hooks.sh", "scripts/gate-lock.sh"]
+        "name", ["scripts/run-gates.sh", "scripts/gates-remote.sh", "scripts/install-hooks.sh", "scripts/gate-lock.sh"]
     )
     def test_the_gate_machinery_runs_the_backend_suite_that_tests_it(self, hook, name):
         """This file is the machinery's only test, and it reads the scripts
@@ -262,7 +264,7 @@ def checkouts(tmp_path):
     (main / "backend").mkdir(parents=True)
     (main / "backend" / "manage.py").write_text("")
     (main / "scripts").mkdir()
-    for name in ("install-hooks.sh", "run-gates.sh", "gate-lock.sh"):
+    for name in ("install-hooks.sh", "run-gates.sh", "gates-remote.sh", "gate-lock.sh"):
         (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
     (main / "backend" / "tests").mkdir()
     (main / "backend" / "tests" / READERS.name).write_text(READERS.read_text(encoding="utf-8"))
@@ -380,6 +382,8 @@ class TestFromAWorktree:
         # The copy a branch without scripts/run-gates.sh falls back to.
         copy = main / ".git" / "hooks" / "soulledger-gates" / "run-gates.sh"
         assert copy.read_text(encoding="utf-8") == RUNNER.read_text(encoding="utf-8")
+        # ... and the remote executor that copy sources from beside itself.
+        assert (copy.parent / REMOTE.name).read_text(encoding="utf-8") == REMOTE.read_text(encoding="utf-8")
 
 
 def _fake_venv(checkout: Path, python_body: str) -> Path:
@@ -1458,11 +1462,19 @@ class TestTheOfficerAppIsGated:
         assert named <= dirs | names, sorted(named - dirs - names)
 
 
+def _both_sides(stamp: Path, line: str) -> None:
+    """One ledger line into each side's ledger ($STAMP-backend, $STAMP-js): a pass of both sides."""
+    for side in ("backend", "js"):
+        Path(f"{stamp}-{side}").write_text(line)
+
+
 class TestATreeThatAlreadyPassedFull:
     """A push of a tree `run-gates.sh --full` already passed is let through (2026-10-19, user decision).
 
     The push to main runs the full set; running it again right after a full pass of the very same
     files cost ~22 minutes a push. Only an exact tree match skips — the second case is the guard.
+    A full pass is `*` in each side's ledger since 2026-11-15; the whole-tree ledger it used to be ($STAMP
+    itself) is no longer read (2026-11-21, user decision) — the third case.
     """
 
     def _push(self, hook, wt: Path, stamp: Path) -> subprocess.CompletedProcess:
@@ -1478,19 +1490,30 @@ class TestATreeThatAlreadyPassedFull:
     def test_the_same_tree_is_not_run_again(self, hook, checkouts, tmp_path):
         _, wt = checkouts
         stamp = tmp_path / "passed"
-        stamp.write_text(f"{self._tree(wt)}\t2026-10-19 12:00, abc1234\n")
+        _both_sides(stamp, f"{self._tree(wt)}\t2026-10-19 12:00, abc1234\t*\n")
         proc = self._push(hook, wt, stamp)
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        assert "already passed" in proc.stdout, proc.stdout
+        assert "already passed `scripts/run-gates.sh --full`" in proc.stdout, proc.stdout
         assert "classify:" not in proc.stdout, "the gates were classified (would have run) for a tree that passed"
 
     def test_a_different_tree_runs_as_before(self, hook, checkouts, tmp_path):
         _, wt = checkouts
         stamp = tmp_path / "passed"
-        stamp.write_text(f"{'f' * 40}\t2026-10-19 12:00, abc1234\n")
+        _both_sides(stamp, f"{'f' * 40}\t2026-10-19 12:00, abc1234\t*\n")
         proc = self._push(hook, wt, stamp)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "already passed" not in proc.stdout
+        assert re.search(r"^classify: ", proc.stdout, re.M), proc.stdout
+
+    def test_the_whole_tree_ledgers_from_before_the_sides_are_not_read(self, hook, checkouts, tmp_path):
+        """$STAMP itself (a --full pass) and $STAMP-selective, written until 2026-11-15, vouch for nothing now."""
+        _, wt = checkouts
+        stamp = tmp_path / "passed"
+        stamp.write_text(f"{self._tree(wt)}\t2026-10-19 12:00, abc1234\n")
+        (tmp_path / "passed-selective").write_text(f"{self._tree(wt)}\t2026-10-27 12:00, abc1234\tbackend/x.py\n")
+        proc = self._push(hook, wt, stamp)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "already passed" not in proc.stdout and "vouch" not in proc.stdout, proc.stdout
         assert re.search(r"^classify: ", proc.stdout, re.M), proc.stdout
 
 
@@ -1524,7 +1547,7 @@ class TestASelectivePassIsNotRunAgain:
         for side in ("backend", "js"):
             line = (tmp_path / f"passed-{side}").read_text()
             assert line.startswith(self._head(main, "HEAD^{tree}") + "\t") and line.rstrip().endswith("\tbackend/x.py"), line
-        assert not (tmp_path / "passed-selective").exists(), "the whole-tree ledger is read, no longer written"
+        assert not (tmp_path / "passed-selective").exists(), "the whole-tree ledger is neither written nor read any more"
         push = self._push(hook, main, stamp, ["backend/x.py"])
         assert push.returncode == 0, push.stdout + push.stderr
         assert "for these changes" in push.stdout, push.stdout
@@ -1532,8 +1555,7 @@ class TestASelectivePassIsNotRunAgain:
 
     def _stamp_for(self, main: Path, tmp_path: Path, files: str) -> Path:
         stamp = tmp_path / "passed"
-        (tmp_path / "passed-selective").write_text(
-            f"{self._head(main, 'HEAD^{tree}')}\t2026-10-27 12:00, abc1234\t{files}\n")
+        _both_sides(stamp, f"{self._head(main, 'HEAD^{tree}')}\t2026-10-27 12:00, abc1234\t{files}\n")
         return stamp
 
     def test_a_push_changing_a_file_the_run_did_not_cover_runs(self, hook, checkouts, tmp_path):
@@ -1551,7 +1573,7 @@ class TestASelectivePassIsNotRunAgain:
     def test_another_tree_runs(self, hook, checkouts, tmp_path):
         main, _ = checkouts
         stamp = tmp_path / "passed"
-        (tmp_path / "passed-selective").write_text(f"{'f' * 40}\t2026-10-27 12:00, abc1234\tbackend/a.py\n")
+        _both_sides(stamp, f"{'f' * 40}\t2026-10-27 12:00, abc1234\tbackend/a.py\n")
         assert "for these changes" not in self._push(hook, main, stamp, ["backend/a.py"]).stdout
 
     def test_gates_full_at_push_time_still_runs(self, hook, checkouts, tmp_path):
@@ -1592,7 +1614,7 @@ class TestTheBaseIsTheLastTreeThatPassed:
 
     def test_a_commit_whose_tree_passed_full_is_the_base(self, checkouts, tmp_path):
         main, sha = self._repo(checkouts)
-        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        _both_sides(tmp_path / "passed", f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\t*\n")
         out = self._gates(main, tmp_path)
         assert f"base: {sha['a'][:7]}" in out and "(last tree that passed, full) — 1 commits since" in out, out
         assert "merge-base with origin/main" not in out
@@ -1612,17 +1634,17 @@ class TestTheBaseIsTheLastTreeThatPassed:
     def test_a_selective_pass_counts_only_when_it_covered_its_commit(self, checkouts, tmp_path):
         main, sha = self._repo(checkouts)
         mig = "backend/apps/souls/migrations/0002_x.py"
-        sel = tmp_path / "passed-selective"
-        sel.write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py\n")
+        stamp = tmp_path / "passed"
+        _both_sides(stamp, f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py\n")
         out = self._gates(main, tmp_path)
         assert "merge-base with origin/main; none of the last 300" in out, out
-        sel.write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py|{mig}\n")
+        _both_sides(stamp, f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py|{mig}\n")
         out = self._gates(main, tmp_path)
         assert f"base: {sha['a'][:7]} (last tree that passed, selective)" in out, out
 
     def test_a_pass_on_that_base_records_the_whole_branch_as_covered(self, checkouts, fake_backend, tmp_path):
         main, sha = self._repo(checkouts)
-        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        _both_sides(tmp_path / "passed", f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\t*\n")
         run = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh")], cwd=main,
                              env=_clean_env(PYTHON_BIN=fake_backend, RUFF_BIN=shutil.which("true"),
                                             GATES_STAMP_FILE=str(tmp_path / "passed"),
@@ -1630,7 +1652,7 @@ class TestTheBaseIsTheLastTreeThatPassed:
                              capture_output=True, text=True, timeout=120)
         assert run.returncode == 0, run.stdout + run.stderr
         assert "recorded a selective pass (backend)" in run.stdout, run.stdout
-        line = (tmp_path / "passed-backend").read_text().rstrip().split("\t")
+        line = (tmp_path / "passed-backend").read_text().splitlines()[-1].split("\t")  # the line this run appended
         assert line[0] == self._tree(main, "HEAD"), line
         assert line[2].split("|") == sorted(["backend/apps/souls/migrations/0002_x.py", "backend/a.py",
                                              "backend/b.py"]), line
@@ -1643,7 +1665,7 @@ class TestTheBaseIsTheLastTreeThatPassed:
 
     def test_full_and_an_explicit_base_ignore_the_ledger(self, checkouts, tmp_path):
         main, sha = self._repo(checkouts)
-        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        _both_sides(tmp_path / "passed", f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\t*\n")
         assert "last tree that passed" not in self._gates(main, tmp_path, "--full")
         assert "last tree that passed" not in self._gates(main, tmp_path, "--base", sha["mig"])
 
@@ -1899,7 +1921,8 @@ class TestRealPostgres:
         assert "--create-db" in args and "faulthandler_timeout=600" in args, args
         assert self.PG_ONLY in args and "tests/test_souls.py" in args, args
         assert "-m" in args and "not migration" in args, args
-        assert "→ ruff, makemigrations: skipped — --real-pg runs pytest only" in proc.stdout
+        # 2026-11-21: the backend side's static checks run too, so a green run counts for that side.
+        assert "→ ruff" in proc.stdout and "→ makemigrations --check" in proc.stdout, proc.stdout
 
     def test_full_also_runs_the_sharded_group_that_the_suite_skips(self, checkouts, fake_backend):
         """C21 (2026-10-31): a test that exists only under its own settings is skipped by every ordinary run.
@@ -2056,9 +2079,10 @@ class TestTheWholeRunOnAnotherMachine:
         assert (tmp_path / "passed-backend").read_text().rstrip().endswith("\tbackend/x.py")
         assert (tmp_path / "passed-js").read_text().rstrip().endswith("\tbackend/x.py")
 
-    def test_a_green_real_pg_run_is_recorded_in_its_own_ledger_only(self, checkouts, tmp_path):
-        """2026-11-20: a hook reads `-realpg` before a whole real-PG run (is it needed?). A real-PG pass must never
-        reach the push ledgers, which are the SQLite side's. Mutation: drop `file="$STAMP-realpg"` → red."""
+    def test_a_green_real_pg_run_is_recorded_for_the_backend_side(self, checkouts, tmp_path):
+        """2026-11-20: a hook reads `-realpg` before a whole real-PG run (is it needed?). 2026-11-21: the run also
+        does the backend side's ruff and makemigrations, so it is that side's pass too (`-backend`), never the JS
+        side's. Mutation: drop `files+=("$STAMP-realpg")` or write only `-realpg` → red."""
         main, _ = checkouts
         (main / "backend" / "x.py").write_text("X = 1\n")
         _git(main, "add", "-A")
@@ -2066,7 +2090,39 @@ class TestTheWholeRunOnAnotherMachine:
         proc = self._run(main, tmp_path, "--real-pg", "--base", "HEAD~1", prepush=False)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert (tmp_path / "passed-realpg").read_text().rstrip().endswith("\tbackend/x.py"), proc.stdout
-        assert not (tmp_path / "passed-backend").exists() and not (tmp_path / "passed-js").exists(), proc.stdout
+        assert (tmp_path / "passed-backend").read_text().rstrip().endswith("\tbackend/x.py"), proc.stdout
+        assert not (tmp_path / "passed-js").exists(), proc.stdout
+
+    def _push_of_head(self, main, tmp_path, changed):
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=main, env=_clean_env(), capture_output=True,
+                              text=True, check=True).stdout.strip()
+        (tmp_path / "remote-run").unlink(missing_ok=True)
+        return self._run(main, tmp_path, PREPUSH_CHANGED=changed, PREPUSH_RANGE=f"{'0' * 40}..{head}")
+
+    def test_a_js_pass_and_a_real_pg_pass_of_the_pushed_tree_let_the_push_through(self, checkouts, tmp_path):
+        """2026-11-21: `GATES_SIDES=js run-gates.sh` then `run-gates.sh --real-pg`, both green on one clean tree, then
+        the push of that tree ran both sides again: the real-PG pass went only to `-realpg`, which no push reads,
+        and one unproven side reran the other too. Mutation: record a real-PG pass only in `-realpg` → the push
+        runs (red); make the push all-or-nothing again → the JS-only case below runs JS too (red)."""
+        main, _ = checkouts
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "x")
+        js = self._run(main, tmp_path, "--base", "HEAD~1", prepush=False, GATES_SIDES="js")
+        assert "recorded a selective pass (js)" in js.stdout and not (tmp_path / "passed-backend").exists(), js.stdout
+        # One side proven: only the other runs there.
+        push = self._push_of_head(main, tmp_path, "backend/x.py")
+        assert push.returncode == 0 and "running the backend side only" in push.stdout, push.stdout
+        assert "GATES_SIDES=backend" in (tmp_path / "remote-run").read_text(), push.stdout
+        pg = self._run(main, tmp_path, "--real-pg", "--base", "HEAD~1", prepush=False)
+        assert "recorded a selective pass (backend)" in pg.stdout, pg.stdout
+        push = self._push_of_head(main, tmp_path, "backend/x.py")
+        assert push.returncode == 0 and "already passed" in push.stdout, push.stdout
+        assert not (tmp_path / "remote-run").exists(), "the push ran the gates for a tree both sides passed"
+        # Sound: a pushed file neither pass covered still runs both sides.
+        push = self._push_of_head(main, tmp_path, "backend/x.py\nfrontend/y.ts")
+        assert "already passed" not in push.stdout and "side only" not in push.stdout, push.stdout
+        assert "GATES_SIDES=both" in (tmp_path / "remote-run").read_text(), push.stdout
 
 
 class TestEndToEndOnAnotherMachine:
@@ -2252,7 +2308,7 @@ class TestRemoteLocksSayWhenTheyWait:
     """2026-11-13 (test review 3.5): a remote `flock 9` waited without a word. Each lock is now tried without
     waiting first; when it is taken the run prints who has it (the containers by name) and then waits."""
 
-    SCRIPTS = ("run-gates.sh", "demo-remote.sh", "mobile-remote.sh")
+    SCRIPTS = ("gates-remote.sh", "demo-remote.sh", "mobile-remote.sh")
 
     @staticmethod
     def _definition(script: str) -> str:
@@ -2275,7 +2331,7 @@ class TestRemoteLocksSayWhenTheyWait:
         (b / "docker").write_text(f'#!/bin/bash\necho "docker $*" >> "{tmp_path}/docker.log"\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
-        script = (f"P=gates\n{self._definition('run-gates.sh')}"
+        script = (f"P=gates\n{self._definition('gates-remote.sh')}"
                   f'eval "( $(remote_flock 9 run.lock sl-gates-); echo RAN ) 9>{tmp_path}/lock"\n')
         env = _clean_env()
         env["PATH"] = f"{b}:{env['PATH']}"
@@ -2306,8 +2362,8 @@ class TestTwoGateSlots:
 
     @staticmethod
     def _definition(name: str) -> str:
-        m = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", RUNNER.read_text(encoding="utf-8"), re.M | re.S)
-        assert m, f"no {name} in run-gates.sh"
+        m = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", REMOTE.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, f"no {name} in gates-remote.sh"
         return m.group(0)
 
     def _take(self, tmp_path, free: set[str], frees_later: str = "", slots: str = "2", orphaned: bool = False, show: str = ""):
@@ -2325,7 +2381,7 @@ class TestTwoGateSlots:
         (b / "docker").write_text('#!/bin/bash\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
-        script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition('run-gates.sh')}"
+        script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition('gates-remote.sh')}"
                   f"{self._definition('remote_slots')}"
                   f'eval "( $(remote_slots sl-gates-); echo RAN{show} ) 8>{tmp_path}/lock2 9>{tmp_path}/lock"\n')
         env = _clean_env()
@@ -2354,7 +2410,7 @@ class TestTwoGateSlots:
             (tmp_path / str(i)).mkdir()
             proc, log = self._take(tmp_path / str(i), free, frees_later=later, show="\\$S")
             assert proc.stdout.endswith(f"RAN{want}\n"), (free, later, proc.stdout, log)
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         assert "-e GATES_IN_REMOTE=1 -e SL_GATE_SLOT=\\${S:-1} " in text
 
     def test_a_waiter_whose_ssh_is_gone_gives_up(self, tmp_path):
@@ -2368,10 +2424,10 @@ class TestTwoGateSlots:
         assert "waiting for run.lock" in proc.stdout and log == "flock -n 9\nflock 9\n", proc.stdout + log
 
     def test_a_gate_run_opens_both_slots_and_a_bad_count_is_refused(self, tmp_path):
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         assert '"( $(remote_slots sl-gates-);' in text and ") 8>$RDIR/run.2.lock 9>$RDIR/run.lock\"" in text
         sizing = re.search(r'^case "\$\{GATES_REMOTE_SLOTS:-2\}" in .*?esac$', text, re.M | re.S)
-        assert sizing, "no slot sizing in run-gates.sh"
+        assert sizing, "no slot sizing in gates-remote.sh"
         for slots, rc in (("3", 2), ("1", 0), ("2", 0)):
             proc = subprocess.run(["bash", "-c", f"GATES_REMOTE_SLOTS={slots}\n{sizing.group(0)}\necho $SLOT_CPUS"],
                                   env=_clean_env(), capture_output=True, text=True, timeout=60)
@@ -2495,11 +2551,11 @@ class TestTheWindowsPcTakesARunOnlyWhenUnraidIsFull:
 
     @staticmethod
     def _definitions(*names: str) -> str:
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         out = []
         for n in names:
             m = re.search(rf"^{n}\(\) \{{\n.*?^\}}\n", text, re.M | re.S)
-            assert m, f"no {n} in run-gates.sh"
+            assert m, f"no {n} in gates-remote.sh"
             out.append(m.group(0))
         return "".join(out)
 
@@ -2584,8 +2640,8 @@ class TestUnusedRemoteTreesAreDeleted:
 
     @staticmethod
     def _function() -> str:
-        m = re.search(r"^remote_prune\(\) \{.*?^\}\n", RUNNER.read_text(encoding="utf-8"), re.M | re.S)
-        assert m, "no remote_prune in run-gates.sh"
+        m = re.search(r"^remote_prune\(\) \{.*?^\}\n", REMOTE.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, "no remote_prune in gates-remote.sh"
         return m.group(0)
 
     def _tree(self, rdir: Path, rel: str, used_days_ago: float | None) -> Path:
@@ -2671,7 +2727,7 @@ class TestUnusedRemoteTreesAreDeleted:
         assert proc.returncode == 1 and all(p.is_dir() for p in t.values()) and "what is mounted is unknown" in proc.stdout, proc.stdout
 
     def test_a_refusal_stops_the_run_before_its_container_starts(self):
-        run = RUNNER.read_text(encoding="utf-8")
+        run = REMOTE.read_text(encoding="utf-8")
         assert "$PRUNE_MIN_KB ) 7>$RDIR/prune.lock || exit 75; $(win_bg" in run
 
     def test_only_a_tree_no_run_has_used_for_the_period_is_deleted(self, tmp_path):
@@ -2999,7 +3055,7 @@ class TestTheRemoteDependencyHashes:
         assert js3 == js2 and py3 != py2
 
     def test_the_venv_is_synced_not_rebuilt(self):
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         deps = text[text.index("REMOTE_DEPS='"):]
         deps = deps[: deps.index("fi'") + 3]
         assert "rm -rf backend/.venv" not in deps
@@ -3040,7 +3096,7 @@ class TestTheJestCacheSurvivesTheNight:
         assert re.search(r"cacheDirectory: ['\"]<rootDir>/node_modules/\.cache/jest['\"]", text), config
 
     def test_the_sync_keeps_node_modules(self):
-        assert "--filter='P **/node_modules/'" in RUNNER.read_text(encoding="utf-8")
+        assert "--filter='P **/node_modules/'" in REMOTE.read_text(encoding="utf-8")
 
 
 class TestTwoSidesAtOnce:
@@ -3098,7 +3154,7 @@ class TestTwoSidesAtOnce:
         assert "backend exit 1, JS exit 0" in proc.stdout and "  backend: pytest failed" in proc.stdout, proc.stdout
 
     def test_the_container_splits_its_cpus_between_the_sides(self):
-        text = RUNNER.read_text(encoding="utf-8")
+        text = REMOTE.read_text(encoding="utf-8")
         assert "-e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-$SLOT_WORKERS}" in text
         assert "-e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-$SLOT_WORKERS}" in text
         assert "--cpus ${GATES_REMOTE_CPUS:-$SLOT_CPUS} --memory ${GATES_REMOTE_MEMORY:-$SLOT_MEM}" in text
@@ -3149,7 +3205,7 @@ class TestTheE2eReport:
 
 
 class TestMobileRemoteMetroFollowsTheDependencies:
-    """The dependency hash is run-gates.sh's deps_hash_js (dependency fields + lockfile + image), and a Metro
+    """The dependency hash is gates-remote.sh's deps_hash_js (dependency fields + lockfile + image), and a Metro
     started under another hash is restarted by `metro sync` / `metro open` — on 2026-10-31 a dependency change
     followed by only `metro sync` bundled against a node_modules that was gone. ssh and rsync are fakes; the
     fake ssh answers `docker inspect` with the environment in `metro-env` (absent = no Metro running)."""
@@ -3461,7 +3517,7 @@ class TestGatesSidesRunsOneSide:
         main, _ = checkouts
         self._red_backend_and_a_js_reader(main)
         proc = self._run_red_backend(main, tmp_path, "--prepush", GATES_SIDES="js", PREPUSH_CHANGED="backend/x.py")
-        assert "GATES_SIDES=js ignored on a push — both sides run" in proc.stdout, proc.stdout
+        assert "GATES_SIDES=js ignored on a push — the sides the ledgers do not vouch for run" in proc.stdout, proc.stdout
         assert proc.returncode != 0, proc.stdout
 
 

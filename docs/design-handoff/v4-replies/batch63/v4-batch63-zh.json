@@ -1,0 +1,14 @@
+{
+  "souls.diyu_station.reason_label": "理由",
+  "souls.diyu_station.reason_required_mark": "必填",
+  "souls.diyu_station.reason_hint_back": "往回挪要写理由。",
+  "souls.diyu_station.reason_hint_forward": "往前挪可以不写。",
+  "souls.diyu_station.reason_placeholder": "例如：上一站记错了",
+  "souls.diyu_station.error.reason_required": "往回挪要写理由。",
+  "souls.diyu_station.error.soul_settled": "这个灵魂已终局，不能再挪站。",
+  "souls.diyu_station.timeline_back": "退回 · {{station}}",
+  "souls.diyu_station.timeline_reason": "理由：{{reason}}",
+  "soul_app.timeline.reconsidered": "复议",
+  "soul_app.life.confession.none": "还没有记",
+  "soul_app.life.confession.count": "已记 {{recorded}} / {{total}}"
+}

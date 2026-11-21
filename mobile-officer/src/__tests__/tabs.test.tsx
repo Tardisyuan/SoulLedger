@@ -5,12 +5,12 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { AccessibilityInfo, AppState, StyleSheet } from "react-native";
+import { AccessibilityInfo, Animated, AppState, StyleSheet } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
 import { RefreshFailed, Row, TAB_CODES, TabBar, doorOf, visibleTabs } from "../kit";
-import { ToastProvider, themeFor, useI18n } from "../shared";
+import { EASE, ToastProvider, motion, themeFor, useI18n } from "../shared";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, overviewParts } from "../screens/queue";
@@ -240,7 +240,9 @@ describe("the other tabs have the same four states", () => {
     );
     renderOfficer(<QueueTab onOpen={() => {}} />);
     const held = await screen.findByTestId("queue-row-j7");
-    expect(within(held).getByText("‖ 暂不能认领 · 2999年 · 11月3日 起可认领")).toBeTruthy();
+    // The date's parts carry word joiners (U+2060) so a narrow row wraps at a space, never inside 「11月3日」.
+    const joined = (part: string) => [...part].join("\u2060");
+    expect(within(held).getByText(`‖ 暂不能认领 · ${joined("2999年")} · ${joined("11月3日")} 起可认领`)).toBeTruthy();
     expect(within(held).getByText(/ · 在枉死城候着$/)).toBeTruthy();
     expect(within(held).queryByText(/候至/)).toBeNull();
     expect(screen.queryByTestId("queue-claim-j7")).toBeNull();
@@ -250,6 +252,29 @@ describe("the other tabs have the same four states", () => {
     expect(order).toEqual(["queue-row-j8", "desk-held-divider", "queue-row-j7"]);
     expect(within(screen.getByTestId("queue-row-j8")).getByText(/ · 枉死$/)).toBeTruthy();
     expect(screen.getByTestId("queue-claim-j8")).toBeTruthy();
+    // 第六十三批 二 f: no `claimable_count` from the server, so 待认领 has no number (not 0 − 1, not the rows loaded).
+    expect(screen.queryByTestId("desk-count-unclaimed")).toBeNull();
+  });
+
+  it("第六十三批 二 f: 待认领's heading is claimable_count and 候着的 · N is held_count, not the rows on screen", async () => {
+    mockCounts.mockResolvedValue({ data: { mine: 0, unclaimed: 9, others: 0, deferred: 0, claimable_count: 4, held_count: 5 } });
+    mockList.mockImplementation(
+      byGroup({
+        unclaimed: [
+          { id: "j1", case_number: "CN-1", soul_name: "海瑞", court: "十殿", is_final: false },
+          { id: "j2", case_number: "GR-2", soul_name: "Elpenor", court: "岔路", is_final: false, ferry_barred: "UNBURIED" },
+        ],
+      })
+    );
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    await screen.findByTestId("queue-row-j2");
+    await waitFor(() => expect(screen.getByTestId("desk-count-unclaimed")).toHaveTextContent("4"));
+    expect(screen.getByTestId("desk-count-unclaimed")).not.toHaveTextContent("9");
+    expect(within(screen.getByTestId("desk-held-divider")).getByText("候着的 · 5")).toBeTruthy();
+    expect(within(screen.getByTestId("desk-held-divider")).queryByText("候着的 · 1")).toBeNull();
+    // A case that cannot cross Acheron waits with the held ones, after the divider (the server refuses its claim).
+    const order = screen.getAllByTestId(/^(queue-row-j[12]|desk-held-divider)$/).map((el) => el.props.testID);
+    expect(order).toEqual(["queue-row-j1", "desk-held-divider", "queue-row-j2"]);
   });
 
   it("「加载更多」 that fails says so under the list, and 重试 asks again", async () => {
@@ -323,6 +348,55 @@ describe("the other tabs have the same four states", () => {
     fireEvent.press(screen.getByTestId("notices-mark-all"));
     expect((await screen.findByTestId("toast")).props.children).toBe("全部标记已读失败");
     expect(screen.getAllByText("●")).toHaveLength(2);
+    // 第六十三批 E1: both dots fade back in.
+    expect(screen.getByTestId("notice-1-glyph-fade")).toBeTruthy();
+    expect(screen.getByTestId("notice-2-glyph-fade")).toBeTruthy();
+  });
+
+  it.each([false, true])("第六十三批 E1: the ● a failed mark puts back fades in over 160, opacity only (reduce motion %s: at once)", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    const timing = jest.spyOn(Animated, "timing");
+    const { notificationsApi } = jest.requireMock("@soulledger/core/api/notifications") as { notificationsApi: Record<string, jest.Mock> };
+    notificationsApi.markRead.mockRejectedValueOnce(new Error("offline"));
+    mockNotices.mockResolvedValue({ data: { results: [{ id: 1, title: "新审批", message: "", is_read: false, created_at: "2026-10-09T01:00:00Z" }] } });
+    renderOfficer(
+      <ToastProvider>
+        <NoticesTab />
+      </ToastProvider>
+    );
+    await screen.findByText("●");
+    await act(async () => {});
+    // The ● on arrival just is: no fade.
+    expect(screen.queryByTestId("notice-1-glyph-fade")).toBeNull();
+    timing.mockClear();
+    fireEvent.press(screen.getByTestId("notice-1"));
+    await screen.findByTestId("toast");
+    expect(screen.getByText("●")).toBeTruthy();
+    if (reduced) expect(screen.queryByTestId("notice-1-glyph-fade")).toBeNull();
+    else expect(screen.getByTestId("notice-1-glyph-fade")).toBeTruthy();
+    timing.mockRestore();
+    spy.mockResolvedValue(false);
+  });
+
+  it.each([false, true])("第六十三批 E1: Row's glyphFadeIn is one 160 opacity fade on the enter curve (reduce motion %s: none)", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    renderOfficer(<Row testID="probe" title="x" glyph="○" glyphFadeIn />); // let the reduce-motion answer land first
+    await act(async () => {});
+    const timing = jest.spyOn(Animated, "timing");
+    renderOfficer(<Row testID="r" title="新审批" glyph="●" glyphFadeIn />);
+    await act(async () => {});
+    if (reduced) {
+      expect(screen.queryByTestId("r-glyph-fade")).toBeNull();
+      expect(timing).not.toHaveBeenCalled();
+    } else {
+      expect(motion.unreadIn).toBe(160);
+      expect(screen.getByTestId("r-glyph-fade")).toBeTruthy();
+      expect(timing).toHaveBeenCalledTimes(1);
+      expect(timing.mock.calls[0][1]).toEqual({ toValue: 1, duration: 160, easing: EASE.enter, useNativeDriver: true });
+    }
+    expect(screen.getByText("●", { includeHiddenElements: true })).toBeTruthy();
+    timing.mockRestore();
+    spy.mockResolvedValue(false);
   });
 
   it("notices: no big 「通知」 title under the top bar; 全部已读 stays", async () => {

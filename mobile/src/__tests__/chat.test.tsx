@@ -23,13 +23,14 @@ import type { ReactNode } from "react";
 import { AppState, FlatList, Platform, StyleSheet, TextInput, type AppStateStatus } from "react-native";
 
 import { ChatContext, ChatProvider, OUTBOX_KEY, clearOutbox, readOutbox, useChat, useChatStatus, type Chat, type ChatStatus } from "../chat";
-import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
+import { dayOf, normalizeCode } from "../chatRules";
 import { AppHeader } from "../chrome";
 import { translate } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { family } from "../fonts";
 import { formatStamp } from "../rules";
+import { themeFor } from "../theme";
 import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
@@ -81,10 +82,8 @@ const hall = (overrides: Partial<SoulConversation> = {}) =>
 
 const msg = (id: string, sender: string, body: string, ts: number): ChatMessage => ({ eventId: id, sender, body, ts, officer: null, officerTitle: null, image: null, txnId: null });
 
-const facts = (overrides = {}) => ({ now: NOW, peerHasSpoken: false, iHaveSpoken: false, refused: null, ...overrides });
-
-// ── the state choice ──────────────────────────────────────────────────
-
+// The state choice (`chatMode`, `chatSections`, `sendsThroughBackend`) is tested with the rules, in
+// packages/core/src/domain/__tests__/soulChat.test.ts.
 
 /** v3: a 书信 tag is glyph + word; the glyph comes from the glyph font and is hidden from screen readers. */
 function expectTag(testID: string, word: string, glyph: string) {
@@ -100,84 +99,7 @@ function expectTag(testID: string, word: string, glyph: string) {
   expect(StyleSheet.flatten(mark.props.style).fontFamily).toBe(family.glyph);
 }
 
-describe("chatMode — the design's eight states from the server's facts", () => {
-  it("① free: mutual", () => {
-    expect(chatMode(conv(), facts()).kind).toBe("free");
-  });
-
-  it("② my request, a letter may go / locked until next_request_at", () => {
-    const mine = conv({ throttled: true, initiated_by_me: true, mutual: false });
-    expect(chatMode(mine, facts()).kind).toBe("outgoing_open");
-    const next = new Date(NOW + 3_600_000).toISOString();
-    expect(chatMode({ ...mine, next_request_at: next }, facts())).toEqual({ kind: "outgoing_locked", nextAt: next, rejected: false });
-    // The time has come: open again, not locked forever.
-    expect(chatMode({ ...mine, next_request_at: new Date(NOW - 1).toISOString() }, facts()).kind).toBe("outgoing_open");
-    // They answered: free, before the backend lifts the throttle on the next send.
-    expect(chatMode({ ...mine, next_request_at: next }, facts({ peerHasSpoken: true })).kind).toBe("free");
-  });
-
-  it("③ their request: incoming until I answer", () => {
-    const theirs = conv({ throttled: true, initiated_by_me: false, mutual: false });
-    expect(chatMode(theirs, facts()).kind).toBe("incoming");
-    expect(chatMode(theirs, facts({ iHaveSpoken: true })).kind).toBe("free");
-  });
-
-  it("④ request_throttled: a refused send locks with the server's retry_at, marked as rejected", () => {
-    const mine = conv({ throttled: true, initiated_by_me: true, mutual: false });
-    const retry = "2026-09-16T19:30:00+08:00";
-    expect(chatMode(mine, facts({ refused: { code: "request_throttled", retryAt: retry } }))).toEqual({
-      kind: "outgoing_locked",
-      nextAt: retry,
-      rejected: true,
-    });
-  });
-
-  it("④ once retry_at has passed the refusal locks nothing: the list decides again", () => {
-    const mine = conv({ throttled: true, initiated_by_me: true, mutual: false });
-    const over = { code: "request_throttled", retryAt: new Date(NOW).toISOString() };
-    expect(chatMode(mine, facts({ refused: over })).kind).toBe("outgoing_open");
-    const next = new Date(NOW + 3_600_000).toISOString();
-    expect(chatMode({ ...mine, next_request_at: next }, facts({ refused: over }))).toEqual({ kind: "outgoing_locked", nextAt: next, rejected: false });
-  });
-
-  it("⑤ muted, ⑥ closed / peer_retired — the server's refusal wins over everything else", () => {
-    expect(chatMode(conv({ refusal: "muted" }), facts()).kind).toBe("muted");
-    expect(chatMode(conv({ refusal: "closed", throttled: true, initiated_by_me: true }), facts())).toEqual({ kind: "closed", reason: "closed" });
-    expect(chatMode(conv({ refusal: "peer_retired" }), facts())).toEqual({ kind: "closed", reason: "peer_retired" });
-    // A refusal met on send is newer than the list.
-    expect(chatMode(conv(), facts({ refused: { code: "muted", retryAt: null } })).kind).toBe("muted");
-  });
-
-  it("the hall: writable when current, sealed when left — and never 'muted' (a mute does not cut the hall)", () => {
-    expect(chatMode(hall(), facts()).kind).toBe("hall");
-    expect(chatMode(hall({ refusal: "not_current_hall" }), facts()).kind).toBe("hall_sealed");
-    expect(chatMode(hall({ refusal: "muted" }), facts()).kind).toBe("hall");
-  });
-});
-
-describe("sendsThroughBackend — the path each send takes", () => {
-  it("my request and the hall go through the backend; the answer to THEIR request goes to Synapse", () => {
-    expect(sendsThroughBackend(conv({ throttled: true, initiated_by_me: true }))).toBe(true);
-    expect(sendsThroughBackend(hall())).toBe(true);
-    // The backend refuses the receiver on its path (409 not_initiator); in Synapse the receiver speaks at 50.
-    expect(sendsThroughBackend(conv({ throttled: true, initiated_by_me: false }))).toBe(false);
-    expect(sendsThroughBackend(conv())).toBe(false);
-  });
-});
-
-describe("chatSections — halls and souls are never interleaved", () => {
-  it("current hall on top, halls left behind under it, souls newest first", () => {
-    const old = hall({ id: "old", refusal: "not_current_hall", last_message_at: "2026-09-15T00:00:00Z" });
-    const a = conv({ id: "a", room_id: "!a", last_message_at: "2026-09-12T00:00:00Z" });
-    const b = conv({ id: "b", room_id: "!b", last_message_at: "2026-09-14T00:00:00Z" });
-    const cur = hall({ last_message_at: "2026-09-01T00:00:00Z" });
-    const sections = chatSections([a, old, b, cur], (room) => (room === "!a" ? Date.parse("2026-09-15T01:00:00Z") : 0));
-    expect(sections.hall?.id).toBe("c-hall");
-    expect(sections.sealedHalls.map((c) => c.id)).toEqual(["old"]);
-    // The newest hall letter does not pull the hall down among the souls, and a newer timeline beats the list.
-    expect(sections.souls.map((c) => c.id)).toEqual(["a", "b"]);
-  });
-
+describe("the code as typed", () => {
   it("the code as typed is normalised the way the server does, and no further", () => {
     expect(normalizeCode("  2p6r41wz88 ")).toBe("2P6R41WZ88");
     expect(normalizeCode("2P6R-41WZ88")).toBe("2P6R-41WZ88");
@@ -472,27 +394,66 @@ describe("the conversation's eight states", () => {
     expect(ground("chat-menu-sheet")).not.toBe(ground("header"));
   });
 
-  it("a reply with neither a position nor a name is signed by the hall alone, with no dangling dot", () => {
+  // 第六十四批: the hall thread reads as the officer app and the web read it. The soul is "self": its groups on the
+  // card2 panel, the hall's replies plain; one column; the heads say 我 / 殿司, never an officer's name.
+  it("the hall: one column, grouped, the soul's letters on the panel and the hall's plain, headed 我 / 殿司 and never by name", () => {
+    const at = (h: number, m: number) => new Date(2026, 8, 15, h, m).getTime();
     openConversation(hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" } }), [
-      { ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "", officerTitle: "" },
+      msg("s1", ME, "我想申诉。", at(9, 0)),
+      msg("s2", ME, "还有一件。", at(9, 10)),
+      msg("s3", ME, "补一句。", at(9, 50)),
+      { ...msg("e1", "@officer:hs.test", "申诉已收。", at(10, 0)), officer: "崔珏", officerTitle: "判官" },
     ]);
-    expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿")).toBeTruthy();
+    const theme = themeFor(null, "dark");
+    const mine = screen.getAllByTestId("hall-group-me");
+    const theirs = screen.getAllByTestId("hall-group-hall");
+    // Three letters of mine in a row are one group; the reply is another.
+    expect([mine.length, theirs.length]).toEqual([1, 1]);
+    expect(StyleSheet.flatten(mine[0].props.style)).toMatchObject({ backgroundColor: theme.s2, borderRadius: 6, padding: 12, alignSelf: "stretch" });
+    const plain = StyleSheet.flatten(theirs[0].props.style);
+    expect(plain.backgroundColor).toBeUndefined();
+    expect(plain.borderWidth).toBeUndefined();
+    expect(plain.alignSelf).toBe("stretch");
+    // Neither side is pushed right or narrowed: no bubble rows, no officer bubble, no paper corners.
+    expect(screen.queryByTestId("officer-bubble")).toBeNull();
+    expect(screen.queryAllByTestId(/^letter-corner-/)).toEqual([]);
+    for (const g of [...mine, ...theirs]) expect(StyleSheet.flatten(g.props.style).maxWidth).toBeUndefined();
+    expect(within(mine[0]).getByText("我")).toBeTruthy();
+    expect(within(theirs[0]).getByText("殿司")).toBeTruthy();
+    expect(screen.queryByText(/崔珏|判官/)).toBeNull();
+    // One head time for the group (09:00); 09:10 is 10 minutes on, no time; 09:50 is 40 minutes on, its own.
+    expect(within(mine[0]).getAllByText(/^\d{2}:\d{2}$/).map((n) => n.props.children)).toEqual(["09:00", "09:50"]);
+    expect(within(screen.getByTestId("hall-letter-s3")).getByText("09:50")).toBeTruthy();
+    // The hall wrote last: 「殿司回信了」 above the box, with no wait time.
+    expect(screen.getByTestId("hall-state").props.children).toBe("殿司回信了");
   });
 
-  it("the hall: officer bubbles, writable; a hall left behind is sealed and offers the current one", () => {
+  it("the hall, my letter last: 「已寄出 · 等殿司回」; a letter still on its way is a dashed panel 「◌ 待发出」, a failed one 「没发出 · 重试」", () => {
+    const c = hall();
+    openConversation(c, [msg("s1", ME, "我想申诉。", NOW - 60_000)], {
+      outbox: [
+        { txnId: "t1", conversationId: c.id, roomId: c.room_id, body: "还在路上", ts: NOW, state: "queued" },
+        { txnId: "t2", conversationId: c.id, roomId: c.room_id, body: "没发出去", ts: NOW, state: "failed" },
+      ],
+    });
+    expect(screen.getByTestId("hall-state").props.children).toBe("已寄出 · 等殿司回");
+    const queued = screen.getByTestId("pending-queued");
+    expect(StyleSheet.flatten(queued.props.style)).toMatchObject({ borderWidth: 1, borderStyle: "dashed", borderRadius: 6 });
+    expect(StyleSheet.flatten(queued.props.style).backgroundColor).toBeUndefined();
+    expect(within(queued).getByText("◌ 待发出")).toBeTruthy();
+    const failed = screen.getByTestId("pending-failed");
+    expect(within(failed).getByText("没发出 ·")).toBeTruthy();
+    expect(within(failed).getByTestId("resend")).toBeTruthy();
+    expect(within(failed).getByTestId("dismiss")).toBeTruthy();
+    expect(within(failed).queryByText("◌ 待发出")).toBeNull();
+  });
+
+  it("the hall: writable; a hall left behind is sealed and offers the current one", () => {
     openConversation(
       hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" } }),
       [{ ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "崔珏", officerTitle: "判官" }]
     );
     expect(screen.getByTestId("conversation-hall")).toBeTruthy();
-    // The byline: the hall's display name, the officer's position, the officer — as the backend stamped them.
-    expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿 · 判官 崔珏")).toBeTruthy();
-    // 文明气质 1f: the officer's letter is paper — four corners, 4 in, mirrored; the body padded 24
-    // (1f drew 22; 补足 A2 puts it on the scale, still clear of the corners).
-    const bubble = screen.getByTestId("officer-bubble");
-    expect(["tl", "tr", "bl", "br"].map((k) => within(bubble).getByTestId(`letter-corner-${k}`))).toHaveLength(4);
-    expect(StyleSheet.flatten(within(bubble).getByTestId("letter-corner-br").props.style)).toMatchObject({ right: 4, bottom: 4 });
-    expect(StyleSheet.flatten(bubble.props.style)).toMatchObject({ padding: 24 });
     expect(screen.getByTestId("compose").props.placeholder).toBe("向殿司陈情……");
     // The Han placeholder is set in Noto Serif SC. In an Android multiline TextInput a line height under about
     // 1.8 × the size clips the top of the first line (华为真机 2026-10-31: 15/20, 15/24, 15/26, 13/21, 13/23 all cut
@@ -509,10 +470,13 @@ describe("the conversation's eight states", () => {
   });
 
   it("a sealed hall has no composer, only the way to the current hall", () => {
-    openConversation(hall({ refusal: "not_current_hall" }));
+    openConversation(hall({ refusal: "not_current_hall" }), [msg("s1", ME, "旧信", NOW - 60_000)]);
     expect(screen.getByTestId("conversation-hall_sealed")).toBeTruthy();
     expect(screen.getByTestId("go-current-hall")).toBeTruthy();
     composerGone();
+    // Read-only: no whose-turn line, though the soul wrote last.
+    expect(screen.getByTestId("hall-group-me")).toBeTruthy();
+    expect(screen.queryByTestId("hall-state")).toBeNull();
     expect(StyleSheet.flatten(within(screen.getByTestId("header")).getByRole("header").props.style)).toMatchObject({ fontSize: 20, lineHeight: 28 });
     expectTag("sealed-tag", "封存", "▣");
   });

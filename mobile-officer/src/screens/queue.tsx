@@ -55,7 +55,9 @@ export function deskTag(
   // 第六十一批 二: a case nobody can claim yet says so on the right -- ⊘ 到不了殿, or ‖ and the day it opens.
   if (group === "unclaimed" && isDuatBarred(row)) return { tone: "neutral", text: `⊘ ${t("judgment.claim.duat_barred_short")}`, deadline: false };
   if (group === "unclaimed" && isHeldUntilFatedDate(row)) {
-    return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("judgment.claim.held_from", { date: formatIsoDay(row.held_until, locale) })}`, deadline: false };
+    // Word joiners inside each part of the date: on a narrow row the tag wraps at a space, never inside 「10月28日」.
+    const date = formatIsoDay(row.held_until, locale).split(" ").map((part) => [...part].join("\u2060")).join(" ");
+    return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("judgment.claim.held_from", { date })}`, deadline: false };
   }
   if (group === "others") return { tone: "neutral", text: `${TAG_SHAPE.others} ${t("officer_app.desk.tag.others")}`, deadline: false };
   if (group === "mine") return { tone: "warn", text: `${TAG_SHAPE.reviewing} ${t(row.is_final ? "officer_app.desk.tag.reviewing" : "officer_app.desk.tag.awaiting")}`, deadline: false };
@@ -87,8 +89,8 @@ export function rowNotes(t: (key: string, vars?: Record<string, string>) => stri
  * 第六十一批 二: the cases in 待认领 nobody can claim yet -- held until a day (枉死城, 木乃伊 70 天) or barred from the hall.
  * A held_until already past is claimable whatever the server's phase still says.
  */
-export function waitsBeforeClaim(row: Pick<Judgment, "held_until" | "duat_stage">): boolean {
-  return isHeldUntilFatedDate(row) || isDuatBarred(row);
+export function waitsBeforeClaim(row: Pick<Judgment, "held_until" | "duat_stage" | "ferry_barred">): boolean {
+  return isHeldUntilFatedDate(row) || isDuatBarred(row) || !!row.ferry_barred;
 }
 
 /** 「今日 7 件 · 超期 1 · 本月已结 22%」; 0 overdue reads 「无超期」, unmarked. Parts that did not load are left out. */
@@ -234,6 +236,10 @@ export function QueueTab({
 
   // 第六十一批 二: 待认领's held cases, in the order they came (rowsOf already puts them after the claimable ones).
   const heldOf = (group: DeskGroup, rows: Judgment[]) => (group === "unclaimed" ? rows.filter(waitsBeforeClaim) : []);
+  // 第六十三批 二 f: 待认领's heading is the server's `claimable_count` (counted without `source`, so only under 全部);
+  // without it the heading has no number -- never the loaded rows minus the held ones, which moves as pages load.
+  const headCount = (group: DeskGroup, rows: Judgment[]): number | null =>
+    group === "unclaimed" ? (source === "all" ? c?.claimable_count ?? null : null) : ((source === "all" ? c?.[group] : null) ?? rows.length);
 
   return (
     <Screen testID="tab-queue-screen" edges={["left", "right"]} refreshing={groups.some((g) => g.loading && g.rows !== null)} onRefresh={refresh}>
@@ -281,10 +287,11 @@ export function QueueTab({
                       <Txt variant="caption" style={{ color: offline ? theme.faint : theme.ink }}>{`${t("officer_app.queue.open_swipe")} ›`}</Txt>
                     </Press>
                   ) : null}
-                  <Txt variant="value" style={{ color: theme.faintText }}>
-                    {/* 第六十一批 二: 待认领's count is only the claimable ones; the held ones are counted on their own line. */}
-                    {String(Math.max(0, ((source === "all" ? c?.[group] : null) ?? rows.length) - heldOf(group, rows).length))}
-                  </Txt>
+                  {headCount(group, rows) === null ? null : (
+                    <Txt testID={`desk-count-${group}`} variant="value" style={{ color: theme.faintText }}>
+                      {String(headCount(group, rows))}
+                    </Txt>
+                  )}
                 </View>
               </View>
               {[...rows.filter((row) => !heldOf(group, rows).includes(row)), ...heldOf(group, rows)].map((row, i, all) => {
@@ -297,7 +304,7 @@ export function QueueTab({
                     // A dashed rule and 「候着的 · N」 at the end of 待认领 (第六十一批 二); no 「· 0」 when there are none.
                     <View testID="desk-held-divider" style={[styles.heldHead, { borderTopColor: theme.hair2 }]}>
                       <Txt variant="caption" style={{ color: theme.faintText }}>
-                        {t("judgment.claim.groups.held", { n: String(heldOf(group, rows).length) })}
+                        {t("judgment.claim.groups.held", { n: String((source === "all" ? c?.held_count : null) ?? heldOf(group, rows).length) })}
                       </Txt>
                     </View>
                   ) : null}
@@ -408,7 +415,9 @@ const styles = StyleSheet.create({
   groupRight: { flexDirection: "row", alignItems: "center", gap: space[4] },
   row: { minHeight: touch.row, flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[2], borderBottomWidth: 1 },
   rowText: { flex: 1, minWidth: 0, gap: space[1] },
-  rowRight: { alignItems: "flex-end", gap: space[1], flexShrink: 0 },
+  // At most 60% of the row: a held case's tag (「‖ 暂不能认领 · 2056年 · 10月28日 起可认领」) used to take it all and leave the
+  // name as 「QA··」 (simulator 2026-11-21). The tag wraps to a second line instead.
+  rowRight: { alignItems: "flex-end", gap: space[1], flexShrink: 1, maxWidth: "60%" },
   // Serif 16/24 (Design 第三十批 二.2). A Text, not a TextInput: the Android clipping of serif lines is TextInput's.
   name: { fontFamily: family.title, fontSize: 16, lineHeight: 24 },
   gone: { opacity: 0.45 },

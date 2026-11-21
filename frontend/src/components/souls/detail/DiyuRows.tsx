@@ -155,13 +155,17 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
 
 /** 后端 `SoulStationMoveSerializer.reason` 的 max_length。 */
 const REASON_MAX = 500;
-/** 后端的拒绝码里有自己一句话的那几个(`souls.diyu_station.error.*`);别的落到 `common.error`。 */
-const MOVE_ERRORS = new Set(["not_diyu", "alive", "reason_required", "soul_settled"]);
+const REASON_ID = "soul-diyu-station-reason";
+/** 拒绝码里写在弹层正文顶上的那几个(`souls.diyu_station.error.*`);别的落到 `common.error`,同一处。 */
+const FORM_ERRORS = new Set(["not_diyu", "alive", "soul_settled"]);
 
 /**
- * 挪站弹层(S-1b):一个下拉列 13 站(当前站标「· 现在」不可选),一句后果。
- * 决定 #11:往回挪(选的站在当前站之前)要写理由 —— 多一个必填的理由框,空白时不能提交;往前挪不发 `reason`。
- * 理由框的标签与 `reason_required` / `soul_settled` 两句是临时措辞,等 Design 第六十三批定稿;egy 暂缺(egyPendingKeys.json)。
+ * 挪站弹层(S-1b):一个下拉列 13 站(当前站标「· 现在」不可选),一个理由框,一句后果。
+ * Design 第六十三批 一(决定 #11):理由框一直在,不出现、不收起。往前挪写「往前挪可以不写」;选到更早的一站,
+ * 标签成「理由 · 必填」、帮助句换成「往回挪要写理由」。确认键不灰掉:往回挪而理由是空(只有空白也算空)时,
+ * 点了在理由框下行内报错、框边转 neg、焦点回到框里;后端回 `reason_required` 也报在那里。
+ * 写了理由就随请求发出(两个方向都是)。`soul_settled` 与 `not_diyu` / `alive` 写在正文顶上;已终局时
+ * 弹层不关、下拉与理由框禁用、「挪站」灰掉,只剩「取消」,关掉后刷新灵魂详情。
  */
 function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onClose: () => void }) {
   const { t } = useI18n();
@@ -169,10 +173,14 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<Station>(DIYU_STATIONS[Math.min(at, DIYU_STATIONS.length - 1)]);
   const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const settled = formError === "soul_settled";
   const current = DIYU_STATIONS[at - 1];
   const backward = DIYU_STATIONS.indexOf(target) + 1 < at;
+  const focusReason = () => document.getElementById(REASON_ID)?.focus();
   const move = useMutation({
-    mutationFn: (station: Station) => soulsApi.moveStation(soul.id, station, backward ? reason.trim() : undefined),
+    mutationFn: (station: Station) => soulsApi.moveStation(soul.id, station, reason.trim() || undefined),
     onSuccess: (_, station) => {
       void queryClient.invalidateQueries({ queryKey: soulKeys.all });
       showToast(t("souls.diyu_station.moved", { station: t(`souls.diyu_station.${station}`) }), "success");
@@ -180,17 +188,37 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
     },
     onError: (err: unknown) => {
       const code = responseCode(err);
-      showToast(code && MOVE_ERRORS.has(code) ? t(`souls.diyu_station.error.${code}`) : t("common.error"), "error");
+      if (code === "reason_required") {
+        setReasonError(true);
+        focusReason();
+        return;
+      }
+      setFormError(code && FORM_ERRORS.has(code) ? code : "common");
     },
   });
+  const close = () => {
+    // 已终局:灵魂的状态已经变了,详情要重取。
+    if (settled) void queryClient.invalidateQueries({ queryKey: soulKeys.all });
+    onClose();
+  };
+  const confirm = () => {
+    if (backward && !reason.trim()) {
+      setReasonError(true);
+      focusReason();
+      return;
+    }
+    setFormError(null);
+    move.mutate(target);
+  };
+  const locked = move.isPending || settled;
   return (
     <BaseModal
       isOpen
-      onClose={onClose}
+      onClose={close}
       title={t("souls.diyu_station.move_title", { name: soul.name })}
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={move.isPending}>
+          <Button type="button" variant="ghost" onClick={close} disabled={move.isPending}>
             {t("common.cancel")}
           </Button>
           <Button
@@ -198,8 +226,8 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
             variant="primary"
             data-testid="soul-diyu-station-move-confirm"
             loading={move.isPending}
-            disabled={target === current || (backward && !reason.trim())}
-            onClick={() => move.mutate(target)}
+            disabled={target === current || settled}
+            onClick={confirm}
           >
             {t("souls.diyu_station.move_confirm")}
           </Button>
@@ -210,12 +238,20 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">
           {t("souls.diyu_station.move_current", { n: String(at), station: t(`souls.diyu_station.${current}`) })}
         </p>
+        {formError && (
+          <p role="alert" data-testid="soul-diyu-station-move-error" className="text-sm text-[oklch(var(--color-danger))]">
+            {formError === "common" ? t("common.error") : t(`souls.diyu_station.error.${formError}`)}
+          </p>
+        )}
         <SelectField
           id="soul-diyu-station-target"
           label={t("souls.diyu_station.move_to")}
           value={target}
-          onChange={(e) => setTarget(e.target.value as Station)}
-          disabled={move.isPending}
+          onChange={(e) => {
+            setTarget(e.target.value as Station);
+            setReasonError(false);
+          }}
+          disabled={locked}
           options={DIYU_STATIONS.map((s, i) => ({
             value: s,
             label: `${t("souls.diyu_station.ordinal", { n: String(i + 1) })} · ${t(`souls.diyu_station.${s}`)}${
@@ -223,19 +259,33 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
             disabled: s === current,
           }))}
         />
-        {backward && (
-          <TextAreaField
-            modEnterSubmits={false}
-            id="soul-diyu-station-reason"
-            label={t("souls.diyu_station.reason_label")}
-            required
-            maxLength={REASON_MAX}
-            rows={3}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            disabled={move.isPending}
-          />
-        )}
+        <TextAreaField
+          modEnterSubmits={false}
+          id={REASON_ID}
+          label={
+            backward ? (
+              <>
+                {t("souls.diyu_station.reason_label")}
+                {" · "}
+                <b className="font-medium text-[oklch(var(--color-ink))]">{t("souls.diyu_station.reason_required_mark")}</b>
+              </>
+            ) : (
+              t("souls.diyu_station.reason_label")
+            )
+          }
+          aria-required={backward || undefined}
+          description={reasonError ? undefined : t(backward ? "souls.diyu_station.reason_hint_back" : "souls.diyu_station.reason_hint_forward")}
+          error={reasonError ? t("souls.diyu_station.error.reason_required") : null}
+          placeholder={t("souls.diyu_station.reason_placeholder")}
+          maxLength={REASON_MAX}
+          rows={3}
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            if (e.target.value.trim()) setReasonError(false);
+          }}
+          disabled={locked}
+        />
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.diyu_station.move_body")}</p>
       </div>
     </BaseModal>

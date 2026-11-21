@@ -1097,11 +1097,15 @@ export function MyLifeScreen() {
   const onTheRoad = stations || deliveredRow || !!wangsi.data?.length;
 
   const refresh = () => {
-    void life.reload();
+    const showing = !!life.data;
+    const lifeAnswered = life.reload();
     void appeals.reload();
     void wangsi.reload();
     setRefreshes((n) => n + 1);
-    refreshProfile().catch((e: unknown) => {
+    refreshProfile().catch(async (e: unknown) => {
+      // 第六十一批 E6: when the page's own refresh failed too, the stale line already says so -- one failure, one
+      // message (simulator 2026-11-21: the line and a sticky 「无法连接服务器」 toast for the same pull).
+      if (showing && !(await lifeAnswered)) return;
       const m = soulErrorMessage(e);
       toast(t(m.key, m.params), "failure");
     });

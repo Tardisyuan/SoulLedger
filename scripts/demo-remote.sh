@@ -58,7 +58,7 @@ if [ -n "$DEMO_TREE" ] && [ "${FORCE:-}" != 1 ] && [ -f "$DEMO_STAMP" ] && grep 
     exit 0
 fi
 
-# .sl-last-use: this tree is in use — run-gates.sh deletes synced trees no run has used for two weeks (remote_prune).
+# .sl-last-use: this tree is in use — the gates (gates-remote.sh) delete synced trees no run has used for two weeks (remote_prune).
 ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RWORK $RDIR/tmp/demo && touch $RWORK/.sl-last-use" || exit 1
 # First run: borrow the gates' installed dependencies rather than installing them again.
 ssh -o BatchMode=yes "$GATES_REMOTE" "cd $RWORK && if [ ! -d node_modules ]; then S=\$(ls -d $RDIR/work/SoulLedger-*-e2e | head -1); cp -a \$S/node_modules . ; mkdir -p backend; cp -a \$S/backend/.venv backend/ ; for w in frontend packages/core mobile mobile-officer; do if [ -d \$S/\$w/node_modules ]; then mkdir -p \$w; cp -a \$S/\$w/node_modules \$w/; fi; done; fi" || exit 1
@@ -108,7 +108,7 @@ trap 'exit 130' INT TERM
 # overrides (GNU timeout's syntax: 1500, 25m). `timeout` is the container's own command, so the run ends at the limit
 # even when this machine's ssh has dropped; the lock is held by a subshell that removes the container (docker rm -f)
 # before letting go, so a dropped ssh no longer frees the lock under a container still running. Same scheme as
-# scripts/run-gates.sh (TIME LIMITS ON THE REMOTE MACHINE). The two servers (demo-serve-inner.sh,
+# scripts/gates-remote.sh (TIME LIMITS ON THE REMOTE MACHINE). The two servers (demo-serve-inner.sh,
 # demo-app-backend-inner.sh) are meant to stay up, so they get no limit unless DEMO_TIMEOUT is set.
 #
 # THE TWO SERVERS DO NOT HOLD e2e.lock (2026-11-13, test review 3.5). They stay up for hours with no limit, and
@@ -124,7 +124,7 @@ trap 'exit 130' INT TERM
 # ponytail: demo-serve.lock is one lock for every checkout and both servers; .next is per tree, so a lock per
 # tree would let two checkouts' servers coexist — add it when more than one checkout serves the demo.
 P=demo-remote
-# remote_flock — a copy of scripts/run-gates.sh's, kept identical by its test: take the lock; when it is
+# remote_flock — a copy of scripts/gates-remote.sh's, kept identical by its test: take the lock; when it is
 # taken, say who has it, then wait (the wait used to be silent; this machine's gate-lock.sh reports every minute).
 remote_flock() {
     local fd="$1" lock="$2" filters="" n; shift 2

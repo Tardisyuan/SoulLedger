@@ -1,0 +1,14 @@
+{
+  "souls.diyu_station.reason_label": "Khet",
+  "souls.diyu_station.reason_required_mark": "Em Tepy",
+  "souls.diyu_station.reason_hint_back": "Semawy Er Tepy: Khet Em Tepy.",
+  "souls.diyu_station.reason_hint_forward": "Semawy Er Khet: Khet Nen Em Tepy.",
+  "souls.diyu_station.reason_placeholder": "Mi: Sekhet Tepy Sesh Nen Maat",
+  "souls.diyu_station.error.reason_required": "Semawy Er Tepy: Khet Em Tepy.",
+  "souls.diyu_station.error.soul_settled": "Ba Pen Khetem-N: Nen Semawy Sekhet Mawy.",
+  "souls.diyu_station.timeline_back": "Semawy Er Tepy · {{station}}",
+  "souls.diyu_station.timeline_reason": "Khet: {{reason}}",
+  "soul_app.timeline.reconsidered": "Wehem Wedja",
+  "soul_app.life.confession.none": "Nen Sesh Djer",
+  "soul_app.life.confession.count": "Sesh-N {{recorded}} / {{total}}"
+}

@@ -68,8 +68,12 @@ class DeathRegistrationFilter(django_filters.FilterSet):
         value = value.strip()
         if not value:
             return queryset
+        from apps.core.shard_reads import crossing_q
+
+        # `soul__name` through the crossing key DeathRegistrationRequest.soul, read by ids (`crossing_q`).
         return queryset.filter(
-            Q(soul__name__icontains=value) | Q(source_reference_id__icontains=value) | Q(idempotency_key=value)
+            crossing_q(queryset.model, "soul__name__icontains", value) | Q(source_reference_id__icontains=value)
+            | Q(idempotency_key=value)
         )
 
 
@@ -604,6 +608,7 @@ class AdminWebhookDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
         webhook = original.webhook
         if not webhook.is_active:
             return problem(status.HTTP_409_CONFLICT, "webhook_inactive", "Webhook is disabled")
+        # The FAILED half: a row whose last try predates `tasks._abandon` (2026-11-21), or whose ceiling was lowered.
         finished = original.status == EventWebhookStatus.ABANDONED or (
             original.status == EventWebhookStatus.FAILED and original.attempt >= attempt_ceiling(webhook))
         if not finished:

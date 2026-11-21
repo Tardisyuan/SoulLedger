@@ -3,7 +3,7 @@
  * into a civilization, between pressing 「登录」 and the 本世 page.
  *
  * WHAT IS ON IT: the page's own ground (the canvas, the same in every civilization — no wash of civilization colour),
- * the civilization's top line drawing in from the left, its seal stamped down in the middle (96, the seal colour,
+ * the civilization's top line drawing in from the left, its seal stamped down in the middle (96, `plaque` — the 本世 header seal's colour,
  * 1.18 → 1), and 「你已进入{冥界名}」 16 below it. The theme is the civilization's from the first frame
  * (navigation.tsx themes the signed-in tree by the profile), so nothing switches colour afterwards.
  *
@@ -39,7 +39,7 @@ import { Topline } from "./civHead";
 import { headerSeal, hide, rise, settleEntrance } from "./entrance";
 import { useI18n } from "./i18n";
 import { OutlineSeal } from "./seal";
-import { civKeyOf, motion, seal, themeFor, type CivKey, type ColorScheme } from "./theme";
+import { civKeyOf, motion, themeFor, type CivKey, type ColorScheme } from "./theme";
 import { EASE, Txt } from "./ui";
 
 type Welcomable = Pick<MeProfile, "civilization" | "home_civilization" | "welcomed_civilizations">;
@@ -103,7 +103,11 @@ export function flightTo(from: Box | null, to: Box | null, screenHeight: number)
 /** How long the header seal may take to answer where it is before the seal just fades where it stands. */
 const MEASURE_WAIT = 100;
 
-export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; scheme: ColorScheme; onSettled?: () => void }) {
+/**
+ * `held`: the 「已锁定」 screen is up. The welcome waits under it and starts once it is down -- played under the lock it
+ * would be recorded as seen while nobody saw it (simulator, 2026-11-21: a restored session's welcome never showed).
+ */
+export function Welcome({ profile, scheme, onSettled, held = false }: { profile: MeProfile; scheme: ColorScheme; onSettled?: () => void; held?: boolean }) {
   const { t } = useI18n();
   const { height: screenHeight } = useWindowDimensions();
   const [shown, setShown] = useState<Shown | null>(null);
@@ -132,7 +136,7 @@ export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; sc
   const key = `${profile.soul_code}:${civilization}`;
 
   useEffect(() => {
-    if (from === null) return;
+    if (from === null || held) return;
     // Played before in this process: nothing to show, so whoever waits on the welcome need not.
     if (PLAYED.has(key)) return onSettled?.();
     PLAYED.add(key);
@@ -143,7 +147,7 @@ export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; sc
     return () => {
       alive = false;
     };
-  }, [key, from, civilization, onSettled]);
+  }, [key, from, civilization, onSettled, held]);
 
   /** Seen and handed over: the record, the overlay gone, the waiters told. */
   const finish = useCallback(
@@ -256,7 +260,8 @@ export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; sc
   const to = themeFor(shown.civilization, scheme);
   // The underworld's name (中国地府, 杜阿特 …), not the civilization's (user decision 2026-09-27).
   const text = t("soul_app.welcome.entered", { civ: t(`soul_app.welcome.realm.${shown.civilization}`) });
-  const color = to.civ === "neutral" ? to.plaque : seal[to.civ][scheme];
+  // 第六十三批 三 d: the header seal's colour (`plaque`, civT), so the seal that shrinks into it does not change colour.
+  const color = to.plaque;
   const sealMotion = {
     opacity: Animated.multiply(v.stamp, v.sealGone),
     transform: [

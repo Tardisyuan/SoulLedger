@@ -1,0 +1,15 @@
+{
+  "letters.state.awaiting_hall": "Wesheb Wesekhet · Shat Em Smen {{wait}}",
+  "letters.state.awaiting_soul": "Wesheb-N · Em Smen Ba",
+  "letters.state.closed": "Shat Khetem-N · Maa Wa",
+  "letters.state.archived": "Per Sesh · Maa Wa",
+  "letters.side.soul": "Shat Ba",
+  "letters.side.hall": "Wesheb Wesekhet",
+  "letters.queued": "Em Smen Hab",
+  "letters.not_sent": "Nen Hab",
+  "letters.image_alt": "Tut Wa · Nen Sesh",
+  "soul_app.chat.side.hall": "Wesekhet",
+  "soul_app.chat.side.me": "Djes",
+  "soul_app.chat.state.awaiting_hall": "Hab-N · Em Smen Wesekhet",
+  "soul_app.chat.state.awaiting_me": "Wesekhet Wesheb-N"
+}

@@ -288,7 +288,12 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             // Offered after a decision, never taken for the officer (D1: a link opens a page, it does not decide).
             next={next ? { name: next.name ?? "", left, onNext: () => { setDetail(next.target); setVersion((v) => v + 1); } } : undefined}
             last={at >= 0 && !next}
-            onBack={close}
+            // 返回 goes back to the page the detail was opened from: a notice lands on a case under 审判 / 待办, and
+            // 返回 used to stay there instead of the 通知 list (simulator 2026-11-21).
+            onBack={() => {
+              close();
+              setTab(origin);
+            }}
             onLeave={() => {
               close();
               setTab(origin);

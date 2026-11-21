@@ -280,7 +280,7 @@ export function ConfessionCard({ tally }: { tally: Confession | null | undefined
   const byN = new Map((tally.items ?? []).map((item) => [item.n, KIND[item.state]]));
   const params = { truthful: String(tally.truthful), untruthful: String(tally.untruthful), unheard: String(tally.unheard), total: String(tally.total) };
   return (
-    <Card testID="life-confession" title={tr("soul_app.life.confession.title")} right={`${recorded} / ${tally.total}`}>
+    <Card testID="life-confession" title={tr("soul_app.life.confession.title")} right={tr("soul_app.life.confession.count", { recorded: String(recorded), total: String(tally.total) })}>
       <Txt variant="caption" tone="subtle" style={styles.subtitle}>
         {tr("soul_app.life.confession.subtitle")}
       </Txt>

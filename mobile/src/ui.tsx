@@ -1955,14 +1955,15 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
         if (wait > 0) setTimeout(go, wait);
         else go();
       });
+    // Resolves true when the fetch answered, false when it failed -- whoever refreshed may need to know (life.tsx).
     return fetcher().then(
       (value) =>
         settle(() => {
           setData(value);
           setError(null);
           setAt(Date.now());
-        }),
-      (e: unknown) => settle(() => setError(e))
+        }).then(() => true),
+      (e: unknown) => settle(() => setError(e)).then(() => false)
     );
   }, [fetcher]);
   useEffect(() => {
@@ -1993,19 +1994,28 @@ export function StaleLine({ state, onRetry }: { state: { data: unknown; error: u
   const { t: tr } = useI18n();
   const { offline } = useOnline();
   const { gutter } = useLayout();
-  if (offline || state.data === null || !state.error || state.at === null) return null;
-  const time = formatAsOf(new Date(state.at).toISOString(), new Date(), (d) => hhmm(d)) ?? "";
+  const { staleOut } = useReducedMotionDurations();
+  const show = !offline && state.data !== null && !!state.error && state.at !== null;
+  // Design v4 第六十三批 二 e (E6): once the page answers again the line folds away over `staleOut` (height and
+  // opacity, exit curve) instead of vanishing and pushing the content up; it stays mounted, with the time it said,
+  // until then. It appears at once, as before. Reduce motion: gone at once.
+  const [shownAt, setShownAt] = useState<number | null>(show ? state.at : null);
+  if (show && shownAt !== state.at) setShownAt(state.at);
+  if (shownAt === null) return null;
+  const time = formatAsOf(new Date(shownAt).toISOString(), new Date(), (d) => hhmm(d)) ?? "";
   return (
-    <View testID="stale-line" accessibilityRole="alert" style={[styles.staleLine, { paddingHorizontal: gutter }]}>
-      <Txt variant="caption" tone="muted" style={styles.shrink}>
-        {`↻ ${tr("soul_app.stale.line", { time })}`}
-      </Txt>
-      <Press testID="stale-retry" accessibilityRole="button" onPress={onRetry} hitSlop={8}>
-        <Txt variant="caption" style={{ color: t.ink, textDecorationLine: "underline" }}>
-          {tr("soul_app.common.retry")}
+    <Grow ms={show ? 0 : staleOut} open={show} onClosed={() => setShownAt(null)}>
+      <View testID="stale-line" accessibilityRole="alert" style={[styles.staleLine, { paddingHorizontal: gutter }]}>
+        <Txt variant="caption" tone="muted" style={styles.shrink}>
+          {`↻ ${tr("soul_app.stale.line", { time })}`}
         </Txt>
-      </Press>
-    </View>
+        <Press testID="stale-retry" accessibilityRole="button" onPress={onRetry} hitSlop={8}>
+          <Txt variant="caption" style={{ color: t.ink, textDecorationLine: "underline" }}>
+            {tr("soul_app.common.retry")}
+          </Txt>
+        </Press>
+      </View>
+    </Grow>
   );
 }
 

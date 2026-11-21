@@ -1,13 +1,15 @@
 /**
  * 灵魂来信里的图片(2026-10-10),官员 App 的线程里。
  *
- * 排法与灵魂端一致:一条消息一张图、不带文字;按原比例、宽不超过线程宽度的 60%;点开是黑底全屏,
+ * 一条消息一张图、不带文字;第六十四批起跟其他信一样进组,按原比例放进 160×120(圆角 6,发丝线边,
+ * `letterImageBox`),读屏写「一张图，没有附字」(`letters.image_alt`);点开是黑底全屏,
  * 左右滑动看线程里的每一张,点一下关闭,没有保存。官员回信暂不支持发图 —— 这里只有显示,没有选图与上传。
  *
  * 官员端没有 expo-image(不为这一处加原生模块),用 React Native 自带的 `Image`、`ScrollView`(弹层是共用的 `FadeModal`)。
  * 地址是服务器在消息里签给当前官员的短时路径(取文件时再按码名与殿司查一次),每次打开线程重新取;
  * 取不到(过期、失去权限)就写「图片加载失败」,不留空白。
  */
+import { letterImageBox } from "@soulledger/core/domain/letters";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import { useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -22,9 +24,6 @@ export interface LetterImageRef {
   height: number;
 }
 
-/** 图的最大宽度占线程内容宽度的比例(规格)。线程两侧各留 `space[5]`。 */
-export const LETTER_IMAGE_SHARE = 0.6;
-
 /**
  * `onReload` asks the thread for fresh addresses. A picture's address is signed for an hour
  * (backend `chat/images.py::URL_TTL`); after that it fails for good unless the thread is read again.
@@ -33,15 +32,14 @@ export const LETTER_IMAGE_SHARE = 0.6;
 export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef; onOpen: () => void; onReload?: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
-  const { width: screen } = useWindowDimensions();
   const [broken, setBroken] = useState(false);
   const { offline } = useOnline();
-  const width = Math.round(Math.max(0, screen - 2 * space[5]) * LETTER_IMAGE_SHARE);
-  const label = t("soul_app.circle.media.image", { i: "1" });
+  const box = letterImageBox(image.width, image.height);
+  const label = t("letters.image_alt");
   if (broken && offline) {
     // Pictures are not cached (readCache.ts): a grey block of the picture's own shape until the network is back.
     return (
-      <View testID="letter-image-later" style={{ width, aspectRatio: image.width / image.height, backgroundColor: theme.s2, alignItems: "center", justifyContent: "center" }}>
+      <View testID="letter-image-later" style={{ ...box, borderRadius: 6, backgroundColor: theme.s2, alignItems: "center", justifyContent: "center" }}>
         <Txt variant="caption" tone="muted">
           {t("officer_app.offline.image_later")}
         </Txt>
@@ -70,7 +68,7 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
       accessibilityRole="imagebutton"
       accessibilityLabel={label}
       onPress={onOpen}
-      style={{ width, aspectRatio: image.width / image.height, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.hair, backgroundColor: theme.s2 }}
+      style={{ ...box, borderRadius: 6, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: theme.hair, backgroundColor: theme.s2 }}
     >
       <Image source={{ uri: mediaUrl(image.url) }} style={styles.fill} resizeMode="cover" accessibilityLabel={label} onError={() => setBroken(true)} />
     </Press>

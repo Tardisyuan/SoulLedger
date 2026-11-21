@@ -4,6 +4,7 @@ REST views for Judgment app.
 import uuid
 
 from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.utils import timezone
 from django_filters import rest_framework as filters
 from django_filters.utils import translate_validation
 from drf_spectacular.types import OpenApiTypes
@@ -11,7 +12,6 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ValidationError
-from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -25,6 +25,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problem_codes import ProblemCode
 from apps.core.problems import problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
+from apps.core.shard_search import ShardSearchFilter
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
@@ -201,8 +202,12 @@ def queue_counts_of(queryset, user) -> dict:
         # v4 队列的两个标签(与 `?overdue=` / `?returned=` 同一谓词;与四个组不互斥)。
         overdue=Count("pk", filter=deadline.overdue_q(queryset)),
         returned=Count("pk", filter=RETURNED),
+        # 第六十三批 二 f:「待认领」里此刻谁都认领不了的(`claims.held_q`,与认领的拒绝同一条规则)。
+        # 组头读 `claimable_count`,组尾「候着的 · N」读 `held_count`;两者相加等于 `unclaimed`。
+        held_count=Count("pk", filter=group_q(QueueGroup.UNCLAIMED, user) & claims.held_q(timezone.localdate(), queryset)),
         **_source_aggregates(),
     )
+    counts["claimable_count"] = counts[QueueGroup.UNCLAIMED] - counts["held_count"]
     counts["sources"] = _pop_sources(counts)
     return counts
 
@@ -1220,7 +1225,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             filterset = JudgmentFilter(params, queryset=self.get_queryset().filter(PENDING), request=request)
             if not filterset.is_valid():
                 raise translate_validation(filterset.errors)
-            return SearchFilter().filter_queryset(request, filterset.qs, self)
+            return ShardSearchFilter().filter_queryset(request, filterset.qs, self)
 
         counts = queue_counts_of(filtered(params), request.user)
         if "source" in params:

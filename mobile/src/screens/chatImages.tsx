@@ -15,6 +15,7 @@
 import { soulChatApi, SOUL_CHAT_ERROR_CODES } from "@soulledger/core/api/soul-chat";
 import type { ChatImageRef } from "@soulledger/core/api/matrix";
 import { mediaUrl } from "@soulledger/core/api/soul-social";
+import { letterImageBox } from "@soulledger/core/domain/letters";
 import { Image, type ImageSource } from "expo-image";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -94,18 +95,18 @@ const ratio = (w?: number, h?: number) => (w && h && w > 0 && h > 0 ? w / h : 1)
 
 // ── 会话里的图片消息 ──────────────────────────────────────────────────
 
-function Picture({ image, width, onPress, testID }: { image: ChatImageRef; width: number; onPress?: () => void; testID: string }) {
+function Picture({ image, width, onPress, testID, label, rounded }: { image: ChatImageRef; width: number; onPress?: () => void; testID: string; label?: string; rounded?: boolean }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { source, failed, reload } = useChatImageSource(image.id);
-  const frame = [styles.frame, { width, aspectRatio: ratio(image.width, image.height), borderColor: t.hair2, backgroundColor: t.s2 }];
+  const frame = [styles.frame, { width, aspectRatio: ratio(image.width, image.height), borderColor: t.hair2, backgroundColor: t.s2 }, rounded && styles.rounded];
   return (
     <Press
       ref={thumbRef(`chat:${image.id}`)}
       dim
       testID={testID}
       accessibilityRole="imagebutton"
-      accessibilityLabel={tr("soul_app.circle.media.image", { i: "1" })}
+      accessibilityLabel={label ?? tr("soul_app.circle.media.image", { i: "1" })}
       onPress={onPress}
       style={frame}
     >
@@ -121,6 +122,15 @@ function Picture({ image, width, onPress, testID }: { image: ChatImageRef; width
       ) : null}
     </Press>
   );
+}
+
+/**
+ * 写给殿司的往来里的图(第六十四批):跟其他信一样进组,按原比例放进 160×120,圆角 6,发丝线边;
+ * 读屏写「一张图，没有附字」。时间在组头,不在图下。
+ */
+export function LetterPicture({ image, onOpen }: { image: ChatImageRef; onOpen: () => void }) {
+  const { t: tr } = useI18n();
+  return <Picture image={image} width={letterImageBox(image.width, image.height).width} onPress={onOpen} testID="chat-image" label={tr("letters.image_alt")} rounded />;
 }
 
 /** 一条图片消息(对方的或我的):图 + 时间。图片不套气泡的文字边框,只有细线框。 */
@@ -341,6 +351,7 @@ const styles = StyleSheet.create({
   mineRow: { justifyContent: "flex-end" },
   endAligned: { alignItems: "flex-end" },
   frame: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 0, overflow: "hidden" },
+  rounded: { borderRadius: 6 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 8 },
   centered: { textAlign: "center" },
   mask: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", gap: 8 },

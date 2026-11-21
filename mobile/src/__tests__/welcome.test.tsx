@@ -8,7 +8,8 @@ import { AccessibilityInfo, Animated, StyleSheet } from "react-native";
 
 import { headerSeal, lifeEntrance } from "../entrance";
 import { I18nProvider } from "../i18n";
-import { motion, themeFor, v4 } from "../theme";
+import { motion, seal, themeFor, v4 } from "../theme";
+import { OutlineSeal } from "../seal";
 import { WELCOME, Welcome, flightTo, useArrival } from "../welcome";
 import { PROFILE, stubApi } from "./stubApi";
 
@@ -52,7 +53,7 @@ describe("第六十二批 · the welcome", () => {
     expect(WELCOME.still).toBe(80);
   });
 
-  it("the ground is the page's canvas, never a wash of the civilization's colour; the seal is the seal colour, stamped 1.18 → 1", async () => {
+  it("the ground is the page's canvas, never a wash of the civilization's colour; the seal is the header seal's plaque, stamped 1.18 → 1", async () => {
     await play();
     const cn = themeFor("CHINESE", "light");
     expect(flat("welcome-ground").backgroundColor).toBe(cn.s0);
@@ -63,6 +64,9 @@ describe("第六十二批 · the welcome", () => {
     expect(flat("welcome-seal").opacity).toBe(0);
     expect(flat("welcome-text").opacity).toBe(0);
     expect(screen.getByText("你已进入中国地府")).toBeTruthy();
+    // 第六十三批 三 d: the header seal's colour (`plaque`, civT), not the `seal` token — it shrinks into that seal.
+    expect(seal.cn.light).not.toBe(cn.plaque);
+    expect(screen.UNSAFE_getByType(OutlineSeal).props.color).toBe(cn.plaque);
   });
 
   it("entrance 360, hold 900, then the hand-off 320: the sheet's wait ends only when the hand-off does", async () => {
@@ -84,6 +88,26 @@ describe("第六十二批 · the welcome", () => {
     await advance(motion.welcomeOut + 40);
     expect(settled).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("welcome")).toBeNull();
+  });
+
+  it("held under 「已锁定」: nothing shows and nothing is recorded; it plays once the lock is down", async () => {
+    const calls = stubApi({ "POST /me/welcomed/": { status: 200, data: { welcomed_civilizations: ["CHINESE"] } } });
+    const profile = P();
+    const settled = jest.fn();
+    const tree = (held: boolean) => (
+      <I18nProvider>
+        <Welcome profile={profile} scheme="light" onSettled={settled} held={held} />
+      </I18nProvider>
+    );
+    const { rerender } = render(tree(true));
+    await act(async () => {});
+    await advance(motion.welcomeIn + motion.welcomeHold + motion.welcomeOut + 200);
+    expect(screen.queryByTestId("welcome")).toBeNull();
+    expect(calls.filter((c) => c.url.includes("/me/welcomed/"))).toEqual([]);
+    expect(settled).not.toHaveBeenCalled();
+    rerender(tree(false));
+    await act(async () => {});
+    expect(screen.getByTestId("welcome")).toBeTruthy();
   });
 
   it("a tap skips the hold, not the hand-off: the hand-off runs from the tap, and the sheet waits for its end", async () => {

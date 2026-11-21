@@ -902,19 +902,25 @@
         "not_diyu": "只有地府的亡魂走十三站。",
         "alive": "在世的灵魂不在路上。",
         "reason_required": "往回挪要写理由。",
-        "soul_settled": "这个灵魂已经结案，不在路上了。"
+        "soul_settled": "这个灵魂已终局，不能再挪站。"
       },
       "move_title": "挪站 · {{name}}",
       "move_current": "现在：第 {{n}} 站 · {{station}}",
       "move_to": "挪到",
-      "reason_label": "往回挪的理由",
+      "reason_label": "理由",
       "move_body": "挪站只改记录的位置，会记进灵魂账页。",
       "not_on_road": "十三站 · 不在路上",
       "move_confirm": "挪站",
       "here_mark": "现在",
       "now_card": "现在 · 第 {{n}} 站",
       "state_passed": "已过",
-      "state_ahead": "未到"
+      "state_ahead": "未到",
+      "reason_required_mark": "必填",
+      "reason_hint_back": "往回挪要写理由。",
+      "reason_hint_forward": "往前挪可以不写。",
+      "reason_placeholder": "例如：上一站记错了",
+      "timeline_back": "退回 · {{station}}",
+      "timeline_reason": "理由：{{reason}}"
     },
     "birth_continent": {
       "label": "出身部洲",
@@ -5326,7 +5332,8 @@
         "none": "还没有记",
         "partial": "已记 {{recorded}} / {{total}} 条，其余还没有记。",
         "complete": "{{total}} 条都已记下。",
-        "strip_aria": "如实 {{truthful}}，不实 {{untruthful}}，未记 {{unheard}}，共 {{total}} 条"
+        "strip_aria": "如实 {{truthful}}，不实 {{untruthful}}，未记 {{unheard}}，共 {{total}} 条",
+        "count": "已记 {{recorded}} / {{total}}"
       },
       "delivered": "已超度",
       "delivered_on": "已超度 · {{date}}",
@@ -5644,7 +5651,6 @@
         "hint": "写信给殿司，官员会以殿司名义回复。",
         "title": "{{hall}} · 殿司",
         "subtitle": "官员以殿司名义回复 · 非即时",
-        "officer_byline": "{{hall}} · {{role}} {{name}}",
         "not_current": "你已不在{{hall}}。旧信留着，不能再添。",
         "go_current": "写信给{{hall}} · 殿司"
       },
@@ -5758,6 +5764,14 @@
           "images_unavailable": "对方回信之前只能写文字"
         },
         "button": "图"
+      },
+      "side": {
+        "hall": "殿司",
+        "me": "我"
+      },
+      "state": {
+        "awaiting_hall": "已寄出 · 等殿司回",
+        "awaiting_me": "殿司回信了"
       }
     },
     "circle": {
@@ -7346,7 +7360,6 @@
     "thread_empty": "这封信还没有内容",
     "closed": "已关闭(已转生)",
     "no_messages": "暂无消息",
-    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "以殿司名义回复",
     "reply_hint": "灵魂看到的是殿司的回复,署你的名字。",
     "send": "发送",
@@ -7375,11 +7388,8 @@
     "by_hall": "按殿",
     "folder_empty": "这个文件夹里没有来信",
     "newest_first": "最近在上",
-    "from_soul": "来自 {{name}}",
     "officer_reply": "殿司回复",
-    "previous": "前一封",
     "earlier": "更早的 {{n}} 封",
-    "awaiting": "待回复 · {{n}} 天",
     "cite_hint": "/ 引用律条",
     "cite_label": "律条",
     "cite_results": "{{n}} 条律条,↑↓ 选择,回车插入",
@@ -10644,5 +10654,19 @@
       "title": "权限没读到",
       "body": "这不是没有权限：这一次没从服务器读到。重新加载试试；还不行，请稍后再来。"
     }
+  },
+  "letters": {
+    "state": {
+      "awaiting_hall": "轮到殿司回 · 来信已等 {{wait}}",
+      "awaiting_soul": "已回 · 等灵魂来信",
+      "closed": "往来已结束 · 只能看"
+    },
+    "side": {
+      "soul": "来信",
+      "hall": "回信"
+    },
+    "queued": "待发出",
+    "not_sent": "没发出",
+    "image_alt": "一张图，没有附字"
   }
 }
