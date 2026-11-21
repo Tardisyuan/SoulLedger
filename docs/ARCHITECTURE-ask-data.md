@@ -1,6 +1,6 @@
 # 官员端「问数」(Text-to-SQL)—— 讲解稿
 
-> **状态(2026-11-21):第 0–2 步已在功能分支 `feat/ask-data` 上实现,未推送、未合进 main。** 本文原是需求说明,
+> **状态(2026-11-21):第 0–2 步已实现，经一次独立审查修了四处(§3 CTE 作用域、§4 游标与字节上限、READ ONLY 有测试、NaN/bytea),2026-11-21 合进 main 并推送;115 测试环境已建只读角色，真模型尚未接(测试后端没配模型)。** 本文原是需求说明,
 > 现改成讲解稿:每节先说做了什么,再给「代码在哪」与「实测结果」。没做的在 §8。§9 是用户拍板的决定,原样保留。
 > 本项目是个人项目,没有真实用户;下文的「官员」「殿」都是系统里的角色,不是真实使用者。
 > 代码出处标 文件:行(行号是本文写成时的,随代码移动);没有实跑过的推断标「未核实」。
@@ -90,7 +90,7 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 | `FOR UPDATE` / `FOR SHARE` 等锁子句 | `locking_clause` |
 | 黑名单函数(`pg_sleep*`、`dblink*`、`pg_read_file`、`set_config`、`current_setting`、`lo_*`、`txid_*`、`pg_advisory*` …);会话身份 `user` / `current_user` / `current_role` / `session_user`(不带引号、不带限定) | `forbidden_function` |
 | 函数不在放行清单(按类;sqlglot 解析成 `Anonymous` 的只放 `age`、`make_date` 两个名字,且不带 schema 前缀;数组字面量、`ANY` / `ALL`、下标、jsonb 的 `->` / `->>` / `#>` / `#>>` 放行,`unnest` 不放);属性调用 `j.to_jsonb`(限定名后面不是该来源的列) | `unknown_function` |
-| 表不在白名单、带 schema 前缀;CTE 名只在它的作用域里算 CTE | `table_not_allowed` |
+| 表不在白名单、带 schema 前缀;CTE 名只在它的作用域里算 CTE(按 PG 规则：非递归 CTE 的定义里只看得见排在它前面的兄弟，`WITH RECURSIVE` 才看得见自己;2026-11-21 审查发现自引用可绕过白名单读系统目录，已改) | `table_not_allowed` |
 | `SELECT *` 或 `t.*`(`count(*)` 放行);不带限定的来源名(`SELECT j FROM judgment_judgment j`,取整行) | `star_not_allowed` |
 
 来源的列:白名单表读 `schema.yaml` 的全部列(授没授都算),子查询与 CTE 读输出列,`generate_series` 的别名本身也是列。来源名按全树收、同名取交集,
@@ -108,7 +108,7 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 按类加进去;只有 `age`、`make_date` 是 `Anonymous`,按名字放(`_ALLOWED_BY_NAME`),两者所有重载都是纯计算。按名字放的只认不带前缀的写法
 (`public.age(…)`、`j.age(…)` 是别的模式里的函数,仍拒),黑名单先于放行判,所以 `pg_sleep_for(make_interval(…))` 照旧 `forbidden_function`。
 `generate_series` 在 FROM 里是表函数(`Table.this`),表循环只对它跳过白名单;别的表函数照旧拒。执行器的单语句与 `set_config` 检查不读放行清单,不受影响。
-代价:`generate_series(1, 1e9)` 让「结果很大」更容易写出来(以前要靠多表笛卡尔积),仍由 3 s 超时兜着(§8「截断只截返回的部分」)。
+代价:`generate_series(1, 1e9)` 让「结果很大」更容易写出来(以前要靠多表笛卡尔积),由 3 s 超时与 4 MB 字节上限兜着(§4「执行」)。
 
 ## 4. 只读执行与库里的墙(`setup.py`、`executor.py`)
 
@@ -120,7 +120,9 @@ PG-only 的 `test_through_the_wall_the_model_forgets_the_hall_and_still_counts_o
 
 **执行。** 别名 `ask_data` 读 `ASK_DATA_DATABASE_URL`(未设 = 没有这个别名,答 503),不迁移、测试里镜像 `default`。每次一个事务:
 `SET TRANSACTION READ ONLY` → `set_config('statement_timeout', ASK_DATA_TIMEOUT_MS, true)` 与 `set_config('app.tenant_id', 殿, true)` →
-SQL → `fetchmany(ASK_DATA_MAX_ROWS + 1)` → COMMIT。殿只来自调用方;没有殿不执行。
+SQL → 服务端命名游标(`connection.chunked_cursor()`,写语句仍用普通游标)每次取 10 行，取到 `ASK_DATA_MAX_ROWS + 1` 行
+或累计 `MAX_RESULT_BYTES`(4 MB)即停、标 truncated → COMMIT。结果里的 NaN / ±Infinity 转 `None`,bytea 转 `\x…` 文本(`_json_safe`)。
+殿只来自调用方;没有殿不执行。(2026-11-21 审查后改：此前普通游标在 `execute` 时把整份结果取到进程里，宽行实测把内存从 221 MB 撑到 1185 MB。)
 
 **分库时(2026-11-21 决定 2,取代原来的 409 `not_on_this_database`)。** `settings.SHARDED` 时四张表的行都在殿所在文明的分库上,
 控制库一行没有,所以执行器连 `ask_data_civ_<文明>`(`executor.alias_for`:殿的文明 → `shard_reads.alias_for_reads` → 分库别名;
@@ -215,8 +217,7 @@ UPDATE / DELETE / 未授权列 / 未授权表全被库拒且什么都没写、`p
 - **就绪探针**:`apps/core/health.py:23` 会 ping 每个别名,所以先设了 `ASK_DATA_DATABASE_URL`、还没跑 `ask_data_setup` 时,就绪检查失败。先跑命令再设变量。
 - **向量在 Django cache 里**:缓存清空或换后端就在下一问时重嵌四段说明(多一次 embed 请求),没有持久化;相似度下限沿用帮助台的设置项,
   在这里的取值是否合适未核实。
-- **截断只截返回的部分**:psycopg2 的普通游标在 `execute` 时把整份结果取到客户端,`fetchmany` 只决定回给官员多少行。大结果由 3 s 超时兜着,
-  内存上限未量过。
+- **单个超大值仍整行取回**:字节上限按行累计，一行里接近 PG 1 GB 字段上限的值仍会整个进内存(`executor.py` 的 `ponytail:` 注释)。
 - **留痕只在接口上**:接口每次调用写一行审计(§2「留痕」),不写 `AIDraft`;演示命令与评测命令不写。
 - **离线分数只在种子上成立**:`ask_data_eval --offline` 在别的库上会得到别的数字;种子只由测试加载,没有加载命令。
 - ADMIN 跨殿问数;多轮追问;模型看结果再总结;图表;Web 页面与官员 App。

@@ -101,7 +101,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 
 | 变量 | App | 缺了怎么样 |
 |---|---|---|
-| `EXPO_PUBLIC_API_URL` | 灵魂端 `mobile/`(官员端 `mobile-officer/` 复用同一个 platform 模块:`mobile-officer/src/shared.ts` 从 `../../mobile/src/*` 再导出,**官员端是否同样读这个变量:未核实**) | 回退 `http://10.0.2.2:8000/api/v1`(Android)/ `http://localhost:8000/api/v1`(iOS),商店包会连自己的手机(`mobile/src/platform.ts:89-93`) |
+| `EXPO_PUBLIC_API_URL` | 灵魂端 `mobile/`(官员端 `mobile-officer/` 复用同一个 platform 模块:`mobile-officer/src/shared.ts` 从 `@soulledger/mobile-ui/src/*` 再导出(2026-11-21 起两端共用模块在 `packages/mobile-ui`),**官员端是否同样读这个变量:未核实**) | 回退 `http://10.0.2.2:8000/api/v1`(Android)/ `http://localhost:8000/api/v1`(iOS),商店包会连自己的手机(`packages/mobile-ui/src/platform.ts:89-93`) |
 | `EXPO_PUBLIC_DESK_URL` | 官员端 | 官员端「打开官员台」之类的链接前缀,回退 `http://localhost:3000`(`mobile-officer/src/rules.ts` 的 `deskBaseUrl()`) |
 | EAS `projectId` | 两个 App | 见第 9 节 |
 
