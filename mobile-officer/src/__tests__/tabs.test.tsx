@@ -240,7 +240,9 @@ describe("the other tabs have the same four states", () => {
     );
     renderOfficer(<QueueTab onOpen={() => {}} />);
     const held = await screen.findByTestId("queue-row-j7");
-    expect(within(held).getByText("‖ 暂不能认领 · 2999年 · 11月3日 起可认领")).toBeTruthy();
+    // The date's parts carry word joiners (U+2060) so a narrow row wraps at a space, never inside 「11月3日」.
+    const joined = (part: string) => [...part].join("\u2060");
+    expect(within(held).getByText(`‖ 暂不能认领 · ${joined("2999年")} · ${joined("11月3日")} 起可认领`)).toBeTruthy();
     expect(within(held).getByText(/ · 在枉死城候着$/)).toBeTruthy();
     expect(within(held).queryByText(/候至/)).toBeNull();
     expect(screen.queryByTestId("queue-claim-j7")).toBeNull();

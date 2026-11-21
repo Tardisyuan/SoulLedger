@@ -49,7 +49,7 @@ export function Tag({ tone = "neutral", children, testID }: { tone?: TagTone; ch
   const ground = tone === "neutral" ? t.s2 : `${ink}24`;
   return (
     <View testID={testID} style={[styles.tag, { backgroundColor: ground }]}>
-      <Txt variant="caption" numberOfLines={1} style={{ color: ink }}>
+      <Txt variant="caption" numberOfLines={2} style={{ color: ink }}>
         {children}
       </Txt>
     </View>
