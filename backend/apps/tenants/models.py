@@ -254,13 +254,16 @@ class ShardOutbox(models.Model):
 
 
 class ShardInbox(models.Model):
-    """A saga message applied on the target hall's master, in the same transaction as what it applied. The unique
-    `message_id` is the idempotence: a redelivery fails to insert and applies nothing."""
+    """A saga message answered on the target hall's master: applied, in the same transaction as what it applied, or
+    refused (`refused`). The unique `message_id` is the idempotence: a redelivery fails to insert, applies nothing
+    and reads the answer."""
 
     message_id = models.UUIDField(unique=True)
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="+")
     kind = models.CharField(max_length=64)
     received_at = models.DateTimeField(auto_now_add=True)
+    #: The target refused the message (`shard_saga.Refused`): nothing was applied, and a redelivery is refused too.
+    refused = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.kind} {self.message_id}"
