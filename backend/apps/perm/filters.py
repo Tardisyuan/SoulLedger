@@ -4,6 +4,7 @@ Data scope filter: rows narrowed by the role data scope (`apps/perm/data_scope.p
 A model that is not in `data_scope.REGISTRY` comes back unchanged — the same queryset object, which
 `officer_app/todo.py::_judgments_in_scope` relies on (`seen is every`).
 """
+from django.conf import settings
 from django.db.models import Q
 from rest_framework.request import Request
 
@@ -50,8 +51,25 @@ class DataScopeFilter:
                                  cache=data_scope.request_cache(request))
         if q is None:
             return queryset
+        if soul_path and settings.SHARDED:
+            return cls._through_soul_by_id(request, queryset, soul_path)
         tenant_id = getattr(user, "tenant_id", None)
         if tenant_id is not None:
             home = f"{at}home_tenant"
             q |= Q(**{f"{home}__isnull": False}) & ~Q(**{home: tenant_id})
         return queryset.filter(q)
+
+    @classmethod
+    def _through_soul_by_id(cls, request, queryset, soul_path):
+        """Sharded: `soul_path` is a crossing key (`soul`, `soul_a`, `plan__soul`), a join a shard refuses
+        (apps/core/shard_reads.py CrossShardJoin). The rows' souls are read by id from every leg, the scope runs on
+        them (the same rule, on the souls), and the rows of the visible souls are kept.
+        ponytail: reads the soul id of every row in `queryset` (a hall's scoped list); a hall with hundreds of
+        thousands wants the soul's organization denormalized onto the row."""
+        from apps.core.shard_reads import with_fanout
+        from apps.souls.models import Soul
+
+        key = f"{soul_path}_id"
+        souls = set(queryset.order_by().values_list(key, flat=True)) - {None}
+        visible = cls.through_soul(request, with_fanout(Soul._base_manager.filter(pk__in=souls)), soul_path="")
+        return queryset.filter(**{f"{key}__in": list(visible.values_list("pk", flat=True))})

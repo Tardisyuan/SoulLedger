@@ -47,7 +47,11 @@ def _cosigning_me(user, waiting) -> list:
         waiting, Q(current_node__kind=NodeKind.COUNTERSIGN) | ~Q(current_node__cosigners_json=[]))
     tenant_id = getattr(user, "tenant_id", None)
     if tenant_id is not None:
-        candidates = candidates.filter(Q(tenant_id=tenant_id) | Q(current_node__segment__tenant_id=tenant_id))
+        from apps.core.shard_reads import crossing_q
+
+        # The segment through the crossing key ApprovalNode.segment, read by ids (`crossing_q`).
+        candidates = candidates.filter(Q(tenant_id=tenant_id) | crossing_q(
+            ApprovalWorkflow, "current_node__segment__tenant_id", tenant_id))
     # ponytail: 逐条 can_approve,候选只限进行中的会签 / 加签节点;量大时把槽位拆成表再写成 SQL。
     return [wf.pk for wf in candidates.select_related("current_node__segment") if wf.current_node.can_approve(user)]
 
@@ -107,7 +111,7 @@ def _single_valued_prefix(model, path):
 
 def _user_q(model, path, user, cache=None) -> Q:
     if not _multi_valued(model, path):
-        return Q(**{path: user.pk})
+        return _q(model, path, user.pk)
     prefix, related = _single_valued_prefix(model, path)
     if not prefix:
         return Q(pk__in=model._base_manager.filter(**{path: user.pk}).values("pk"))
@@ -254,13 +258,25 @@ def org_ids(user, resource, cache=None):
     return ids if configured else None
 
 
+def _q(model, lookup, value) -> Q:
+    """`Q(**{lookup: value})`; with `model`, a crossing key on the path (`soul__owner_org` on a reincarnation) is
+    read by ids instead of joined -- a shard refuses that join (apps/core/shard_reads.py `crossing_q`).
+    ponytail: sharded, the souls of the scoped organizations go into the SQL as ids; a big organization wants
+    the owner organization denormalized onto the row."""
+    if model is None:
+        return Q(**{lookup: value})
+    from apps.core.shard_reads import crossing_q
+
+    return crossing_q(model, lookup, value)
+
+
 def visible_q(user, resource, org_path, user_paths=(), extra_q=None, *, model=None, cache=None):
     """`user` 对这项业务可见行的 Q;None = 不限(调用方原样返回 queryset)。
-    `user_paths` 里有多值关系时要给 `model`(写成 `pk__in` 子查询)。"""
+    `user_paths` 里有多值关系时要给 `model`(写成 `pk__in` 子查询);给了 `model`,跨库键上的路径按 id 读(`_q`)。"""
     ids = org_ids(user, resource, cache)
     if ids is None:
         return None
-    q = Q(**{f"{org_path}__in": ids})
+    q = _q(model, f"{org_path}__in", ids)
     for path in user_paths:
         q |= _user_q(model, path, user, cache) if model is not None else Q(**{path: user.pk})
     if extra_q is not None:

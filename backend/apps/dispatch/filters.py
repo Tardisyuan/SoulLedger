@@ -4,6 +4,7 @@ Dispatch FilterSet — filtering, search, and ordering for Dispatch API.
 import django_filters as filters
 from django.db.models import Q
 
+from apps.core.shard_reads import crossing_q
 from apps.core.tenant import request_tenant
 from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus, JudgmentStatus
 
@@ -20,7 +21,7 @@ class DispatchFilter(filters.FilterSet):
     status = filters.ChoiceFilter(choices=DispatchStatus.choices)
     source_tenant = filters.NumberFilter()
     target_tenant = filters.NumberFilter()
-    soul_name = filters.CharFilter(field_name="soul__name", lookup_expr="icontains")
+    soul_name = filters.CharFilter(method="filter_soul_name")
 
     # Date range filters
     proposed_after = filters.DateTimeFilter(field_name="proposed_at", lookup_expr="gte")
@@ -39,8 +40,12 @@ class DispatchFilter(filters.FilterSet):
             return queryset
         q = Q()
         for field in self.search_fields:
-            q |= Q(**{f"{field}__icontains": value})
+            q |= crossing_q(queryset.model, f"{field}__icontains", value)
         return queryset.filter(q)
+
+    def filter_soul_name(self, queryset, name, value):
+        """`soul__name` through the crossing key DispatchRecord.soul, read by ids (`crossing_q`)."""
+        return queryset.filter(crossing_q(queryset.model, "soul__name__icontains", value)) if value else queryset
 
 
 class CrossTenantJudgmentFilter(filters.FilterSet):
@@ -66,4 +71,6 @@ class CrossTenantJudgmentFilter(filters.FilterSet):
         if value == "initiated":
             return queryset.filter(initiating_tenant=tenant)
         # `.distinct()`:连了 participants,同一殿坐两个席位时一行会回来两次(同 get_queryset 的理由)。
-        return queryset.filter(participants__participant_tenant=tenant).exclude(initiating_tenant=tenant).distinct()
+        # The seats read by ids: a seat is a row of its own hall, the bench one of the initiating hall's (`crossing_q`).
+        return queryset.filter(crossing_q(queryset.model, "participants__participant_tenant", tenant)).exclude(
+            initiating_tenant=tenant).distinct()

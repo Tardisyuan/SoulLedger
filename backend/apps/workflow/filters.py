@@ -5,6 +5,7 @@ import django_filters as filters
 from django.db.models import DateTimeField, F, Func, Q
 from django.utils import timezone
 
+from apps.core.shard_reads import crossing_q
 from apps.souls.models import Civilization
 from apps.workflow.models import (
     REACHABLE_WORKFLOW_STATUSES,
@@ -56,7 +57,7 @@ class WorkflowFilter(filters.FilterSet):
     civilization = filters.ChoiceFilter(
         choices=Civilization.choices, method="filter_civilization"
     )
-    soul_name = filters.CharFilter(field_name="soul__name", lookup_expr="icontains")
+    soul_name = filters.CharFilter(method="filter_soul_name")
     # 「已超时」:进行中、当前节点还在等人、且它有超时时限并且已过。与 `timeouts.py` 的 `_due` 同一道时钟
     # (`activated_at + timeout_hours`),但**不看 `timed_out_at`** —— 提醒类动作触发过之后节点仍在等,仍然是超时的。
     overdue = filters.BooleanFilter(method="filter_overdue")
@@ -105,7 +106,13 @@ class WorkflowFilter(filters.FilterSet):
             # 一个映射表里没有的文明。返回空集而不是忽略这个筛选条件 ——
             # 忽略会让调用者以为「这个文明下确实有这些工作流」。
             return queryset.none()
-        return queryset.filter(soul__tenant__code=code)
+        # ponytail: sharded, the ids of every soul of that civilization's hall go into the SQL; a big hall wants
+        # the soul's hall denormalized onto the workflow.
+        return queryset.filter(crossing_q(queryset.model, "soul__tenant__code", code))
+
+    def filter_soul_name(self, queryset, name, value):
+        """`soul__name` through the crossing key ApprovalWorkflow.soul, read by ids (`crossing_q`)."""
+        return queryset.filter(crossing_q(queryset.model, "soul__name__icontains", value)) if value else queryset
 
     def filter_search(self, queryset, name, value):
         """Search across multiple fields."""
@@ -113,5 +120,5 @@ class WorkflowFilter(filters.FilterSet):
             return queryset
         q = Q()
         for field in self.search_fields:
-            q |= Q(**{f"{field}__icontains": value})
+            q |= crossing_q(queryset.model, f"{field}__icontains", value)
         return queryset.filter(q)
