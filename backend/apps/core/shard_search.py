@@ -19,6 +19,7 @@ from functools import reduce
 
 from django.conf import settings
 from django.core.exceptions import EmptyResultSet, FieldError
+from django.db import DEFAULT_DB_ALIAS
 from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.core.shard_reads import crossing_q, orders_across
@@ -58,7 +59,9 @@ def _orders(queryset, term):
     if term.lstrip("-").startswith("_"):
         return False
     try:
-        queryset.order_by(term).query.get_compiler(queryset.db).as_sql()
+        # Compile on the queryset's pinned database, or `default`: only the field names are being checked, and
+        # asking the router (`queryset.db`) for a fan-out read has no single answer (NoShardContext, sharded).
+        queryset.order_by(term).query.get_compiler(queryset._db or DEFAULT_DB_ALIAS).as_sql()
     except EmptyResultSet:  # `.none()`: never compiled, so never refused
         return True
     except FieldError:
