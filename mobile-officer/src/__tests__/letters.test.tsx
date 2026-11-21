@@ -12,7 +12,8 @@ import { INBOX_REPLY_MAX } from "@soulledger/core/api/soul-inbox";
 import { clearDrafts, flushDraft, readDraft } from "../drafts";
 import { outboxReasonOf } from "../outbox";
 import { ToastProvider, translate } from "../shared";
-import { TODO_GROUPS, noticeLanding, replyFailureKey, replyReady, withTemplate } from "../rules";
+import { replyReady } from "@soulledger/core/domain/letters";
+import { TODO_GROUPS, noticeLanding, replyFailureKey, withTemplate } from "../rules";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockTodo = jest.fn();

@@ -342,12 +342,6 @@ export function handledNotice(detail: Pick<TodoItemDetail, "actionable" | "state
 
 // ── letters (待回书信) ─────────────────────────────────────────────────
 
-/** Can this text go out as a reply: not blank, not longer than the server takes (`INBOX_REPLY_MAX`). */
-export function replyReady(text: string): boolean {
-  const body = text.trim();
-  return body !== "" && body.length <= INBOX_REPLY_MAX;
-}
-
 /**
  * A chosen template goes INTO the box as plain text (the two known placeholders filled, nothing
  * rendered, nothing sent). An empty box takes it whole; text already typed keeps going, the template

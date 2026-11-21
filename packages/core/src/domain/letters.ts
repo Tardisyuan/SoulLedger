@@ -10,6 +10,8 @@
  * - 回复正文(`replyReady`)与草稿(`normalizeDraft` / `draftNeedsSave`):`OfficerReplySerializer.body`
  *   (去掉首尾空白后非空、不超过 `INBOX_REPLY_MAX`)与草稿视图的「只有空白 = 清掉」。
  */
+import { INBOX_REPLY_MAX } from "../api/soul-inbox";
+
 /** 这封信此刻的回信状态。`open`:能回(没人经办的也能回,回了不改经办人)。 */
 export type InboxReplyGate = "closed" | "moved" | "others" | "open";
 
@@ -39,4 +41,10 @@ export function inboxReplyGate(c: InboxReplyFacts, viewer: { userId: number | un
  */
 export function awaitingReply(c: InboxReplyFacts, lastFrom: string | undefined = c.last_from): boolean {
   return lastFrom === "soul" && c.closed_at == null && c.can_reply !== false;
+}
+
+/** 这段字能不能作为回复发出:去掉首尾空白后非空,且不超过服务端收的长度(`OfficerReplySerializer.body`)。 */
+export function replyReady(text: string): boolean {
+  const body = text.trim();
+  return body !== "" && body.length <= INBOX_REPLY_MAX;
 }

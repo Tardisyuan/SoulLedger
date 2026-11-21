@@ -12,7 +12,7 @@ import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { newReplyTxn, renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
-import { awaitingReply, inboxReplyGate } from "@soulledger/core/domain/letters";
+import { awaitingReply, inboxReplyGate, replyReady } from "@soulledger/core/domain/letters";
 import {
   useInboxArchive,
   useInboxAssign,
@@ -451,7 +451,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   // 同一段文字重发用同一个事务号:响应丢了再点发送,服务器回第一次的结果,不会发两封(与官员 App 同一条规则)。
   const attempt = useRef<{ body: string; txn: string } | null>(null);
   const submit = () => {
-    if (!draft.body.trim() || reply.isPending) return;
+    if (!replyReady(draft.body) || reply.isPending) return;
     if (attempt.current?.body !== draft.body) attempt.current = { body: draft.body, txn: newReplyTxn() };
     reply.mutate(
       { id: conversation.id, body: draft.body, txnId: attempt.current.txn },
@@ -672,7 +672,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
             <Button type="button" variant="ghost" onClick={() => draft.persist(draft.body)} disabled={!draft.body.trim()}>
               {t("soul_inbox.save_draft")}
             </Button>
-            <Button type="submit" variant="primary" loading={reply.isPending} disabled={!draft.body.trim()}>
+            <Button type="submit" variant="primary" loading={reply.isPending} disabled={!replyReady(draft.body)}>
               {t("soul_inbox.send")}
               <kbd aria-hidden="true" className="ml-2 font-mono text-2xs">
                 {k("⌘⏎")}

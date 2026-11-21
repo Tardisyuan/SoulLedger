@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { awaitingReply, inboxReplyGate } from "../letters";
+import { INBOX_REPLY_MAX } from "../../api/soul-inbox";
+import { awaitingReply, inboxReplyGate, replyReady } from "../letters";
 
 const open = { closed_at: null, can_reply: true, assignee: null, last_from: "soul" };
 const me = { userId: 7 };
@@ -45,5 +46,16 @@ describe("awaitingReply —— inbox.awaiting_reply", () => {
     expect(awaitingReply({ ...open, last_from: "hall" }, "soul")).toBe(true);
     expect(awaitingReply(open, "hall")).toBe(false);
     expect(awaitingReply({ ...open, can_reply: false }, "soul")).toBe(false);
+  });
+});
+
+describe("replyReady —— OfficerReplySerializer.body", () => {
+  it("去掉首尾空白后非空、不超过上限", () => {
+    expect(replyReady("")).toBe(false);
+    expect(replyReady(" \n\t ")).toBe(false);
+    expect(replyReady("好")).toBe(true);
+    // 服务端先去空白再量长度:首尾的空白不算进上限。
+    expect(replyReady(`  ${"好".repeat(INBOX_REPLY_MAX)}  `)).toBe(true);
+    expect(replyReady("好".repeat(INBOX_REPLY_MAX + 1))).toBe(false);
   });
 });

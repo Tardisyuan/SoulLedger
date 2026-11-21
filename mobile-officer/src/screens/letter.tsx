@@ -15,7 +15,7 @@ import {
   soulInboxApi,
   type InboxMessage,
 } from "@soulledger/core/api/soul-inbox";
-import { inboxReplyGate } from "@soulledger/core/domain/letters";
+import { inboxReplyGate, replyReady } from "@soulledger/core/domain/letters";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 
@@ -30,7 +30,6 @@ import {
   ASSIGNED_TO_OTHER,
   MOVED,
   replyFailureKey,
-  replyReady,
   withTemplate,
 } from "../rules";
 import { useCan, useSession } from "../session";
