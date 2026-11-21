@@ -215,6 +215,41 @@ def test_a_long_result_is_cut_at_max_rows_and_flagged(wall):
 
 @PG_ONLY
 @pytest.mark.django_db(transaction=True)
+def test_a_wide_result_is_cut_at_the_byte_cap_on_a_server_side_cursor(wall):
+    """Review 2026-11-21: a plain cursor pulled the whole result into the web process (221 -> 1185 MB RSS) before
+    `fetchmany` cut it. Now the statement runs on a named cursor (it sees itself in `pg_cursors`) and the fetch
+    stops at MAX_RESULT_BYTES."""
+    a, alias = wall["A"][0], wall["alias"]
+    assert executor.run("SELECT count(*) FROM pg_cursors", a.pk, using=alias).rows == [[1]]
+    wide = executor.run("SELECT lpad('x', 1000000, 'x') AS w FROM generate_series(1, 50)", a.pk, using=alias)
+    held = sum(len(w) for (w,) in wide.rows)
+    assert wide.truncated and 0 < held <= executor.MAX_RESULT_BYTES and len(wide.rows) < 50
+
+
+@PG_ONLY
+@pytest.mark.django_db(transaction=True)
+def test_the_statement_runs_in_a_read_only_transaction(wall):
+    """Deleting `SET TRANSACTION READ ONLY` kept every other test green (the role has no write grant anyway)."""
+    result = executor.run("SELECT current_setting('transaction_read_only')", wall["A"][0].pk, using=wall["alias"])
+    assert result.rows == [["on"]]
+
+
+@PG_ONLY
+@pytest.mark.django_db(transaction=True)
+def test_values_json_cannot_write_come_back_as_null_or_text(wall):
+    """NaN / Infinity (float and numeric) and bytea made the view 500 after the audit row said ok."""
+    from rest_framework.renderers import JSONRenderer
+
+    sql = ("SELECT 'NaN'::float8, 'Infinity'::float8, '-Infinity'::numeric, 'NaN'::numeric, 1.5::numeric, "
+           "'\\x00ff'::bytea, ARRAY['NaN'::float8, 2.5]")
+    rows = executor.run(sql, wall["A"][0].pk, using=wall["alias"]).rows
+    assert [[None if v is None else str(v) for v in r[:6]] + [r[6]] for r in rows] == [
+        [None, None, None, None, "1.5", "\\x00ff", [None, 2.5]]]
+    JSONRenderer().render(rows)  # raised ValueError / UnicodeDecodeError before
+
+
+@PG_ONLY
+@pytest.mark.django_db(transaction=True)
 def test_the_date_and_series_functions_the_gate_allows_run_as_the_read_only_role(wall):
     """Decision 1 (2026-11-21): the by-name / newly listed functions pass the gate and the role may call them."""
     from apps.soul_assist.ask_data import gate

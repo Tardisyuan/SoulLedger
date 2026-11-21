@@ -141,15 +141,23 @@ def _folded(ident: exp.Identifier) -> str:
 
 
 def _visible_ctes(table: exp.Table) -> set[str]:
-    """沿祖先链收集包住这张表的查询定义的 CTE 名。按作用域收,不收全树:
-    别处子查询里定义的 `WITH pg_roles AS (…)` 不能让外层的 `FROM pg_roles` 冒充 CTE。"""
+    """沿祖先链收集这张表看得见的 CTE 名。按作用域收,不收全树:
+    别处子查询里定义的 `WITH pg_roles AS (…)` 不能让外层的 `FROM pg_roles` 冒充 CTE。
+    表在某个 CTE 的定义里时,PG 的非递归 WITH 只让它看见排在这个 CTE **前面**的兄弟,看不见自己和后面的:
+    `WITH pg_roles AS (SELECT rolname FROM pg_roles)` 里那个 `pg_roles` 是真目录表。`WITH RECURSIVE` 全看得见,含自己。"""
     names: set[str] = set()
-    node = table.parent
+    child, node = table, table.parent
     while node is not None:
-        with_ = node.args.get("with_")
-        if isinstance(with_, exp.With):
-            names.update(_folded(cte.args["alias"].this) for cte in with_.expressions)
-        node = node.parent
+        if isinstance(node, exp.With):  # 从某个 CTE 的定义里上来
+            ctes = node.expressions
+            i = next(k for k, cte in enumerate(ctes) if cte is child)
+            seen = ctes if node.args.get("recursive") else ctes[:i]
+            names.update(_folded(cte.args["alias"].this) for cte in seen)
+        else:
+            with_ = node.args.get("with_")
+            if isinstance(with_, exp.With) and with_ is not child:  # 从查询主体上来:整个 WITH 都看得见
+                names.update(_folded(cte.args["alias"].this) for cte in with_.expressions)
+        child, node = node, node.parent
     return names
 
 

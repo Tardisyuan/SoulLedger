@@ -118,6 +118,21 @@ REJECTED = [
         "SELECT a FROM (WITH pg_roles AS (SELECT 1 AS a) SELECT a FROM pg_roles) s UNION SELECT rolname FROM pg_roles",
         gate.TABLE_NOT_ALLOWED,
     ),
+    # 非递归 CTE 看不见自己、也看不见排在后面的兄弟:定义里的同名表是真表(2026-11-21 评审在真 PG 上读到 pg_roles)
+    ("WITH pg_roles AS (SELECT rolname FROM pg_roles) SELECT rolname FROM pg_roles", gate.TABLE_NOT_ALLOWED),
+    (
+        "WITH a AS (SELECT rolname FROM pg_roles), pg_roles AS (SELECT 1 AS rolname) SELECT rolname FROM a",
+        gate.TABLE_NOT_ALLOWED,
+    ),
+    (
+        "WITH pg_roles AS (SELECT rolname FROM (SELECT rolname FROM pg_roles) s) SELECT rolname FROM pg_roles",
+        gate.TABLE_NOT_ALLOWED,
+    ),
+    (
+        "WITH authentication_user AS (SELECT username FROM authentication_user) "
+        "SELECT username FROM authentication_user",
+        gate.TABLE_NOT_ALLOWED,
+    ),
     # 星号
     ("SELECT * FROM judgment_judgment", gate.STAR_NOT_ALLOWED),
     ("SELECT j.* FROM judgment_judgment j", gate.STAR_NOT_ALLOWED),
@@ -150,6 +165,13 @@ ALLOWED = [
         "WITH a AS (SELECT soul_id FROM disposition_disposition), b AS (SELECT soul_id FROM a) "
         "SELECT count(*) FROM b JOIN souls_soul s ON s.id = b.soul_id",
         {D, S},
+    ),
+    # WITH RECURSIVE 看得见自己;CTE 定义里的子查询看得见外层 WITH 的 CTE
+    ("WITH RECURSIVE r AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM r WHERE n < 3) SELECT count(*) FROM r", set()),
+    (
+        "WITH a AS (SELECT soul_id FROM disposition_disposition) "
+        "SELECT count(*) FROM (WITH b AS (SELECT soul_id FROM a) SELECT soul_id FROM b) s",
+        {D},
     ),
     # UNION
     ("SELECT soul_id FROM disposition_disposition UNION SELECT soul_id FROM sentence_plan_sentenceplan", {D, P}),
