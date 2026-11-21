@@ -346,7 +346,7 @@ function LetterGroupBlock({ group, soulName, onOpenImage }: { group: LetterGroup
       className={`${own ? "rounded-panel bg-[oklch(var(--color-surface-2))] p-3" : ""} ${group.open ? "border-l-2 border-[oklch(var(--color-ink))] pl-3" : ""}`}
     >
       <p className="flex items-baseline justify-between gap-3 text-sm">
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 truncate" title={name}>
           <span className="font-medium text-[oklch(var(--color-ink))]">{name}</span>
           <span className="text-[oklch(var(--color-ink-muted))]">{` · ${t(`letters.side.${group.side}`)}`}</span>
         </span>

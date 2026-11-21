@@ -159,6 +159,8 @@ export function LetterThread({
       () => undefined,
     );
   }, [id, offline, outboxEntry]);
+  // 「来信已等 …」 is counted to when the thread was opened (render stays pure; a reopened thread counts again).
+  const [openedAt] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -335,7 +337,7 @@ export function LetterThread({
   };
   // 第六十四批第三节: whose turn, right above where the officer decides. No warning colour: there is no service target yet.
   const since = awaiting ? lastSoulLetterAt(ordered, factsOf) : undefined;
-  const wait = since !== undefined ? letterWait(since, Date.now()) : null;
+  const wait = since !== undefined ? letterWait(since, openedAt) : null;
   const status =
     turn === "awaiting_hall" && wait ? (
       <Txt testID="letter-state" variant="section" style={styles.status}>
