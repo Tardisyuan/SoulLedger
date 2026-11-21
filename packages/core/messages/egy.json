@@ -7322,7 +7322,6 @@
     "thread_empty": "Nen Medu",
     "closed": "Khetem-N (Wehem Mesut-N)",
     "no_messages": "Nen Medu",
-    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Wesheb Em Wesekhet",
     "reply_hint": "Ba Maa Wesheb Wesekhet; Ren-Ek Em Sesh.",
     "send": "Hab",
@@ -7351,11 +7350,8 @@
     "by_hall": "Wesekhet",
     "folder_empty": "Nen Sesh Dy",
     "newest_first": "Hesb: Mawy Tepy",
-    "from_soul": "Em {{name}}",
     "officer_reply": "Weshed Wesekhet",
-    "previous": "Sep Tepy",
     "earlier": "Tepy: Sep {{n}}",
-    "awaiting": "Nen Weshed Djer · Hru {{n}}",
     "cite_hint": "/ Djed Hep",
     "cite_label": "Hep",
     "cite_results": "Hep {{n}} · ↑↓ Setep · ↵ Redi",
@@ -10623,8 +10619,7 @@
     "state": {
       "awaiting_hall": "Wesheb Wesekhet · Shat Em Smen {{wait}}",
       "awaiting_soul": "Wesheb-N · Em Smen Ba",
-      "closed": "Shat Khetem-N · Maa Wa",
-      "archived": "Per Sesh · Maa Wa"
+      "closed": "Shat Khetem-N · Maa Wa"
     },
     "side": {
       "soul": "Shat Ba",

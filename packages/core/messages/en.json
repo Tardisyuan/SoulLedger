@@ -7361,7 +7361,6 @@
     "thread_empty": "This letter has no messages yet",
     "closed": "Closed (reborn)",
     "no_messages": "No messages yet",
-    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Reply as the hall",
     "reply_hint": "The soul sees a reply from the hall, signed with your name.",
     "send": "Send",
@@ -7390,11 +7389,8 @@
     "by_hall": "By hall",
     "folder_empty": "No letters in this folder",
     "newest_first": "Newest first",
-    "from_soul": "From {{name}}",
     "officer_reply": "Hall reply",
-    "previous": "previous",
     "earlier": "{{n}} earlier letters",
-    "awaiting": "Awaiting reply · {{n}} d",
     "cite_hint": "/ cite a statute",
     "cite_label": "Statutes",
     "cite_results": "{{n}} statutes; ↑↓ to choose, Enter to insert",
@@ -10664,8 +10660,7 @@
     "state": {
       "awaiting_hall": "The hall's turn to reply · the letter has waited {{wait}}",
       "awaiting_soul": "Replied · waiting for the soul",
-      "closed": "This exchange is closed · read-only",
-      "archived": "Archived · read-only"
+      "closed": "This exchange is closed · read-only"
     },
     "side": {
       "soul": "Letter",

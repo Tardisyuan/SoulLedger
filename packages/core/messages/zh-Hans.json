@@ -7361,7 +7361,6 @@
     "thread_empty": "这封信还没有内容",
     "closed": "已关闭(已转生)",
     "no_messages": "暂无消息",
-    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "以殿司名义回复",
     "reply_hint": "灵魂看到的是殿司的回复,署你的名字。",
     "send": "发送",
@@ -7390,11 +7389,8 @@
     "by_hall": "按殿",
     "folder_empty": "这个文件夹里没有来信",
     "newest_first": "最近在上",
-    "from_soul": "来自 {{name}}",
     "officer_reply": "殿司回复",
-    "previous": "前一封",
     "earlier": "更早的 {{n}} 封",
-    "awaiting": "待回复 · {{n}} 天",
     "cite_hint": "/ 引用律条",
     "cite_label": "律条",
     "cite_results": "{{n}} 条律条,↑↓ 选择,回车插入",
@@ -10664,8 +10660,7 @@
     "state": {
       "awaiting_hall": "轮到殿司回 · 来信已等 {{wait}}",
       "awaiting_soul": "已回 · 等灵魂来信",
-      "closed": "往来已结束 · 只能看",
-      "archived": "已归档 · 只能看"
+      "closed": "往来已结束 · 只能看"
     },
     "side": {
       "soul": "来信",

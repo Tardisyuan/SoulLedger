@@ -12,7 +12,19 @@ import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { newReplyTxn, renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
-import { awaitingReply, draftNeedsSave, inboxReplyGate, replyReady } from "@soulledger/core/domain/letters";
+import {
+  draftNeedsSave,
+  groupLetters,
+  inboxReplyGate,
+  lastSoulLetterAt,
+  letterImageBox,
+  letterState,
+  letterWait,
+  replyReady,
+  type LetterFacts,
+  type LetterGroup,
+} from "@soulledger/core/domain/letters";
+import { formatListDate, hhmm } from "@soulledger/core/domain/dates";
 import {
   useInboxArchive,
   useInboxAssign,
@@ -278,31 +290,23 @@ function Composer({
   );
 }
 
-/** One letter. The newest is read at quote size; earlier ones step down and hang off a 2 px structure line. */
-function Letter({ m, conversation, latest, previous, onOpenImage }: { m: InboxMessage; conversation: InboxConversation; latest: boolean; previous: boolean; onOpenImage: (id: string) => void }) {
-  const { t, formatDateTime, locale } = useI18n();
+/** What grouping reads of a letter (`@soulledger/core/domain/letters`): the hall's replies by officer, the soul's by sender. */
+const factsOf = (m: InboxMessage): LetterFacts => ({ ts: m.timestamp, side: m.from_officer ? "hall" : "soul", author: m.sender_name });
+
+/** One letter in its group. A picture is its own letter, fitted into 160×120. */
+function Letter({ m, stamp, onOpenImage }: { m: InboxMessage; stamp: boolean; onOpenImage: (id: string) => void }) {
+  const { t } = useI18n();
   const [broken, setBroken] = useState(false);
-  const who = m.from_officer
-    ? `${t("soul_inbox.officer_reply")} · ${t("soul_inbox.from_hall", { hall: hallOf(conversation, locale), title: m.officer_title, name: m.sender_name })
-        .replace(/\s+/g, " ")
-        .trim()}`
-    : t("soul_inbox.from_soul", { name: m.sender_name });
+  const box = m.image ? letterImageBox(m.image.width, m.image.height) : null;
   return (
-    <li
-      data-event-id={m.event_id}
-      className={`py-4 border-b ${RULE} ${latest ? "" : "pl-4 shadow-[inset_2px_0_0_oklch(var(--color-line))]"}`}
-    >
-      <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-        {who}
-        {" · "}
-        {formatDateTime(new Date(m.timestamp).toISOString())}
-        {previous && ` · ${t("soul_inbox.previous")}`}
-      </p>
-      {m.image ? (
-        // 灵魂来信里的图(2026-10-10):一条消息一张,不带文字;按原比例,宽不超过线程宽度的 60%。
+    <li data-event-id={m.event_id}>
+      {/* 组里与上一封相隔超过 30 分钟:这一封上方右侧补一个小时间。 */}
+      {stamp && <p className={`mb-2 text-right ${TIME}`}>{hhmm(new Date(m.timestamp))}</p>}
+      {m.image && box ? (
+        // 灵魂来信里的图(2026-10-10):一条消息一张,不带文字;第六十四批起放进 160×120,圆角 6,发丝线边。
         // 地址是服务器签给当前官员的短时路径(取文件时再按码名与殿司查一次);取不到时说一句,不留空白。
         broken ? (
-          <p data-letter-image-broken className="mt-2 text-xs text-[oklch(var(--color-ink-subtle))]">
+          <p data-letter-image-broken className="text-xs text-[oklch(var(--color-ink-subtle))]">
             {t("social_moderation.review.media_load_failed")}
           </p>
         ) : (
@@ -310,29 +314,62 @@ function Letter({ m, conversation, latest, previous, onOpenImage }: { m: InboxMe
             type="button"
             data-letter-image=""
             onClick={() => onOpenImage(m.image!.id)}
-            style={{ width: "60%", aspectRatio: `${m.image.width} / ${m.image.height}` }}
-            className="mt-2 block overflow-hidden border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))]"
+            style={{ width: box.width, height: box.height }}
+            className="block overflow-hidden rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))]"
           >
             {/* 裸 <img>,不是 next/image:签名地址、按请求鉴权,不能经图片优化代理转一道。 */}
-            <img
-              src={mediaUrl(m.image.url)}
-              alt={t("social_moderation.review.media_caption", { i: "1", w: String(m.image.width), h: String(m.image.height) })}
-              loading="lazy"
-              onError={() => setBroken(true)}
-              className="h-full w-full object-cover"
-            />
+            <img src={mediaUrl(m.image.url)} alt={t("letters.image_alt")} loading="lazy" onError={() => setBroken(true)} className="h-full w-full object-cover" />
           </button>
         )
       ) : (
-        <p
-          className={`mt-2 max-w-[60ch] font-serif whitespace-pre-wrap break-words ${
-            latest ? "text-md font-normal text-[oklch(var(--color-ink))]" : "text-md font-normal text-[oklch(var(--color-ink-muted))]"
-          }`}
-        >
-          {m.body}
-        </p>
+        <p className="font-serif text-md whitespace-pre-wrap break-words text-[oklch(var(--color-ink))]">{m.body}</p>
       )}
     </li>
+  );
+}
+
+const TIME = "text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]";
+
+/**
+ * 第六十四批:同一人连写的几封并成一组,一行组头「名字 · 来信/回信 … 时:分」。殿司是这一端的「自己」:回信组放在
+ * `surface-2`(card2)面板上,圆角 6、内边距 12、整栏宽;灵魂的来信直接是正文。没回的那组来信左边一道 2px 墨线。
+ */
+function LetterGroupBlock({ group, soulName, onOpenImage }: { group: LetterGroup<InboxMessage>; soulName: string; onOpenImage: (id: string) => void }) {
+  const { t } = useI18n();
+  const own = group.side === "hall";
+  const first = group.letters[0].item;
+  const name = own ? first.sender_name || t("soul_inbox.officer_reply") : first.sender_name || soulName;
+  return (
+    <section
+      data-letter-group={group.side}
+      data-open={group.open ? "" : undefined}
+      className={`${own ? "rounded-panel bg-[oklch(var(--color-surface-2))] p-3" : ""} ${group.open ? "border-l-2 border-[oklch(var(--color-ink))] pl-3" : ""}`}
+    >
+      <p className="flex items-baseline justify-between gap-3 text-sm">
+        <span className="min-w-0 truncate">
+          <span className="font-medium text-[oklch(var(--color-ink))]">{name}</span>
+          <span className="text-[oklch(var(--color-ink-muted))]">{` · ${t(`letters.side.${group.side}`)}`}</span>
+        </span>
+        <time className={TIME}>{hhmm(new Date(group.ts))}</time>
+      </p>
+      <ol className="mt-4 space-y-4">
+        {group.letters.map((l) => (
+          <Letter key={l.item.event_id} m={l.item} stamp={l.stamp} onOpenImage={onOpenImage} />
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** 跨天:11 号淡字靠左,右边接一道发丝线。组头的时间只写时:分,日期在这里。 */
+function DayDivider({ day }: { day: string }) {
+  const { locale } = useI18n();
+  const [y, mo, d] = day.split("-").map(Number);
+  return (
+    <div role="separator" data-letter-day={day} className="flex items-center gap-2 text-2xs text-[oklch(var(--color-ink-subtle))]">
+      <span>{formatListDate(new Date(y, mo - 1, d), locale, { time: false })}</span>
+      <span aria-hidden="true" className={`flex-1 border-t ${LINE}`} />
+    </div>
   );
 }
 
@@ -430,13 +467,13 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   const last = rows.at(-1);
   // 全屏查看翻的是整个线程里灵魂来信的图,从旧到新。
   const gallery = rows.flatMap((r) => (r.image ? [r.image] : []));
-  // 最后一封是灵魂写的、殿司此刻回得了(未关闭、灵魂没调走)→ 待回复,天数从那一封算。
-  const waitingDays =
-    last && !last.from_officer && awaitingReply(conversation, "soul")
-      ? Math.max(0, Math.floor((Date.now() - last.timestamp) / 86_400_000))
-      : null;
-  // 最新一封全尺寸,前一封缩小;再早的收起,点开才出。
+  // 第六十四批第三节:底部一行说轮到谁、等了多久(与官员 App 同一份规则)。不用警示色:等多久算久还没有定。
+  const state = letterState(gate, last ? factsOf(last).side : undefined);
+  const since = state === "awaiting_hall" ? lastSoulLetterAt(rows, factsOf) : undefined;
+  const wait = since !== undefined ? letterWait(since, Date.now()) : null;
+  // 最近两封之外的收起,点开才出;分组只排出来的那几封。
   const hidden = showEarlier ? 0 : Math.max(0, rows.length - 2);
+  const thread = groupLetters(rows.slice(hidden), factsOf, { open: state === "awaiting_hall" });
 
   // 信读到了才算读过:线程加载成功之后标已读,一次。
   const marked = useRef(false);
@@ -508,7 +545,6 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
         <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{conversation.soul_name}</h2>
         <SoulCode code={conversation.soul_code} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" />
         {conversation.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
-        {waitingDays !== null && <Badge tone="warning">{t("soul_inbox.awaiting", { n: String(waitingDays) })}</Badge>}
         {conversation.assignee && (
           <span data-testid="thread-assignee" className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">
             {t("soul_inbox.assign.assignee", { name: conversation.assignee.display_name })}
@@ -565,22 +601,41 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
               {t("soul_inbox.earlier", { n: String(hidden) })}
             </button>
           )}
-          <ol>
-            {rows.slice(hidden).map((m, i, shown) => (
-              <Letter
-                key={m.event_id}
-                m={m}
-                conversation={conversation}
-                latest={i === shown.length - 1}
-                previous={i === shown.length - 2}
-                onOpenImage={(id) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === id)))}
-              />
-            ))}
-          </ol>
+          {/* 一栏从上往下读,正文限 680 宽;组与组之间 24(设计是 20,网页的间距节奏没有 20 这一档)。 */}
+          <div data-letter-thread="" className="mt-4 flex max-w-[680px] flex-col gap-6">
+            {thread.map((row) =>
+              row.kind === "day" ? (
+                <DayDivider key={row.key} day={row.day} />
+              ) : (
+                <LetterGroupBlock
+                  key={row.key}
+                  group={row}
+                  soulName={conversation.soul_name}
+                  onOpenImage={(id) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === id)))}
+                />
+              )
+            )}
+          </div>
         </>
       )}
+      {/* 状态行在操作的正上方。只读(已关闭、灵魂调走)只有一行灰字,不放按钮、不放回复框。 */}
+      {state === "awaiting_hall" && wait && (
+        <p data-testid="inbox-state" role="status" className="mt-4 max-w-[680px] text-sm font-semibold text-[oklch(var(--color-ink))]">
+          {t("letters.state.awaiting_hall", { wait: t(`common.duration.${wait.unit}`, { n: String(wait.n) }) })}
+        </p>
+      )}
+      {state === "awaiting_soul" && (
+        <p data-testid="inbox-state" role="status" className="mt-4 max-w-[680px] text-sm text-[oklch(var(--color-ink-muted))]">
+          {t("letters.state.awaiting_soul")}
+        </p>
+      )}
+      {state === "closed" && (
+        <p data-testid="inbox-closed" role="status" className="mt-4 text-sm text-[oklch(var(--color-ink-muted))]">
+          {t("letters.state.closed")}
+        </p>
+      )}
       {replyBlocked && (
-        <p data-testid="inbox-moved-away" role="status" className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">
+        <p data-testid="inbox-moved-away" role="status" className="mt-4 text-sm text-[oklch(var(--color-ink-muted))]">
           {t("soul_inbox.errors.not_current_hall")}
         </p>
       )}

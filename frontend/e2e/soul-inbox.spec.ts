@@ -16,7 +16,12 @@ test.describe("Hall inbox", () => {
     const thread = page.getByRole("region", { name: "与 写信的灵魂 的来往" });
     await expect(thread.locator("li[data-event-id]")).toHaveCount(2);
     await expect(thread.locator("li[data-event-id]").first()).toContainText("我想申诉这次判决");
-    await expect(thread.locator("li[data-event-id]").last()).toContainText("第五殿 · 判官 测试管理员");
+    await expect(thread.locator("li[data-event-id]").last()).toContainText("已收到,正在查");
+    // 第六十四批:一栏;殿司的回信组在面板上,组头「名字 · 回信」;灵魂的来信组头「名字 · 来信」。
+    await expect(thread.locator("[data-letter-group]")).toHaveCount(2);
+    await expect(thread.locator("[data-letter-group='hall']")).toContainText("测试管理员 · 回信");
+    await expect(thread.locator("[data-letter-group='soul']")).toContainText("· 来信");
+    await expect(thread.getByTestId("inbox-state")).toHaveText("已回 · 等灵魂来信");
 
     await thread.getByLabel("以殿司名义回复").fill("已受理");
     await thread.getByRole("button", { name: "发送" }).click();
