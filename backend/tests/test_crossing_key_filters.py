@@ -22,10 +22,16 @@ from tests.test_sharded_writes import _in_hall
 
 def _shard_viewsets():
     """{view class: model} for every routed view of a SHARD model whose reads go to a shard."""
-    from django.urls import URLPattern, URLResolver, get_resolver
-
     from apps.core.shard_reads import CONTROL_READS
     from apps.core.sharding import SHARD, placement
+
+    return {cls: model for cls, model in _viewsets().items()
+            if placement(model) == SHARD and model._meta.label not in CONTROL_READS}
+
+
+def _viewsets():
+    """{view class: model} for every routed view with a model."""
+    from django.urls import URLPattern, URLResolver, get_resolver
 
     def walk(patterns):
         for p in patterns:
@@ -39,7 +45,7 @@ def _shard_viewsets():
         qs = getattr(cls, "queryset", None)
         model = qs.model if qs is not None else getattr(getattr(getattr(cls, "serializer_class", None), "Meta", None),
                                                          "model", None)
-        if model is not None and placement(model) == SHARD and model._meta.label not in CONTROL_READS:
+        if model is not None:
             out[cls] = model
     return out
 
@@ -97,9 +103,7 @@ def _request(params, user, hall):
 
 def _params(cls, model, user, hall):
     """Each parameter the view's backends read, one request each: search, each filter, each ordering field."""
-    from django.core.exceptions import FieldError
     from django_filters.rest_framework import DjangoFilterBackend
-    from rest_framework.filters import OrderingFilter
 
     view = _view(cls, _request({}, user, hall))
     base = model._base_manager.all()
@@ -107,13 +111,59 @@ def _params(cls, model, user, hall):
     filterset = DjangoFilterBackend().get_filterset_class(view, base)
     for name, f in (filterset.base_filters.items() if filterset else ()):
         out += [{name: value} for value in _values(f)]
-    for term, _ in OrderingFilter().get_valid_fields(base, view, {"request": view.request}):
-        try:
-            str(base.order_by(term).query)
-        except FieldError:
-            continue  # a serializer-only name DRF lists by default; not a path at all
-        out.append({"ordering": term})
-    return out
+    return out + [{"ordering": term} for term in _ordering_terms(view, base)]
+
+
+#: Names no list may order by, whatever a serializer lists: none is a path, or it is a secret's.
+NEVER_ORDERED = ["_raw_key", "-_signing_secret", "no_such_field", "unread", "has_draft", "archived",
+                 "tenant__hall_names", "signing_secret", "key_hash"]
+
+
+def _ordering_terms(view, base):
+    """Each term DRF's ordering would accept on the view (a serializer-only name too: it must be ignored, not
+    500), and the names in NEVER_ORDERED."""
+    from rest_framework.filters import OrderingFilter
+
+    if not any(issubclass(b, OrderingFilter) for b in view.filter_backends):
+        return []
+    try:
+        listed = [t for t, _ in OrderingFilter().get_valid_fields(base, view, {"request": view.request})]
+    except Exception:  # noqa: BLE001 -- a view with no serializer for this action: the junk names still go
+        listed = []
+    return listed + NEVER_ORDERED
+
+
+def _ordering_failures(user, hall, shard_only):
+    """Drive every viewset's ordering backend with each `_ordering_terms`; ([failure], {view names that ran})."""
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from rest_framework.exceptions import APIException
+    from rest_framework.filters import OrderingFilter
+
+    from apps.core.shard_reads import read_context
+
+    failed, ran = [], set()
+    for cls, model in (_shard_viewsets() if shard_only else _viewsets()).items():
+        view = _view(cls, _request({}, user, hall))
+        for term in _ordering_terms(view, model._base_manager.all()):
+            request = _request({"ordering": term}, user, hall)
+            view = _view(cls, request)
+            try:
+                with _savepoints(), _in_hall(hall), read_context(hall):
+                    try:
+                        qs = view.get_queryset()
+                    except Exception:  # noqa: BLE001 -- a queryset that needs a detail route: its model's rows
+                        qs = model._base_manager.all()
+                    for backend in view.filter_backends:
+                        if issubclass(backend, OrderingFilter):
+                            qs = backend().filter_queryset(request, qs, view)
+                    list(qs[:1])
+            except (APIException, DjangoValidationError):
+                continue
+            except Exception as e:  # noqa: BLE001 -- FieldError (a 500), CrossShardJoin, anything
+                failed.append(f"{cls.__name__} ordering={term}: {type(e).__name__}: {e}")
+            else:
+                ran.add(cls.__name__)
+    return failed, ran
 
 
 @sharded
@@ -157,7 +207,18 @@ def test_no_list_parameter_of_a_shard_viewset_joins_through_a_crossing_key(world
             ("ApprovalWorkflowViewSet", "soul_name"), ("ApprovalWorkflowViewSet", "civilization"),
             ("DispatchRecordViewSet", "search"), ("DispatchRecordViewSet", "soul_name"),
             ("SentencePlanViewSet", "search"), ("DeathRegistrationReadViewSet", "search"),
-            ("CrossTenantJudgmentViewSet", "side"), ("AuditLogViewSet", "search"), ("AuditLogViewSet", "username")} <= ran
+            ("CrossTenantJudgmentViewSet", "side"), ("AuditLogViewSet", "search"), ("AuditLogViewSet", "username"),
+            ("OfficerInboxViewSet", "ordering")} <= ran
+
+
+@sharded
+def test_no_ordering_term_of_a_shard_viewset_is_a_500(world):
+    """The ordering half on a hall's shard (single database: test_ordering_terms_never_500.py). Mutation:
+    `ShardOrderingFilter.remove_invalid_fields` removed -> FieldError on the inbox's `unread`, red."""
+    hall = world["GREEK"]
+    failed, ran = _ordering_failures(_admin(hall, "xk_order_admin"), hall, shard_only=True)
+    assert failed == []
+    assert {"OfficerInboxViewSet", "JudgmentViewSet", "SoulEventViewSet"} <= ran
 
 
 #: The rows that follow their soul's data scope (`DataScopeFilter.through_soul`): (model, path to the soul).

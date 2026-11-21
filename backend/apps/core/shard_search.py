@@ -8,11 +8,17 @@ DRF's SearchFilter ORs `Q(<field>__icontains=term)` over `search_fields`. A fiel
 `?ordering=` likewise: DRF accepts any serializer field when a view names no `ordering_fields`, so
 `?ordering=soul__name` (appeals, city-god cases, wangsi, death registrations, the officer inbox) ordered through
 a crossing key and 500'd. An order cannot be read by ids; sharded, such a term is dropped like any field DRF does
-not know, and the view's default order stands."""
+not know, and the view's default order stands.
+
+The same default lists names that are no path at all -- `_raw_key` / `_signing_secret` (set on the instance once, on
+create), the officer inbox's `unread` / `has_draft` / `archived`, `tenant__hall_names` (a property): `order_by` of one
+raised FieldError and the list 500'd, single database and sharded alike. Every requested term is kept only if the
+queryset can order by it (a field, a path, an annotation); a `_` name never, whatever the view lists."""
 import operator
 from functools import reduce
 
 from django.conf import settings
+from django.core.exceptions import EmptyResultSet, FieldError
 from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.core.shard_reads import crossing_q, orders_across
@@ -42,3 +48,19 @@ class ShardOrderingFilter(OrderingFilter):
         if not settings.SHARDED:
             return fields
         return [(name, label) for name, label in fields if not orders_across(queryset.model, name)]
+
+    def remove_invalid_fields(self, queryset, fields, view, request):
+        return [t for t in super().remove_invalid_fields(queryset, fields, view, request) if _orders(queryset, t)]
+
+
+def _orders(queryset, term):
+    """Whether `queryset.order_by(term)` compiles (resolving an order happens in the compiler, not in `order_by`)."""
+    if term.lstrip("-").startswith("_"):
+        return False
+    try:
+        queryset.order_by(term).query.get_compiler(queryset.db).as_sql()
+    except EmptyResultSet:  # `.none()`: never compiled, so never refused
+        return True
+    except FieldError:
+        return False
+    return True
