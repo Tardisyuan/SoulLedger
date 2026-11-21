@@ -12,7 +12,7 @@ import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { newReplyTxn, renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
-import { awaitingReply, inboxReplyGate, replyReady } from "@soulledger/core/domain/letters";
+import { awaitingReply, draftNeedsSave, inboxReplyGate, replyReady } from "@soulledger/core/domain/letters";
 import {
   useInboxArchive,
   useInboxAssign,
@@ -363,8 +363,7 @@ function useDraft(conversationId: string, enabled: boolean) {
   const { mutate } = save;
   const persist = useCallback(
     (text: string) => {
-      if (!enabled || saved.current === null || text === saved.current) return;
-      if (!text.trim() && !saved.current) return;
+      if (!enabled || !draftNeedsSave(saved.current, text)) return;
       setStatus({ kind: "saving" });
       mutate(
         { id: conversationId, body: text },

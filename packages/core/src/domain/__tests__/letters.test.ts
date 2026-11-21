@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { INBOX_REPLY_MAX } from "../../api/soul-inbox";
-import { awaitingReply, inboxReplyGate, replyReady } from "../letters";
+import { awaitingReply, draftNeedsSave, inboxReplyGate, normalizeDraft, replyReady } from "../letters";
 
 const open = { closed_at: null, can_reply: true, assignee: null, last_from: "soul" };
 const me = { userId: 7 };
@@ -57,5 +57,24 @@ describe("replyReady —— OfficerReplySerializer.body", () => {
     // 服务端先去空白再量长度:首尾的空白不算进上限。
     expect(replyReady(`  ${"好".repeat(INBOX_REPLY_MAX)}  `)).toBe(true);
     expect(replyReady("好".repeat(INBOX_REPLY_MAX + 1))).toBe(false);
+  });
+});
+
+describe("草稿 —— 草稿视图的「只有空白 = 清掉」", () => {
+  it("normalizeDraft:只有空白是空串,其余原样", () => {
+    expect(normalizeDraft(" \n ")).toBe("");
+    expect(normalizeDraft(" 写到一半 ")).toBe(" 写到一半 ");
+  });
+
+  it("draftNeedsSave:服务端那份还没取到,一个字都不存", () => {
+    expect(draftNeedsSave(null, "写到一半")).toBe(false);
+    expect(draftNeedsSave(null, "")).toBe(false);
+  });
+
+  it("draftNeedsSave:与服务端那份不同才存;空白对空白不存,空白对有字要清", () => {
+    expect(draftNeedsSave("写到一半", "写到一半")).toBe(false);
+    expect(draftNeedsSave("", "  ")).toBe(false);
+    expect(draftNeedsSave("", "新写的")).toBe(true);
+    expect(draftNeedsSave("写到一半", "  ")).toBe(true);
   });
 });

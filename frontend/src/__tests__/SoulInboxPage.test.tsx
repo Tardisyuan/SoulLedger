@@ -368,6 +368,10 @@ it("第六十一批 E3: a draft that did not load locks the box, says so with �
   await waitFor(() => expect(box.value).toBe("上次没写完"));
   expect(within(thread).queryByTestId("draft-load-failed")).toBeNull();
   expect(box.readOnly).toBe(false);
+  // 取到之后照常存(审计 2026-11-20 §5:此前取失败一次就再也不存)。
+  fireEvent.change(box, { target: { value: "上次没写完,补一句" } });
+  fireEvent.focusOut(box);
+  await waitFor(() => expect(apiMock.saveDraft).toHaveBeenCalledWith("c1", "上次没写完,补一句"));
 });
 
 it("a draft that loads leaves the box editable and shows no load-failed line", async () => {

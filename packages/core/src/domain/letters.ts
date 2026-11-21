@@ -48,3 +48,14 @@ export function replyReady(text: string): boolean {
   const body = text.trim();
   return body !== "" && body.length <= INBOX_REPLY_MAX;
 }
+
+/** 草稿存进服务端时的样子:只有空白就是清掉(草稿视图同一条规则)。 */
+export const normalizeDraft = (text: string): string => (text.trim() ? text : "");
+
+/**
+ * 回复框里的字要不要存:与服务端那一份(`null` = 还没取到)不同才存。还没取到就一个字都不存 —— 否则空白的框
+ * 会先把服务端的草稿清掉;取不到时要说出来(Web 的「草稿没取到 · 重试」),不能一直不声不响地不存。
+ */
+export function draftNeedsSave(saved: string | null, text: string): boolean {
+  return saved !== null && normalizeDraft(text) !== saved;
+}
