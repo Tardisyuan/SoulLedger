@@ -5765,6 +5765,14 @@
           "images_unavailable": "Until they reply, only text can be sent"
         },
         "button": "Photo"
+      },
+      "side": {
+        "hall": "The hall",
+        "me": "Me"
+      },
+      "state": {
+        "awaiting_hall": "Sent · waiting for the hall",
+        "awaiting_me": "The hall has replied"
       }
     },
     "circle": {
@@ -10651,5 +10659,20 @@
       "title": "Couldn’t load permissions",
       "body": "This is not a refusal: the permissions just didn’t arrive from the server this time. Reload; if it still fails, come back a little later."
     }
+  },
+  "letters": {
+    "state": {
+      "awaiting_hall": "The hall's turn to reply · the letter has waited {{wait}}",
+      "awaiting_soul": "Replied · waiting for the soul",
+      "closed": "This exchange is closed · read-only",
+      "archived": "Archived · read-only"
+    },
+    "side": {
+      "soul": "Letter",
+      "hall": "Reply"
+    },
+    "queued": "Waiting to send",
+    "not_sent": "Not sent",
+    "image_alt": "An image, with no text"
   }
 }

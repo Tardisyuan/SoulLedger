@@ -5730,6 +5730,14 @@
         "title": "Shena-N",
         "unblock": "Fekh Shena",
         "unblocked": "Fekh Shena-N"
+      },
+      "side": {
+        "hall": "Wesekhet",
+        "me": "Djes"
+      },
+      "state": {
+        "awaiting_hall": "Hab-N · Em Smen Wesekhet",
+        "awaiting_me": "Wesekhet Wesheb-N"
       }
     },
     "circle": {
@@ -10610,5 +10618,20 @@
       "title": "Nen Ini Was",
       "body": "Nen Khesef Pen: Was Nen Ini Em Per Hemsu. Wehem Ini; Ky: Wehem Er Khet."
     }
+  },
+  "letters": {
+    "state": {
+      "awaiting_hall": "Wesheb Wesekhet · Shat Em Smen {{wait}}",
+      "awaiting_soul": "Wesheb-N · Em Smen Ba",
+      "closed": "Shat Khetem-N · Maa Wa",
+      "archived": "Per Sesh · Maa Wa"
+    },
+    "side": {
+      "soul": "Shat Ba",
+      "hall": "Wesheb Wesekhet"
+    },
+    "queued": "Em Smen Hab",
+    "not_sent": "Nen Hab",
+    "image_alt": "Tut Wa · Nen Sesh"
   }
 }

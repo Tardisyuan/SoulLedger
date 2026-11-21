@@ -5765,6 +5765,14 @@
           "images_unavailable": "对方回信之前只能写文字"
         },
         "button": "图"
+      },
+      "side": {
+        "hall": "殿司",
+        "me": "我"
+      },
+      "state": {
+        "awaiting_hall": "已寄出 · 等殿司回",
+        "awaiting_me": "殿司回信了"
       }
     },
     "circle": {
@@ -10651,5 +10659,20 @@
       "title": "权限没读到",
       "body": "这不是没有权限：这一次没从服务器读到。重新加载试试；还不行，请稍后再来。"
     }
+  },
+  "letters": {
+    "state": {
+      "awaiting_hall": "轮到殿司回 · 来信已等 {{wait}}",
+      "awaiting_soul": "已回 · 等灵魂来信",
+      "closed": "往来已结束 · 只能看",
+      "archived": "已归档 · 只能看"
+    },
+    "side": {
+      "soul": "来信",
+      "hall": "回信"
+    },
+    "queued": "待发出",
+    "not_sent": "没发出",
+    "image_alt": "一张图，没有附字"
   }
 }
