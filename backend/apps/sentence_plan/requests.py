@@ -330,7 +330,7 @@ def _apply(soul, plan, req):
                 f"Node {getattr(node, 'order', pk)} is no longer PENDING", "node_not_pending", status=409,
                 node_status=getattr(node, "status", None),
             )
-        node.status = SentenceNodeStatus.REMOVED
+        node.move(SentenceNodeStatus.REMOVED)
         node.removed_by_request_id = req.pk
         _save(node, "status", "removed_by_request_id")
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
@@ -551,7 +551,7 @@ def _end_serving(soul, plan, executed):
             if not elsewhere:
                 served.expired_at = now
                 served.save(update_fields=["expired_at"])
-            node.status = SentenceNodeStatus.COMPLETED
+            node.move(SentenceNodeStatus.COMPLETED)
             node.completed_at = now
             _save(node, "status", "completed_at")
             SentencePlanService._node_finished(soul, plan, node)
@@ -567,7 +567,7 @@ def _withdraw_stop(soul, node, reason, why):
     from apps.disposition.models import Disposition
     from apps.realms.path import SoulPathService
 
-    node.status = SentenceNodeStatus.REMOVED
+    node.move(SentenceNodeStatus.REMOVED)
     node.reason = reason
     _save(node, "status", "reason")
     if node.disposition_id is None or rows_elsewhere(node):  # voided by the return's step there
@@ -778,7 +778,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
         _return_from_withdrawn_stop(soul, plan)
     for node in nodes:
         if node.status == SentenceNodeStatus.PENDING and not (keep_foreign and not node.is_home):
-            node.status = SentenceNodeStatus.REMOVED
+            node.move(SentenceNodeStatus.REMOVED)
             _save(node, "status")
             touched.add(node.tenant_code)
     added = []
@@ -865,10 +865,10 @@ def cancel(plan, *, reason, user):
                     record = DispatchRecord._base_manager.filter(pk=node.dispatch_record_id).first()
                     if record is not None and record.status in (DispatchStatus.PROPOSED, DispatchStatus.APPROVED):
                         _cancel_stop_dispatch(record, node, now)
-                node.status = SentenceNodeStatus.CANCELLED
+                node.move(SentenceNodeStatus.CANCELLED)
                 _save(node, "status")
             elif node.status in (SentenceNodeStatus.ACTIVE, SentenceNodeStatus.WAITING, SentenceNodeStatus.ETERNAL):
-                node.status = SentenceNodeStatus.ABORTED
+                node.move(SentenceNodeStatus.ABORTED)
                 node.completed_at = now
                 _save(node, "status", "completed_at")
                 pardon_term(soul, node, now)  # 赦免 = 刑期就此止,否则转生报 term_not_served(审查 11-01 P1 #2)
