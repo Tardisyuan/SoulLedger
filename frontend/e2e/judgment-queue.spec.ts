@@ -166,7 +166,7 @@ test.describe("Claim queue and evidence admission", () => {
       const results = call.query.group ? byGroup[call.query.group] ?? [] : [];
       return { body: { count: results.length, next: null, previous: null, results } };
     });
-    api.on("GET", "/judgment/queue-counts/", { mine: 1, unclaimed: 3, others: 0, deferred: 2, total: 6 });
+    api.on("GET", "/judgment/queue-counts/", { mine: 1, unclaimed: 3, others: 0, deferred: 2, total: 6, claimable_count: 3, held_count: 0 });
     api.on("POST", "/judgment/:id/claim/", { ...OPEN, claimed_by: 1 });
 
     await page.goto("/judgment");

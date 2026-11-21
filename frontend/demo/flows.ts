@@ -10,6 +10,7 @@ import { aiRead, aiWrite } from "./aiReplay";
 import { inboxRead, inboxWrite, letterCounts } from "./inbox";
 import { tourOf } from "./tour";
 import { spineNow } from "@/src/components/dossier/spineModel";
+import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import {
   type Answer,
   type Recording,
@@ -101,6 +102,8 @@ function elsewhereOf(rec: Recording): Record<string, number | null> {
     [key, held.has(code) && recorded(path) ? rowsNow(rec, path).filter(open).length : null]));
 }
 
+const heldNow = (row: Row) => isHeldUntilFatedDate(row) || isDuatBarred(row) || !!row.ferry_barred;
+
 /** `GET /judgment/queue-counts/` as `queue_counts` answers it: `?source=` narrows groups / total / overdue / returned,
  * never `sources`; `?civilization=`, `?court=`, `?search=` narrow all of them; `group` is ignored. */
 function queueCounts(rec: Recording, query: URLSearchParams): Answer {
@@ -121,6 +124,9 @@ function queueCounts(rec: Recording, query: URLSearchParams): Answer {
     unclaimed: count("unclaimed"),
     others: count("others"),
     deferred: count("deferred"),
+    // 第六十三批 二 f: 待认领 split by `claims.held_q` -- the queue's own `onHold` rule on the recorded rows.
+    claimable_count: narrowed.filter((row) => groupOf(row, me) === "unclaimed" && !heldNow(row)).length,
+    held_count: narrowed.filter((row) => groupOf(row, me) === "unclaimed" && heldNow(row)).length,
     // `overdue_q`: past the hall's deadline and not deferred; the row's own `is_overdue` carries the hall's days.
     overdue: narrowed.filter((row) => row.is_overdue === true && !row.deferred_at).length,
     returned: narrowed.filter((row) => returned.has(String(row.id))).length,

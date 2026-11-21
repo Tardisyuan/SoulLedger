@@ -115,7 +115,7 @@ function serveByScope(api: ApiMock) {
   api.on("GET", "/judgment/queue-counts/", () => {
     const rows = seen();
     const n = (g: string) => rows.filter((j) => groupOf(j) === g).length;
-    return { body: { mine: n("mine"), unclaimed: n("unclaimed"), others: n("others"), deferred: 0, total: rows.length } };
+    return { body: { mine: n("mine"), unclaimed: n("unclaimed"), others: n("others"), deferred: 0, total: rows.length, claimable_count: n("unclaimed"), held_count: 0 } };
   });
   for (const j of judgments) {
     api.on("GET", `/judgment/${j.id}/`, () => (visible(JUDGMENT_OWNERS.get(j.id)) ? { body: j } : NOT_FOUND));
