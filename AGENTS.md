@@ -397,6 +397,7 @@ SoulLedger/
 │   └── eslint.config.mjs  ← 七条 design-system 规则
 ├── mobile/                ← 灵魂端 App(Expo);门禁见 CLAUDE.md 的 Build & Test
 ├── mobile-officer/        ← 官员端 App(Expo);CI 的 officer job 跑它
+├── packages/mobile-ui/   ← 两个 App 共用的 28 个模块与字体(`@soulledger/mobile-ui/src/<模块>`,2026-11-21 起)
 └── scripts/
     ├── install-hooks.sh   ← 装 pre-commit / pre-push,clone 后必跑
     └── run-gates.sh       ← pre-push 实际跑的门禁(jest 选择性),会话里也能直接跑
