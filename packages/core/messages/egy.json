@@ -114,7 +114,11 @@
       "welcome": "Iyi Wehem",
       "switch": "Aq Em Ky Ren Aq"
     },
-    "account_or_email": "Ren Aq Er Djeret"
+    "account_or_email": "Ren Aq Er Djeret",
+    "account_or_email_hint": "Djeret: Smen Em Djes, Er Khet Aq.",
+    "error_attempts_body": "Wehem Iri: Sep {{n}}. Er Khet: Smen, {{m}} At Er Pehwy.",
+    "error_locked_body": "Sep Hau Nen Maat. Er Khet {{time}}: Aq. Nen Iri Ky.",
+    "error_locked_title": "Aq Smen"
   },
   "mfa": {
     "title": "Aq Sep Sen",
@@ -2031,7 +2035,8 @@
         "cn": "Dbh Sekher · Nen Hesy Djer"
       },
       "city_god": "Chenghuang · Maa Tepy",
-      "wangsi": "Sepret · Nut Mut Nen Maat"
+      "wangsi": "Sepret · Nut Mut Nen Maat",
+      "reassign_requests": "Dbh Hab Ky"
     },
     "civ_empty": "Nen Sesh Djer · Sesh",
     "tab_ledger": "Medjat",
@@ -2687,7 +2692,9 @@
       "uphold_late": "Maat (Sesh Wa)",
       "late_hint": "Hru Mut Smen Iyi-N Er Sep Khetem-N: Ba Per-N. Maa: Sesh Wa · Nen Per Tepy, Nen Seshem.",
       "deliver_sends_on": "Sep Em Chenghuang Djer: Seshem Hena Hab Er Wesekhet 1 Er 10.",
-      "queue_title": "Sepret · Nut Mut Nen Maat"
+      "queue_title": "Sepret · Nut Mut Nen Maat",
+      "filed_at": "Hru Hab",
+      "queue_hint": "Chenghuang Djes Wa: Sepret Nen Wedja Djer. Wen Ren Ba, Er Wedja."
     },
     "ferry": {
       "barred_unburied": "Nen Qeres · Nen Shem Itru",
@@ -2985,7 +2992,8 @@
       "col_resource": "Khet",
       "col_count": "Hesb",
       "row_label": "Maa Medu Maa «{{name}}»",
-      "failed": "Nen Ini Hesb Medu. Wehem Iri."
+      "failed": "Nen Ini Hesb Medu. Wehem Iri.",
+      "scope_civilization": "Wesekhet Neb Taui Pen · Sesh Neb · Sep {{count}}"
     },
     "sessions": {
       "confirm_all_message": "{{name}}: Per Aq Em Medjat Neb Min.",
@@ -3011,7 +3019,8 @@
       "title": "Aq Em Khet",
       "user": "Ren Aq"
     },
-    "filter_operator": "Iri (Ren Aq)"
+    "filter_operator": "Iri (Ren Aq)",
+    "civilization_halls": "Wesekhet Neb Taui Pen"
   },
   "profile": {
     "title": "Djes",
@@ -3569,7 +3578,8 @@
     },
     "withdraw_approval": "Fekh Henen",
     "withdraw_approval_warning": "Wesekhet Pen Henen-N, Nen Iri Djer. Fekh: Hab-Ba Nen Wenen, Ba Smen Dy, Wesekhet Tepy Sedjem.",
-    "withdraw_approval_success": "Henen Fekh-N"
+    "withdraw_approval_success": "Henen Fekh-N",
+    "frozen": "Hab-Ba Hena Wedja Taui Ky: Smen-N (Hemsu Em Iri). Er Khet Wen: Wehem Iri."
   },
   "crossJudgments": {
     "title": "Wedja Taui Ky",
@@ -3672,7 +3682,8 @@
       "JUDGE": "Sab Wedja",
       "GUARDIAN": "Smen Khet",
       "VIEWER": "Sab Maa",
-      "SOUL": "Ba"
+      "SOUL": "Ba",
+      "SYSTEM_ADMIN": "Sab Hery Hemsu"
     },
     "password_empty": "Sekhem: Nen Sesh",
     "username_empty": "Ren Aq Nen Shu",
@@ -4952,7 +4963,9 @@
       "audit_prune_retained_data": "Khetem Sesh Mut (Sesh Hab, Sedjem Maa-N, Ikhet Khetem…)",
       "officer_app_check_receipts": "Sedjem Sab: Ini Sesh Hab",
       "workflow_pick_reminders_for_tenant": "Sedjem Sab Ta Ky: Setep Sekhet",
-      "chat_sync_all_rooms": "Demedj Was Medu · Hen Shat"
+      "chat_sync_all_rooms": "Demedj Was Medu · Hen Shat",
+      "sharding_relay_outbox": "Hab Medu Taui Ky Em Smen",
+      "sharding_sync_shards": "Demedj Sesh Taui Neb"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -5136,7 +5149,12 @@
         "devoured": "Wat-Ek Pehwy: Ammit",
         "devoured_body": "Wesekhet Maaty: Wedja Pehwy. Nen Ankh Mawy, Nen Aq Mawy. Aq Pen Nen Wenen Djer; Sesh Smen.",
         "devoured_ack": "Rekh"
-      }
+      },
+      "email": "Djeret",
+      "email_hint": "Djeret Smen · Per Wa, Djeret Wa: Aq Em Ren Hesb Ba",
+      "reset_filled": "✓ Ren Hesb Ba-Ek: Gem-N",
+      "use_code": "Aq Em Ren Hesb Ba",
+      "use_email": "Aq Em Djeret"
     },
     "change_password": {
       "title": "Semawy Sekhem Tepy",
@@ -7110,6 +7128,16 @@
     "rebirth_status_terminated": {
       "title": "Dbh Wehem Mesut · Kheperu Mawy",
       "body": "Dbh Wehem Mesut-Ek: Khetem-N Em Wesekhet."
+    },
+    "sentence_request_not_filed": {
+      "body": "{{tenant}}: Wedja Semawy Sekhet «{{soul}}» Khetem-N, Dbh Semawy Sekher. Sekher Em Dbh Nen Wedja Djer, Mi Nen Shesep Semawy: Nen Hab-N. Henen: Dbh Wehem.",
+      "body_by_civ": {
+        "cn": "{{tenant}}: Wedja Semawy Sekhet «{{soul}}» Khetem-N, Dbh Semawy Sekher. Sekher Em Dbh Nen Wedja Djer, Mi Nen Shesep Semawy: Nen Hab-N. Henen: Dbh Wehem."
+      },
+      "title": "Wedja Semawy Sekhet: Semawy Sekher Nen Hab-N",
+      "title_by_civ": {
+        "cn": "Wedja Semawy Sekhet: Semawy Sekher Nen Hab-N"
+      }
     }
   },
   "social_moderation": {
@@ -7307,7 +7335,8 @@
     "confirm_approve_body": "Smi Khesef-N; Medu Maa Wenen. Medu Imen In Medu Djeseru: Menkh Hena.",
     "confirm_mute_title": "Ger {{name}} Hru {{n}}?",
     "confirm_mute_body": "Em Ger: Nen Medu, Nen Wesheb. Khetem Djes-Ef; Er Fekh Tepy Em «Ger».",
-    "tab_count_sr": ", Sep {{n}}"
+    "tab_count_sr": ", Sep {{n}}",
+    "scope_civilization": "Wesekhet Neb Taui Pen"
   },
   "soul_inbox": {
     "title": "Sesh Wesekhet",
@@ -8304,7 +8333,8 @@
       "see_all": "Maa Neb · {{n}} ›",
       "kind_soul": "Ba",
       "kind_officer": "Sab",
-      "no_results_hint": "Ba: Ren. Sep: Ren Sep Tepy, Mi {{example}}."
+      "no_results_hint": "Ba: Ren. Sep: Ren Sep Tepy, Mi {{example}}.",
+      "first_only": "{{n}} Tepy Wa"
     },
     "assist": {
       "entry": "Hehy Medu",
@@ -8482,7 +8512,8 @@
         "network": "Nen Em Demedj",
         "other": "Nen Aq-Ek. Wehem Iri Er Khet."
       },
-      "switch": "Aq Em Ky Ren Aq"
+      "switch": "Aq Em Ky Ren Aq",
+      "email_hint": "Djeret: Smen Em Djes, Er Khet Aq."
     },
     "mfa": {
       "title": "Aq Sep Sen",
@@ -8795,7 +8826,17 @@
       "lock_title": "Medjat Ba: Khetem-N",
       "lock_who": "{{name}} · {{hall}}",
       "unlock": "Wen Em {{bio}}",
-      "use_password": "Aq Em Sekhem"
+      "use_password": "Aq Em Sekhem",
+      "button": "Aq Em {{bio}}",
+      "enable_body": "Sesh Sekhem Min, Er Khet Maa {{bio}}.",
+      "expired": "Medjat Pen: Aq Em {{bio}} Khetem-N. Sesh Sekhem.",
+      "failed": "{{bio}}: Nen Rekh. Sesh Sekhem.",
+      "locked": "{{bio}}: Sep Hau. Medjat Smen-N. Sesh Sekhem, Mi Wehem Iri Er Khet.",
+      "prompt_login": "Aq: Nen Sekhem.",
+      "prompt_unlock": "Wen Medjat Ba.",
+      "row_unavailable": "Nen Djes Em Medjat Pen",
+      "toggle_failed": "Nen Wen. Wehem Iri Er Khet.",
+      "wrong_password": "Sekhem Min Nen Maat"
     }
   },
   "print": {
