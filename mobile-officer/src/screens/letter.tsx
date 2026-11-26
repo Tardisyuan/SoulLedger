@@ -412,7 +412,7 @@ export function LetterThread({
             {offline ? null : <SmallButton testID="letter-unarchive" title={t("officer_app.letter.unarchive")} onPress={() => pick("unarchive")} />}
           </View>
         ) : null}
-        <Screen edges={["left", "right"]} scrollRef={scroll}>
+        <Screen edges={["left", "right"]} scrollRef={scroll} keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}>
           <View style={{ padding: space[5], gap: 20 }}>
             {older.more && older.state === "failed" ? (
               <Notice tone="neg" onRetry={loadEarlier} testID="letter-earlier-failed">

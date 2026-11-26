@@ -930,6 +930,7 @@ export function Screen({
   scrollRef,
   onScroll,
   belowHeader,
+  keyboardDismissMode,
 }: {
   children: ReactNode;
   refreshing?: boolean;
@@ -947,6 +948,8 @@ export function Screen({
    * form stays beneath the keyboard; passing the distance fixes that (`mobile-officer` letter.tsx, 2026-10-11).
    */
   belowHeader?: boolean;
+  /** A thread under a reply box: dragging the list puts the keyboard away (Apple HIG; ux-motion-mobile S4). */
+  keyboardDismissMode?: "none" | "interactive" | "on-drag";
 }) {
   const t = useTheme();
   const keyboardFrame = useRef<View>(null);
@@ -980,6 +983,7 @@ export function Screen({
             ref={scrollRef}
             contentContainerStyle={styles.grow}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={keyboardDismissMode}
             {...pull.props}
             onScroll={both(onScroll && ((e) => onScroll(e.nativeEvent.contentOffset.y)), pull.props.onScroll)}
             scrollEventThrottle={onScroll || pull.props.onScroll ? 16 : undefined}
