@@ -15,8 +15,8 @@ from django.conf import settings
 from django.db import transaction
 
 from tests import test_s4_residence_hall_acts_after_the_cut as r3
+from tests.shard_support import sharded
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import _audited
-from tests.test_shard_sync import sharded
 from tests.test_sharded_writes import _in_hall, cut
 
 PAIRS = r3.PAIRS  # (CHINESE home, GREEK residence), (EGYPTIAN home, EUROPEAN residence): home sorts first

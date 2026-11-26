@@ -1,4 +1,4 @@
-"""朋友圈审核的 AI 预筛(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 4)。
+"""朋友圈审核的 AI 预筛(业务 AI 设计稿(不在仓库里) 第二部分接入点 4)。
 
 `POST /api/v1/social-moderation/{posts|comments}/ai-screen/` → `{"items": [{id, score, reason, signals, source}], …}`
 

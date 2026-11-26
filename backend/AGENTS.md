@@ -96,7 +96,7 @@ class CrossTenantPermission(models.Model):
 (`apps/perm/migrations/0031_drop_dead_scope_fields.py`)删除;`Role` 的作用域 / 机构 / 父角色三列同批删除。
 
 现在的数据范围:`RoleDataScope`(`apps/perm/models.py`)+ 注册表与求解器 `apps/perm/data_scope.py`,
-设计见 `local-gates/rbac-2026-10-29/datascope-design.md`。
+设计见 数据范围设计稿(不在仓库里)。
 
 ---
 

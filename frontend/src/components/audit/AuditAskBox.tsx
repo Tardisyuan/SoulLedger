@@ -25,7 +25,7 @@ function useAskValueLabel() {
 }
 
 /**
- * 审计页的「用一句话找记录」(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 7)。
+ * 审计页的「用一句话找记录」(业务 AI 设计稿(不在仓库里) 第二部分接入点 7)。
  * 问题 → `POST /audit-logs/nl-filter/` → 一组**建议的**筛选(可逐项去掉)→ 人点「按这些条件查」才交给页面,
  * 页面照旧调 `GET /audit-logs/`。模型不可用、殿没开助手时只说一句,手动筛选照常可用。
  * 采纳 / 不用都回报给 `AIDraft`(只记状态与改动比例)。

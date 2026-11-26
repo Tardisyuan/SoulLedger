@@ -1,4 +1,4 @@
-"""权限解释器(`apps/perm/explain.py`;docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 6)。
+"""权限解释器(`apps/perm/explain.py`;业务 AI 设计稿(不在仓库里) 第二部分接入点 6)。
 
 - 评测集 `apps/soul_assist/evalsets/perm_explain.json`:角色 × 动作 × 对象 → 代码算出的原因码,逐条经真接口跑;
 - 范围外的对象与不存在的对象答**同一个**原因、同一组字段(与 404 同口径);

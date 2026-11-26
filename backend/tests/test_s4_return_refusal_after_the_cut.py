@@ -1,4 +1,4 @@
-"""Stage 4, after the third review (docs/audit/2026-11-15-sharding/VERIFY-stage4-r3.md N-2, N-4; REPORT-all-stages.md
+"""Stage 4, after the third review (the third stage-4 review (not in this repo) N-2, N-4; REPORT-all-stages.md
 §3 items 1 and 4): a residence that will not let the soul go, a residence without a plan, and the residence concluding
 an amendment case -- on a world built AFTER both civilizations are write-cut, over HTTP, two civilization pairs.
 
@@ -19,6 +19,7 @@ an amendment case -- on a world built AFTER both civilizations are write-cut, ov
 import pytest
 from django.conf import settings
 
+from tests.shard_support import sharded
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import _plan_url, _read
 from tests.test_s4_residence_hall_acts_after_the_cut import (
     PAIRS,
@@ -28,7 +29,6 @@ from tests.test_s4_residence_hall_acts_after_the_cut import (
     _pending,
     _quiet,
 )
-from tests.test_shard_sync import sharded
 from tests.test_sharded_writes import _in_hall, cut
 
 

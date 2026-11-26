@@ -1,4 +1,4 @@
-"""Guard G4 across databases (sharding stage 4 part C; docs/audit/2026-11-15-sharding/PLAN.md 阶段 4 测试;
+"""Guard G4 across databases (sharding stage 4 part C; the sharding plan (not in this repo) 阶段 4 测试;
 apps/tenants/shard_saga.py, apps/dispatch/transfer.py). The single-database G4 is
 tests/test_cross_tenant_writes_are_all_or_nothing.py; this is its rewrite for a flow whose halls are written on two
 databases, where one transaction cannot hold it and a saga does:
@@ -33,7 +33,7 @@ from django.conf import settings
 from django.core.management import CommandError, call_command
 from django.db import connections, router, transaction
 
-from tests.test_shard_sync import CIVS, sharded
+from tests.shard_support import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 _WRITE = re.compile(r'^\s*(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+"?(\w+)"?', re.I)
@@ -369,7 +369,7 @@ def test_executing_a_sentence_plan_stop_across_civilizations_ends_at_the_start_o
     from apps.sentence_plan.models import SentenceNodeStatus
     from apps.tenants.shard_saga import master_of, relay_until_quiet
     from tests import sentence_plan_support as plan
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     cn, eg = plan.tenant("CN_DIYU"), plan.tenant("EG_DUAT")
     for hall in (cn, eg):
@@ -501,7 +501,7 @@ def test_a_same_civilization_dispatch_sends_nothing_and_writes_what_one_database
     from apps.dispatch.services import DispatchService
     from apps.souls.models import Soul
     from apps.tenants.models import ShardOutbox, Tenant
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     halls = _halls()
     other = Tenant.objects.create(code="W4_GR2", display_name="GR2", declared_civilization="GREEK")

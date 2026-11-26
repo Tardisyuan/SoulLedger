@@ -6,7 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 
 /**
- * 「为什么?」(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 6)。点了才问 `GET /perm/explain/`:
+ * 「为什么?」(业务 AI 设计稿(不在仓库里) 第二部分接入点 6)。点了才问 `GET /perm/explain/`:
  * 原因由后端按权限规则算出(`reason`),这里总是先写语言包里那句(不靠模型的兜底);殿开了助手时,
  * 模型对同一结论的措辞(`explanation`)放在下面,标明是 AI 措辞。权限码不上页面,只写可读名称。
  * 不用 react-query:它画在几十处 403 里,那些地方(和它们的测试)不一定挂了 QueryClientProvider。

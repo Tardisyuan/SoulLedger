@@ -86,8 +86,8 @@ export { LOCALE_LABELS } from "@soulledger/core/config/locale";
 //
 // 也就是说,没有这张表,一个 egy 界面的日期会跟着**用户的操作系统**变语言,
 // 而不是跟着界面语言 —— 一个只在别人机器上出现的 bug。这张表不是便利,
-// 它是唯一挡住这件事的东西。`docs/design-handoff/tables/README.md` 也照抄了
-// 那个 RangeError 的说法,已一并更正。
+// 它是唯一挡住这件事的东西。设计交付包的 `tables/README.md`(现在 `archive/docs` 分支上)
+// 也照抄了那个 RangeError 的说法,已一并更正。
 const INTL_LOCALE: Record<Locale, string> = {
   "zh-Hans": "zh-Hans",
   en: "en",

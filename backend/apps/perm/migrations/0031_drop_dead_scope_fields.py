@@ -1,4 +1,4 @@
-"""数据范围 B7:删死字段(local-gates/rbac-2026-10-29/datascope-design.md)。
+"""数据范围 B7:删死字段(数据范围设计稿(不在仓库里))。
 
 删 ``RowLevelDataScope``、``DataScope`` 两张表,``RolePermission.conditions`` / ``data_scope``,
 ``Role.scope`` / ``organization`` / ``parent``。数据范围从 B2 起只读 ``RoleDataScope``,这些列没有读者。

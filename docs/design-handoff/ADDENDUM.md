@@ -1,5 +1,7 @@
 # Addendum to the design brief
 
+> `screens/` and `tables/` were removed from main on 2026-11-26; they are on the `archive/docs` branch (5aeba17ea).
+
 `BRIEF.md` and the screenshots in `screens/` were assembled on 2 August 2026.
 Everything below landed after that and is not reflected in either. Read the
 brief first; this only adds.

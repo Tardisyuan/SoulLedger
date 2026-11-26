@@ -1,5 +1,5 @@
 """Database engine for a civilization shard alias (`civ_*`; stage 1B, D3 in
-docs/audit/2026-11-15-sharding/PLAN.md). ENGINE "config.shard_db.postgresql".
+the sharding plan (not in this repo)). ENGINE "config.shard_db.postgresql".
 
 On a shard `allow_migrate` leaves the control tables out (authentication_user, perm_*, menus_*...), but
 the historical migrations created the shard tables' foreign keys to them as real constraints years

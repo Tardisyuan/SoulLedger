@@ -1,5 +1,7 @@
 # SoulLedger — UI/UX Design Brief
 
+> `screens/` and `tables/` were removed from main on 2026-11-26; they are on the `archive/docs` branch (5aeba17ea).
+
 **For:** Claude Design
 **Attached:** 27 full-page screenshots of the live app (`screens/`), design token inventory (`tokens.md`)
 **Date:** 2026-08-02

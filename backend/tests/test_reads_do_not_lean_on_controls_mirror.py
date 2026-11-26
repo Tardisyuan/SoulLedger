@@ -1,5 +1,5 @@
-"""Stage 5 deletes control's copy of every write-cut civilization's SHARD rows (docs/audit/2026-11-15-sharding/
-PREP-stage5.md section 2, "仍从控制库读 SHARD 行的代码"). Each case here drives one code path that read that copy, through
+"""Stage 5 deletes control's copy of every write-cut civilization's SHARD rows (the stage-5
+preparation notes, not in this repo, section 2, "仍从控制库读 SHARD 行的代码"). Each case here drives one code path that read that copy, through
 its real entry point, with the rows it needs on their shard and NOT on control -- what a purge leaves, and what a row
 written in the last minute before the shard-to-control sync already looks like on 115.
 
@@ -29,9 +29,9 @@ import pytest
 from django.db import connections, transaction
 from django.utils import timezone
 
+from tests.shard_support import CIVS, sharded
 from tests.soul_push_support import enqueued  # noqa: F401
 from tests.test_control_locks_in_a_write_cut_hall import _admin, _client, _soul_account, world  # noqa: F401
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _in_hall
 
 SHARDS = {f"civ_{c.lower()}" for c in CIVS}

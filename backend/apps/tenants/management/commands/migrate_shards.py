@@ -1,4 +1,4 @@
-"""Migrate every configured civilization shard (sharding stage 2, docs/audit/2026-11-15-sharding/PLAN.md).
+"""Migrate every configured civilization shard (sharding stage 2, the sharding plan (not in this repo)).
 
     manage.py migrate_shards [--check]
 

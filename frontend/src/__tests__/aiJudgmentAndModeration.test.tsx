@@ -1,5 +1,5 @@
 /**
- * Business AI points 1, 2 and 4 (docs/audit/2026-11-12-portfolio-ai-ideas.md part two):
+ * Business AI points 1, 2 and 4 (the business-AI design notes (not in this repo) part two):
  * - `StatuteSuggestions`: nothing is cited until the judge ticks; only the ticked ones go through `onCite`;
  * - `VerdictDraftPanel`: no draft before a verdict is chosen; the draft goes into the text box only on "insert",
  *   and the deterministic check failures are shown;

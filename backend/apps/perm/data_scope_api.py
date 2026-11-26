@@ -1,4 +1,4 @@
-"""角色数据范围的接口(数据范围设计 B4,local-gates/rbac-2026-10-29/datascope-design.md「接口(B4)」)。
+"""角色数据范围的接口(数据范围设计 B4,数据范围设计稿(不在仓库里)「接口(B4)」)。
 
 GET     /perm/data-scope/resources/     可单独设置范围的业务 [{key, label}](label 按 Accept-Language,zh 中文、其余英文)
 GET|PUT /perm/roles/<id>/data-scope/    {default:{scope,orgs}, default_configured, overrides:[{resource,scope,orgs}]}

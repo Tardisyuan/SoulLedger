@@ -1,4 +1,4 @@
-"""Stage 1B (D3, docs/audit/2026-11-15-sharding/PLAN.md): a bare id keeps the delete rule it had.
+"""Stage 1B (D3, the sharding plan (not in this repo)): a bare id keeps the delete rule it had.
 
 The foreign keys across the control / shard boundary are `db_constraint=False, on_delete=DO_NOTHING`,
 so neither the database nor Django's collector clears them any more. `apps.core.bare_ids` does, on every

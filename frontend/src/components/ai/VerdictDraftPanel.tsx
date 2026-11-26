@@ -9,7 +9,7 @@ import { Button } from "@/src/components/ui/Button";
 const VERDICTS: readonly string[] = ["PASSED", "FAILED", "PURGATORY", "RETRY"];
 
 /**
- * 「起草判词」(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 2)。
+ * 「起草判词」(业务 AI 设计稿(不在仓库里) 第二部分接入点 2)。
  *
  * **先有裁决,后有草稿**:没选裁决时按钮不可用。草稿先在这里预览,确定性检查(不在已采纳引用里的条文、
  * 相反的裁决词、灵魂的名字)标红;判官点「放入判词框」才经 `onInsert` 交给页面的判词框 —— 之后照旧

@@ -207,7 +207,7 @@ def test_a_batch_deactivate_whose_row_fails_deactivates_no_one(admin_user, cn_te
 @pytest.mark.sharded
 @pytest.mark.django_db(databases="__all__", transaction=True)
 def test_a_soul_on_a_civilization_shard_rolls_back_with_its_audit_row():
-    from tests.test_shard_sync import HAS_SHARDS
+    from tests.shard_support import HAS_SHARDS
 
     if not HAS_SHARDS:
         pytest.skip("needs the four civ_* aliases (--ds=config.settings_sharded)")
@@ -244,11 +244,11 @@ def test_a_rolled_back_step_on_one_master_leaves_no_audit_row_on_another():
     Egyptian hall's master, civ_egyptian. Written in its own transaction that row outlived the step's rollback; it now
     waits for the step's commit. Rolled back: no row anywhere, the copy unchanged. Committed: exactly one, on
     civ_egyptian."""
-    from tests.test_shard_sync import HAS_SHARDS
+    from tests.shard_support import HAS_SHARDS
 
     if not HAS_SHARDS:
         pytest.skip("needs the four civ_* aliases (--ds=config.settings_sharded)")
-    from tests.test_shard_sync import CIVS
+    from tests.shard_support import CIVS
     from tests.test_sharded_writes import GREEK, _assign, _halls, _in_hall, cut
 
     halls = _halls()
@@ -289,7 +289,7 @@ def test_a_row_written_beside_the_open_transaction_keeps_its_audit_row_when_that
     """The other side of the deferral: a step's transaction is on civ_greek, and it writes a control row (a role) --
     on control, in autocommit, outside that transaction. The role stays when the step rolls back, so its audit row
     must too: it goes in with the role (`written_on`), not on the step's commit. Exactly one row, on control."""
-    from tests.test_shard_sync import HAS_SHARDS
+    from tests.shard_support import HAS_SHARDS
 
     if not HAS_SHARDS:
         pytest.skip("needs the four civ_* aliases (--ds=config.settings_sharded)")

@@ -21,7 +21,7 @@ import { expect, test, openRoute, SOULS } from "./fixtures";
 import { routesFor } from "./routes";
 
 /** `app/` 下每一条静态路由,减去 `routes.ts` 的 `EXCLUDE.overflow`(各带理由)。此前是一张手写的 30 条的表,
- *  新页面不会自己进来(docs/audit/2026-11-13-test-review.md §2 #5);`e2eRouteTables.test.ts` 守着这张表仍从那里来。
+ *  新页面不会自己进来(2026-11-13 测试审查(不在仓库里) §2 #5);`e2eRouteTables.test.ts` 守着这张表仍从那里来。
  *  致谢页的开源软件一节有长的许可证声明(gsap 的一整句),393 下要折行不撑宽 —— `/about` 因此一直在表里。 */
 const ROUTES = [
   ...routesFor("overflow"),

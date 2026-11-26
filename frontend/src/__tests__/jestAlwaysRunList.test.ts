@@ -3,7 +3,7 @@
  *
  * `frontend/jest.always-run.txt` must name exactly the tests that read files.
  *
- * The pre-push hook (and `scripts/run-gates.sh --affected`) runs only the jest
+ * The pre-push hook (and `scripts/run-gates.sh`) runs only the jest
  * tests `--findRelatedTests` connects to the changed files. That graph is
  * built from imports. A test that reads `app/globals.css`, a language pack or
  * another source file through `fs` / `child_process` / `git` depends on that

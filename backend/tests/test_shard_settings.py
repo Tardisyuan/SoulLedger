@@ -1,4 +1,4 @@
-"""Sharding stage 2, part A: the shard aliases' settings and plumbing (docs/audit/2026-11-15-sharding/PLAN.md).
+"""Sharding stage 2, part A: the shard aliases' settings and plumbing (the sharding plan (not in this repo)).
 
   * `SHARD_DATABASE_URL_<CIV>` adds `civ_<civ>` on the shard engine; one for every civilization makes the process
     SHARDED, none leaves production with `default` alone, some but not all refuse to start (asked of a fresh

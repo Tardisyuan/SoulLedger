@@ -15,8 +15,8 @@ from types import SimpleNamespace
 
 import django_filters as df
 
+from tests.shard_support import sharded
 from tests.test_control_locks_in_a_write_cut_hall import _admin, _client, _officer, world  # noqa: F401
-from tests.test_shard_sync import sharded
 from tests.test_sharded_writes import _in_hall
 
 

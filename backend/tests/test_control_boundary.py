@@ -1,4 +1,4 @@
-"""Stage 1B exit, on a real shard database (plan docs/audit/2026-11-15-sharding/PLAN.md, 阶段 1B).
+"""Stage 1B exit, on a real shard database (the sharding plan (not in this repo), 阶段 1B).
 
 A civilization shard is migrated from the same migrations as the control database, through
 `ShardRouter.allow_migrate` and the shard engine (`config/shard_db/`). What it must end up as:

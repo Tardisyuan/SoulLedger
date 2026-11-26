@@ -151,7 +151,6 @@ npm run dev --workspace frontend
 
 测试数量（2026-11-06 读数，来源 [`landing-stats.json`](frontend/src/config/landing-stats.json)；数字会过期，以最近一次运行为准）：后端 9,243 · 网页 5,677 · 灵魂端 App 1,204 · 官员端 App 1,095 · E2E 约 270。
 
-- **每个 PR**：静态检查加冒烟测试（`pr-checks.yml`）。
 - **每天在 main 上**：`ci.yml` 跑全套。包括带覆盖率下限的真 PostgreSQL、三种浏览器引擎、真 Synapse，以及 pip 与 npm audit。上面的徽章显示的就是这一次运行。
 - **推送前**：维护者本地的门禁 `scripts/run-gates.sh`。
 

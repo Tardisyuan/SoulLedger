@@ -28,7 +28,7 @@ import pytest
 from django.db import DatabaseError, connection, connections, transaction
 from django.db.transaction import TransactionManagementError
 
-from tests.test_shard_sync import CIVS, sharded
+from tests.shard_support import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 SQLITE = connection.vendor == "sqlite"

@@ -453,7 +453,7 @@ export default function XPage() {                    // 页级权限门包在默
 三份 bundle 在 `packages/core/messages/{zh-Hans,en,egy}.json`。
 【实跑】**各 1350 个叶键**（三份一致）。`egy` 对外声明 BCP47 = `en`。
 
-> `BRIEF.md:289` 写「886 keys per bundle」，`tables/README.md:29` 写 1275。两个都是旧数。
+> `BRIEF.md:289` 写「886 keys per bundle」，`tables/README.md:29`(已移到 `archive/docs` 分支)写 1275。两个都是旧数。
 
 **最容易踩的一条：`t(key)` 找不到键时返回键本身，永不返回 undefined。** 所以：
 

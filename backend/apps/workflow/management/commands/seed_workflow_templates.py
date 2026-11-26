@@ -6,7 +6,7 @@ One ``WorkflowTemplate`` row per hall and case type, in the hall's own tenant, p
 it). ``_resolve_template`` prefers such a row over ``WORKFLOW_TEMPLATES`` for the hall's own segment
 and for the segment a hall runs inside another hall's workflow (``segments.foreign_realms``).
 
-What the rows say is ``local-gates/流程退回规则草案.md`` as approved, with the user's lore corrections
+What the rows say is `流程退回规则草案(不在仓库里)` as approved, with the user's lore corrections
 of 2026-10-19:
 
 * a first station's FAIL ends the flow; a middle station's goes back one station;

@@ -1,5 +1,5 @@
 """A soul account reads the shard of its soul's primary hall, not every leg (apps/core/shard_reads.py::
-soul_read_context; docs/audit/2026-11-15-sharding/PLAN.md 阶段 4).
+soul_read_context; the sharding plan (not in this repo) 阶段 4).
 
 The world is test_sharded_reads_equal_single_db's (same seed variable, `SHARDED_READS_SEED=<n>` replays it): rows in
 every civilization, a soul residing abroad and a soul back from residence with the rows its residence court wrote.
@@ -30,7 +30,7 @@ from apps.core.sharding import alias_for_civilization
 from apps.soul_accounts.authentication import SoulJWTAuthentication
 from tests import endpoint_answers as shadow
 from tests import test_sharded_reads_equal_single_db as world_of
-from tests.test_shard_sync import CIVS, HAS_SHARDS, _sync, sharded
+from tests.shard_support import CIVS, HAS_SHARDS, _sync, sharded
 from tests.test_sharded_reads_equal_single_db import _chat_on, _seed_in_report, _small_pages  # noqa: F401 -- autouse
 
 SEED = world_of.SEED

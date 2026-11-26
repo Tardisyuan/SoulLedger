@@ -1,5 +1,5 @@
 """Integer primary keys once a civilization's writes are cut over (stage 4, gap 4a in
-docs/audit/2026-11-15-sharding/PLAN.md).
+the sharding plan (not in this repo)).
 
 A SHARD model with an auto-incrementing integer pk (Organization -- named by bare id from control: User.organization,
 the RoleDataScope.orgs through rows -- and every other one: AuditLog, TaskRun, the officer through rows...) gets ids

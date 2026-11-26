@@ -1,5 +1,5 @@
 """Bare ids: the foreign keys that cross the control / shard boundary (stage 1B, D3 in
-docs/audit/2026-11-15-sharding/PLAN.md).
+the sharding plan (not in this repo)).
 
 Each one is `ForeignKey(..., on_delete=DO_NOTHING, db_constraint=False)`: same `*_id` column, same
 accessor, no database constraint and no ORM on_delete -- Django's delete collector only looks in the

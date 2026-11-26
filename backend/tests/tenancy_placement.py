@@ -1,5 +1,5 @@
 """Pinned placement of every model once the database is split by civilization (stage 0, plan D5 in
-docs/audit/2026-11-15-sharding/PLAN.md). Read by `tests/test_shard_placement_inventory.py`, which
+the sharding plan (not in this repo)). Read by `tests/test_shard_placement_inventory.py`, which
 derives the same table from `apps.core.sharding.placement` / `tenant_path` and fails on any difference.
 
 PLACEMENT    "app.Model": (placement, tenant_path, one-line reason)

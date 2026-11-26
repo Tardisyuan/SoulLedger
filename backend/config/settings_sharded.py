@@ -1,4 +1,4 @@
-"""Test settings for the `sharded` group (stage 2, docs/audit/2026-11-15-sharding/PLAN.md): the normal
+"""Test settings for the `sharded` group (stage 2, the sharding plan (not in this repo)): the normal
 settings plus all four civilization shards, `civ_chinese` / `civ_european` / `civ_egyptian` / `civ_greek`,
 behind the production `config.sharding.ShardRouter`. Select with `--ds=config.settings_sharded -m sharded`;
 under any other settings a `sharded` test skips (root conftest.py).

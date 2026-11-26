@@ -22,8 +22,8 @@ import random
 
 import pytest
 
+from tests.shard_support import CIVS, sharded
 from tests.test_cross_civilization_saga import _ownership, _realm, _walk
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 CUTS = ("both",)  # sharded: every civilization on its shard (the partial cut-overs are gone, 2026-11-21)
@@ -173,7 +173,7 @@ def test_another_civilizations_hall_files_and_withdraws_a_request_on_a_plan(cut_
     from apps.sentence_plan.models import SentencePlanRequest, SentenceRequestStatus
     from apps.souls.models import Soul
     from tests import sentence_plan_support as plan
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     cn, eg, eu = plan.tenant("CN_DIYU"), plan.tenant("EG_DUAT"), plan.tenant("EU_HEAVEN_HELL")
     for hall in (cn, eg, eu):

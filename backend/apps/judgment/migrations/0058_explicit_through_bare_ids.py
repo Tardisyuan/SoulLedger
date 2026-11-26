@@ -1,4 +1,4 @@
-"""Stage 4 gap 4c (docs/audit/2026-11-15-sharding/PLAN.md): CityGod.officers's through table, made an explicit model with
+"""Stage 4 gap 4c (the sharding plan (not in this repo)): CityGod.officers's through table, made an explicit model with
 both keys bare (DO_NOTHING, no constraint) so Django's collector never clears it on the wrong database;
 apps.core.bare_ids clears it on every database instead. State only: the table, its columns, its unique pair and its
 rows are the ones Django created for the M2M (1B already dropped its constraints), so nothing runs on any database

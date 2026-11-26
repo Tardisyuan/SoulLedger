@@ -4,7 +4,7 @@ An order with ties (souls by `-create_time`, stations by `order`) leaves the ord
 database, and PostgreSQL does not keep it between two queries: page 2 may repeat a row of page 1 and skip
 another, and an export lists tied rows in whatever order the plan gives. Once reads are cut over to the
 shards (apps/core/shard_reads.py) the merge puts tied rows in leg order, so the same question answered by one
-database and by the shards differed on 115 (docs/audit/2026-11-15-sharding/shadow-diff-greek-1.txt, the soul
+database and by the shards differed on 115 (the Greek shadow diff (not in this repo), the soul
 export). With the pk last, both answer one order (tests/test_sharded_reads_equal_single_db.py compares every
 page and every export line).
 """

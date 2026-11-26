@@ -18,7 +18,7 @@ from django.db.models.signals import post_save
 
 from apps.core.shard_reads import CONTROL_ALIAS, read_context
 from apps.tenants import global_codes
-from tests.test_shard_sync import HAS_SHARDS
+from tests.shard_support import HAS_SHARDS
 
 GREEK, EGYPTIAN = "civ_greek", "civ_egyptian"
 SQLITE = connection.vendor == "sqlite"

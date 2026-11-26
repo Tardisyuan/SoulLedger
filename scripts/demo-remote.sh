@@ -10,8 +10,12 @@
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
+# prepush_env, the remote lock and limit words, the ledger line and two regexes: shared with run-gates.sh.
 # shellcheck disable=SC1091
-. "$(git rev-parse --path-format=absolute --git-common-dir)/../.prepush.env"
+. "$ROOT/scripts/remote-common.sh"
+PREPUSH_ENV="$(prepush_env)"
+# shellcheck disable=SC1090
+[ -z "$PREPUSH_ENV" ] || . "$PREPUSH_ENV"
 : "${GATES_REMOTE:?GATES_REMOTE is not set (.prepush.env): the demo is never recorded on this machine}"
 RDIR="${GATES_REMOTE_DIR:-/srv/appdata/sl-gates}"
 RWORK="$RDIR/work/demo-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
@@ -22,7 +26,7 @@ IMG="${DEMO_IMAGE:-sl-gates-e2e:1}"
 # the diff against DEMO_BASE (default: the merge-base with origin/main) plus untracked files. The demo build sees
 # frontend/ (its pages, frontend/demo/ and the recordings in frontend/demo/data/, e2e/demo, the demo playwright
 # config), packages/core/, the JS dependency tree, its own runner scripts, and — failing closed — any root-level
-# file not on run-gates.sh's INERT_ROOT_RE (copied below). Without --auto it always runs.
+# file not on INERT_ROOT_RE (scripts/remote-common.sh). Without --auto it always runs.
 if [ "${1:-}" = --auto ]; then
     shift
     case "${1:-}" in scripts/demo-e2e-inner.sh|./scripts/demo-e2e-inner.sh) ;;
@@ -31,10 +35,10 @@ if [ "${1:-}" = --auto ]; then
         && git rev-parse --verify -q "$BASE^{commit}" >/dev/null \
         || { echo "demo-remote: --auto needs a base: no merge-base with origin/main, and DEMO_BASE is not set"; exit 2; }
     CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
-    # Not what no browser loads (run-gates.sh's E2E_BLIND_COMMON_RE, copied; 2026-11-13): unit tests, the
+    # Not what no browser loads (E2E_BLIND_COMMON_RE, scripts/remote-common.sh; 2026-11-13): unit tests, the
     # jest / vitest / eslint configuration, documentation. The demo specs and recordings stay triggers here.
-    HIT="$(echo "$CHANGED" | grep -vE '(\.md$|^frontend/src/__tests__/|^frontend/.*\.test\.tsx?$|^packages/core/(.*/)?__tests__/|^packages/core/.*\.test\.tsx?$|^frontend/(jest|eslint)\.[^/]+$|^packages/core/(vitest|eslint)\.[^/]+$)' | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
-    [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE '(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)' | grep -v '^$' | head -1)"
+    HIT="$(echo "$CHANGED" | grep -vE "$E2E_BLIND_COMMON_RE" | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|remote-common\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
+    [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE "$INERT_ROOT_RE" | grep -v '^$' | head -1)"
     if [ -z "$HIT" ]; then
         echo "demo-remote: --auto: nothing since $(git rev-parse --short "$BASE") reaches the demo (no frontend/, packages/core/, JS dependency, demo runner or unknown root-level file changed) — not running the demo E2E"
         exit 0
@@ -124,13 +128,6 @@ trap 'exit 130' INT TERM
 # ponytail: demo-serve.lock is one lock for every checkout and both servers; .next is per tree, so a lock per
 # tree would let two checkouts' servers coexist — add it when more than one checkout serves the demo.
 P=demo-remote
-# remote_flock — a copy of scripts/gates-remote.sh's, kept identical by its test: take the lock; when it is
-# taken, say who has it, then wait (the wait used to be silent; this machine's gate-lock.sh reports every minute).
-remote_flock() {
-    local fd="$1" lock="$2" filters="" n; shift 2
-    for n in "$@"; do filters="$filters --filter name=$n"; done
-    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
-}
 case "$SCRIPT" in
     *serve-inner.sh|*backend-inner.sh)
         LIMIT="${DEMO_TIMEOUT:-}"
@@ -141,7 +138,7 @@ case "$SCRIPT" in
 esac
 TIMED=""
 if [ -n "$LIMIT" ]; then
-    [[ "$LIMIT" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "demo-remote: DEMO_TIMEOUT=$LIMIT is not a time limit (e.g. 25m, 1500)"; exit 2; }
+    remote_limit "$LIMIT" DEMO_TIMEOUT
     TIMED="timeout -k 60 $LIMIT"
 fi
 ssh -o BatchMode=yes "$GATES_REMOTE" "( $LOCKS; docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
@@ -150,18 +147,12 @@ ssh -o BatchMode=yes "$GATES_REMOTE" "( $LOCKS; docker run --rm --init --name $N
     $IMG $TIMED bash $ARGS; rc=\$?; docker rm -f $NAME >/dev/null 2>&1; exit \$rc ) $LOCK_FILES"
 RC=$?
 trap - EXIT
-case "$RC" in
-    124) echo "demo-remote: TIMED OUT on $GATES_REMOTE after $LIMIT (DEMO_TIMEOUT overrides). The run was stopped there" \
-              "(its container removed with docker rm -f) and the lock released; nothing of it is still running." ;;
-    137) echo "demo-remote: killed on $GATES_REMOTE (exit 137): the time limit's KILL, 60 s after ${LIMIT:-its limit}, or the" \
-              "container's memory limit. The container is removed and the lock released." ;;
-esac
+remote_verdict "$RC" "$LIMIT" DEMO_TIMEOUT
 if [ "$RC" -eq 0 ] && [ -n "$DEMO_TREE" ]; then
     if [ -n "$(git status --porcelain)" ] || [ "$(git rev-parse HEAD^{tree})" != "$DEMO_TREE" ]; then
         echo "demo-remote: not recording this demo E2E pass — the checkout changed while it ran"
     else
-        printf '%s\t%s, %s\n' "$DEMO_TREE" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$DEMO_STAMP"
-        tail -n 50 "$DEMO_STAMP" >"$DEMO_STAMP.tmp" && mv "$DEMO_STAMP.tmp" "$DEMO_STAMP"
+        ledger_append "$DEMO_STAMP" "$DEMO_TREE" "$(date '+%Y-%m-%d %H:%M'), $(git rev-parse --short HEAD)"
         echo "demo-remote: recorded a demo E2E pass for tree ${DEMO_TREE:0:10} — the same tree will not run again"
     fi
 fi

@@ -1,5 +1,5 @@
 """数据范围 B4:权限接口(`apps/perm/data_scope_api.py`)、导出导入段 `role_data_scopes`、复制角色带范围、
-机构接口按范围收窄。设计 local-gates/rbac-2026-10-29/datascope-design.md「接口(B4)」。
+机构接口按范围收窄。设计 数据范围设计稿(不在仓库里)「接口(B4)」。
 """
 import pytest
 

@@ -1,5 +1,5 @@
 /**
- * The demo's business-AI answers (docs/audit/2026-11-12-portfolio-ai-ideas.md part two, points 6 and 7). The demo
+ * The demo's business-AI answers (the business-AI design notes (not in this repo) part two, points 6 and 7). The demo
  * never calls a model: `scripts/demo-record.mjs` asked the real backend once and these are its recorded answers.
  *
  * - `GET /perm/explain/?action=…` — exact key only. Any other recorded explanation would be about another action, so

@@ -1,4 +1,4 @@
-"""审计日志自然语言查询(`apps/audit/nl_query.py`;docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 7)。
+"""审计日志自然语言查询(`apps/audit/nl_query.py`;业务 AI 设计稿(不在仓库里) 第二部分接入点 7)。
 
 - 评测集 `apps/soul_assist/evalsets/audit_query.json` 对桩供应商全过:桩照字面听话(`naive` 里的越权、注入、
   不认识的键都给),校验把它们丢掉 —— 证明的是**校验**,真模型的分数由同一个 `evaluate` 在线下另跑;

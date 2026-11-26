@@ -1,4 +1,4 @@
-"""Stage 4, third review (docs/audit/2026-11-15-sharding/VERIFY-stage4-r3.md): the residence's / seat's hall acts on a
+"""Stage 4, third review (the third stage-4 review (not in this repo)): the residence's / seat's hall acts on a
 world built AFTER both civilizations are write-cut. The D6 tests build theirs before the cut and act from the home
 hall; these act from the other side, where one business flow's rows are on two masters.
 
@@ -25,8 +25,8 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction
 
+from tests.shard_support import CIVS, sharded
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import HALLS, _audited, _client, _read, _route, _settled
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _in_hall, cut
 
 PAIRS = [("CHINESE", "GREEK"), ("EGYPTIAN", "EUROPEAN")]
@@ -57,7 +57,7 @@ def _halls(pair):
     from apps.org.ownership import tenant_root
     from apps.realms.models import Realm
     from tests import sentence_plan_support as plan
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     home, res = (plan.tenant(HALLS[c]) for c in pair)
     for hall in (home, res):

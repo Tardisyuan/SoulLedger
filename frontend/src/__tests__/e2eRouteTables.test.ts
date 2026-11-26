@@ -6,7 +6,7 @@
  *
  * WHY. `no-route-overflows-the-document`, `the-api-mock-models-what-the-app-calls` and `rendered-contrast` each had a
  * hand-written table; together they opened 33 of the 64 static routes and nothing compared them with `app/`
- * (docs/audit/2026-11-13-test-review.md §2 #5). They now spread `routesFor(<table>)` from `e2e/routes.ts`. Playwright
+ * (the 2026-11-13 test review (not in this repo) §2 #5). They now spread `routesFor(<table>)` from `e2e/routes.ts`. Playwright
  * is not run on a push that does not touch the frontend, and never in jest, so this is what keeps that arrangement
  * honest: every page is opened or excused with a reason, no excuse outlives its page, and no spec has gone back to a
  * table of its own.

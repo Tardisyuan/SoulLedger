@@ -1,5 +1,5 @@
 """Core guard: the sharded form changes no outcome of a write
-(docs/audit/2026-11-15-sharding/PLAN.md 阶段 4). The single database is the baseline.
+(the sharding plan (not in this repo) 阶段 4). The single database is the baseline.
 
 The world is stage 3's (`tests/test_sharded_reads_equal_single_db.py::_build`: every civilization, crossing keys,
 residences, synced to the shards), built once per module and rolled back at the end. Then for every write route of
@@ -35,7 +35,7 @@ from django.test import override_settings
 
 from apps.core.sharding import SHARD, placement
 from tests import endpoint_answers as shadow
-from tests.test_shard_sync import HAS_SHARDS, sharded
+from tests.shard_support import HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_WRITES_SEED") or random.SystemRandom().randrange(10 ** 6))
 GREEK = "civ_greek"

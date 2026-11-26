@@ -12,15 +12,7 @@ from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
 from apps.perm.models import Role
 from apps.souls.models import Soul, SoulState
-from apps.tenants.models import Tenant
 from tests.data_scope_support import org, scope
-
-
-@pytest.fixture
-def eu_tenant(db):
-    return Tenant.objects.get_or_create(
-        code="EU_HEAVEN_HELL", defaults={"display_name": "European Heaven/Hell"}
-    )[0]
 
 
 @pytest.fixture

@@ -4,10 +4,11 @@
 # reads (RDIR, RIMG, RID, RWORK, SLOT_*, WIN_*, PRUNE_*, DEPS_JS / DEPS_PY, REMOTE_DEPS).
 #   - routing: unRAID slot 1 → the idle Windows PC → unRAID slot 2 or its queue (win_route, remote_slots)
 #   - the PC: game detection, nice 19 and fewer CPUs while a game runs (win_game, win_probe, win_watch)
-#   - ssh + rsync (remote_sync), flock (remote_flock), time limits (remote_limit, remote_verdict),
+#   - ssh + rsync (remote_sync), flock (remote_slots; remote_flock, remote_limit and remote_verdict are in
+#     scripts/remote-common.sh, which run-gates.sh sources first),
 #     synced trees nobody uses (remote_prune), dependency hashes (deps_hash_js, REMOTE_DEPS)
 #   - the containers: remote_gate_run (delegated gates and --tests), remote_e2e_run (--e2e)
-# Split out of run-gates.sh on 2026-11-21 (docs/audit/rebuild-2026-11-20.md §5, step 6): the same code in the
+# Split out of run-gates.sh on 2026-11-21 (the 2026-11-20 rebuild audit (not in this repo) §5, step 6): the same code in the
 # same order. A change here forces a full run and the gate tests, as a change to run-gates.sh does (FULL_RULES
 # there, GATE_SCRIPTS in select-backend-tests.py). install-hooks.sh copies it beside the hook's run-gates.sh.
 
@@ -67,17 +68,9 @@ remote_sync() {
 #     is released only once the container is gone. (No SIGHUP reaches it: ssh without a tty sends none.)
 # The time spent waiting for the lock does not count: `timeout` starts inside the container.
 #
-# remote_flock <fd> <lock name> <container name prefix>… — the remote shell's words for "take this lock; when
-# it is taken, say who has it, then wait" (2026-11-13, test review 3.5). The wait used to be silent — a plain
-# `flock 9` — while this machine's gate-lock.sh reports every minute; a demo server left up held e2e.lock for
-# hours and `--e2e` simply sat there. Who has it is read from the containers' names (sl-gates-, sl-e2e-,
-# sl-demo-, sl-android-). scripts/demo-remote.sh and scripts/mobile-remote.sh carry copies, kept identical
-# by TestRemoteLocksSayWhenTheyWait.
-remote_flock() {
-    local fd="$1" lock="$2" filters="" n; shift 2
-    for n in "$@"; do filters="$filters --filter name=$n"; done
-    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
-}
+# remote_flock <fd> <lock name> <container name prefix>… — take a lock on that machine, saying who holds it
+# while it waits: scripts/remote-common.sh, with remote_limit and remote_verdict (demo-remote.sh and
+# mobile-remote.sh use the same three).
 # remote_slots <container name prefix> — the gates' lock, with GATES_REMOTE_SLOTS (default 2, 2026-11-16 user
 # decision) runs at once on that machine: slot 1 is fd 9 on run.lock, slot 2 fd 8 on run.2.lock (the caller opens
 # both). Free slot first, without waiting; both taken: say who holds them, then try both every 10 s. A copy of
@@ -99,20 +92,6 @@ remote_slots() {
 }
 case "${GATES_REMOTE_SLOTS:-2}" in 1) SLOT_CPUS=12 SLOT_MEM=24g SLOT_WORKERS=6 ;; 2) SLOT_CPUS=10 SLOT_MEM=20g SLOT_WORKERS=5 ;;
     *) echo "gates: GATES_REMOTE_SLOTS=${GATES_REMOTE_SLOTS} — 1 or 2"; exit 2 ;; esac
-remote_limit() {  # <value> <variable name>: refuse anything `timeout` would not read as a duration
-    [[ "$1" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: $2=$1 is not a time limit (e.g. 30m, 1800)"; exit 2; }
-}
-# remote_verdict <exit status> <limit> <variable> — say so when the remote run ended on the limit.
-remote_verdict() {
-    case "$1" in
-        124) echo "$P: TIMED OUT on $GATES_REMOTE after $2 ($3 overrides). The run was stopped there (its container" \
-                  "removed with docker rm -f) and the lock released; nothing of it is still running." ;;
-        137) echo "$P: killed on $GATES_REMOTE (exit 137): either the time limit's KILL, 60 s after it ran out ($2," \
-                  "$3), or the container's memory limit. The container is removed and the lock released." ;;
-        75) echo "$P: REFUSED by $GATES_REMOTE: its work dir is too full and no unmounted tree could be deleted to make room" \
-                  "(see the prune line above; GATES_REMOTE_MIN_FREE_MB). Nothing ran." ;;
-    esac
-}
 
 # ── THE WINDOWS PC: A THIRD HOST WHEN UNRAID IS FULL AND THE PC IS IDLE (2026-11-17, user decision) ──
 # GATES_REMOTE_WIN (.prepush.env) names an ssh host: sshd inside WSL on the PC, with docker, the same images and

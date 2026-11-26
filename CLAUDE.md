@@ -168,11 +168,3 @@ bash scripts/install-hooks.sh
 ```bash
 git log --format="%s" | grep -oE '^[a-z0-9]+' | sort | uniq -c | sort -rn
 ```
-
-## Lazy-Load Reference
-
-Load `docs/claude-reference.md` only when explicitly required for:
-- Agent communication patterns and examples
-- Swarm routing and topology configuration
-- Memory/learning MCP tools and hooks
-- CLI commands and setup

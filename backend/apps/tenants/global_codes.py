@@ -1,5 +1,5 @@
 """Global uniqueness once rows are written to four civilization databases (sharding stage 4,
-docs/audit/2026-11-15-sharding/PLAN.md "全局唯一" and gap 4b; tests/tenancy_global_uniqueness.py STRATEGY).
+the sharding plan (not in this repo) "全局唯一" and gap 4b; tests/tenancy_global_uniqueness.py STRATEGY).
 
 A UNIQUE index covers one database. A key whose rows move to the shards (SHARD placement) needs something in
 the control database that every shard asks first:

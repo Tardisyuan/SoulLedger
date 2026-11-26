@@ -1,5 +1,5 @@
 """`reconcile_shards` copies control's rows to the civilization shards (the one-database form: how the test group
-builds a world) and finds every row where the two disagree (docs/audit/2026-11-15-sharding/PLAN.md, D2 / D4 / D6).
+builds a world) and finds every row where the two disagree (the sharding plan (not in this repo), D2 / D4 / D6).
 
 A random world -- every SHARD and REFERENCE model gets rows, in halls of all four civilizations, in a
 hall of UNKNOWN civilization and with no hall -- is synced, then checked from the outside: each shard
@@ -34,17 +34,8 @@ from django.utils import timezone
 from apps.core.shard_sync import DEBOUNCE_KEY, DEBOUNCE_SECONDS, compared_models, fingerprints, shard_aliases
 from apps.core.sharding import CONTROL, REFERENCE, SHARD, alias_for_civilization, placement, tenant_path
 
-CIVS = ("CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK")
-HAS_SHARDS = all(alias_for_civilization(c) in settings.DATABASES for c in CIVS)
-
-
-def sharded(test):
-    for mark in (pytest.mark.django_db(databases="__all__"),
-                 pytest.mark.skipif(not HAS_SHARDS, reason="needs the four civ_* aliases (--ds=config.settings_sharded)"),
-                 pytest.mark.sharded):
-        test = mark(test)
-    return test
-
+# Re-exported: other test modules imported these from here before tests/shard_support.py held them.
+from tests.shard_support import CIVS, HAS_SHARDS, _reconcile, _sync, sharded  # noqa: F401
 
 # ---- a random world ----------------------------------------------------------------------------------
 
@@ -417,24 +408,6 @@ def _executed_cross_civ(soul_pk, civ):
         if len(ends) == 2 and civ in ends:
             return True
     return False
-
-
-def _sync():
-    out = io.StringIO()
-    try:
-        call_command("reconcile_shards", "--all", "--fix", stdout=out)
-    except CommandError as e:
-        raise AssertionError(f"{e}\n{out.getvalue()}") from None
-    return out.getvalue()
-
-
-def _reconcile(*args):
-    out = io.StringIO()
-    try:
-        call_command("reconcile_shards", *args, stdout=out)
-        return 0, out.getvalue()
-    except CommandError:
-        return 1, out.getvalue()
 
 
 def _shard_pks(alias, model):

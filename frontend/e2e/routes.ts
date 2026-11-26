@@ -3,7 +3,7 @@
  *
  * WHY. `no-route-overflows-the-document`, `the-api-mock-models-what-the-app-calls` and `rendered-contrast` each
  * carried their own list (30 / 22 / 8 entries); together they reached 33 of the 64 static routes, and nothing
- * compared any of them with `app/` (docs/audit/2026-11-13-test-review.md §2 #5). A new page was in none of them
+ * compared any of them with `app/` (the 2026-11-13 test review (not in this repo) §2 #5). A new page was in none of them
  * until someone remembered. Now each spec opens every static route except the ones its EXCLUDE map names, with the
  * reason written next to it; `src/__tests__/e2eRouteTables.test.ts` checks that every entry is a real route with a
  * reason, and that the three specs still take their list from here.

@@ -59,16 +59,6 @@ async def _try_connect(app, path):
 
 
 @pytest.fixture
-def eu_tenant(db):
-    from apps.tenants.models import Tenant
-    tenant, _ = Tenant.objects.get_or_create(
-        code="EU_HEAVEN_HELL",
-        defaults={"display_name": "European Heaven/Hell"},
-    )
-    return tenant
-
-
-@pytest.fixture
 def admin_user(db, django_user_model, cn_tenant):
     user, _ = django_user_model.objects.get_or_create(
         username="ws_admin",

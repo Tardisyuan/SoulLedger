@@ -1,4 +1,4 @@
-"""Stage 1B is schema only and reversible (plan docs/audit/2026-11-15-sharding/PLAN.md, 阶段 1B):
+"""Stage 1B is schema only and reversible (the sharding plan (not in this repo), 阶段 1B):
 the `*_bare_ids_across_databases` migrations drop exactly the foreign-key constraints of the bare ids,
 the reverse puts every one of them back, and forward again drops them again -- rows untouched.
 

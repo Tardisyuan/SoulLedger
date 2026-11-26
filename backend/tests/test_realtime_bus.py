@@ -23,16 +23,6 @@ from channels.db import database_sync_to_async
 
 
 @pytest.fixture
-def eu_tenant(db):
-    from apps.tenants.models import Tenant
-    tenant, _ = Tenant.objects.get_or_create(
-        code="EU_HEAVEN_HELL",
-        defaults={"display_name": "European Heaven/Hell"},
-    )
-    return tenant
-
-
-@pytest.fixture
 def soul(db, cn_tenant):
     from apps.souls.models import Soul, SoulState
     soul, _ = Soul.objects.get_or_create(

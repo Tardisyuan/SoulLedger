@@ -58,7 +58,7 @@ def test_an_upheld_review_can_be_taken_up_the_chinese_appeal_flow(case):
     workflow = ApprovalWorkflow.all_objects.get(pk=response.data["workflow"])
     assert workflow.case_type == CaseType.APPEAL and workflow.is_appeal
     assert workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
-    # 魏征 → 原殿 → 上级殿 → 酆都大帝 (docs/03_人物关系图.md; local-gates/流程退回规则草案.md 申诉审判流程)
+    # 魏征 → 原殿 → 上级殿 → 酆都大帝 (docs/03_人物关系图.md; 流程退回规则草案(不在仓库里) 申诉审判流程)
     assert [n.node_name for n in workflow.nodes.order_by("node_order")] == [
         "魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"]
     filed = SoulEvent.objects.get(soul=case["soul"], event_type="JUDGMENT_APPEAL_FILED", payload__round=2)

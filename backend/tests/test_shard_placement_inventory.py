@@ -1,4 +1,4 @@
-"""Stage 0 of the civilization split (docs/audit/2026-11-15-sharding/PLAN.md D5): where every model
+"""Stage 0 of the civilization split (the sharding plan (not in this repo) D5): where every model
 lives, derived by `apps.core.sharding.placement` from `apps.get_models()`, is pinned in
 `tests/tenancy_placement.py` -- the same new / gone / moved diff as G1
 (`tests/test_fk_inventory_across_tenants.py`).

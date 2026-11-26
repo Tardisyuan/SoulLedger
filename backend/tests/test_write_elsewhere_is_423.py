@@ -1,5 +1,5 @@
 """A write refused because its row is on another master answers 423 `write_elsewhere`, not 500
-(docs/audit/error-triage-2026-11-20.md #2; VERIFY-stage4-r3 N-6; apps/core/problems.py `exception_handler`).
+(the 2026-11-20 error triage (not in this repo) #2; VERIFY-stage4-r3 N-6; apps/core/problems.py `exception_handler`).
 
 `WriteOutsideTransaction` (a write to a shard the request's transaction does not hold) and `StepOutsideTransaction`
 (a saga step on such a master) are raised before anything is written and roll the whole transaction back -- safe,
@@ -11,8 +11,8 @@ an account for its soul while the soul resides in another civilization, every ci
 import pytest
 from django.conf import settings
 
+from tests.shard_support import sharded
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import _abroad, _client
-from tests.test_shard_sync import sharded
 from tests.test_sharded_writes import cut
 
 

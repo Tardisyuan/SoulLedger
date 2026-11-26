@@ -1,7 +1,7 @@
 import { api } from "./client";
 
 /**
- * Business AI on the judging desk and the moderation queue (docs/audit/2026-11-12-portfolio-ai-ideas.md part two,
+ * Business AI on the judging desk and the moderation queue (the business-AI design notes (not in this repo) part two,
  * points 1, 2 and 4). Every answer is a suggestion: citing still goes through `POST judgment/<id>/citations/`, the
  * verdict text through `PATCH judgment/<id>/draft/`, and moderation through the existing actions. What a person did
  * with a suggestion is reported with `officerAssistApi.decideDraft(draft_id, …)`.

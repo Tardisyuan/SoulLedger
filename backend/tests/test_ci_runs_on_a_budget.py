@@ -4,8 +4,7 @@
 按 tag、按手动触发;不许在分支推送上自动跑。每个 job 必须有 `timeout-minutes`
 (默认 360 分钟,一条挂住的测试就能吃掉一个月额度的几分之一),同一 ref 的旧运行被取消。
 
-唯一的例外是 `pr-checks.yml`(用户 2026-11-14 定:接受外部 PR):只在 PR 上跑，只做静态检查和
-一组点名的冒烟测试，只读 token、不碰 secret,用 `pull_request` 而不是 `pull_request_target`。
+没有例外:PR 上跑的 `pr-checks.yml`(2026-11-14 加)一次也没触发过,2026-11-26 删了。
 """
 import json
 from pathlib import Path
@@ -22,11 +21,8 @@ def _load(name):
     return data, data.get("on", data.get(True))
 
 
-PR_WORKFLOW = "pr-checks.yml"
-
-
 # Every workflow, not a named list: ios-sim-build.yml (2026-11-07) would otherwise be outside the guard.
-@pytest.mark.parametrize("name", sorted(p.name for p in WORKFLOWS.glob("*.yml") if p.name != PR_WORKFLOW))
+@pytest.mark.parametrize("name", sorted(p.name for p in WORKFLOWS.glob("*.yml")))
 def test_triggers_stay_on_the_budget(name):
     data, on = _load(name)
     assert set(on) <= {"workflow_dispatch", "schedule", "push"}, f"{name}: {sorted(on)}"
@@ -45,37 +41,15 @@ def test_triggers_stay_on_the_budget(name):
 
 
 def test_a_manual_run_does_not_cancel_the_daily_one():
-    """The CI timing audit (docs/audit/ci-timing-2026-11-20.md §5.3): `ci-${{ github.ref }}` alone put a manual
+    """The CI timing audit of 2026-11-20 (not in this repo, §5.3): `ci-${{ github.ref }}` alone put a manual
     run on main in the daily run's group, and `cancel-in-progress` threw away two ~2-hour daily runs (11-15, 11-16)."""
     data, _ = _load("ci.yml")
     assert "github.event_name" in data["concurrency"]["group"], data["concurrency"]
 
 
-def test_the_pr_workflow_is_cheap_and_cannot_touch_secrets():
-    """The one workflow a pull request starts. It must stay the cheap one (static checks and a named smoke set,
-    never the whole suite) and safe for a fork's code: `pull_request` gives a read-only token and no secrets,
-    `pull_request_target` would give the base repository's."""
-    text = (WORKFLOWS / PR_WORKFLOW).read_text()
-    data, on = _load(PR_WORKFLOW)
-    assert set(on) == {"pull_request"}, sorted(on)
-    assert data["permissions"] == {"contents": "read"}
-    assert data["concurrency"]["cancel-in-progress"] is True
-    assert "${{ secrets." not in text and "pull_request_target" not in text.split("\non:")[1]
-    for job_name, job in data["jobs"].items():
-        assert isinstance(job.get("timeout-minutes"), int) and job["timeout-minutes"] <= 20, job_name
-        assert "permissions" not in job, f"{job_name} widens the token"
-        for step in job["steps"]:
-            run = step.get("run", "")
-            for line in run.splitlines():
-                if "pytest" in line:
-                    # A named smoke set: every argument after the options is a test file.
-                    files = [a for a in line.split() if a.endswith(".py")]
-                    assert files and len(files) <= 5, line
-            assert "playwright" not in run and "test:coverage" not in run, f"{job_name}: {run}"
-
-
 def test_the_full_suite_still_does_not_run_on_pull_requests():
-    """The other half: adding the PR workflow must not turn ci.yml into a per-PR run."""
+    """ci.yml and security.yml by name: test_triggers_stay_on_the_budget walks every workflow, and an empty glob
+    (a moved directory) would pass it."""
     for name in ("ci.yml", "security.yml"):
         _, on = _load(name)
         assert "pull_request" not in on and "pull_request_target" not in on, name
@@ -131,7 +105,7 @@ def test_the_sharded_group_runs_in_its_own_job_on_postgresql():
     """Sharding stage 2: a `sharded` test skips unless the four civilization shards exist, and they exist only
     under config.settings_sharded. The command runs the whole group, not a file list that a new test misses.
     It replaced the multi-database guard (review C21, 2026-10-31), whose settings are gone. Its own job beside
-    the suite since 2026-11-21 (it ran after it, docs/audit/ci-timing-2026-11-20.md §5.2), on the same
+    the suite since 2026-11-21 (it ran after it, the CI timing audit of 2026-11-20 (not in this repo) §5.2), on the same
     PostgreSQL image, and a green run still needs it (`stats`)."""
     data, _ = _load("ci.yml")
     job = data["jobs"]["backend-sharded"]
@@ -230,7 +204,7 @@ def test_a_green_main_run_uploads_its_suite_counts_and_only_the_stats_job_may_wr
 
 
 def test_the_e2e_jobs_run_in_playwrights_image_at_the_locked_version():
-    """User decision 2026-11-21 (docs/audit/ci-timing-2026-11-20.md §5.4): the E2E jobs run in Playwright's own
+    """User decision 2026-11-21 (the CI timing audit of 2026-11-20 (not in this repo) §5.4): the E2E jobs run in Playwright's own
     image instead of `playwright install --with-deps` (its apt step once took 773 s). The image carries one
     Playwright's browsers; a different @playwright/test looks for other builds and fails to launch, so the tag
     has to follow package-lock.json."""

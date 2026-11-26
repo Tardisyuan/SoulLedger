@@ -1,4 +1,4 @@
-"""朋友圈审核的 AI 预筛(`apps/social/ai_screen.py`;docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 4)。
+"""朋友圈审核的 AI 预筛(`apps/social/ai_screen.py`;业务 AI 设计稿(不在仓库里) 第二部分接入点 4)。
 
 - 评测集 `apps/soul_assist/evalsets/moderation.json`:桩照字面听话(注入句子要 0 分就给 0 分),注入用例照样排在
   上半区 —— 因为最后的分是 `max(模型分, 规则分)`;去掉这一条(模型分说了算)守卫变红;

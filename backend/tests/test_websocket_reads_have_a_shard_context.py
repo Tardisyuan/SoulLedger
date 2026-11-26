@@ -15,7 +15,7 @@ from django.test import override_settings
 from apps.authentication.models import User, UserRole
 from apps.core.shard_reads import FANOUT, current_context
 from apps.core.ws_tenant import TenantMiddleware
-from tests.test_shard_sync import HAS_SHARDS
+from tests.shard_support import HAS_SHARDS
 
 
 def _inner(seen):

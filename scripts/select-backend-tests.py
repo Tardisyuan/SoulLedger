@@ -68,7 +68,7 @@ FULL_RULES = [
 ]
 # The lines of reads-outside-backend.txt that compare the backend with another area carry one of these.
 CONTRACT_TOPS = {"frontend", "packages", "mobile", "mobile-officer"}
-GATE_SCRIPTS = re.compile(r"^scripts/(run-gates|gates-remote|install-hooks|gate-lock|select-backend-tests)\.(sh|py)$")
+GATE_SCRIPTS = re.compile(r"^scripts/(run-gates|gates-remote|remote-common|install-hooks|gate-lock|select-backend-tests)\.(sh|py)$")
 
 
 def is_test_file(rel):

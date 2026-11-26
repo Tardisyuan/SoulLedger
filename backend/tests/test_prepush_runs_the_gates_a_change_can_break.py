@@ -98,6 +98,7 @@ GENERATOR = REPO_ROOT / "scripts" / "install-hooks.sh"
 RUNNER = REPO_ROOT / "scripts" / "run-gates.sh"
 # The remote executor run-gates.sh sources (2026-11-21): routing, the Windows PC, locks, sync, containers.
 REMOTE = REPO_ROOT / "scripts" / "gates-remote.sh"
+COMMON = REPO_ROOT / "scripts" / "remote-common.sh"
 READERS = REPO_ROOT / "backend" / "tests" / "reads-outside-backend.txt"
 
 
@@ -216,7 +217,8 @@ class TestTheExistingPrefixesStillWork:
         assert _classify(hook, ["docs/README.md", "scripts/status.sh"]) == NONE
 
     @pytest.mark.parametrize(
-        "name", ["scripts/run-gates.sh", "scripts/gates-remote.sh", "scripts/install-hooks.sh", "scripts/gate-lock.sh"]
+        "name", ["scripts/run-gates.sh", "scripts/gates-remote.sh", "scripts/remote-common.sh", "scripts/install-hooks.sh",
+                 "scripts/gate-lock.sh"]
     )
     def test_the_gate_machinery_runs_the_backend_suite_that_tests_it(self, hook, name):
         """This file is the machinery's only test, and it reads the scripts
@@ -264,7 +266,7 @@ def checkouts(tmp_path):
     (main / "backend").mkdir(parents=True)
     (main / "backend" / "manage.py").write_text("")
     (main / "scripts").mkdir()
-    for name in ("install-hooks.sh", "run-gates.sh", "gates-remote.sh", "gate-lock.sh"):
+    for name in ("install-hooks.sh", "run-gates.sh", "gates-remote.sh", "remote-common.sh", "gate-lock.sh"):
         (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
     (main / "backend" / "tests").mkdir()
     (main / "backend" / "tests" / READERS.name).write_text(READERS.read_text(encoding="utf-8"))
@@ -384,6 +386,7 @@ class TestFromAWorktree:
         assert copy.read_text(encoding="utf-8") == RUNNER.read_text(encoding="utf-8")
         # ... and the remote executor that copy sources from beside itself.
         assert (copy.parent / REMOTE.name).read_text(encoding="utf-8") == REMOTE.read_text(encoding="utf-8")
+        assert (copy.parent / COMMON.name).read_text(encoding="utf-8") == COMMON.read_text(encoding="utf-8")
 
 
 def _fake_venv(checkout: Path, python_body: str) -> Path:
@@ -2311,16 +2314,26 @@ class TestRemoteLocksSayWhenTheyWait:
     """2026-11-13 (test review 3.5): a remote `flock 9` waited without a word. Each lock is now tried without
     waiting first; when it is taken the run prints who has it (the containers by name) and then waits."""
 
-    SCRIPTS = ("gates-remote.sh", "demo-remote.sh", "mobile-remote.sh")
-
     @staticmethod
-    def _definition(script: str) -> str:
-        m = re.search(r"^remote_flock\(\) \{\n.*?^\}\n", (GENERATOR.parent / script).read_text(encoding="utf-8"), re.M | re.S)
-        assert m, f"no remote_flock in {script}"
+    def _definition() -> str:
+        m = re.search(r"^remote_flock\(\) \{\n.*?^\}\n", COMMON.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, "no remote_flock in remote-common.sh"
         return m.group(0)
 
-    def test_the_three_scripts_carry_the_same_words(self):
-        assert len({self._definition(s) for s in self.SCRIPTS}) == 1
+    @pytest.mark.parametrize("script", ["run-gates.sh", "demo-remote.sh", "mobile-remote.sh"])
+    def test_each_remote_script_sources_the_common_file(self, script):
+        """remote_flock, remote_limit, remote_verdict, ledger_append, prepush_env and the two E2E regexes live in
+        scripts/remote-common.sh (2026-11-26); until then demo-remote.sh and mobile-remote.sh carried copies.
+        gates-remote.sh is sourced by run-gates.sh after it, so run-gates.sh stands for both. A script that
+        defines one of them again has a copy that can drift."""
+        text = (GENERATOR.parent / script).read_text(encoding="utf-8")
+        assert re.search(r'^\s*\. "\$(HERE|ROOT/scripts)/remote-common\.sh"$', text, re.M), f"{script} does not source remote-common.sh"
+        for sh in (script, "gates-remote.sh"):
+            body = (GENERATOR.parent / sh).read_text(encoding="utf-8")
+            for name in ("remote_flock", "remote_limit", "remote_verdict", "ledger_append", "prepush_env"):
+                assert not re.search(rf"^{name}\(\)", body, re.M), f"{sh} defines {name} again"
+            for var in ("INERT_ROOT_RE", "E2E_BLIND_COMMON_RE"):
+                assert not re.search(rf"^\s*{var}=", body, re.M), f"{sh} defines {var} again"
 
     def _take(self, tmp_path, free: bool, waits: bool = True):
         """Run the words the remote shell would get, with a flock that finds the lock free or taken."""
@@ -2334,7 +2347,7 @@ class TestRemoteLocksSayWhenTheyWait:
         (b / "docker").write_text(f'#!/bin/bash\necho "docker $*" >> "{tmp_path}/docker.log"\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
-        script = (f"P=gates\n{self._definition('gates-remote.sh')}"
+        script = (f"P=gates\n{self._definition()}"
                   f'eval "( $(remote_flock 9 run.lock sl-gates-); echo RAN ) 9>{tmp_path}/lock"\n')
         env = _clean_env()
         env["PATH"] = f"{b}:{env['PATH']}"
@@ -2384,7 +2397,7 @@ class TestTwoGateSlots:
         (b / "docker").write_text('#!/bin/bash\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
-        script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition('gates-remote.sh')}"
+        script = (f"P=gates\nGATES_REMOTE_SLOTS={slots}\n{TestRemoteLocksSayWhenTheyWait._definition()}"
                   f"{self._definition('remote_slots')}"
                   f'eval "( $(remote_slots sl-gates-); echo RAN{show} ) 8>{tmp_path}/lock2 9>{tmp_path}/lock"\n')
         env = _clean_env()
@@ -3000,12 +3013,6 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
         assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
         assert "bash /app/scripts/demo-e2e-inner.sh" in (tmp_path / "remote-run").read_text()
 
-    def test_the_demo_carries_the_same_list_of_files_no_browser_loads(self):
-        """demo-remote.sh cannot source run-gates.sh, so it copies the pattern; the copy must not drift."""
-        m = re.search(r"^E2E_BLIND_COMMON_RE='(.+)'$", RUNNER.read_text(encoding="utf-8"), re.M)
-        assert m, "run-gates.sh no longer defines E2E_BLIND_COMMON_RE on one line"
-        assert f"grep -vE '{m.group(1)}'" in (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8")
-
     def test_the_demo_skips_a_unit_test(self, checkouts, tmp_path):
         main, _ = checkouts
         proc = self._demo_auto(main, tmp_path, "frontend/src/__tests__/SoulPage.test.tsx")
@@ -3217,6 +3224,7 @@ class TestMobileRemoteMetroFollowsTheDependencies:
         repo = tmp_path / "repo"
         (repo / "scripts").mkdir(parents=True)
         shutil.copy(REPO_ROOT / "scripts" / "mobile-remote.sh", repo / "scripts" / "mobile-remote.sh")
+        shutil.copy(COMMON, repo / "scripts" / COMMON.name)
         (repo / "package-lock.json").write_text('{"lockfileVersion": 3}\n')
         self._pkg(repo, "1.0.0", "jest", "1")
         _git(repo, "init", "-q")

@@ -1,4 +1,4 @@
-"""「为什么我点不了?」(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 6)。
+"""「为什么我点不了?」(业务 AI 设计稿(不在仓库里) 第二部分接入点 6)。
 
 `GET /api/v1/perm/explain/?action=<权限码>[&object=<类型>:<id>]`
 

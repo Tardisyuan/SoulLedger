@@ -17,7 +17,7 @@ __pycache__/
 .env.staging
 .env.production
 .env.local
-# Backups of env files (local-gates/split-matrix-secrets.sh leaves .env.bak-20261112-split): secrets, so never
+# Backups of env files (a local secrets-splitting script leaves .env.bak-20261112-split): secrets, so never
 # committed and never synced — the gate / demo syncs list untracked files with --exclude-standard.
 .env.bak*
 *.env.bak*

@@ -23,9 +23,9 @@ import pytest
 from django.core.cache import cache
 from django.utils import timezone
 
+from tests.shard_support import CIVS, sharded
 from tests.test_control_locks_in_a_write_cut_hall import _soul_account
 from tests.test_s5_tooling_and_sockets_after_the_purge import purge_control
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 OLD = timedelta(days=1000)  # past every window here (assistant usage: 730 days)

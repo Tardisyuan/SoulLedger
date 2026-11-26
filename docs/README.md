@@ -133,7 +133,6 @@ draft was deleted on 2026-10-24.*
 
 | 文件 | 状态 | 内容 |
 |---|---|---|
-| [claude-reference.md](claude-reference.md) | 已入库 | 本仓库的 Claude Code 参考（由 `../CLAUDE.md` 按需加载） |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 已入库 | 架构概览 |
 | [ARCHITECTURE-soul-app-and-domain-split.md](ARCHITECTURE-soul-app-and-domain-split.md) | 已入库 | 灵魂端 App 与按业务域拆分的设计稿（2026-09-13 起）;文首决策记录是拍板结果,正文「现状」一节是当时的快照 |
 | [ARCHITECTURE-sentence-plan.md](ARCHITECTURE-sentence-plan.md) | 已入库 | 受刑计划(处置流程节点)设计稿与决策记录(2026-09-18/19 拍板),已落地为 `backend/apps/sentence_plan/` |
@@ -173,9 +172,9 @@ draft was deleted on 2026-10-24.*
   四种文明现在在数据层就不同了（见 `readings.py`），因此需要四种不同的呈现，而不是一个
   带 variant 的组件——ADDENDUM §1 写的是三种，§5 补了第四种（希腊）及其第四种读数形状。
   **必须与 BRIEF 一起读。**
-- [`screens/`](design-handoff/screens/) — 29 张实际界面全页截图
+- `screens/` — 29 张实际界面全页截图(2026-11-26 移出 main,在 `archive/docs` 分支,提交 5aeba17ea)
 - [`tokens.md`](design-handoff/tokens.md) / [`tokens.html`](design-handoff/tokens.html) — 设计 token 清单
-- [`tables/`](design-handoff/tables/) — 三语（zh-Hans / en / egy）表格样本与字符串导出
+- `tables/` — 三语（zh-Hans / en / egy）表格样本与字符串导出(同上,在 `archive/docs` 分支)
 
 > 这个包已经交付并被外部引用，请视为冻结内容——不要重排、重命名或改写其中的文件。
 > *This package has been delivered and is referenced externally. Treat it as

@@ -1,4 +1,4 @@
-"""The saga findings of the independent stage-4 review, closed (docs/audit/2026-11-15-sharding/VERIFY-stage4.md;
+"""The saga findings of the independent stage-4 review, closed (the stage-4 review (not in this repo);
 apps/tenants/shard_saga.py, apps/dispatch/transfer.py, apps/tenants/global_codes.py):
 
   in transit    a write to a soul while its move is open -- a dispatch, a return home, a rebirth; after step 1 or
@@ -28,6 +28,7 @@ from django.conf import settings
 from django.core.management import CommandError, call_command
 from django.db import connection, connections, transaction
 
+from tests.shard_support import CIVS, sharded
 from tests.test_cross_civilization_saga import RUN, InjectedError, _approved, _ownership, _walk, _world, seed_of
 from tests.test_cross_civilization_saga_limits import (
     _execute,
@@ -36,7 +37,6 @@ from tests.test_cross_civilization_saga_limits import (
     _stuck_before_step_3,
     _three,
 )
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 SQLITE = connection.vendor == "sqlite"

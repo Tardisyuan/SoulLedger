@@ -40,7 +40,12 @@ APP="${1:-}"; case "$APP" in mobile) PORT=8081 SCHEME=soulledger DSN_VAR=EXPO_PU
     mobile-officer) PORT=8082 SCHEME=soulledger-officer DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_OFFICER ;; *) sed -n '2,13p' "$0"; exit 2 ;; esac
 shift
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-[ -f "$ROOT/.prepush.env" ] && . "$ROOT/.prepush.env"
+# prepush_env and the remote lock and limit words: shared with run-gates.sh and demo-remote.sh.
+# shellcheck disable=SC1091
+. "$ROOT/scripts/remote-common.sh"
+PREPUSH_ENV="$(cd "$ROOT" && prepush_env)"
+# shellcheck disable=SC1090
+if [ -n "$PREPUSH_ENV" ]; then . "$PREPUSH_ENV"; fi
 H="${MOBILE_REMOTE:-${GATES_REMOTE:-unraid}}"
 IP="${MOBILE_REMOTE_IP:-gates-host.lan}"
 API_URL="${EXPO_PUBLIC_API_URL:-http://$IP:8010/api/v1}"
@@ -55,14 +60,6 @@ P=mobile-remote
 cd "$ROOT"
 
 rsh() { ssh -o BatchMode=yes -o ConnectTimeout=5 "$H" "$@"; }
-
-# remote_flock <fd> <lock name> <container name prefix>… — the remote shell's words for "take this lock; when
-# it is taken, say who has it, then wait". A copy of scripts/gates-remote.sh's, kept identical by its test.
-remote_flock() {
-    local fd="$1" lock="$2" filters="" n; shift 2
-    for n in "$@"; do filters="$filters --filter name=$n"; done
-    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
-}
 
 sync_tree() {
     # .sl-last-use: this tree is in use — run-gates.sh deletes synced trees no run has used for two weeks
@@ -106,7 +103,7 @@ build)
     T0=$(date +%s)
     rsh "docker image inspect $IMG >/dev/null" || { echo "$P: $H unreachable or has no $IMG"; exit 1; }
     BLIMIT="${MOBILE_REMOTE_TIMEOUT:-30m}"
-    [[ "$BLIMIT" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: MOBILE_REMOTE_TIMEOUT=$BLIMIT is not a time limit (e.g. 30m, 1800)"; exit 2; }
+    remote_limit "$BLIMIT" MOBILE_REMOTE_TIMEOUT
     sync_tree
     echo "$P: synced to $H:$W ($(( $(date +%s) - T0 ))s); building $APP under $RDIR/android/build.lock (limit $BLIMIT)"
     NAME="sl-android-$APP-$RID-$$"
@@ -142,10 +139,7 @@ build)
     RC=$?
     set -e
     trap - EXIT
-    case "$RC" in
-        124) echo "$P: TIMED OUT on $H after $BLIMIT (MOBILE_REMOTE_TIMEOUT overrides). The build was stopped there (its container removed with docker rm -f) and the lock released." ;;
-        137) echo "$P: killed on $H (exit 137): the time limit's KILL, 60 s after $BLIMIT, or the container's memory limit. The container is removed and the lock released." ;;
-    esac
+    remote_verdict "$RC" "$BLIMIT" MOBILE_REMOTE_TIMEOUT "$H"
     if [ "$RC" = 3 ]; then
         echo "$P: no build needed ($(( $(date +%s) - T0 ))s). JS changes only need Metro: scripts/mobile-remote.sh $APP metro start|sync. FORCE=1 to build anyway."
         exit 0

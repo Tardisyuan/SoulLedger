@@ -1,5 +1,5 @@
-"""Sharded reads and writes: each civilization's SHARD rows live on its own shard (docs/audit/2026-11-15-sharding/
-PLAN.md 阶段 3-5, D7, D8). Two forms only (2026-11-21, config/settings.py): sharded (`settings.SHARDED`: every
+"""Sharded reads and writes: each civilization's SHARD rows live on its own shard (the sharding
+plan, not in this repo: 阶段 3-5, D7, D8). Two forms only (2026-11-21, config/settings.py): sharded (`settings.SHARDED`: every
 SHARD_DATABASE_URL_<CIV> set; control holds REFERENCE, CONTROL, the control-mastered models and the rows with no hall)
 and the one database. Not sharded, every entry point returns before looking at a context, so the one database reads
 and writes exactly as with no router (tests/test_sharded_reads_equal_single_db.py and

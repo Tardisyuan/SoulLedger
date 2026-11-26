@@ -1,4 +1,4 @@
-// The demo recordings on disk (2026-11-14, expert design wave 2: docs/audit/2026-11-14-expert-design/raw/fe-perf.md P5/P6).
+// The demo recordings on disk (2026-11-14, expert design wave 2: the 2026-11-14 expert design review, frontend performance (not in this repo) P5/P6).
 //
 // One role's recording used to be one file, `frontend/demo/data/<role>.<lang>.json` (admin 7.2 MB, 960 KB gzip), and
 // the sign-in waited for all of it. Now it is a directory of buckets, `<role>.<lang>/`:

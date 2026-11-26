@@ -353,7 +353,7 @@ async function sweepWithParams(rec, access, login) {
   }
 }
 
-// Business AI (docs/audit/2026-11-12-portfolio-ai-ideas.md part two, points 6 and 7). The demo never calls a model:
+// Business AI (the business-AI design notes (not in this repo) part two, points 6 and 7). The demo never calls a model:
 // it replays what the backend answered here (frontend/demo/aiReplay.ts). With the assistant switched on for the
 // recording hall these are the real model's words; without it, the explainer's computed reason alone and a 503 for
 // the audit questions, which the page shows as 「not switched on」.

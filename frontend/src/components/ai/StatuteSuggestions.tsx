@@ -7,7 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 
 /**
- * 「建议援引」(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 1)。
+ * 「建议援引」(业务 AI 设计稿(不在仓库里) 第二部分接入点 1)。
  *
  * 点一下 → `POST /judgment/<id>/statute-suggestions/` → 每条建议带条文原文与「为什么」,**默认都不勾**;
  * 判官逐条读、勾选,点「引用所选」才经 `onCite`(页面原来的 `POST citations/`)写入 —— 认领、未结案、
