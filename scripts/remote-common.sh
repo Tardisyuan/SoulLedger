@@ -1,10 +1,10 @@
 # scripts/remote-common.sh — what run-gates.sh (with gates-remote.sh), demo-remote.sh and mobile-remote.sh share.
 # Sourced, never run. Definitions only: nothing here runs on source. It uses the caller's $P (the message prefix)
 # and, for remote_verdict, $GATES_REMOTE unless a host is passed. install-hooks.sh copies it beside the hook's
-# run-gates.sh; a change here forces a full run and the gate tests, as a change to run-gates.sh does (FULL_RULES
-# and TOUCHES_BACKEND there, GATE_SCRIPTS in select-backend-tests.py).
-# Until 2026-11-26 demo-remote.sh and mobile-remote.sh carried copies of remote_flock and of the regexes, kept equal
-# by tests that only compared the copies.
+# run-gates.sh; a change here forces a full run and the gate tests, as a change to run-gates.sh does (GATE_SCRIPTS
+# in scripts/gates_classify.py).
+# Until 2026-11-26 demo-remote.sh and mobile-remote.sh carried copies of remote_flock and of the regexes (now in
+# scripts/gates_classify.py), kept equal by tests that only compared the copies.
 
 # prepush_env — the path of this machine's settings file (.prepush.env, gitignored), or nothing. The checkout's own
 # copy wins; a worktree has none (a gitignored file is not checked out there), so the main checkout's is the fallback:
@@ -51,11 +51,3 @@ remote_verdict() {
                   "(see the prune line above; GATES_REMOTE_MIN_FREE_MB). Nothing ran." ;;
     esac
 }
-
-# Root-level files that change nothing a gate measures (documentation, deployment). Used by run-gates.sh's
-# root-level rules (where the list is explained), its --e2e=auto, and demo-remote.sh --auto.
-INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)'
-# What no browser loads (2026-11-13, test review #10a; the reasoning is at E2E_AUTO_RE in run-gates.sh): unit
-# tests and their support files, the jest / vitest / eslint configuration, documentation. run-gates.sh adds the
-# demo's specs and recordings for its own suites (E2E_BLIND_RE); for demo-remote.sh --auto they stay triggers.
-E2E_BLIND_COMMON_RE='(\.md$|^frontend/src/__tests__/|^frontend/.*\.test\.tsx?$|^packages/core/(.*/)?__tests__/|^packages/core/.*\.test\.tsx?$|^frontend/(jest|eslint)\.[^/]+$|^packages/core/(vitest|eslint)\.[^/]+$)'

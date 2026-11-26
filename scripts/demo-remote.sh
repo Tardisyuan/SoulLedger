@@ -10,7 +10,7 @@
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
-# prepush_env, the remote lock and limit words, the ledger line and two regexes: shared with run-gates.sh.
+# prepush_env, the remote lock and limit words and the ledger line: shared with run-gates.sh.
 # shellcheck disable=SC1091
 . "$ROOT/scripts/remote-common.sh"
 PREPUSH_ENV="$(prepush_env)"
@@ -26,7 +26,7 @@ IMG="${DEMO_IMAGE:-sl-gates-e2e:1}"
 # the diff against DEMO_BASE (default: the merge-base with origin/main) plus untracked files. The demo build sees
 # frontend/ (its pages, frontend/demo/ and the recordings in frontend/demo/data/, e2e/demo, the demo playwright
 # config), packages/core/, the JS dependency tree, its own runner scripts, and — failing closed — any root-level
-# file not on INERT_ROOT_RE (scripts/remote-common.sh). Without --auto it always runs.
+# file not on INERT_ROOT_RE (scripts/gates_classify.py). Without --auto it always runs.
 if [ "${1:-}" = --auto ]; then
     shift
     case "${1:-}" in scripts/demo-e2e-inner.sh|./scripts/demo-e2e-inner.sh) ;;
@@ -35,10 +35,11 @@ if [ "${1:-}" = --auto ]; then
         && git rev-parse --verify -q "$BASE^{commit}" >/dev/null \
         || { echo "demo-remote: --auto needs a base: no merge-base with origin/main, and DEMO_BASE is not set"; exit 2; }
     CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
-    # Not what no browser loads (E2E_BLIND_COMMON_RE, scripts/remote-common.sh; 2026-11-13): unit tests, the
-    # jest / vitest / eslint configuration, documentation. The demo specs and recordings stay triggers here.
-    HIT="$(echo "$CHANGED" | grep -vE "$E2E_BLIND_COMMON_RE" | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|remote-common\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
-    [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE "$INERT_ROOT_RE" | grep -v '^$' | head -1)"
+    # The rule is scripts/gates_classify.py's (DEMO_AUTO_RE, less E2E_BLIND_COMMON_RE: unit tests, the jest /
+    # vitest / eslint configuration, documentation; 2026-11-13), shared with run-gates.sh --e2e=auto. The demo
+    # specs and recordings stay triggers here.
+    HIT="$(echo "$CHANGED" | python3 -I "$ROOT/scripts/gates_classify.py" e2e-auto --demo)" \
+        || { echo "demo-remote: scripts/gates_classify.py failed — refusing to guess"; exit 2; }
     if [ -z "$HIT" ]; then
         echo "demo-remote: --auto: nothing since $(git rev-parse --short "$BASE") reaches the demo (no frontend/, packages/core/, JS dependency, demo runner or unknown root-level file changed) — not running the demo E2E"
         exit 0

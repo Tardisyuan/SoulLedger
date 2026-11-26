@@ -54,6 +54,7 @@ tests/test_frontend_page_size.py                                 config frontend
 tests/test_frontend_permission_strings_are_real.py               frontend mobile-officer packages
 tests/test_frontend_role_labels.py                               frontend packages
 tests/test_frontend_statute_enums.py                             packages
+tests/test_gates_classify.py .gitignore README.md docker-compose.yml docs frontend mobile package-lock.json packages pytest.ini scripts
 tests/test_menu_seed_first_sixteen.py                            *
 tests/test_no_second_copy_of_the_civilization_map.py             *
 tests/test_obs_request_metrics.py                                docs

@@ -68,7 +68,9 @@ FULL_RULES = [
 ]
 # The lines of reads-outside-backend.txt that compare the backend with another area carry one of these.
 CONTRACT_TOPS = {"frontend", "packages", "mobile", "mobile-officer"}
-GATE_SCRIPTS = re.compile(r"^scripts/(run-gates|gates-remote|remote-common|install-hooks|gate-lock|select-backend-tests)\.(sh|py)$")
+# The gate machinery: one list, in gates_classify.py beside this file (run under -I, so not on sys.path by itself).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gates_classify import GATE_SCRIPTS
 
 
 def is_test_file(rel):
@@ -224,8 +226,8 @@ def select(changed):
             needles = [os.path.basename(rel)] + ([f"tests.{stem}", f"import {stem}"] if rel.endswith(".py") else [])
             picked.update(t for t in tests if any(n in text(t) for n in needles))
     # The gate scripts' only tests read them as text.
-    if any(GATE_SCRIPTS.match(p) for p in changed):
-        picked.update(t for t in tests if any(os.path.basename(p) in text(t) for p in changed if GATE_SCRIPTS.match(p)))
+    if any(p in GATE_SCRIPTS for p in changed):
+        picked.update(t for t in tests if any(os.path.basename(p) in text(t) for p in changed if p in GATE_SCRIPTS))
     return sorted(picked), None
 
 
