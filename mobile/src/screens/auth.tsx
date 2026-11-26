@@ -13,7 +13,7 @@ import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { expiryOf, formatStamp } from "../rules";
 import { useSession, type MfaChallenge } from "../session";
-import { bioEnabled, bioOwner, clearCredential, forgetAccount, forgetNumber, isColdStart, readCredential, rememberedAccounts, revokeCredential, spendAutoPrompt, type RememberedAccount } from "../deviceLogin";
+import { bioEnabled, bioOwner, clearCredential, forgetAccount, forgetNumber, isColdStart, readCredential, rememberedAccounts, revokeCredential, spendAutoPrompt, type RememberedAccount, knownBiometry } from "../deviceLogin";
 import { LAPSE_KEYS, canSubmitLogin, isFinalLapse, lapseOfReason, shouldAutoPrompt, type Lapse } from "../loginRules";
 import { forgetDevice } from "../mfa";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "@soulledger/mobile-ui/src/passwordRulesView";
@@ -21,7 +21,7 @@ import { RememberedCard } from "@soulledger/mobile-ui/src/rememberedCard";
 import { radius } from "@soulledger/mobile-ui/src/theme";
 import { SoulCodeField } from "../soulCodeView";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
-import { useBiometry } from "../useBiometry";
+import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
 import { useNow } from "../useNow";
 import { ForgetNumberSheet, SwitchAccountSheet } from "./bio";
 import { LoginSecondStep } from "./loginMfa";
@@ -136,7 +136,7 @@ export function LoginScreen() {
   const params = useRoute<RouteProp<{ Login: LoginParams }, "Login">>().params;
   const reset = params?.passwordReset === true;
   const { state, signIn, deviceSignIn } = useSession();
-  const bio = useBiometry();
+  const bio = useBiometry(knownBiometry);
   const toast = useToast();
   // The numbers this phone remembers (第五十批 C4: up to five, used-last first). One: its card. Two or more: a list to
   // pick from (`picking`), unless 「用别的编号」 opened the empty form (`typing`).

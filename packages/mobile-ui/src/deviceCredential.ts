@@ -14,11 +14,12 @@
 import { platform } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 import { captureCrash } from "./crashReport";
 import { classifyCredentialError, credentialReadFailure, type CredentialFailure } from "./credentialFailure";
-import { storedLocale, translate } from "./i18n";
+import { storedLocale, translate, useI18n } from "./i18n";
 
 // ── the phone's face / finger ────────────────────────────────────────────
 
@@ -47,6 +48,32 @@ export async function readBiometry(): Promise<Biometry> {
   } catch {
     return { enrolled: false, wordKey: "soul_app.bio.finger" };
   }
+}
+
+/**
+ * What this phone has enrolled, and `{{bio}}` (面容 / 指纹) for a sentence: `word` as it starts one, `inside` as it
+ * sits inside one (lower-case in English; the soul app's English sentences start with it, the officer's mostly do
+ * not). `known` gives the first frame: by default this process's last read; an app's `knownBiometry` also falls back
+ * to what the phone said when its login was turned on. `read`: ask the phone when the screen appears; without it only
+ * what is known, and no late state update (the officer's sign-in page, lock and question want that).
+ */
+export function useBiometry(
+  known: () => Biometry | null = () => cached,
+  read = true
+): Biometry & { ready: boolean; word: string; inside: string } {
+  const { t, locale } = useI18n();
+  const [bio, setBio] = useState<Biometry | null>(known);
+  useEffect(() => {
+    if (!read) return;
+    let live = true;
+    void readBiometry().then((b) => live && setBio(b));
+    return () => {
+      live = false;
+    };
+  }, [read]);
+  const shown = bio ?? { enrolled: false, wordKey: "soul_app.bio.finger" as const };
+  const word = t(shown.wordKey);
+  return { ...shown, ready: bio !== null, word, inside: locale === "en" ? word.toLowerCase() : word };
 }
 
 // ── the credential ───────────────────────────────────────────────────────

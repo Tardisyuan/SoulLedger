@@ -9,11 +9,10 @@
  */
 import { platform } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
-import { useEffect, useState } from "react";
 import { AppState } from "react-native";
 
 import { currentOwner } from "./owner";
-import { useI18n } from "./shared";
+import { useBiometry } from "./shared";
 
 /** The prefix: each officer's switch is `officer_bio_confirm:<owner>` (owner.ts). */
 export const CONFIRM_KEY = "officer_bio_confirm";
@@ -34,19 +33,8 @@ export async function canCheck(): Promise<boolean> {
  * the start of a sentence and lower-case inside one, so callers say which.
  */
 export function useBioWord(): { start: string; inside: string } {
-  const { t, locale } = useI18n();
-  const [face, setFace] = useState(false);
-  useEffect(() => {
-    let live = true;
-    LocalAuthentication.supportedAuthenticationTypesAsync()
-      .then((types) => live && setFace(types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)))
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, []);
-  const word = t(face ? "soul_app.bio.face" : "soul_app.bio.finger");
-  return { start: word, inside: locale === "en" ? word.toLowerCase() : word };
+  const bio = useBiometry();
+  return { start: bio.word, inside: bio.inside };
 }
 
 /** Stored only when turned off, so a missing value means on. */

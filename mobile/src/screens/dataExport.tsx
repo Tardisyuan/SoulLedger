@@ -13,7 +13,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import { AppState, StyleSheet, TextInput, View } from "react-native";
 
-import { bioEnabled, exportPrompt, readCredential } from "../deviceLogin";
+import { bioEnabled, exportPrompt, readCredential, knownBiometry } from "../deviceLogin";
 import { formatBytes, saveExport } from "../dataExport";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { family } from "@soulledger/mobile-ui/src/fonts";
@@ -21,7 +21,7 @@ import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { Button, Input, Notice, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useAnnounceOnMount, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
-import { useBiometry } from "../useBiometry";
+import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
 /** While a request is in preparation, ask the server this often. A push also says when it is ready. */
@@ -173,7 +173,7 @@ export function DataExportScreen() {
   const { t } = useI18n();
   const toast = useToast();
   const { gutter } = useLayout();
-  const bio = useBiometry();
+  const bio = useBiometry(knownBiometry);
   const remote = useRemote(soulApi.dataExport);
   useReloadOnRefocus(remote.reload, remote);
   const [asking, setAsking] = useState(false);

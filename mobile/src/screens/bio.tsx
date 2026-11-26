@@ -8,14 +8,14 @@ import { platform } from "@soulledger/core/platform";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 
-import { APP_LOCK_KEY, CredentialStoreError, appLockOn, bioEnabled, bioOwner, enableWithPassword, markAsked, markAskedForGood, rememberedAccount, revokeCredential, wasAsked } from "../deviceLogin";
+import { APP_LOCK_KEY, CredentialStoreError, appLockOn, bioEnabled, bioOwner, enableWithPassword, markAsked, markAskedForGood, knownBiometry, rememberedAccount, revokeCredential, wasAsked } from "../deviceLogin";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { shouldAskBio } from "../loginRules";
 import { stateOfFailure, type StepState } from "../mfa";
 import { useSession } from "../session";
-import { useBiometry } from "../useBiometry";
+import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
 import { Button, Input, SwitchMark, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
@@ -169,7 +169,7 @@ export function BioRow() {
   const theme = useTheme();
   const { t } = useI18n();
   const { gutter } = useLayout();
-  const bio = useBiometry();
+  const bio = useBiometry(knownBiometry);
   const [on, setOn] = useState(bioEnabled);
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -222,7 +222,7 @@ export function BioAsk({ soulCode, welcomePending, onSettled }: { soulCode: stri
   const { t } = useI18n();
   const toast = useToast();
   const { heldPassword, dropPassword } = useSession();
-  const bio = useBiometry();
+  const bio = useBiometry(knownBiometry);
   const [answered, setAnswered] = useState(false);
   const [busy, setBusy] = useState(false);
   // Due once the phone has said what it has enrolled, until the soul answers. A password that is not going to be

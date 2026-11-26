@@ -14,7 +14,8 @@ import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp } from "../rules";
 import { Button, Empty, FadeModal, OneLine, Press, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
-import { useBiometry } from "../useBiometry";
+import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
+import { knownBiometry } from "../deviceLogin";
 import type { AppStackParams } from "../navTypes";
 
 function DeviceRow({ session, busy, onSignOut }: { session: SoulSignInSession; busy: boolean; onSignOut: () => void }) {
@@ -61,7 +62,7 @@ function RecordRow({ record, phone }: { record: SoulSignInRecord; phone: string 
   const theme = useTheme();
   const { t } = useI18n();
   const { gutter, twoLine } = useLayout();
-  const bio = useBiometry();
+  const bio = useBiometry(knownBiometry);
   const device = record.device === phone ? t("soul_app.security.this_phone") : record.device;
   let text: string;
   if (!record.ok) {

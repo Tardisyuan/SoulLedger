@@ -19,12 +19,11 @@ import {
   Sheet,
   SwitchMark,
   Txt,
-  readBiometry,
+  useBiometry,
   space,
   useI18n,
   useTheme,
   useToast,
-  type Biometry,
   Press,
 } from "./shared";
 
@@ -35,19 +34,8 @@ import {
  * is what the sign-in page, the lock and the question want.
  */
 export function useBio(read = true): { ready: boolean; enrolled: boolean; word: string } {
-  const { t, locale } = useI18n();
-  const [bio, setBio] = useState<Biometry | null>(officerDevice.knownBiometry);
-  useEffect(() => {
-    if (!read) return;
-    let live = true;
-    void readBiometry().then((b) => live && setBio(b));
-    return () => {
-      live = false;
-    };
-  }, [read]);
-  const known = bio ?? { enrolled: false, wordKey: "soul_app.bio.finger" as const };
-  const word = t(known.wordKey);
-  return { ready: bio !== null, enrolled: known.enrolled, word: locale === "en" ? word.toLowerCase() : word };
+  const bio = useBiometry(officerDevice.knownBiometry, read);
+  return { ready: bio.ready, enrolled: bio.enrolled, word: bio.inside };
 }
 
 /** Why 「开启」 was refused, as a key. */
