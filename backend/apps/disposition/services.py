@@ -866,6 +866,31 @@ class DispositionService:
         return cls.GR_MEADOW
 
     @staticmethod
+    def open_for_node(soul, node, *, tenant_id, judgment=None) -> Disposition:
+        """The disposition of one sentence-plan stop, and the soul entered into its realm (same transaction).
+
+        Its content is the node's, set when the bench (or a request) was decided, so it does not route; a stop
+        with no term takes the realm's default (`default_terms.fill`, 2026-10-29). `tenant_id` is the caller's:
+        the executing hall (a dispatch's target, its half of a cross-shard saga) or the plan's home hall. Nothing
+        is looked up in another hall. `soul` is the row the caller holds (its save stamps the life index from it).
+        """
+        from apps.disposition.default_terms import fill
+        from apps.realms.models import realm_by_code
+        from apps.realms.path import SoulPathService
+
+        realm = realm_by_code(node.realm_code, tenant_code=node.tenant_code)
+        disposition = Disposition.objects.create(
+            soul=soul, tenant_id=tenant_id, judgment=judgment, destination_realm=realm,
+            sentence_years=fill(node.sentence_years, node.realm_code, is_eternal=node.is_eternal),
+            is_eternal=node.is_eternal,
+            memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
+            notes=f"受刑计划 {node.plan_id} 节点 {node.order}",
+        )
+        # 行程拓扑:这一站的处置建好,灵魂就在这一站的界域里(同一事务)。
+        SoulPathService.enter(soul, realm, tenant_id=tenant_id)
+        return disposition
+
+    @staticmethod
     def execute(disposition: Disposition) -> bool:
         """
         Mark disposition as executed and move the soul to whatever comes after
