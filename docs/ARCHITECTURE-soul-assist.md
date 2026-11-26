@@ -331,7 +331,7 @@ npm run schema:generate --workspace @soulledger/core
 |---|---|---|---|
 | 1 | 后端:依赖与锁;供应商接口 + 两个适配器 + `FakeProvider`;三个工具;会话表与三个接口;开关、节流、并发上限、超时;审计;清理任务与命令;帮助语料初稿(zh-Hans + en)与防漂移测试;schema 与生成类型 | ruff、`makemigrations --check`、SQLite 全量、真 PG 一次、pip-audit | 约 4 天 |
 | 1.5 | 行为评测:用真实 key 分别对选定的供应商手动跑评测集(≥20 问,期望调用的工具 + 回答要点),记录各自的正确率 | 数字写进本文档 | 约 0.5 天 |
-| 2 | App:`AppHeader` 的「问一问」、会话抽屉、`packages/core/src/api/assist.ts`、两份语言包的界面文案(egy 界面文案照常三份) | mobile typecheck / lint / test;前端 jest | 约 2.5 天 |
+| 2 | App:`AppHeader` 的「问一问」、会话抽屉、`packages/core/src/api/soul-assist.ts`、两份语言包的界面文案(egy 界面文案照常三份) | mobile typecheck / lint / test;前端 jest | 约 2.5 天 |
 | 3 | 官员端:独立接口与官员令牌;工具按权限码(`CodenamePermission`)分级,每种权限有测试;单独写计划 | — | 约 3 天 |
 | 4 | 向量检索,满足 §7 才做 | — | — |
 

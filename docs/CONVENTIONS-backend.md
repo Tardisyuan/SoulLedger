@@ -77,10 +77,6 @@ SQLite，探针于是连本地 socket，失败在"连不上"而不是"查不到"
 `apps/perm/test_codename_coverage.py:18-23` 记录了因此漏掉 `UserViewSet` 的事故。
 **所有元测试因此都改成走 URLconf 而不是遍历模块** —— 新写元测试照此办理。
 
-**已跟踪的产物文件**（与 `CLAUDE.md:8` 矛盾，`.gitignore:10` 只挡 `*.sqlite3`）：
-`backend/coverage.json`（816KB）、`backend/coverage_summary.json`（646KB）、
-`backend/test.db`（0 字节）。【实跑】`git ls-files backend | grep -E 'coverage.*json|\.db$'` 三条命中。
-
 ---
 
 ## 3. 多租户与权限 —— 这是本仓库唯一有全量守卫的领域
@@ -491,7 +487,7 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
     又把 menus/audit 标"M4新增"并画进架构图。`AGENTS.md:542` 写"最后更新 2026-05-10"，
     正文却含 2026-09-02 的追加。
 12. **根目录禁放工作文件。** `CLAUDE.md:8` vs 根 `pytest.ini`/`conftest.py`
-    （`pytest.ini:14-19` 解释了必须在根的原因）+ 已跟踪的 `backend/test.db`、`coverage*.json`。
+    （`pytest.ini:14-19` 解释了必须在根的原因）。
 
 ---
 

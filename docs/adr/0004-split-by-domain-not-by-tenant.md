@@ -36,5 +36,5 @@ need an owner. There was also no production workload and no data-residency rule 
 
 - `docs/ARCHITECTURE-soul-app-and-domain-split.md` (options, decisions, dated additions)
 - `docs/ARCHITECTURE-tenant-sharding.md` (what database-per-tenant would break, and when to start)
-- `backend/tests/test_multidb_shadow.py` (the multi-database guard, opt-in settings)
+- `backend/tests/test_multidb_shadow.py` (the multi-database guard, opt-in settings; retired 2026-11-15 with sharding stage 2, `a0c795b31`)
 - `backend/apps/chat/` (the separated chat domain)

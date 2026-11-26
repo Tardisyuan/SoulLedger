@@ -20,6 +20,7 @@ import {
   SURFACE_TOKENS,
   THEMES,
   TOKENS_BY_THEME,
+  contrastRatio,
   oklchTripleToRgb,
   resolveTriple,
 } from "./support/globalsCssTokens";
@@ -61,30 +62,9 @@ import {
 // indicator the user can delete by accident. It also measured 2.14:1 against
 // light-mode white — a plain 1.4.11 failure before anyone touched a setting.
 //
-// The contrast maths is hand-rolled below rather than imported.
-// `dataGridToneContract.test.ts` has the same two functions, which is a real
-// duplication and is called out rather than hidden: the right home is
-// `support/globalsCssTokens.ts`, and moving them there is a change to a module
-// three other contract tests import, so it is left as its own edit. Both copies
-// are self-checked against known values so a wrong one cannot be quietly wrong.
+// The contrast maths is `support/globalsCssTokens.ts`'s, the same the other
+// contrast contracts use, and is self-checked below against known values.
 // ───────────────────────────────────────────────────────────────────────────
-
-type Rgb = readonly [number, number, number];
-
-/** WCAG 2.x relative luminance: linearize each sRGB channel, then weight. */
-function relativeLuminance([r, g, b]: Rgb): number {
-  const lin = (c: number): number => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  };
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-}
-
-function contrastRatio(a: Rgb, b: Rgb): number {
-  const la = relativeLuminance(a);
-  const lb = relativeLuminance(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
 
 /**
  * The body of the bare `:focus-visible` rule in globals.css.
