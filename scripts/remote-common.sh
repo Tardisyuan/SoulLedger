@@ -1,6 +1,6 @@
 # scripts/remote-common.sh — what run-gates.sh (with gates-remote.sh), demo-remote.sh and mobile-remote.sh share.
-# Sourced, never run. Definitions only: nothing here runs on source. It uses the caller's $P (the message prefix)
-# and, for remote_verdict, $GATES_REMOTE unless a host is passed. install-hooks.sh copies it beside the hook's
+# Sourced, never run. Definitions only: nothing here runs on source. It uses the caller's $P (the message prefix),
+# $ROOT (remote_rsync) and, for remote_verdict, $GATES_REMOTE unless a host is passed. install-hooks.sh copies it beside the hook's
 # run-gates.sh; a change here forces a full run and the gate tests, as a change to run-gates.sh does (GATE_SCRIPTS
 # in scripts/gates_classify.py).
 # Until 2026-11-26 demo-remote.sh and mobile-remote.sh carried copies of remote_flock and of the regexes (now in
@@ -15,6 +15,28 @@ prepush_env() {
     main="$(cd "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/.." 2>/dev/null && pwd)"
     if [ -n "$root" ] && [ -f "$root/.prepush.env" ]; then echo "$root/.prepush.env"
     elif [ -n "$main" ] && [ -f "$main/.prepush.env" ]; then echo "$main/.prepush.env"; fi
+}
+
+# sync_files <untracked pathspec>… — what a remote copy of this checkout gets, NUL-separated, for remote_rsync:
+# every tracked file, and the untracked (not ignored) ones under the pathspecs — all of them when none is given.
+# Run at the checkout's top level. What a ledger calls a clean checkout follows from this: run-gates.sh's
+# tree_is_clean looks for untracked files only where remote_sync sends them; demo-remote.sh sends every untracked
+# file, so it asks for `git status --porcelain` to be empty. The difference is deliberate.
+sync_files() {
+    git ls-files -z
+    git ls-files -z -o --exclude-standard -- "$@"
+}
+
+# remote_rsync <host> <dir> <rsync option>… — the files on stdin (sync_files) to <host>:<dir>, owned by the remote
+# user (git there refuses a repository another user owns once the tests turn the system config off). --delete
+# spares node_modules, .sl-* and what the caller's filters protect — and DOES NOTHING for a file this checkout no
+# longer has: under --files-from a deleted file is simply absent from the list, so the remote copy stays. Each
+# caller prunes those itself, its own way: gates-remote.sh's remote_sync by the synced .git's untracked files,
+# demo-remote.sh by the list (its tree has no .git), mobile-remote.sh not at all. Uses the caller's $ROOT.
+remote_rsync() {
+    local host="$1" dir="$2"; shift 2
+    rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P .sl-*' "$@" \
+        --from0 --files-from=- -r "$ROOT/" "$host:$dir/"
 }
 
 # ledger_append <file> <field>… — one tab-separated line onto a pass ledger, which keeps its last 50 lines.

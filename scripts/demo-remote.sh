@@ -73,7 +73,8 @@ ssh -o BatchMode=yes "$GATES_REMOTE" "rm -rf $RWORK/frontend/e2e/demo" || exit 1
 # a stale test (judgmentFullCaseMotion.test.ts, 2026-11-14) failed the recording's type check.
 SL_LIST="$(mktemp "${TMPDIR:-/tmp}/sl-demo-list.XXXXXX")"
 trap 'rm -f "$SL_LIST"' EXIT
-{ git ls-files -z; git ls-files -z -o --exclude-standard; } \
+# Every untracked file (sync_files with no pathspec; scripts/remote-common.sh), less those deleted here and not yet in a commit.
+sync_files \
   | python3 -c 'import os,sys; sys.stdout.write("".join(p+"\0" for p in sys.stdin.read().split("\0") if p and os.path.exists(p)))' \
   > "$SL_LIST"
 rsync -a --no-owner --no-group "$SL_LIST" "$GATES_REMOTE:$RWORK/.sl-files" || exit 1
@@ -88,8 +89,7 @@ for d, dirs, files in os.walk(\".\"):
         if p not in keep and not p.startswith(\".sl-\") and not p.startswith(\"frontend/demo/data/\"):
             os.remove(p)
 '" || exit 1
-rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P frontend/.next/' --filter='P .sl-*' \
-      --from0 --files-from="$SL_LIST" -r "$ROOT/" "$GATES_REMOTE:$RWORK/" || exit 1
+remote_rsync "$GATES_REMOTE" "$RWORK" --filter='P backend/.venv/' --filter='P frontend/.next/' <"$SL_LIST" || exit 1
 
 : "${1:?usage: scripts/demo-remote.sh <script under /app> [args...]}"
 # Every argument goes through, each %q-quoted once for the remote shell, so one with a space stays one.
