@@ -169,30 +169,24 @@ REFUSALS = {
 
 
 def _create_workflow(soul, nodes, *, name, name_en="", original=None):
-    from apps.workflow.models import (
-        ApprovalNode,
-        ApprovalWorkflow,
-        ApprovalWorkflowStatus,
-        CaseType,
-        NodeStatus,
-    )
+    """The application's flow, through the workflow app's own builder (`WorkflowService._build`, the core of
+    `start_workflow`): row, nodes, the first node entered, WORKFLOW_CREATED. No realm segment. Inside the caller's
+    transaction; the caller tells the approver after commit. `original` links an appeal the way `_start_ladder` does."""
+    from apps.workflow.models import ApprovalWorkflow, CaseType
+    from apps.workflow.services import WorkflowService
 
-    workflow = ApprovalWorkflow.objects.create(
-        soul=soul, workflow_name=name, workflow_name_en=name_en, case_type=CaseType.REBIRTH_APPLICATION,
-        status=ApprovalWorkflowStatus.PENDING, is_appeal=original is not None,
-        original_workflow=original, tenant=soul.home_tenant,
-    )
-    created = [
-        ApprovalNode.objects.create(
-            workflow=workflow, node_name=node_name, node_name_en=NAME_EN.get(node_name, ""),
-            node_order=order, node_type=node_type,
-            court_code="转生申请", approver_type="ROLE", approver_role=role, status=NodeStatus.PENDING,
-            required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED"],
-        )
+    template = {"name": name, "name_en": name_en, "nodes": [
+        {"name": node_name, "name_en": NAME_EN.get(node_name, ""), "order": order, "type": node_type,
+         "court": "转生申请", "approver_type": "ROLE", "approver_role": role}
         for order, (node_name, node_type, role) in enumerate(nodes, start=1)
-    ]
-    workflow._make_current(created[0], timezone.now())  # the one way a node becomes current: starts its clock
-    workflow.save(update_fields=["current_node", "status"])
+    ]}
+    workflow, _ = WorkflowService._build(
+        soul, template, soul.home_civilization, case_type=CaseType.REBIRTH_APPLICATION, tenant=soul.home_tenant,
+        is_appeal=original is not None, segmented=False,
+    )
+    if original is not None:
+        ApprovalWorkflow.all_objects.filter(pk=workflow.pk).update(original_workflow_id=original.pk)
+        workflow.original_workflow_id = original.pk
     return workflow
 
 
@@ -237,8 +231,7 @@ def submit(account, desired_form=None, statement=""):
                 )
         except IntegrityError:
             raise SoulAccountError(REFUSALS["application_open"], "application_open", 409) from None
-        # The event rows are part of the application's record: same transaction as the application.
-        WorkflowService.record_events(workflow, created=True)
+        # WORKFLOW_CREATED is written by `_create_workflow`; both are the application's record, same transaction.
         EventService.log(soul, "REBIRTH_APPLICATION_SUBMITTED", {
             "application_id": str(application.pk), "cycle": application.cycle,
             "desired_form": desired_form, "workflow_id": str(workflow.pk),
@@ -281,7 +274,6 @@ def appeal(account, application_id, statement=""):
         application.rejection_reason = ""
         application.decided_at = None
         application.save()
-        WorkflowService.record_events(workflow, created=True)
         _log_status_change(application, old)
     WorkflowService.announce(workflow, created=True)
     _notify_status_change(application)
@@ -491,10 +483,10 @@ def decide_cooldown_shortening(request_id, user, *, approve: bool, approved_days
 def sync_from_workflow(workflow_id):
     """把申请状态对齐到它的工作流。状态没变什么也不做,幂等。
 
-    **在决定工作流的那个事务里调用**(`approve_node`、超时自动驳回):审批和申请状态一起提交或一起回滚,
-    `REBIRTH_STATUS_CHANGED` 事件写不进去时整个审批回滚、调用方拿到原始错误。只有给灵魂的站内通知
-    挂在 `on_commit` 上(提交后才发,失败只丢通知)。`signals.py` 里工作流 post_save 也同步调用它(同一事务,
-    2026-10-10),覆盖其余写路径(后台 CRUD 等)—— 已对齐时那次调用什么也不做,不重复写事件。
+    **由 `ApprovalWorkflow._finish` 在结束流程的那个事务里调用**:流程的每一种结束(审批、超时自动驳回、
+    管理员终止、跨域段撤销)都经过它,审批和申请状态一起提交或一起回滚,`REBIRTH_STATUS_CHANGED` 事件写不进去时
+    整个审批回滚、调用方拿到原始错误。未结束的流程投影不变,不必对齐。只有给灵魂的站内通知挂在 `on_commit` 上
+    (提交后才发,失败只丢通知)。此前是工作流 post_save 信号(2026-10-10 起同步),2026-11-26 改为显式调用。
 
     **锁序:工作流行 → 节点行 → 申请行。** `complete_node` 先锁工作流再锁节点,这里随后才锁申请;
     `decide_cross_civilization` 因此也先锁工作流再锁申请(此前是反过来)。其余写申请的路径

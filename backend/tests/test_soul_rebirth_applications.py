@@ -74,6 +74,16 @@ def test_submit_creates_a_rebirth_workflow_and_shows_only_the_role(cn_tenant, ju
     assert workflow.case_type == CaseType.REBIRTH_APPLICATION and workflow.soul_id == account.soul_id
     assert [(n.approver_type, n.approver_role) for n in workflow.nodes.order_by("node_order")] == [
         ("ROLE", "JUDGE"), ("ROLE", "ADMIN")]
+    # Built by `WorkflowService._build` (2026-11-26) in the shape it always had: home hall, no realm segment, these
+    # names and court; `required_verdicts` is `[]` like every other flow (SKIPPED, the one verdict the old list left
+    # out, is refused by `complete_node` anyway).
+    assert (workflow.tenant_id, workflow.original_workflow_id, workflow.segments.count()) == (
+        account.soul.home_tenant.pk, None, 0)
+    assert [(n.node_name, n.node_name_en, n.node_type, n.court_code, n.segment_id, n.required_verdicts)
+            for n in workflow.nodes.order_by("node_order")] == [
+        ("判官初审", "Judge's first review", "EVALUATION", "转生申请", None, []),
+        ("终审", "Final review", "FINAL", "转生申请", None, [])]
+    assert SoulEvent.objects.filter(soul=account.soul, event_type="WORKFLOW_CREATED").count() == 1
     assert response.data["status"] == "UNDER_REVIEW"
     assert response.data["current_step"] == {"node_type": "EVALUATION", "approver_role": "JUDGE",
                                              "is_appeal": False}

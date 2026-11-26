@@ -806,11 +806,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     # The decision on the soul's timeline: same transaction as the decision, so a failed event
                     # row rolls the approval / rejection back and the real error reaches this request.
                     node.refresh_from_db()
+                    # A rebirth application's status follows the flow in `_finish`, inside `complete_node`.
                     WorkflowService.record_events(workflow, node=node)
-                    if workflow.case_type == "REBIRTH_APPLICATION":
-                        # The application's status follows the workflow in the SAME transaction (lock order:
-                        # workflow, node, then application; see rebirth.sync_from_workflow).
-                        rebirth.sync_from_workflow(workflow.pk)
         except _hook_refusals() as exc:
             # The last stop of a flow that merged a cross-realm judgment ends that judgment (第四十三批), and it
             # cannot end yet — a participating realm has not filled its sentence stop; or another end-of-flow hook
