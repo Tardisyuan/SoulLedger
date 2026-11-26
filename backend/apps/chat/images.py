@@ -3,7 +3,7 @@
 **为什么不走 Matrix 的媒体仓库(`m.image` + `mxc://`)。** Synapse 的媒体按「有没有这台服务器的
 access token」放行,不按房间:任何一个灵魂拿到 mxc id 就能取到,而这里要的是「只有这次会话的
 双方取得到」。官员又没有 Matrix 身份,收件箱里的官员读不了它。所以图片放在我们自己的存储里 ——
-**与朋友圈帖子图片同一条路**:同一个校验与重编码函数(`apps/social/images.reencode`:魔数 +
+**与朋友圈帖子图片同一条路**:同一个校验与重编码函数(`apps/core/images.reencode`:魔数 +
 Pillow 解码 + 去 EXIF/GPS + 5 MB / 4000 万像素上限)、同一个 `private/` 前缀(nginx 与 DEBUG 路由都不公开)、
 同一种签名短时地址、同一个文件出口写法(`media_views.serve_private_file`)。
 
@@ -27,7 +27,7 @@ from django.utils import timezone
 
 from apps.chat import services as svc
 from apps.chat.models import ChatImage, Conversation, ConversationKind
-from apps.social import images as social_images
+from apps.core import images
 from apps.social.soul_circle import SOUL_ROLE
 
 logger = logging.getLogger(__name__)
@@ -74,8 +74,8 @@ def upload(account, conversation, uploaded_file):
     if pending.count() >= MAX_PER_SEND:
         raise svc.ChatError(f"未发出的图片最多 {MAX_PER_SEND} 张。", "too_many_pending", status=409)
     try:
-        image = social_images.reencode(uploaded_file, max_edge=MAX_EDGE)
-    except social_images.ImageRejectedError as exc:
+        image = images.reencode(uploaded_file, max_edge=MAX_EDGE)
+    except images.ImageRejectedError as exc:
         raise svc.ChatError(str(exc), exc.code, status=400) from None
     row = ChatImage(conversation=conversation, uploader=account, width=image.width, height=image.height,
                     byte_size=image.file.size, content_type=image.content_type)

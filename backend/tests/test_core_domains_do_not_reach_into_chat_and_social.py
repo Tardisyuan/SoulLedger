@@ -26,10 +26,7 @@ EDGE = ("chat", "social")
 
 # "<file under backend/> -> <module>": how many import statements. Measured 2026-11-12.
 BASELINE = {
-    "apps/judgment/attachment_views.py -> apps.social.media_views": 1,
-    "apps/judgment/attachments.py -> apps.social": 1,
     "apps/judgment/attachments.py -> apps.social.media": 1,
-    "apps/judgment/attachments.py -> apps.social.soul_circle": 1,
     "apps/judgment/handover.py -> apps.chat.models": 2,
 }
 

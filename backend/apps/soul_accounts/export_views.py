@@ -15,7 +15,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import status
 from rest_framework.response import Response
 
-from apps.social.media_views import serve_private_file
+from apps.core.private_media import serve_private_file
 from apps.soul_accounts import data_export
 from apps.soul_accounts.me_views import SoulAPIView
 from apps.soul_accounts.mfa_views import confirm_current_password
