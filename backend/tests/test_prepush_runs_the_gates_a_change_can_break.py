@@ -3108,7 +3108,10 @@ class TestTheJestCacheSurvivesTheNight:
         assert re.search(r"cacheDirectory: ['\"]<rootDir>/node_modules/\.cache/jest['\"]", text), config
 
     def test_the_sync_keeps_node_modules(self):
-        assert "--filter='P **/node_modules/'" in REMOTE.read_text(encoding="utf-8")
+        """The three syncs share remote_rsync (scripts/remote-common.sh, 2026-11-27); gates-remote.sh uses it."""
+        body = re.search(r"^remote_rsync\(\) \{\n.*?^\}\n", COMMON.read_text(encoding="utf-8"), re.M | re.S)
+        assert body and "--filter='P **/node_modules/'" in body.group(0)
+        assert re.search(r"\| remote_rsync ", REMOTE.read_text(encoding="utf-8"))
 
 
 class TestTwoSidesAtOnce:

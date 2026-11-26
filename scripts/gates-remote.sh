@@ -32,9 +32,9 @@ remote_sync() {
     ssh -o BatchMode=yes "$GATES_REMOTE" "$(declare -f remote_prune); mkdir -p $RDIR; ( flock 7; remote_prune $RDIR $RWORK 0 ${PRUNE_DRY:-0} ${PRUNE_MIN_KB:-3145728} ) 7>$RDIR/prune.lock" \
         || { echo "$P: $GATES_REMOTE has no room for this tree under $RDIR, and none to make (see above). Not syncing."; return 1; }
     [ -f "$ROOT/.git" ] && { dotgit=''; keepgit=(--filter='P .git/'); }
-    { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf "$dotgit"; } \
-        | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
-            --filter='P frontend/.next/' --filter='P .sl-*' ${keepgit[@]+"${keepgit[@]}"} --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" \
+    { sync_files backend frontend packages mobile mobile-officer scripts; printf "$dotgit"; } \
+        | remote_rsync "$GATES_REMOTE" "$RWORK" --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
+            --filter='P frontend/.next/' ${keepgit[@]+"${keepgit[@]}"} --exclude='.git/soulledger-*' \
         || return 1
     if [ -f "$ROOT/.git" ]; then
         local common gitdir
@@ -45,8 +45,8 @@ remote_sync() {
             "$common/" "$GATES_REMOTE:$RWORK/.git/" || return 1
         rsync -a --no-owner --no-group "$gitdir/HEAD" "$gitdir/index" "$GATES_REMOTE:$RWORK/.git/" || return 1
     fi
-    # --delete never fires under --files-from: a file deleted here is simply absent from the list, so the
-    # remote copy stayed and kept running (2026-10-29: a test deleted by a merge failed the gates there).
+    # --delete never fires under --files-from (remote_rsync, scripts/remote-common.sh): a deleted file's remote
+    # copy stayed and kept running (2026-10-29: a test deleted by a merge failed the gates there).
     # The synced .git no longer tracks it, so it shows up remotely as untracked; remove every such file
     # that is not one of this machine's own untracked files (those were just sent on purpose).
     # .github and docs too (2026-11-26): a deleted workflow stayed remotely and failed test_ci_runs_on_a_budget.

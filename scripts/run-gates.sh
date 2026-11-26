@@ -251,18 +251,12 @@ side_proves() {
 # Not for --full / GATES_FULL=1, --real-pg (a SQLite pass says nothing about PostgreSQL) or --e2e (gate
 # passes say nothing about browsers; E2E has its own ledger). A push (PREPUSH_CHANGED) is unchanged: the
 # hook compares with the remote ref being pushed over. No record found: the merge-base, as before.
-# One line per side says which base it took and why.
+# One line per side says which base it took and why. The walk is gates_classify.py's side_base (2026-11-27);
+# should that fail, the merge-base, which runs more, never less.
 side_base() {  # <backend|js> → SIDE_BASE (empty: none) and SIDE_WHY
-    local sha tree
-    SIDE_BASE=""; SIDE_WHY="; no pass recorded"
-    [ -f "$STAMP-$1" ] || return 0
-    while read -r sha tree; do
-        grep -qs "^$tree	" "$STAMP-$1" || continue
-        if side_proves "$1" "$tree" "$(if [ -n "$MB" ]; then git diff --name-only --no-renames "$MB" "$sha"; else echo -; fi)"; then
-            SIDE_BASE="$sha"; SIDE_WHY="last tree that passed, $PROVEN_KIND"; return 0
-        fi
-    done < <(git log --format='%H %T' -n 300 HEAD)
-    SIDE_WHY="; none of the last 300 commits has a tree that passed"
+    local out
+    SIDE_BASE=""; SIDE_WHY="; gates_classify.py side-base failed"
+    out="$(gates_py side-base "$STAMP-$1" "$MB")" && eval "$out"
 }
 changed_since_base() {
     if [ -n "${PREPUSH_CHANGED+x}" ]; then

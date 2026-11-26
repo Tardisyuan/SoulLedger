@@ -65,11 +65,10 @@ sync_tree() {
     # .sl-last-use: this tree is in use — run-gates.sh deletes synced trees no run has used for two weeks
     # (remote_prune; a tree a container mounts, such as a running Metro's, is never deleted).
     rsh "mkdir -p $W $RDIR/android/sdk $RDIR/android/gradle && touch $W/.sl-last-use"
-    # Same file list and protections as gates-remote.sh's remote_sync, minus .git; plus the generated
-    # android/ and Expo's cache, so prebuild output and the gradle build survive --delete.
-    { git ls-files -z; git ls-files -z -o --exclude-standard -- packages mobile mobile-officer scripts; } \
-        | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P mobile*/android/' \
-            --filter='P mobile*/.expo/' --filter='P .sl-*' --from0 --files-from=- -r "$ROOT/" "$H:$W/"
+    # The shared sync (scripts/remote-common.sh), without .git or backend/ and frontend/'s untracked files; the
+    # generated android/ and Expo's cache are protected, so prebuild output and the gradle build survive --delete.
+    sync_files packages mobile mobile-officer scripts \
+        | remote_rsync "$H" "$W" --filter='P mobile*/android/' --filter='P mobile*/.expo/'
 }
 
 # The JS dependency hash, as gates-remote.sh's deps_hash_js: the lockfile, only the dependency fields of each
