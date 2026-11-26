@@ -98,7 +98,7 @@ export function LoadingRows({ inContent = false }: { inContent?: boolean } = {})
   const shown = useAfter(motion.skeletonDelay);
   const [x] = useState(() => new Animated.Value(0));
   const [width, setWidth] = useState(0);
-  // The 30% run travels left to right and starts again, as the soul app's `Skeleton` line and the web's page-head
+  // The 32% run travels left to right and starts again, as the soul app's `Skeleton` line and the web's page-head
   // top line do; it stood still here from the start (found on the simulator 2026-11-16). Reduce motion: still.
   useEffect(() => {
     if (reduced || !width) return;
@@ -116,10 +116,10 @@ export function LoadingRows({ inContent = false }: { inContent?: boolean } = {})
           testID="state-loading-line"
           style={{
             height: touch.topline,
-            width: "30%",
+            width: "32%",
             backgroundColor: inContent ? t.ink : t.plaque,
             opacity: inContent ? 0.6 : 1,
-            transform: [{ translateX: reduced ? 0 : x.interpolate({ inputRange: [0, 1], outputRange: [-0.3 * width, width] }) }],
+            transform: [{ translateX: reduced ? 0 : x.interpolate({ inputRange: [0, 1], outputRange: [-0.32 * width, width] }) }],
           }}
         />
       </View>
@@ -179,7 +179,7 @@ export function StateView({
   }
   return (
     <View testID="state-empty" style={[styles.state, styles.empty]}>
-      {/* The hall's mark at 96, 12%: decoration, never a target. */}
+      {/* The hall's mark at 96, ink 10% (第四十八批第三节 A8, as the soul app's): decoration, never a target. */}
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.emptyMark}>
         <Emblem civ={t.civ} size={96} stroke={t.ink} />
       </View>
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
   skeletonRow: { height: 72, justifyContent: "center", gap: space[3], paddingHorizontal: GUTTER, borderBottomWidth: 1 },
   state: { padding: GUTTER, gap: space[4] },
   empty: { alignItems: "center", paddingTop: space[7] },
-  emptyMark: { opacity: 0.12 },
+  emptyMark: { opacity: 0.1 },
   tag: { minHeight: touch.tag, borderRadius: radius.control, paddingHorizontal: space[2], justifyContent: "center", alignSelf: "flex-end" },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },

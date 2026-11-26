@@ -24,7 +24,7 @@ import Svg, { Path } from "react-native-svg";
 import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { INVALID_BANNER_MS } from "../loginRules";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, v4 } from "@soulledger/mobile-ui/src/theme";
 import { Button, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** What the sign-in page receives: a fresh `at` per scan, so the same code twice still lands. */
@@ -45,7 +45,7 @@ function PhotoGlyph({ color }: { color: string }) {
 }
 
 /** The no-code notice: a light card on the camera's dark (v4 light --card2 / --ink / --sub), not themed. */
-const NOTICE = { ground: "#F3F3F1", ink: "#16171A", sub: "#54575C" };
+const NOTICE = { ground: v4.light.card2, ink: v4.light.ink, sub: v4.light.sub };
 
 export function ScanScreen() {
   const theme = useTheme();

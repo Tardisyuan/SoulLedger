@@ -401,7 +401,8 @@ export function RootNavigator() {
   const [signedInHere, setSignedInHere] = useState(false);
   if (state.status === "signedOut" && !signedInHere) setSignedInHere(true);
   const [ready, setReady] = useState(0);
-  const scheme = useColorScheme() === "light" ? "light" : "dark";
+  // No scheme reads as light, as the cold start, the error boundary, the version gate and the officer app do.
+  const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const theme = state.status === "signedIn" ? themeFor(state.profile.civilization, scheme) : preLoginTheme(scheme);
   // `theme` is one object per (civ, scheme) (theme.ts), so this is too: NavigationContainer redraws on a new theme.
   const navTheme = useMemo<NavTheme>(() => {

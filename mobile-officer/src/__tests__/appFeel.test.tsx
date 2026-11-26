@@ -107,14 +107,14 @@ describe("the loading line travels (Design batch 48 A9: the head's top line turn
     await screen.findByTestId("state-loading-track");
     act(() => screen.getByTestId("state-loading-track").props.onLayout({ nativeEvent: { layout: { width: 400, height: 2 } } }));
   };
-  it.each([[false, 1], [true, 0]])("reduce motion %s: %i loop(s); the 30%% run keeps the civilization's colour", async (reduced, loops) => {
+  it.each([[false, 1], [true, 0]])("reduce motion %s: %i loop(s); the 32%% run keeps the civilization's colour", async (reduced, loops) => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
     const loop = jest.spyOn(Animated, "loop");
     renderOfficer(<LoadingRows />);
     await act(async () => {});
     await lay();
     const line = StyleSheet.flatten(screen.getByTestId("state-loading-line").props.style);
-    expect(line).toMatchObject({ height: 2, width: "30%", backgroundColor: themeFor("CHINESE", "light").plaque });
+    expect(line).toMatchObject({ height: 2, width: "32%", backgroundColor: themeFor("CHINESE", "light").plaque });
     expect(loop).toHaveBeenCalledTimes(loops);
   });
 

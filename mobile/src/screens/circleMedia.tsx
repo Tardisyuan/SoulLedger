@@ -28,11 +28,11 @@ import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { fileField } from "@soulledger/mobile-ui/src/platform";
 import { AlertTxt, FadeModal, PhotoPager, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { motion, radius } from "@soulledger/mobile-ui/src/theme";
 
 const GAP = 3;
-/** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
-const FADE_MS = 120;
+/** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长(`motion.fade`)。 */
+const FADE_MS = motion.fade;
 
 /** 帖子图的来源:签名地址取图,缓存按图的 id(见文件头)。 */
 export function postImageSource(m: PostMedia): ImageSource {

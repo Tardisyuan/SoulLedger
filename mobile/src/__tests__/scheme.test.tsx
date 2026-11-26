@@ -74,9 +74,9 @@ it.each(["dark", "light"] as const)("system %s → v4's neutrals of that scheme,
   expect(loginGround()).not.toBe(v4[scheme === "dark" ? "light" : "dark"].card);
 });
 
-it("no system preference reported → dark (the design's primary scheme)", async () => {
+it("no system preference reported → light, as the cold start before it (2026-11-26)", async () => {
   mockScheme = null;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(v4.dark.card);
+  expect(loginGround()).toBe(v4.light.card);
 });
