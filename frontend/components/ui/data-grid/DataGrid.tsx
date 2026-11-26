@@ -5,9 +5,6 @@ import { DataTable, type SortState } from '@/components/ui/data-table'
 import { cn } from '@/lib/utils'
 import { renderGridCell, toDataTableColumn, columnAlign, type DataGridColumn } from './columns'
 
-export type { SortState } from '@/components/ui/data-table'
-export { parseOrdering } from '@/components/ui/data-table'
-
 /**
  * Selection — a capability Mode B tables opt into (§6). Off by default;
  * souls/judgments/dispatch never pass this prop. Permissions, menus, users

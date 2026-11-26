@@ -6,6 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { Segmented } from "@/src/components/ui/Segmented";
+import { pad2 } from "@soulledger/core/domain/dates";
 
 /**
  * 顶栏右侧的两件小东西(规范 v4 第七批 S01):时辰标签与「舒适 / 紧凑」。
@@ -33,7 +34,6 @@ const useMinute = () =>
     () => null,
   );
 
-const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
  * 「未时 · 14:40」(`hours.format`):按**观看者**的时区(浏览器的本地钟点),换算在 core 的 `civilHour`。
@@ -46,10 +46,10 @@ export function HoursChip() {
   if (minute === null || civ === "neutral") return null;
   const now = new Date(minute * 60_000);
   const hour = civilHour(civ as HourCiv, now);
-  const text = t("hours.format", { name: t(hour.key, hour.params), time: `${pad(now.getHours())}:${pad(now.getMinutes())}` });
+  const text = t("hours.format", { name: t(hour.key, hour.params), time: `${pad2(now.getHours())}:${pad2(now.getMinutes())}` });
   return (
     <span data-testid="shell-hours" title={text} className="hidden min-w-0 truncate whitespace-nowrap font-mono text-xs text-[oklch(var(--color-ink-muted))] min-[1280px]:block">
-      <time dateTime={`${pad(now.getHours())}:${pad(now.getMinutes())}`}>{text}</time>
+      <time dateTime={`${pad2(now.getHours())}:${pad2(now.getMinutes())}`}>{text}</time>
     </span>
   );
 }

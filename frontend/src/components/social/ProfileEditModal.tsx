@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useId } from "react";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { Field, TextAreaField, fieldControl } from "@/src/components/ui/Field";
@@ -14,7 +14,15 @@ interface ProfileEditModalProps {
   profile: UserProfile;
 }
 
-export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalProps) {
+/**
+ * Rendered only while open, keyed by the profile: the bio starts from `profile` on every open (a `key`, not an effect
+ * that copies props into state; audit 2026-11-26 §2.5).
+ */
+export function ProfileEditModal(props: ProfileEditModalProps) {
+  return props.isOpen ? <ProfileEditForm key={props.profile.id} {...props} /> : null;
+}
+
+function ProfileEditForm({ isOpen, onClose, profile }: ProfileEditModalProps) {
   const { t } = useI18n();
   const updateMutation = useUpdateProfile();
   const uploadMutation = useUploadAvatar();
@@ -25,14 +33,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
   const bioId = `${formId}-bio`;
   const avatarId = `${formId}-avatar`;
 
-  const [bio, setBio] = useState("");
-
-  // Populate form when the profile changes or the modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setBio(profile.bio || "");
-    }
-  }, [isOpen, profile]);
+  const [bio, setBio] = useState(profile.bio || "");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

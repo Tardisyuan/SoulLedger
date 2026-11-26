@@ -8,6 +8,7 @@ import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@soulledger/core/api/ledger";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import {
   INHERITANCE_QUANTITIES,
@@ -154,7 +155,7 @@ export function SoulKarmaLedgerCard({
                   t={t}
                   className="tabular-nums text-[oklch(var(--color-ink))]"
                 >
-                  +{life.inheritedMerit}
+                  {signedNumber(life.inheritedMerit)}
                 </Figure>
                 <Figure
                   field="carried_demerit"
@@ -162,7 +163,7 @@ export function SoulKarmaLedgerCard({
                   t={t}
                   className="tabular-nums text-[oklch(var(--color-ink))]"
                 >
-                  -{life.inheritedDemerit}
+                  {signedNumber(-life.inheritedDemerit)}
                 </Figure>
               </span>
             )}
@@ -200,7 +201,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              +{rawMerit}
+              {signedNumber(rawMerit)}
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
@@ -211,7 +212,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              -{rawDemerit}
+              {signedNumber(-rawDemerit)}
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
@@ -222,7 +223,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              +{meritScore}
+              {signedNumber(meritScore)}
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
@@ -233,7 +234,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              -{demeritScore}
+              {demeritScore === null ? null : signedNumber(-demeritScore)}
             </Figure>
           </div>
           {/* WHY THE BALANCE ROW IS THE ONLY PART OF THIS BLOCK THAT IS GUARDED.
@@ -277,8 +278,7 @@ export function SoulKarmaLedgerCard({
                   t={t}
                   className="text-md tabular-nums text-[oklch(var(--color-ink))]"
                 >
-                  {karmicBalance !== null && karmicBalance >= 0 ? "+" : ""}
-                  {karmicBalance}
+                  {karmicBalance !== null && signedNumber(karmicBalance)}
                 </Figure>
               </div>
               <p className="sr-only">{tf("ledger.raw_balance_sr", "原始余额 {{n}}", { n: String(rawBalance) })}</p>
@@ -438,7 +438,7 @@ export function SoulKarmaLedgerCard({
                 t={t}
                 className="tabular-nums text-[oklch(var(--color-ink))]"
               >
-                +{inheritance.inherited_merit}
+                {signedNumber(inheritance.inherited_merit)}
               </Figure>
             </span>
             <span className="inline-flex items-baseline gap-1 text-[oklch(var(--color-ink))]">
@@ -449,7 +449,7 @@ export function SoulKarmaLedgerCard({
                 t={t}
                 className="tabular-nums text-[oklch(var(--color-ink))]"
               >
-                -{inheritance.inherited_demerit}
+                {signedNumber(-inheritance.inherited_demerit)}
               </Figure>
             </span>
           </div>
@@ -461,8 +461,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              {inheritance.inherited_merit - inheritance.inherited_demerit >= 0 ? "+" : ""}
-              {inheritance.inherited_merit - inheritance.inherited_demerit}
+              {signedNumber(inheritance.inherited_merit - inheritance.inherited_demerit)}
             </Figure>
           </div>
           <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">

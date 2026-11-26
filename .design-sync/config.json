@@ -59,7 +59,7 @@
     "TablePageSkeleton": "../../frontend/components/ui/page-skeletons.tsx",
     "CardListPageSkeleton": "../../frontend/components/ui/page-skeletons.tsx",
     "DataGrid": "../../frontend/components/ui/data-grid/DataGrid.tsx",
-    "FilterBar": "../../frontend/components/ui/data-grid/FilterBar.tsx",
+    "FilterBar": "../../frontend/src/components/ui/FilterChip.tsx",
     "ActionsMenu": "../../frontend/components/ui/data-grid/ActionsMenu.tsx",
     "EnumBadge": "../../frontend/components/ui/data-grid/columns.tsx",
     "GlobalSearch": "../../frontend/src/components/layout/GlobalSearch.tsx",

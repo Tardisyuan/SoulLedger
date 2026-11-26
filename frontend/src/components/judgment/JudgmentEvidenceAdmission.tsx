@@ -13,6 +13,7 @@ import { MeritMark } from "@/src/components/dossier/MeritMark";
 import { ReasonDialog } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { ClauseLink, clauseCode, hasRecordFacts, RecordFacts, SinGravityMark } from "@/src/components/souls/SoulLedgerBook";
 import { formatHistoricalDate } from "@/lib/utils";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 /**
  * 丙 · 证据 · 采信(规范 v1 第三类 A·01 的 EvidenceRow)。
@@ -194,7 +195,7 @@ export function JudgmentEvidenceAdmission({
             {net !== null && net !== undefined
               ? t("judgment.admission.not_admitted_net", {
                   n: String(notAdmitted),
-                  net: `${net > 0 ? "+" : net < 0 ? "−" : ""}${Math.abs(Math.round(net))}`,
+                  net: signedNumber(Math.round(net)),
                 })
               : t("judgment.admission.not_admitted_count", { n: String(notAdmitted) })}
           </span>

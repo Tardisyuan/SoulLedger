@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { reincarnationApi } from "@soulledger/core/api";
 import { quotaIsFull, type RebirthQuotaUsage } from "@soulledger/core/api/reincarnation";
+import { utcMonth } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { SIX_PATHS } from "@/src/components/souls/RebirthFormSelect";
@@ -21,13 +22,14 @@ export function useRebirthQuota(enabled = true) {
   });
 }
 
+/**
+ * 标题里的月份是 **UTC** 的 `YYYY-MM`(`utcMonth`):后端 `TIME_ZONE = "UTC"`,配额从 UTC 月初算
+ * (`apps/reincarnation/services.py` `_month_start`)。按浏览器本地月写的话,东边的时区在每月 1 日头几个小时
+ * 标题已是新月份、数还是上个月的。
+ */
+
 /** 六道 + 未归类:六道按 `reincarnation.groups` 的顺序,「未归类」排最后(后端也按它计数)。 */
 const STRIP_FORMS = [...SIX_PATHS, "OTHER"] as const;
-
-/** 本月的 `YYYY-MM`(本地时间,后端按本地时区的月初算)。 */
-export function currentMonth(now: Date = new Date()): string {
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
 
 /** 一格里的数:有上限写「已用 / 上限」,不限写「已用 · 不限」。 */
 export function quotaUsedText(row: Pick<RebirthQuotaUsage, "limit" | "used">, t: (key: string, params?: Record<string, string>) => string): string {
@@ -48,7 +50,7 @@ export function RebirthQuotaStrip() {
   return (
     <section aria-labelledby="rebirth-quota-title" data-testid="rebirth-quota-strip" className="pb-4">
       <h2 id="rebirth-quota-title" className="mb-2 text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
-        {t("rebirths.quota.title", { month: currentMonth() })}
+        {t("rebirths.quota.title", { month: utcMonth() })}
       </h2>
       <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-4 lg:grid-cols-7">
         {STRIP_FORMS.map((form) => {

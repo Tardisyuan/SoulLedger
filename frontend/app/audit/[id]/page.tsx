@@ -7,7 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
+import { AuditRefusal } from "@/src/components/audit/AuditGate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -50,37 +50,37 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+function BackLink() {
+  const { t } = useI18n();
+  const router = useRouter();
+  return (
+    <Button variant="ghost" size="sm" onClick={() => router.back()}>
+      {t("common.back")}
+    </Button>
+  );
+}
+
 export default function AuditDetailPage() {
+  // The gate (`tests/test_page_gates_match_the_backend.py` reads it from the default export).
+  const { hasPermission } = usePermissions();
+  const canReadAudit = hasPermission("audit.read");
+  if (!canReadAudit) return <AuditRefusal backLink={<BackLink />} />;
+  return <AuditDetailContent />;
+}
+
+function AuditDetailContent() {
   const { t, formatDateTime } = useI18n();
   usePlaque({ title: t("audit.title"), hall: useHall(t("plaque.office.records")) });
-  const { hasPermission, permissionsReady } = usePermissions();
-  const canReadAudit = hasPermission("audit.read");
-  const router = useRouter();
   const id = useParams().id as string;
 
   const { data: log, isPending, isError, error, refetch } = useQuery({
     queryKey: ["audit", "detail", id],
     queryFn: async () => (await auditApi.get(id)).data,
-    enabled: canReadAudit && !!id,
+    enabled: !!id,
   });
 
-  const backLink = (
-    <Button variant="ghost" size="sm" onClick={() => router.back()}>
-      {t("common.back")}
-    </Button>
-  );
+  const backLink = <BackLink />;
 
-  if (!canReadAudit) {
-    return (
-      <PageShell density="document" variant="page" title={t("audit.title")} backLink={backLink}>
-        {permissionsReady === false ? (
-          <PermissionsPending />
-        ) : (
-          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
-        )}
-      </PageShell>
-    );
-  }
   if (isError) {
     // Only a 404 is 「没有这条记录」; anything else (offline, 500) is a failure the reader can retry.
     const missing = axios.isAxiosError(error) && error.response?.status === 404;

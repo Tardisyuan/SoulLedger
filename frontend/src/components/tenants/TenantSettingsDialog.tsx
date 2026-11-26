@@ -2,7 +2,7 @@
 
 import { hasRebirth } from "@/src/lib/hasRebirth";
 import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, REBIRTH_COOLDOWN_SETTING, REBIRTH_QUOTA_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
 import { problemErrors, responseStatus } from "@soulledger/core/api/client";
@@ -109,12 +109,11 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
   // 安全 · 两步验证(A12):每角色一行,开关写 `mfa_required_roles`。行从 /tenants/{code}/mfa-roles/ 来;
   // 没拉到就不发这个字段,免得把一份空清单写进去。
   const mfaRoles = useQuery({ queryKey: tenantKeys.mfaRoles(tenant.code), queryFn: () => tenantsApi.mfaRoles(tenant.code).then((r) => r.data) });
-  const [requiredRoles, setRequiredRoles] = useState<Set<string> | null>(null);
-  useEffect(() => {
-    if (mfaRoles.data && requiredRoles === null) {
-      setRequiredRoles(new Set(mfaRoles.data.filter((r) => r.required && !r.always).map((r) => r.role)));
-    }
-  }, [mfaRoles.data, requiredRoles]);
+  // The operator's choice once they tick a row; until then the server's set, derived from the rows rather than
+  // copied into state by an effect (audit 2026-11-26 §2.5). null = rows not loaded, so nothing is sent.
+  const [pickedRoles, setRequiredRoles] = useState<Set<string> | null>(null);
+  const requiredRoles =
+    pickedRoles ?? (mfaRoles.data ? new Set(mfaRoles.data.filter((r) => r.required && !r.always).map((r) => r.role)) : null);
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((e) => ({ ...e, [k === "cooldown" ? "soul_rebirth_cooldown_days" : k]: undefined }));
@@ -396,7 +395,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
                 disabled={row.always || save.isPending || requiredRoles === null}
                 onChange={(on) =>
                   setRequiredRoles((prev) => {
-                    const next = new Set(prev ?? []);
+                    const next = new Set(prev ?? requiredRoles ?? []);
                     if (on) next.add(row.role);
                     else next.delete(row.role);
                     return next;

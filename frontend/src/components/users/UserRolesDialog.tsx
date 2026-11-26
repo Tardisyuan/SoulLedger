@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { User } from "@soulledger/core/api";
 import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useAssignUserRoles } from "@soulledger/core/hooks/useUsers";
@@ -20,21 +20,19 @@ import { SYSTEM_ADMIN_ROLE_NAME, isAdminRole } from "@soulledger/core/api/perm";
  * 兼任整块禁用,保存时发 `[]`(管理员已拥有全部权限)。
  */
 export function UserRolesDialog({ user, onClose }: { user: User | null; onClose: () => void }) {
+  // Open while there is a user; keyed by them so the choices start from that user's roles (a `key`, not an effect
+  // that copies props into state; audit 2026-11-26 §2.5).
+  return user ? <UserRolesForm key={user.id} user={user} onClose={onClose} /> : null;
+}
+
+function UserRolesForm({ user, onClose }: { user: User; onClose: () => void }) {
   const { t } = useI18n();
   const formId = useId();
   const assign = useAssignUserRoles();
-  const [primary, setPrimary] = useState("VIEWER");
-  const [extras, setExtras] = useState<string[]>([]);
-  const isOpen = user !== null;
+  const [primary, setPrimary] = useState(user.role);
+  const [extras, setExtras] = useState<string[]>(() => (user.extra_roles ?? []).filter((r) => r !== user.role));
 
-  useEffect(() => {
-    if (user) {
-      setPrimary(user.role);
-      setExtras((user.extra_roles ?? []).filter((r) => r !== user.role));
-    }
-  }, [user]);
-
-  const rolesQuery = useRoles({ enabled: isOpen });
+  const rolesQuery = useRoles();
   const labelOf = (name: string, displayName?: string, builtin?: boolean) =>
     builtin ? t(`users.roles.${name}`) : displayName || name;
   // SYSTEM_ADMIN 由系统建,不在这里分配;正是系统管理员本人时留着,免得保存时悄悄换掉。
@@ -52,7 +50,6 @@ export function UserRolesDialog({ user, onClose }: { user: User | null; onClose:
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     assign.mutate(
       { id: String(user.id), role: primary, extra_roles: adminLocked ? [] : extras.filter((r) => r !== primary) },
       {
@@ -67,7 +64,7 @@ export function UserRolesDialog({ user, onClose }: { user: User | null; onClose:
 
   return (
     <BaseModal
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title={t("users.roles_dialog.title")}
       footer={
@@ -83,7 +80,7 @@ export function UserRolesDialog({ user, onClose }: { user: User | null; onClose:
     >
       <form id={`${formId}-form`} onSubmit={save} className="space-y-4">
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">
-          {t("users.roles_dialog.for_user", { name: user?.username ?? "" })}
+          {t("users.roles_dialog.for_user", { name: user.username })}
         </p>
         <SelectField
           label={t("users.roles_dialog.primary")}

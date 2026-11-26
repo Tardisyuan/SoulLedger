@@ -26,8 +26,8 @@ z.config({ jitless: true })
 // Six more went the same way on 2026-09-13 (soulTransition, judgmentConclude,
 // workflowAdvance, workflowApprove, reincarnationReborn, ledgerRecord): each
 // had exactly one reference in the tree, its own `export`. What is left is
-// what a form imports, plus `judgmentCreateSchema`, which
-// `civilizationMapCoverage.test.ts` pins to the four civilizations.
+// what a form imports. `judgmentCreateSchema` followed on 2026-11-26: its only
+// caller was the `civilizationMapCoverage.test.ts` case that kept it in sync.
 
 export const loginSchema = z.object({
   username: z.string().min(1, '请输入用户名'),
@@ -84,19 +84,6 @@ export const soulUpdateSchema = z.object({
   // which round-trips whatever state the soul already has. A soul already at
   // SETTLED must still pass validation so the rest of the form stays usable.
   current_state: z.enum(['ALIVE', 'JUDGING', 'DISPOSED', 'REINCARNATING', 'LOST', 'SETTLED']).optional(),
-})
-
-// ── Judgment ─────────────────────────────────────────
-
-export const judgmentCreateSchema = z.object({
-  soul_id: z.string().uuid('无效的灵魂ID'),
-  court: z.string().min(1, '请选择审判庭'),
-  // Same reasoning as soulCreateSchema.civilization — derived, no UNKNOWN.
-  // This one had drifted too, and had no consumer to notice: it would have
-  // shipped the identical GREEK defect the day anything started using it.
-  civilization: z.enum(CIVILIZATION_OPTIONS, {
-    error: '请选择文明',
-  }),
 })
 
 // ── Disposition ──────────────────────────────────────

@@ -1,3 +1,5 @@
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
+
 /**
  * 余额分布(Design A4):200 高的直方图,柱间 3px,底边 1px ink。**0 以下的柱用梯度第 4 档、
  * 0 以上用第 2 档** —— 两档明度分开,负值不用红(余额为负不是一次出错,反馈色不进领域数据)。
@@ -90,8 +92,6 @@ export function BalanceHistogram({ bars, ticks }: { bars: HistogramBar[]; ticks?
 /** Design A4 的刻度值;只画落在某一格下沿上的那几个。 */
 const TICK_VALUES = [-300, -150, 0, 150, 300];
 
-const signed = (v: number) => (v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0");
-
 /**
  * `balance_histogram.buckets`(半开区间 [min, max),两端开口)→ 柱与刻度。
  * 上沿 ≤ 0 的格是负的一边,其余是正的一边;0 线落在 [−50, 0) 与 [0, 50) 之间。
@@ -103,14 +103,14 @@ export function histogramFromBuckets(buckets: { min: number | null; max: number 
   const bars = buckets.map(
     (b): HistogramBar => ({
       label:
-        b.min == null ? `< ${signed(b.max ?? 0)}` : b.max == null ? `≥ ${signed(b.min)}` : `${signed(b.min)} – ${signed(b.max)}`,
+        b.min == null ? `< ${signedNumber(b.max ?? 0)}` : b.max == null ? `≥ ${signedNumber(b.min)}` : `${signedNumber(b.min)} – ${signedNumber(b.max)}`,
       count: b.count,
       tone: b.max != null && b.max <= 0 ? "negative" : "positive",
     })
   );
   const ticks = TICK_VALUES.flatMap((v) => {
     const i = buckets.findIndex((b) => b.min === v);
-    return i < 0 ? [] : [{ label: signed(v), at: i / buckets.length }];
+    return i < 0 ? [] : [{ label: signedNumber(v), at: i / buckets.length }];
   });
   return { bars, ticks };
 }

@@ -1,8 +1,5 @@
 export { DataGrid, type DataGridProps, type DataGridSelection } from './DataGrid'
 export {
-  renderGridCell,
-  toDataTableColumn,
-  columnAlign,
   EnumBadge,
   type DataGridColumn,
   type DataGridColumnType,
@@ -18,6 +15,5 @@ export {
 } from './columns'
 export { ActionsMenu, type OverflowMenuItem } from './ActionsMenu'
 export { ColumnMenu, useColumnVisibility, type ColumnMenuColumn, type ColumnVisibility } from './ColumnMenu'
-export { FilterBar, type FilterChipConfig, type FilterChipOption } from './FilterBar'
 export type { SortState } from '@/components/ui/data-table'
 export { parseOrdering } from '@/components/ui/data-table'

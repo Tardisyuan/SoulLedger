@@ -12,6 +12,7 @@ import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
 import { soulStateGlyph } from "@/src/lib/soulStateBadge";
 import type { Soul } from "@soulledger/core/api/souls";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import type { SoulEvent } from "@soulledger/core/api/events";
 import type { Judgment } from "@soulledger/core/api/judgment";
@@ -280,7 +281,6 @@ export function SoulLifecycleTimeline({
           visibleRows.map((row, idx) => {
             const isLast = idx === visibleRows.length - 1;
             if (row.kind === "karma") {
-              const positive = row.effectiveSigned !== null && row.effectiveSigned >= 0;
               // 分数对 VIEWER 置空(P-02):「原始 …」那一段整段不写,不写成「原始 0」。
               const detail = [
                 t(civKey(t, row.type === "MERIT" ? "souls.detail.merit" : "souls.detail.demerit", soul.civilization)),
@@ -288,8 +288,10 @@ export function SoulLifecycleTimeline({
                 row.originalSigned === null
                   ? null
                   : tf("souls.detail.timeline.original", "原始 {{sign}}{{n}}", {
-                      sign: row.originalSigned >= 0 ? "+" : "",
-                      n: String(row.originalSigned),
+                      // The sign is inside `n` (signedNumber: no `+0`, U+2212); `{{sign}}` stays empty so the
+                      // three catalogues keep their key unchanged.
+                      sign: "",
+                      n: signedNumber(row.originalSigned),
                     }),
               ]
                 .filter((part) => part !== null)
@@ -307,10 +309,7 @@ export function SoulLifecycleTimeline({
                         {row.effectiveSigned === null ? (
                           <MissingValue kind="unrecorded" reason={t("souls.balance_withheld")} />
                         ) : (
-                          <>
-                            {positive ? "+" : ""}
-                            {row.effectiveSigned}
-                          </>
+                          signedNumber(row.effectiveSigned)
                         )}
                       </div>
                       <div className="text-xs text-[oklch(var(--color-ink-subtle))]">

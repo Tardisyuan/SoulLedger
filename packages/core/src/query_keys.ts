@@ -358,3 +358,6 @@ export const assistAdminKeys = {
 
 /** 登录设备(个人中心)。 */
 export const signInSessionKeys = { all: ["auth", "sessions"] as const };
+
+/** 审计。`actions` 是动作下拉的选项表(审计列表、权限变更、统计三页共用一份缓存)。 */
+export const auditKeys = { actions: ["audit-actions"] as const };

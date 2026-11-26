@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { setSingleKeyShortcuts, useHotkeys, useRegisteredShortcuts, useSingleKeyShortcuts, type ShortcutRow } from "@/src/lib/hotkeys";
-import { isMac } from "./GlobalSearchEntry";
+import { isMac } from "@/src/lib/platformKeys";
 
 /**
  * 「单字母快捷键」总开关(WCAG 2.1.4)。放在快捷键列表里,也可以单独挂到任何设置区。

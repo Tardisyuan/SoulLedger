@@ -10,7 +10,7 @@
  * (verdict enum, realm_name, timestamps) than a freeform event payload does.
  * Raw SoulEvent rows are used only for the toggle-gated "system events" feed.
  */
-import { resolveEnumDisplay, type Translate } from "@/src/lib/domainDisplay";
+import { resolveEnumDisplay, signedNumber, type Translate } from "@/src/lib/domainDisplay";
 import { verdictNamespace } from "@/src/lib/domainNames";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { DIYU_STATIONS } from "@soulledger/core/domain/diyuStations";
@@ -397,7 +397,7 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
     }
     case "KARMA_RECALCULATED": {
       const delta = typeof p.delta === "number" ? p.delta : null;
-      return delta === null ? event : `${event} · Δ${delta >= 0 ? "+" : ""}${delta}`;
+      return delta === null ? event : `${event} · Δ${signedNumber(delta)}`;
     }
     case "JUDGMENT_APPEAL_FILED":
     case "JUDGMENT_APPEAL_WITHDRAWN":

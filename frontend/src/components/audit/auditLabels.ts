@@ -24,14 +24,8 @@ export const PERMISSION_RESOURCES = [
   "permission",
 ] as const;
 
-export type DatePreset = "" | "7d" | "30d";
-
 /**
  * 列表的日期三档(全部 · 7 天 · 30 天)都是「N 天前到现在」,所以只算起点(`start_date`);全部为 ""。
+ * 算法在 core(与灵魂事件页同一份,按 UTC 日);这里转出,审计三页照旧从这里引。
  */
-export function datePresetStart(preset: DatePreset, now = new Date()): string {
-  if (!preset) return "";
-  const from = new Date(now);
-  from.setDate(from.getDate() - (preset === "7d" ? 7 : 30));
-  return from.toISOString().slice(0, 10);
-}
+export { datePresetStart, type DatePreset } from "@soulledger/core/domain/dates";

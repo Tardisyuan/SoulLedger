@@ -19,6 +19,7 @@ import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { cn } from "@/lib/utils";
 import { FlowStationPicker, useFlowPreview } from "@/src/components/workflow/segments/FlowStationPicker";
 import { segmentRefusalText } from "@soulledger/core/domain/workflowSegments";
+import { workflowTemplatesQuery } from "@soulledger/core/hooks/sharedQueries";
 
 const REASON_MAX = 1000;
 const FORM_ID = "start-workflow-form";
@@ -147,8 +148,7 @@ export function StartWorkflowDialog({
     enabled: isOpen && Boolean(soulId),
   });
   const templates = useQuery({
-    queryKey: ["workflow-templates"],
-    queryFn: async () => (await workflowApi.templates.list()).data,
+    ...workflowTemplatesQuery(),
     enabled: isOpen,
   });
   const judgments = useQuery({

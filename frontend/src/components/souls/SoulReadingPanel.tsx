@@ -2,6 +2,7 @@
 
 import type { LedgerReading, UnavailableReasonCode } from "@soulledger/core/api/ledger";
 import { READING_QUANTITIES, SUMMARY_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 // The Greek fork — its geometry, and the long argument for why the two roads
@@ -146,7 +147,7 @@ function BalanceReading({
           t={t}
           className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          {reading.merit == null ? <Withheld t={t} /> : `+${reading.merit}`}
+          {reading.merit == null ? <Withheld t={t} /> : signedNumber(reading.merit)}
         </Figure>
       </span>
       <span className={`${cell} ${wide}`} />
@@ -161,7 +162,7 @@ function BalanceReading({
           t={t}
           className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          {reading.demerit == null ? <Withheld t={t} /> : `-${reading.demerit}`}
+          {reading.demerit == null ? <Withheld t={t} /> : signedNumber(-reading.demerit)}
         </Figure>
       </span>
       <span className={`${last} ${wide}`} />
@@ -176,7 +177,7 @@ function BalanceReading({
           t={t}
           className="text-md font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          {reading.balance == null ? <Withheld t={t} /> : `${reading.balance >= 0 ? "+" : ""}${reading.balance}`}
+          {reading.balance == null ? <Withheld t={t} /> : signedNumber(reading.balance)}
         </Figure>
       </span>
     </div>

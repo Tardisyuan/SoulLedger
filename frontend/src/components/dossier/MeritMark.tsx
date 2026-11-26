@@ -3,6 +3,7 @@
 import { useI18n } from "@/src/contexts/I18nContext";
 import { spineCivOf } from "./spineModel";
 import s from "./dossier.module.css";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 /**
  * 功过记号(Design 第三十批 第 3 步第 4 条):记号只回答「是功还是过」,靠形状(描线 vs 实底,加各家自己的形),
@@ -76,6 +77,5 @@ const GLYPH = {
 /** 带号的数:颜色只在这里(功 pos、过 neg),0 不上色。`sign` 给方向,`value` 是大小。 */
 export function SignedNumber({ value, sign }: { value: number; sign?: 1 | -1 }) {
   const signed = sign ? sign * Math.abs(value) : value;
-  const text = signed > 0 ? `+${signed}` : signed < 0 ? `−${Math.abs(signed)}` : "0";
-  return <span className={`${s.num} ${signed > 0 ? s.pos : signed < 0 ? s.neg : ""}`}>{text}</span>;
+  return <span className={`${s.num} ${signed > 0 ? s.pos : signed < 0 ? s.neg : ""}`}>{signedNumber(signed)}</span>;
 }

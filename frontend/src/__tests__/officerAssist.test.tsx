@@ -75,6 +75,13 @@ const done = (content: string, interruption = ""): Event => {
 const reply = (content: string) => (ask: Ask) =>
   ask.send({ event: "meta", conversation_id: CONVERSATION_ID }, { event: "delta", text: content }, done(content));
 
+// StreamingText reads motion's `useReducedMotion`, which reads matchMedia once per page and then follows its
+// `change` events. This double's matchMedia changes per test and never fires one, so the hook asks it every time.
+jest.mock("motion/react", () => ({
+  ...jest.requireActual("motion/react"),
+  useReducedMotion: () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+}));
+
 let reduceMotion = false;
 function setWidth(wide: boolean) {
   Object.defineProperty(window, "matchMedia", {

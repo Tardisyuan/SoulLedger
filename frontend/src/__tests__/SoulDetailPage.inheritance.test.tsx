@@ -251,14 +251,14 @@ describe("SoulDetailPage — inheritance panel", () => {
     const demerit = document.querySelector<HTMLElement>('[data-quantity-field="inherited_demerit"]');
     expect(merit?.textContent).toBe("+20");
     expect(merit?.dataset.quantity).toBe("magnitude");
-    expect(demerit?.textContent).toBe("-100");
+    expect(demerit?.textContent).toBe("−100");
     expect(demerit?.dataset.quantity).toBe("magnitude");
     expect(screen.getByText("souls.detail.merit:")).toBeInTheDocument();
     expect(screen.getByText("souls.detail.demerit:")).toBeInTheDocument();
     // 20 - 100 = -80: under the old `karmic_balance * 0.2` formula (with
     // merit_score === demerit_score === 100, karmic_balance is 0) this line
     // rendered "+0". This is the regression the endpoint switch fixes.
-    expect(screen.getByText("-80")).toBeInTheDocument();
+    expect(screen.getByText("−80")).toBeInTheDocument();
 
     // The two ratio bars are sized from the response's rates rather than from
     // percentages hard-coded in the card. Asserted on the widths because this
@@ -320,7 +320,7 @@ describe("SoulDetailPage — which life the ledger belongs to", () => {
     const demerit = document.querySelector<HTMLElement>('[data-quantity-field="carried_demerit"]');
     expect(merit?.textContent).toBe("+40");
     expect(merit?.dataset.quantity).toBe("magnitude");
-    expect(demerit?.textContent).toBe("-30");
+    expect(demerit?.textContent).toBe("−30");
     expect(demerit?.dataset.quantity).toBe("magnitude");
   });
 

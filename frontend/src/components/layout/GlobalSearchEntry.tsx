@@ -3,6 +3,7 @@
 import { useEffect, type Ref } from "react";
 import { Search } from "lucide-react";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useIsMac } from "@/src/lib/platformKeys";
 
 /**
  * The two 全局搜索 entry buttons (1440: a 240-wide search-box-shaped button with the ⌘K keycap; ≤ 768: a 44 icon),
@@ -26,21 +27,6 @@ export function isSearchShortcut(e: KeyboardEvent): boolean {
   return (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && !e.isComposing && e.key.toLowerCase() === "k";
 }
 
-/**
- * Other entry points (the sidebar's 「搜索、跳转、下指令」, v4 S01) open the same palette through this: the mounted
- * `GlobalSearch` subscribes with `onSearchOpenRequest`; before it has mounted the press is kept as a pending open.
- */
-const openRequests = new Set<() => void>();
-export function requestSearchOpen(): void {
-  if (openRequests.size === 0) pendingOpen = "key";
-  else openRequests.forEach((fn) => fn());
-}
-export function onSearchOpenRequest(fn: () => void): () => void {
-  openRequests.add(fn);
-  return () => void openRequests.delete(fn);
-}
-
-export const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const LINE_STRONG = "border-[oklch(var(--color-line-strong))]";
 const KEYCAP = `border ${LINE_STRONG} px-[6px] font-mono text-xs ${MUTED}`;
@@ -55,6 +41,8 @@ export function GlobalSearchEntries({
   mobileRef?: Ref<HTMLButtonElement>;
 }) {
   const { t } = useI18n();
+  // Server and first paint draw the Mac keycap; the real platform after hydration (useIsMac).
+  const mac = useIsMac();
   return (
     <>
       <button
@@ -68,7 +56,7 @@ export function GlobalSearchEntries({
       >
         <Search aria-hidden="true" size={16} strokeWidth={1.5} />
         <span className="flex-1 text-left">{t("search.aria_label")}</span>
-        <kbd className={KEYCAP}>{isMac() ? "⌘K" : "Ctrl K"}</kbd>
+        <kbd className={KEYCAP}>{mac ? "⌘K" : "Ctrl K"}</kbd>
       </button>
       <button
         ref={mobileRef}

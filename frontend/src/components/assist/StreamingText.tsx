@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
+import { useReducedMotion } from "motion/react";
 import { assistBlocks, assistShownText, type AssistStreamFetch } from "@soulledger/core/api/assist-stream";
 
 /**
@@ -11,24 +12,12 @@ import { assistBlocks, assistShownText, type AssistStreamFetch } from "@soulledg
  *
  * Reduced motion: no fade, no cursor, and text arrives a paragraph at a time (`assistShownText`).
  * The global `prefers-reduced-motion` rule in globals.css already collapses the CSS animations;
- * the paragraph gate and the cursor need to know in JS, hence `useReducedMotion`.
+ * the paragraph gate and the cursor need to know in JS, hence `motion/react`'s `useReducedMotion` (null on the
+ * server and the first frame, read as not reduced).
  */
 
 /** The browser's `fetch`, in the shape `streamAssist` takes (the DOM's init wants a DOM `AbortSignal`). */
 export const webStreamFetch: AssistStreamFetch = (url, init) => fetch(url, init as RequestInit);
-
-const REDUCE = "(prefers-reduced-motion: reduce)";
-const subscribe = (onChange: () => void) => {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {};
-  const mql = window.matchMedia(REDUCE);
-  mql.addEventListener?.("change", onChange);
-  return () => mql.removeEventListener?.("change", onChange);
-};
-const reducedNow = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(REDUCE).matches;
-
-export function useReducedMotion(): boolean {
-  return useSyncExternalStore(subscribe, reducedNow, () => false);
-}
 
 /** 1d waiting: three dots brightening one after another, 400 ms each, looping; still under reduced motion. */
 export function WaitingDots() {
@@ -46,7 +35,7 @@ export function WaitingDots() {
 }
 
 export function StreamingText({ text, streaming, className = "" }: { text: string; streaming: boolean; className?: string }) {
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotion() === true;
   const shown = assistShownText(text, streaming, reduced);
   const blocks = assistBlocks(shown, streaming);
   // The fragment that arrived since the last render fades in; keyed by length so each new one restarts.

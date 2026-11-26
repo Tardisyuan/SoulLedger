@@ -8,6 +8,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { durationParts, jobCron, runStatusBadgeClass, runStatusGlyph } from "./schedulerView";
+import { pad2 } from "@soulledger/core/domain/dates";
 
 export const JOB_DESCRIPTION_NAMESPACE = "scheduler.jobs";
 
@@ -60,20 +61,19 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
   const { t, formatDateTime } = useI18n();
   const cron = jobCron(job);
   const preset = cron ? presetFromCron(cron) : null;
-  const pad = (n: number) => String(n).padStart(2, "0");
   const readable =
     preset === null
       ? null
       : preset.kind === "every_n_minutes"
         ? t("scheduler.readable.every_n_minutes", { interval: String(preset.interval) })
         : preset.kind === "hourly"
-          ? t("scheduler.readable.hourly", { minute: pad(preset.minute) })
+          ? t("scheduler.readable.hourly", { minute: pad2(preset.minute) })
           : preset.kind === "daily"
-            ? t("scheduler.readable.daily", { time: `${pad(preset.hour)}:${pad(preset.minute)}` })
+            ? t("scheduler.readable.daily", { time: `${pad2(preset.hour)}:${pad2(preset.minute)}` })
             : preset.kind === "weekly"
               ? t("scheduler.readable.weekly", {
                   weekday: t(`scheduler.editor.weekdays.${preset.weekday}`),
-                  time: `${pad(preset.hour)}:${pad(preset.minute)}`,
+                  time: `${pad2(preset.hour)}:${pad2(preset.minute)}`,
                 })
               : t("scheduler.editor.presets.custom");
   const last = job.last_run;

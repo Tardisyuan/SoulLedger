@@ -18,6 +18,7 @@ import { forgetOpenCase, rememberOpenCase } from "@/src/lib/lastOpenCase";
 import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
 import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 /**
  * 审判台(规范 v1 第三类 A·01)的几个原语:键帽、队列进度条、区块标、引用签、律条检索。
@@ -76,7 +77,6 @@ export function VerdictKeyContent({
     </>
   );
 }
-
 
 /**
  * 队列进度条 QueueBar:3 px 墨线。数据来自 `GET /judgment/next/?at=<id>` —— 服务端把 `at`
@@ -307,11 +307,6 @@ export function StatuteSearch({
   );
 }
 
-/** `+347` / `−12` / `0`: a balance as the ledger writes it, sign first. */
-function signed(n: number): string {
-  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n)}`;
-}
-
 /**
  * 乙 · 功过 on a concluded case (第三类 F 组 2.3): the balance the verdict rested on,
  * frozen at conclusion (`admitted_balance.balance` is the snapshot there), on top
@@ -333,7 +328,7 @@ export function ConcludedBalance({
     return (
       <p data-testid="concluded-balance" className="flex items-baseline justify-between py-2 text-sm">
         <span className="text-[oklch(var(--color-ink-muted))]">{t("judgment.desk.balance_single")}</span>
-        <span className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(snapshot)}</span>
+        <span className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signedNumber(snapshot)}</span>
       </p>
     );
   }
@@ -342,11 +337,11 @@ export function ConcludedBalance({
     <dl data-testid="concluded-balance" className="py-2 text-sm">
       <div className="flex items-baseline justify-between border-b-3 border-double border-[oklch(var(--color-ink))] pb-1">
         <dt className="text-[oklch(var(--color-ink))]">{t("judgment.desk.balance_at_conclusion")}</dt>
-        <dd className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(snapshot)}</dd>
+        <dd className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signedNumber(snapshot)}</dd>
       </div>
       <div className="flex items-baseline justify-between pt-1 text-[oklch(var(--color-ink-muted))]">
         <dt>{t("judgment.desk.balance_now")}</dt>
-        <dd className="font-mono tabular-nums">{signed(current)}</dd>
+        <dd className="font-mono tabular-nums">{signedNumber(current)}</dd>
       </div>
       <div className="flex items-baseline justify-between text-xs text-[oklch(var(--color-ink-subtle))]">
         <dt>{t("judgment.desk.recorded_after", { n: String(recordedAfter) })}</dt>
@@ -355,7 +350,7 @@ export function ConcludedBalance({
             drift > 0 ? "text-[oklch(var(--color-success))]" : "text-[oklch(var(--color-danger))]"
           }`}
         >
-          {signed(drift)}
+          {signedNumber(drift)}
         </dd>
       </div>
     </dl>

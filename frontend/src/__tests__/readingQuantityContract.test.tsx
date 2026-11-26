@@ -205,7 +205,7 @@ describe("SoulReadingPanel — the figure inventory of each panel", () => {
 
     expect(figures(container)).toEqual([
       { field: "merit", quantity: "magnitude", text: "+30", scaled: true },
-      { field: "demerit", quantity: "magnitude", text: "-12", scaled: true },
+      { field: "demerit", quantity: "magnitude", text: "−12", scaled: true },
       { field: "balance", quantity: "magnitude", text: "+18", scaled: true },
     ]);
   });

@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { DIYU_STATIONS, eventsApi, soulsApi, type Soul, type SoulPathEntry } from "@soulledger/core/api";
+import { DIYU_STATIONS, soulsApi, type Soul, type SoulPathEntry } from "@soulledger/core/api";
 import { soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { UnderworldMap, type MapArrival } from "@/src/components/realms/UnderworldMap";
 import { diyuVisits, greekVisits, pathVisits } from "@/src/lib/underworldMap";
+import { soulStationEventsQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /**
  * 灵魂详情「走到了哪一步」的地图:这个灵魂的行程画在它文明的那张图上。
@@ -37,11 +38,8 @@ export function SoulUnderworldMap({ soul, eternal = false, className }: { soul: 
     enabled: canDraw,
   });
   const moves = useQuery({
-    queryKey: [...soulKeys.all, "station-events", soul.id],
-    queryFn: () =>
-      eventsApi.list({ soul: soul.id, event_type: "DIYU_STATION_CHANGED", ordering: "create_time" }).then((r) => r.data.results ?? []),
+    ...soulStationEventsQuery(soul.id),
     enabled: canDraw && diyu,
-    staleTime: 60_000,
   });
   // 与 `useSoulLedger` 同一个键:详情页已经取过就直接用缓存。
   const ledger = useQuery({

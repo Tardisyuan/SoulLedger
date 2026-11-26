@@ -9,10 +9,7 @@ import {
   CIVILIZATION_CODES,
   CIVILIZATION_OPTIONS,
 } from "@soulledger/core/config/civilizations";
-import {
-  judgmentCreateSchema,
-  soulCreateSchema,
-} from "@soulledger/core/validations/schemas";
+import { soulCreateSchema } from "@soulledger/core/validations/schemas";
 
 /**
  * Every hand-written map keyed by civilization, held against the one list.
@@ -192,8 +189,9 @@ describe("every civilization-keyed map covers every civilization", () => {
  * BEHAVIOURAL, NOT TEXTUAL. The maps are read as text because importing their
  * page modules would drag React in. These schemas are pure zod, so there is no
  * reason to read them as text and every reason not to: parsing an actual value
- * through the actual schema is immune to however the members get spelled. Both
- * schemas now derive from CIVILIZATION_OPTIONS, which is why neither appears
+ * through the actual schema is immune to however the members get spelled. The
+ * schema now derives from CIVILIZATION_OPTIONS (its unused twin
+ * `judgmentCreateSchema` was deleted 2026-11-26), which is why it does not appear
  * in the address list above — deriving REMOVES an address instead of adding
  * one. This test is what keeps them derived: retype a literal enum here and
  * omit a member, and it goes red on the omitted member by name.
@@ -202,15 +200,6 @@ describe("every civilization-accepting validator accepts every civilization", ()
   it.each([...CIVILIZATION_OPTIONS])("soulCreateSchema accepts %s", (civ) => {
     const result = soulCreateSchema.safeParse({
       name: "验证用",
-      civilization: civ,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it.each([...CIVILIZATION_OPTIONS])("judgmentCreateSchema accepts %s", (civ) => {
-    const result = judgmentCreateSchema.safeParse({
-      soul_id: "00000000-0000-4000-8000-000000000000",
-      court: "一殿",
       civilization: civ,
     });
     expect(result.success).toBe(true);

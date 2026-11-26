@@ -1,10 +1,11 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { readFilters, writeFilters } from '@/src/lib/rememberedFilters'
 import { cn } from '@/lib/utils'
+import { useWideViewport } from '@/src/hooks/useWideViewport'
 import { usePopupOpenState, useRovingPopupKeys } from './useRovingPopupKeys'
 
 /**
@@ -20,22 +21,6 @@ export interface ColumnMenuColumn {
   header: string
   /** 不能隐藏。 */
   pinned?: boolean
-}
-
-const WIDE_QUERY = '(min-width: 768px)'
-
-function useIsWide(): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      if (typeof window.matchMedia !== 'function') return () => {}
-      const mq = window.matchMedia(WIDE_QUERY)
-      mq.addEventListener('change', onChange)
-      return () => mq.removeEventListener('change', onChange)
-    },
-    // 没有 matchMedia(jsdom)按宽屏算,与 `useWideViewport` 的同一个退路。
-    () => (typeof window.matchMedia === 'function' ? window.matchMedia(WIDE_QUERY).matches : true),
-    () => true
-  )
 }
 
 export interface ColumnVisibility {
@@ -59,7 +44,8 @@ export function useColumnVisibility(
     const raw = readFilters(storageKey, ['hidden'] as const).hidden
     setSaved(new Set(raw ? raw.split(',') : []))
   }, [storageKey])
-  const wide = useIsWide()
+  // `md`, the line DataTable switches layouts on; no matchMedia (jsdom) reads as wide.
+  const wide = useWideViewport(768)
 
   const pinned = useMemo(() => new Set(columns.filter((c) => c.pinned).map((c) => c.key)), [columns])
   const hidden = useMemo(() => {

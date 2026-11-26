@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { RECORD_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { formatHistoricalDate } from "@/lib/utils";
@@ -417,7 +418,6 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
                     {isMerit ? (
                       <Amount
                         field="original_weight"
-                        sign="+"
                         value={weight}
                         className="text-[oklch(var(--color-ink))]"
                       />
@@ -427,8 +427,7 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
                     {isMerit ? null : (
                       <Amount
                         field="original_weight"
-                        sign="-"
-                        value={weight}
+                        value={weight === null ? null : -weight}
                         className="text-[oklch(var(--color-ink))]"
                       />
                     )}
@@ -437,8 +436,7 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
                   <BodyCell numeric>
                     <Amount
                       field="running_balance"
-                      sign={runningBalance !== null && runningBalance < 0 ? "-" : "+"}
-                      value={runningBalance === null ? null : Math.abs(runningBalance)}
+                      value={runningBalance}
                       className="text-[oklch(var(--color-ink))]"
                     />
                   </BodyCell>
@@ -462,7 +460,6 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
               <FootCell numeric>
                 <Amount
                   field="merit_total"
-                  sign="+"
                   value={meritTotal}
                   className="text-[oklch(var(--color-ink))]"
                 />
@@ -470,16 +467,14 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
               <FootCell numeric>
                 <Amount
                   field="demerit_total"
-                  sign="-"
-                  value={demeritTotal}
+                  value={demeritTotal === null ? null : -demeritTotal}
                   className="text-[oklch(var(--color-ink))]"
                 />
               </FootCell>
               <FootCell numeric>
                 <Amount
                   field="net_total"
-                  sign={netTotal !== null && netTotal < 0 ? "-" : "+"}
-                  value={netTotal === null ? null : Math.abs(netTotal)}
+                  value={netTotal}
                   className="text-[oklch(var(--color-ink))]"
                 />
               </FootCell>
@@ -599,13 +594,11 @@ function FootCell({
  */
 function Amount({
   field,
-  sign,
   value,
   className,
 }: {
   field: string;
-  sign: "+" | "-";
-  /** null = withheld from this reader (VIEWER, P-02): a mark, never a bare sign or a 0. */
+  /** Signed (a demerit is passed negative): written by `signedNumber`, so U+2212 and no sign on 0. null = withheld from this reader (VIEWER, P-02): a mark, never a bare sign or a 0. */
   value: number | null;
   className: string;
 }) {
@@ -623,8 +616,7 @@ function Amount({
       data-quantity-field={field}
       className={`font-mono text-sm tabular-nums ${className}`}
     >
-      {sign}
-      {value}
+      {signedNumber(value)}
     </span>
   );
 }

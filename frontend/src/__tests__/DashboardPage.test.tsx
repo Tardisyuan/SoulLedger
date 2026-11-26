@@ -802,7 +802,7 @@ describe("DashboardPage ledger tab", () => {
 
     const cell = async (state: string) => found(container, `[data-avg-of="${state}"]`);
     expect(await cell("ALIVE")).toHaveTextContent("+12.5");
-    expect(await cell("JUDGING")).toHaveTextContent("-40.0");
+    expect(await cell("JUDGING")).toHaveTextContent("−40.0");
     const disposed = await cell("DISPOSED");
     expect(disposed.querySelector('[data-missing="inapplicable"]')).not.toBeNull();
     expect(disposed).not.toHaveTextContent("0.0");

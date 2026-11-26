@@ -17,6 +17,7 @@ import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import letters from "./data/soul-letters.json";
 import { read, type Recording } from "./store";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 export type SoulScreen = "life" | "letters" | "circle" | "rebirth" | "lock";
 /** v4: 转生 is a tab only where souls go round. */
@@ -42,7 +43,6 @@ export function soulView(rec: Recording, civ: SealCiv, t: T) {
 export type SoulView = ReturnType<typeof soulView>;
 
 const word = (t: T, key: string, fallback: string) => (t(key) === key ? t(fallback) : t(key));
-const signed = (b: number) => (b > 0 ? `+${b}` : b < 0 ? `−${-b}` : "0");
 
 const SECTION = "border-b border-[oklch(var(--color-line))] px-4 py-4";
 const EYEBROW = "m-0 text-2xs uppercase text-[oklch(var(--color-metal))]";
@@ -79,7 +79,7 @@ function Life({ view, civ }: { view: SoulView; civ: SealCiv }) {
         <div className="flex items-end gap-6 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
           <div className="flex-1">
             <p className="m-0 text-xs text-[oklch(var(--color-ink-subtle))]">{t("soul_app.life.balance")}</p>
-            <p className="m-0 mt-1 font-title text-xl font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(me.merit_score - me.demerit_score)}</p>
+            <p className="m-0 mt-1 font-title text-xl font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signedNumber(me.merit_score - me.demerit_score)}</p>
           </div>
           {(["merit", "demerit"] as const).map((w) => (
             <div key={w}>

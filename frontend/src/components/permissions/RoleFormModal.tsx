@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId, useRef } from "react";
+import { useState, useId, useRef } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
@@ -8,15 +8,7 @@ import { TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import type { Role } from "@soulledger/core/api";
 
-export function RoleFormModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  isPending,
-  error,
-  title,
-  initialData,
-}: {
+interface RoleFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { name: string; display_name: string }) => void;
@@ -24,7 +16,17 @@ export function RoleFormModal({
   error: string | null;
   title: string;
   initialData?: Role;
-}) {
+}
+
+/**
+ * Rendered only while open, keyed by the role: the form starts from `initialData` on every open (a `key`, not an
+ * effect that copies props into state; audit 2026-11-26 §2.5).
+ */
+export function RoleFormModal(props: RoleFormModalProps) {
+  return props.isOpen ? <RoleForm key={props.initialData?.id ?? "new"} {...props} /> : null;
+}
+
+function RoleForm({ isOpen, onClose, onSubmit, isPending, error, title, initialData }: RoleFormModalProps) {
   const { t } = useI18n();
   // Unique prefix so field/error ids never collide across multiple
   // RoleFormModal instances mounted at once.
@@ -47,15 +49,8 @@ export function RoleFormModal({
   const nameId = `${formId}-name`;
   const displayNameId = `${formId}-display-name`;
   const errorId = `${formId}-error`;
-  const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      setName(initialData?.name ?? "");
-      setDisplayName(initialData?.display_name ?? "");
-    }
-  }, [isOpen, initialData]);
+  const [name, setName] = useState(initialData?.name ?? "");
+  const [displayName, setDisplayName] = useState(initialData?.display_name ?? "");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,23 +59,18 @@ export function RoleFormModal({
     onSubmit({ name: name.trim().toUpperCase(), display_name: displayName.trim() });
   }
 
-  function handleClose() {
-    setName("");
-    setDisplayName("");
-    onClose();
-  }
 
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={handleClose}
+      onClose={onClose}
       title={title}
       footer={
         <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="secondary"
-            onClick={handleClose}
+            onClick={onClose}
             disabled={isPending}
           >
             {t("common.cancel")}

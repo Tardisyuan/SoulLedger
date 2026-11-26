@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useId } from "react";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
@@ -22,7 +22,25 @@ interface SoulEditModalProps {
 
 const STATE_OPTION_VALUES = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "LOST"] as const;
 
-export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModalProps) {
+/** Convert HistoricalDate to HTML date input format (YYYY-MM-DD). */
+const historicalDateToInputValue = (date: HistoricalDate | null | undefined): string => {
+  if (!date || !date.month || !date.day) return "";
+  const year = Math.abs(date.year).toString().padStart(4, "0");
+  const month = date.month.toString().padStart(2, "0");
+  const day = date.day.toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Rendered only while open, keyed by the soul: the form starts from `soul` on every open (a `key`, not an effect that
+ * copies props into state; audit 2026-11-26 §2.5). A refetch of the same soul while the form is open no longer
+ * overwrites what the operator has typed.
+ */
+export function SoulEditModal(props: SoulEditModalProps) {
+  return props.isOpen ? <SoulEditForm key={props.soul.id} {...props} /> : null;
+}
+
+function SoulEditForm({ isOpen, onClose, soul, onUpdated }: SoulEditModalProps) {
   const { t } = useI18n();
   const updateMutation = useUpdateSoul();
   const { validate, getError, clearFieldError } = useFormValidation(soulUpdateSchema);
@@ -46,19 +64,19 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const neutralId = `${formId}-neutral-in-life`;
   const ferryId = `${formId}-ferry-passage`;
 
-  const [name, setName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [deathDate, setDeathDate] = useState("");
-  const [fatedDate, setFatedDate] = useState("");
-  const [originLocation, setOriginLocation] = useState("");
-  const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
-  const [duatPassage, setDuatPassage] = useState<SoulDuatPassage>("");
-  const [birthContinent, setBirthContinent] = useState<SoulContinent>("");
-  const [baptism, setBaptism] = useState<SoulBaptism>("UNRECORDED");
-  const [deniedImmortality, setDeniedImmortality] = useState<boolean | null>(null);
-  const [neutralInLife, setNeutralInLife] = useState<boolean | null>(null);
-  const [ferryPassage, setFerryPassage] = useState<SoulFerryPassage>("");
-  const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
+  const [name, setName] = useState(soul.name || "");
+  const [birthDate, setBirthDate] = useState(() => historicalDateToInputValue(soul.birth_date));
+  const [deathDate, setDeathDate] = useState(() => historicalDateToInputValue(soul.death_date));
+  const [fatedDate, setFatedDate] = useState(() => historicalDateToInputValue(soul.fated_death_date));
+  const [originLocation, setOriginLocation] = useState(soul.origin_location || "");
+  const [originRegion, setOriginRegion] = useState<SoulOriginRegion>(soul.origin_region ?? "");
+  const [duatPassage, setDuatPassage] = useState<SoulDuatPassage>(soul.duat_passage ?? "");
+  const [birthContinent, setBirthContinent] = useState<SoulContinent>(soul.birth_continent ?? "");
+  const [baptism, setBaptism] = useState<SoulBaptism>(soul.baptism ?? "UNRECORDED");
+  const [deniedImmortality, setDeniedImmortality] = useState<boolean | null>(soul.denied_immortality ?? null);
+  const [neutralInLife, setNeutralInLife] = useState<boolean | null>(soul.neutral_in_life ?? null);
+  const [ferryPassage, setFerryPassage] = useState<SoulFerryPassage>(soul.ferry_passage ?? "");
+  const [currentState, setCurrentState] = useState<Soul["current_state"]>(soul.current_state || "ALIVE");
 
   // SETTLED is terminal to an operator — its one way out (back to DISPOSED
   // when a cross-realm judgment reopens a finished sentence plan) is the
@@ -76,33 +94,6 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   // 过河(2026-10-28):只有希腊登记 —— 未葬 / 无渡资者滞留阿刻戎岸边。
   const hasFerryPassage = soul.civilization === "GREEK";
 
-  // Convert HistoricalDate to HTML date input format (YYYY-MM-DD)
-  const historicalDateToInputValue = (date: HistoricalDate | null | undefined): string => {
-    if (!date || !date.month || !date.day) return "";
-    const year = Math.abs(date.year).toString().padStart(4, "0");
-    const month = date.month.toString().padStart(2, "0");
-    const day = date.day.toString().padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  // Populate form when soul changes or modal opens
-  useEffect(() => {
-    if (isOpen && soul) {
-      setName(soul.name || "");
-      setBirthDate(historicalDateToInputValue(soul.birth_date));
-      setDeathDate(historicalDateToInputValue(soul.death_date));
-      setFatedDate(historicalDateToInputValue(soul.fated_death_date));
-      setOriginLocation(soul.origin_location || "");
-      setOriginRegion(soul.origin_region ?? "");
-      setDuatPassage(soul.duat_passage ?? "");
-      setBirthContinent(soul.birth_continent ?? "");
-      setBaptism(soul.baptism ?? "UNRECORDED");
-      setDeniedImmortality(soul.denied_immortality ?? null);
-      setNeutralInLife(soul.neutral_in_life ?? null);
-      setFerryPassage(soul.ferry_passage ?? "");
-      setCurrentState(soul.current_state || "ALIVE");
-    }
-  }, [isOpen, soul]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

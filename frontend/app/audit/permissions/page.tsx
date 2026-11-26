@@ -8,7 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
+import { AuditRefusal } from "@/src/components/audit/AuditGate";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -21,6 +21,7 @@ import { Segments } from "@/src/components/dashboard/TrendsPanel";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { auditResourceLabel, datePresetStart, PERMISSION_RESOURCES, type DatePreset } from "@/src/components/audit/auditLabels";
 import { localDayKey } from "@/lib/auditGrouping";
+import { auditActionsQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /** 「显示更多」依次取到的条数;最后一档就是后端的 `TIMELINE_MAX_LIMIT`。 */
 const LIMITS = [50, 200, 500] as const;
@@ -119,10 +120,16 @@ function TimelineEntry({ log }: { log: AuditLogEntry }) {
  * 按日分组的竖线，不是表格;每一步都画出来，不像列表那样折叠 ×N。
  */
 export default function PermissionChangesPage() {
+  // The gate (`tests/test_page_gates_match_the_backend.py` reads it from the default export).
+  const { hasPermission } = usePermissions();
+  const canReadAudit = hasPermission("audit.read");
+  if (!canReadAudit) return <AuditRefusal />;
+  return <PermissionChangesContent />;
+}
+
+function PermissionChangesContent() {
   const { t, formatDate } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
-  const { hasPermission, permissionsReady } = usePermissions();
-  const canReadAudit = hasPermission("audit.read");
 
   const [resource, setResource] = useState("");
   const [action, setAction] = useState("");
@@ -135,10 +142,7 @@ export default function PermissionChangesPage() {
   };
 
   const { data: actionValues = [] } = useQuery({
-    queryKey: ["audit-actions"],
-    queryFn: async () => (await auditApi.actions()).data.map((a) => a.value),
-    enabled: canReadAudit,
-    staleTime: Infinity,
+    ...auditActionsQuery(),
   });
 
   const startDate = datePresetStart(datePreset);
@@ -153,7 +157,6 @@ export default function PermissionChangesPage() {
           ...(startDate ? { start_date: startDate } : {}),
         })
       ).data,
-    enabled: canReadAudit,
     placeholderData: (previous) => previous,
   });
   // 后端的 `resource` 是精确匹配(2026-10-17),返回的就是要画的:「显示更多」和 cap_reached 数的正是这些行。
@@ -176,18 +179,6 @@ export default function PermissionChangesPage() {
       <MenuGloss path="/audit" />
     </>
   );
-  if (!canReadAudit) {
-    return (
-      <PageShell variant="full" title={title}>
-        {permissionsReady === false ? (
-          <PermissionsPending />
-        ) : (
-          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
-        )}
-      </PageShell>
-    );
-  }
-
   let body: ReactNode;
   if (isError && !data) body = <QueryError onRetry={() => void refetch()} error={listError} detail={t("audit.timeline.failed")} />;
   else if (isPending) body = null; // PageShell shows the skeleton under the running top line (第三十批 一.5: no spinner)

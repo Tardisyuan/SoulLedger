@@ -27,6 +27,7 @@ import { HandledBy } from "@/src/components/ui/HandledBy";
 import { PageSection } from "@/components/ui/page-section";
 import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 import { responseCode } from "@soulledger/core/api/client";
+import { dispatchKeys } from "@soulledger/core/query_keys";
 
 /** Refusals of approve / execute the toast names in the reader's language (the server's `detail` is English). */
 const DISPATCH_REFUSAL_KEYS: Record<string, string> = {
@@ -112,7 +113,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   const [returnReason, setReturnReason] = useState("");
 
   const { data: dispatch, isLoading, isError, error: listError, refetch } = useQuery({
-    queryKey: ["dispatch", "detail", id],
+    queryKey: dispatchKeys.detail(id),
     queryFn: () => dispatchApi.get(id).then(r => r.data),
     enabled: !!user && !!id,
     staleTime: 0,
@@ -139,7 +140,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     onSuccess: () => {
       setShowApproveModal(false);
       showToast(t("dispatch.approved_success"), "success");
-      queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+      queryClient.invalidateQueries({ queryKey: dispatchKeys.all });
       router.push("/dispatch");
     },
     onError: (err: unknown) => {
@@ -153,7 +154,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     onSuccess: () => {
       setShowRejectModal(false);
       showToast(t("dispatch.rejected_success"), "success");
-      queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+      queryClient.invalidateQueries({ queryKey: dispatchKeys.all });
       router.push("/dispatch");
     },
     onError: () => {
@@ -167,7 +168,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     onSuccess: () => {
       setShowExecuteModal(false);
       showToast(t("dispatch.executed_success"), "success");
-      queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+      queryClient.invalidateQueries({ queryKey: dispatchKeys.all });
       router.push("/dispatch");
     },
     onError: (err: unknown) => {
@@ -182,7 +183,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       setShowReturnModal(false);
       setReturnReason("");
       showToast(t("dispatch.return_home_success"), "success");
-      queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+      queryClient.invalidateQueries({ queryKey: dispatchKeys.all });
     },
     onError: (err: unknown) => {
       setShowReturnModal(false);

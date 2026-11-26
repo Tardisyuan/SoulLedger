@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -44,7 +44,15 @@ interface SoulCreateModalProps {
   onCreated: () => void;
 }
 
-export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalProps) {
+/**
+ * Rendered only while open, so every open starts from an empty form (it mounts fresh rather than an effect resetting
+ * each field on open; audit 2026-11-26 §2.5).
+ */
+export function SoulCreateModal(props: SoulCreateModalProps) {
+  return props.isOpen ? <SoulCreateForm {...props} /> : null;
+}
+
+function SoulCreateForm({ isOpen, onClose, onCreated }: SoulCreateModalProps) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const { validate, getError, clearFieldError } = useFormValidation(soulCreateSchema);
@@ -81,18 +89,6 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const [loading, setLoading] = useState(false);
   const [serverErrors, setServerErrors] = useState<Partial<Record<SoulCreateField, string>>>({});
   const clearServerError = (field: SoulCreateField) => setServerErrors(({ [field]: _drop, ...rest }) => rest);
-
-  // Reset form when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setName("");
-      setCivilization("CHINESE");
-      setBirthDate("");
-      setOriginLocation("");
-      setOriginRegion("");
-      setServerErrors({});
-    }
-  }, [isOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

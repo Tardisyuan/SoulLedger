@@ -29,6 +29,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { dispatchKeys } from "@soulledger/core/query_keys";
 
 /**
  * Dispatch state → badge tone, for the two lists on this page.
@@ -117,7 +118,7 @@ function DispatchPageContent() {
     isPlaceholderData: proposedStale,
     isError: proposedError, error: proposedFailure, refetch: refetchProposed,
   } = useQuery({
-    queryKey: ["dispatch", "proposed", proposedPage, filterKey],
+    queryKey: [...dispatchKeys.all, "proposed", proposedPage, filterKey],
     queryFn: () => dispatchApi.proposed({ page: String(proposedPage), ...filterParams }).then(r => r.data),
     enabled: !!user,
     // Pushed: dispatch events invalidate ["dispatch"].
@@ -131,7 +132,7 @@ function DispatchPageContent() {
     isPlaceholderData: historyStale,
     isError: historyError, error: historyFailure, refetch: refetchHistory,
   } = useQuery({
-    queryKey: ["dispatch", "history", historyPage, filterKey],
+    queryKey: [...dispatchKeys.all, "history", historyPage, filterKey],
     queryFn: () => dispatchApi.history({ page: String(historyPage), ...filterParams }).then(r => r.data),
     enabled: !!user,
     staleTime: 0,

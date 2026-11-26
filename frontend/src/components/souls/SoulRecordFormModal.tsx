@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { problemErrors, responseStatus } from "@soulledger/core/api/client";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
@@ -92,7 +92,15 @@ export interface SoulRecordFormModalProps {
   soulName?: string;
 }
 
-export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, record, soulState, soulName }: SoulRecordFormModalProps) {
+/**
+ * Rendered only while open, keyed by the record: the form starts from `record` (or empty for a new one) on every open
+ * (a `key`, not an effect that copies props into state; audit 2026-11-26 §2.5).
+ */
+export function SoulRecordFormModal(props: SoulRecordFormModalProps) {
+  return props.isOpen ? <SoulRecordForm key={props.record?.id ?? "new"} {...props} /> : null;
+}
+
+function SoulRecordForm({ isOpen, onClose, soulId, civilization, record, soulState, soulName }: SoulRecordFormModalProps) {
   const { t, locale } = useI18n();
   const formId = useId();
   const add = useAddSoulRecord();
@@ -100,45 +108,27 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
   const pending = add.isPending || update.isPending;
   const statutes = useAllStatutes({ enabled: isOpen });
 
-  const [recordType, setRecordType] = useState<string>("MERIT");
-  const [category, setCategory] = useState<string>("OTHER");
-  const [description, setDescription] = useState("");
-  const [weight, setWeight] = useState("1");
-  const [count, setCount] = useState("");
-  const [dateYear, setDateYear] = useState("");
-  const [dateMonth, setDateMonth] = useState("");
-  const [dateDay, setDateDay] = useState("");
+  const [recordType, setRecordType] = useState<string>(record?.type ?? "MERIT");
+  const [category, setCategory] = useState<string>(record?.category ?? "OTHER");
+  const [description, setDescription] = useState(record?.description ?? "");
+  const [weight, setWeight] = useState(String(record?.original_weight ?? 1));
+  const [count, setCount] = useState(record?.occurrence_count != null ? String(record.occurrence_count) : "");
+  const [dateYear, setDateYear] = useState(record?.event_date ? String(record.event_date.year) : "");
+  const [dateMonth, setDateMonth] = useState(record?.event_date?.month ? String(record.event_date.month) : "");
+  const [dateDay, setDateDay] = useState(record?.event_date?.day ? String(record.event_date.day) : "");
   const [dateTouched, setDateTouched] = useState(false);
-  const [lifeStage, setLifeStage] = useState("");
-  const [statuteId, setStatuteId] = useState("");
-  const [clause, setClause] = useState("");
-  const [evidenceSource, setEvidenceSource] = useState("");
-  const [evidenceNote, setEvidenceNote] = useState("");
-  const [sinGravity, setSinGravity] = useState("");
+  const [lifeStage, setLifeStage] = useState(record?.life_stage ?? "");
+  const [statuteId, setStatuteId] = useState(record?.statute_snapshot?.statute_id ?? "");
+  const [clause, setClause] = useState(record ? clauseText(record.statute_clause) : "");
+  const [evidenceSource, setEvidenceSource] = useState(record?.evidence_source ?? "");
+  // 超度回向的来源就是事目;旧记录没写 evidence_note 时从事目取。
+  const [evidenceNote, setEvidenceNote] = useState(
+    record?.evidence_note || (record?.category === "DEDICATION" ? record.description : "")
+  );
+  const [sinGravity, setSinGravity] = useState(record?.sin_gravity ?? "");
   const [errors, setErrors] = useState<Errors>({});
   const [saved, setSaved] = useState<SoulRecordEntry | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setErrors({});
-    setSaved(null);
-    setDateTouched(false);
-    setRecordType(record?.type ?? "MERIT");
-    setCategory(record?.category ?? "OTHER");
-    setDescription(record?.description ?? "");
-    setWeight(String(record?.original_weight ?? 1));
-    setCount(record?.occurrence_count != null ? String(record.occurrence_count) : "");
-    setDateYear(record?.event_date ? String(record.event_date.year) : "");
-    setDateMonth(record?.event_date?.month ? String(record.event_date.month) : "");
-    setDateDay(record?.event_date?.day ? String(record.event_date.day) : "");
-    setLifeStage(record?.life_stage ?? "");
-    setStatuteId(record?.statute_snapshot?.statute_id ?? "");
-    setClause(record ? clauseText(record.statute_clause) : "");
-    setEvidenceSource(record?.evidence_source ?? "");
-    setSinGravity(record?.sin_gravity ?? "");
-    // 超度回向的来源就是事目;旧记录没写 evidence_note 时从事目取。
-    setEvidenceNote(record?.evidence_note || (record?.category === "DEDICATION" ? record.description : ""));
-  }, [isOpen, record]);
 
   const dedication = category === "DEDICATION";
   // 欧洲的过分大罪 / 小罪(2026-10-28,docs/03 §二):结案时与裁决核对。别的文明、功、回向都不画、不发。

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { HandledContent, HandledFilters } from "@soulledger/core/api/social-moderation";
 import { useHandledContent, useModeratedItem, useRestoreVisible } from "@soulledger/core/hooks/useSocialModeration";
 import { PAGE_SIZE } from "@soulledger/core/api";
+import { utcDaysAgo } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
@@ -24,13 +25,11 @@ function HandlingBadge({ handling }: { handling: HandledContent["handling"] }) {
 /** 时间范围(E-08d「近 30 天 ▾」):默认近 30 天,可放宽到 90 天或全部。 */
 const RANGES = ["30d", "90d", "all"] as const;
 type Range = (typeof RANGES)[number];
-const DAY_MS = 86_400_000;
-
 /** 「近 N 天」的起日(含今天,共 N 天),按 UTC 切 —— 与服务端 `TIME_ZONE` 同一把尺。 */
 export function rangeStart(range: Range, now = Date.now()): string | undefined {
   if (range === "all") return undefined;
   const days = range === "30d" ? 30 : 90;
-  return new Date(now - (days - 1) * DAY_MS).toISOString().slice(0, 10);
+  return utcDaysAgo(days - 1, now);
 }
 
 /**

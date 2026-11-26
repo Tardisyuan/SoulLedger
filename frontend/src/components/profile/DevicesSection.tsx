@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { pad2 } from "@soulledger/core/domain/dates";
 
 /** 退出一台之后,这一行显示「已退出」这么久再消失(Design 第二十八批 W2)。 */
 export const SIGNED_OUT_LINGER_MS = 3000;
@@ -18,11 +19,10 @@ export const SIGNED_OUT_LINGER_MS = 3000;
 const ROW = "min-h-16 grid grid-cols-[minmax(0,1fr)_160px_120px] max-sm:grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-[oklch(var(--color-line))]";
 const MUTED = "text-xs text-[oklch(var(--color-ink-muted))]";
 
-const pad = (n: number) => String(n).padStart(2, "0");
 /** `YYYY-MM-DD`,本地时区。 */
-const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const ymd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 /** `YYYY-MM-DD HH:MM`,本地时区。 */
-const ymdHm = (d: Date) => `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const ymdHm = (d: Date) => `${ymd(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
 /**
  * 个人中心「登录设备」(Design 第二十八批 W2):一台设备一行,这台在前(服务端排好)。

@@ -10,6 +10,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { SelectField, TextField, fieldControl } from "@/src/components/ui/Field";
 import { showToast } from "@/src/components/ui/Toast";
 import { tudiRefusalCode, tudiRefusalMessage } from "./tudiDisplay";
+import { cityGodOfficerChoicesQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /*
  * 编辑土地公(第五十七批 S-5):照城隍的编辑抽屉 —— 名字、管辖地(标签输入,同城隍地名)、上级城隍(只列本殿的,
@@ -40,7 +41,7 @@ export function TudiGodEditor({ god, onClose }: Props) {
   const [confirming, setConfirming] = useState(false);
 
   const gods = useQuery({ queryKey: cityGodKeys.gods(), queryFn: () => cityGodsApi.list().then((r) => r.data.results) });
-  const choices = useQuery({ queryKey: [...cityGodKeys.all, "officer-choices"], queryFn: () => cityGodsApi.officerChoices().then((r) => r.data) });
+  const choices = useQuery(cityGodOfficerChoicesQuery());
   const parents = (gods.data ?? []).filter((g) => !g.rank || g.rank === "COUNTY" || g.id === god?.city_god);
 
   const save = useMutation({

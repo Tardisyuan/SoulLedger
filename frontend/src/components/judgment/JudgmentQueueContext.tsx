@@ -9,6 +9,8 @@ import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { formatHistoricalDate } from "@/lib/utils";
 import { SUMMARY_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+// Karma reads as a signed ledger, so the sign is part of the value, not decoration.
+import { signedNumber, signedTone } from "@soulledger/core/domain/signedNumber";
 import type { QueueLedger, QueueLedgerRecord, QueuePriorCycle, QueueRealm, QueueSoul } from "@soulledger/core/api";
 
 /**
@@ -23,17 +25,6 @@ import type { QueueLedger, QueueLedgerRecord, QueuePriorCycle, QueueRealm, Queue
  * only place the 10% status tint is declared (see
  * src/__tests__/dataGridToneContract.test.ts).
  */
-
-/** Karma reads as a signed ledger, so the sign is part of the value, not decoration. */
-export function signed(n: number): string {
-  return n > 0 ? `+${n}` : String(n);
-}
-
-export function karmaTone(n: number): "success" | "error" | "neutral" {
-  if (n > 0) return "success";
-  if (n < 0) return "error";
-  return "neutral";
-}
 
 const STATE_TONE: Record<string, EnumTone> = {
   ALIVE: "success",
@@ -132,8 +123,8 @@ export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civ
       type: "numeric",
       header: t("judgment.queue.ledger_weight"),
       value: (row) => (row.type === "MERIT" ? row.effective_weight : -row.effective_weight),
-      format: signed,
-      tone: karmaTone,
+      format: (n) => signedNumber(n),
+      tone: signedTone,
       width: "10ch",
     },
     {
@@ -176,7 +167,7 @@ export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civ
             t={t}
             className="font-mono tabular-nums text-md text-[oklch(var(--color-status-success))]"
           >
-            {signed(ledger.merit_score)}
+            {signedNumber(ledger.merit_score)}
           </Figure>
         </div>
         <div>
@@ -187,7 +178,7 @@ export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civ
             t={t}
             className="font-mono tabular-nums text-md text-[oklch(var(--color-status-error))]"
           >
-            {signed(-Math.abs(ledger.demerit_score))}
+            {signedNumber(-Math.abs(ledger.demerit_score))}
           </Figure>
         </div>
         {/* The balance is the one of the three that is not a fact about weight.
@@ -225,7 +216,7 @@ export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civ
               t={t}
               className="font-mono tabular-nums text-md text-[oklch(var(--color-ink))]"
             >
-              {signed(ledger.karmic_balance)}
+              {signedNumber(ledger.karmic_balance)}
             </Figure>
           ) : (
             <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />

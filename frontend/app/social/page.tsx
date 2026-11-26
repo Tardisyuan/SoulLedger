@@ -115,7 +115,7 @@ export default function SocialFeedPage() {
      `min-h-`:TAB_BASE 自带 `min-h-(--control-h-sm)`(44),两个 min-h 谁赢取决于生成 CSS 的顺序。
      `aria-pressed`, not `role="tab"`: these own no tabpanel and arrow keys do
      not move between them — a set of toggles with exactly one on.
-     `components/ui/data-grid/FilterBar.tsx:181` already does this. */
+     `src/components/ui/FilterChip.tsx`'s `FilterChipToggle` already does this. */
   const tabs = (
     <div className="flex gap-6 border-b border-[oklch(var(--color-line))] max-[768px]:gap-0 max-[768px]:bg-[oklch(var(--color-surface-1))]">
       {TAB_KEYS.map((key) => (
