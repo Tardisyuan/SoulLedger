@@ -106,6 +106,7 @@ export function TodoTab({
           onRetry={reload}
           role={role}
           area={t("officer_app.areas.todo")}
+          error={error}
           emptyTitle={t("officer_app.todo.empty_title")}
           emptyBody={t(approver ? "officer_app.todo.empty_body" : "officer_app.todo.empty_body_other")}
         />

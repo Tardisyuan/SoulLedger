@@ -46,7 +46,7 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
   const canExecute = useCan("city_god.execute");
 
   const state = detailStateOf({ data: c, error });
-  if (state || !c) return <StateView state={state ?? "loading"} onRetry={() => void reload()} />;
+  if (state || !c) return <StateView state={state ?? "loading"} onRetry={() => void reload()} error={error} />;
 
   const open = c.city_god_status !== "SENT_ON" && canExecute;
   const locked = !c.can_act || offline;

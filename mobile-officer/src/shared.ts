@@ -31,6 +31,7 @@ export {
   Loader,
   Notice,
   Screen,
+  ScreenError,
   SectionLabel,
   SmallButton,
   SwitchMark,

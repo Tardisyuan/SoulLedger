@@ -315,7 +315,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                   {glyph}
                 </Txt>
                 {selected ? <View testID="tab-current-mark" style={[styles.tabCurrent, { backgroundColor: t.ink }]} /> : null}
-                {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
+                {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink, borderColor: t.s0 }]} /> : null}
               </View>
               <Txt
                 testID={`tab-${route.name}-label`}
@@ -360,7 +360,8 @@ const styles = StyleSheet.create({
   tabGlyph: { fontSize: 18, lineHeight: 22 },
   /** The current item's 14 × 2 rule, 3 under its character. */
   tabCurrent: { position: "absolute", bottom: -3, width: 14, height: 2, borderRadius: 1 },
-  tabBadge: { position: "absolute", top: -2, right: -8, width: 8, height: 8, borderRadius: radius.pill },
+  /** The unread dot (第六十七批 五.2, as the officer app's): 8 of ink in a 2px ring of the bar's ground, so it stands off the glyph. */
+  tabBadge: { position: "absolute", top: -4, right: -10, width: 12, height: 12, borderRadius: radius.pill, borderWidth: 2 },
   /** v4: 11 / 16 under a 22 icon. */
   tabLabel: { fontSize: 11, lineHeight: 16, textAlign: "center" },
   /** v4 page header: the seal, then the big title over its sub line. */

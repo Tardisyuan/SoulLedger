@@ -1780,47 +1780,64 @@ export function SmallButton({ title, onPress, testID }: { title: string; onPress
   );
 }
 
-/** The whole screen could not load: say that the record still exists, offer a retry, show the code. */
+/**
+ * The whole screen could not load: say that the record still exists, offer a retry, show the code. Both apps' one
+ * full-page error (第六十七批 五.3): glyph, title, a line, the ink 「重试」, the code in small faint text at the foot --
+ * never a red alert box (第六十一批 E2). The officer app passes its own `title` / `body`; with no `error` there is
+ * no failure line and no code.
+ */
 export function ScreenError({
   error,
   onRetry,
   onHome,
   reported,
+  title,
+  body,
+  testID,
+  retryTestID,
 }: {
-  error: SoulErrorMessage;
-  onRetry: () => void;
+  error?: SoulErrorMessage;
+  onRetry?: () => void;
   /** The crash screen only: a second, quieter way out. */
   onHome?: () => void;
   /** The crash screen only: said once the report has really been delivered. */
   reported?: boolean;
+  title?: string;
+  body?: string;
+  testID?: string;
+  retryTestID?: string;
 }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const [at] = useState(() => new Date());
-  const code = error.params?.code ?? error.key.split(".").pop();
+  const code = error ? (error.params?.code ?? error.key.split(".").pop()) : null;
   const clock = [at.getHours(), at.getMinutes(), at.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
   return (
-    <View style={styles.screenError}>
+    <View testID={testID} style={styles.screenError}>
       <LedgerUnreachable size={34} stroke={t.inkSubtle} />
       <Txt variant="nav" style={styles.center}>
-        {tr("soul_app.errors.screen_title")}
+        {title ?? tr("soul_app.errors.screen_title")}
       </Txt>
       <Txt variant="caption" tone="subtle" style={styles.center}>
-        {tr("soul_app.errors.screen_body")}
+        {body ?? tr("soul_app.errors.screen_body")}
       </Txt>
-      <Txt testID="failure" accessibilityRole="alert" variant="caption" tone="muted" style={styles.center}>
-        {tr(error.key, error.params)}
-      </Txt>
+      {error ? (
+        <Txt testID="failure" accessibilityRole="alert" variant="caption" tone="muted" style={styles.center}>
+          {tr(error.key, error.params)}
+        </Txt>
+      ) : null}
       {reported ? (
         <Txt testID="crash-reported" variant="caption" tone="subtle" style={styles.center}>
           {tr("soul_app.errors.reported")}
         </Txt>
       ) : null}
-      <Button kind="secondary" title={tr("soul_app.common.retry")} onPress={onRetry} style={styles.retry} />
+      {onRetry ? <Button testID={retryTestID ?? "screen-retry"} title={tr("soul_app.common.retry")} onPress={onRetry} style={styles.retry} /> : null}
       {onHome ? <Button testID="crash-home" kind="secondary" title={tr("soul_app.errors.go_home")} onPress={onHome} style={styles.home} /> : null}
-      <Txt testID="error-code" variant="value" tone="subtle" style={styles.errorCode}>
-        {`${code} · ${clock}${error.requestId ? ` · request ${error.requestId}` : ""}`}
-      </Txt>
+      {error ? (
+        <Txt testID="error-code" variant="value" style={[styles.errorCode, { color: t.faintText }]}>
+          {`${code} · ${clock}${error.requestId ? ` · request ${error.requestId}` : ""}`}
+        </Txt>
+      ) : null}
     </View>
   );
 }

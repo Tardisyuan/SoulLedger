@@ -275,9 +275,9 @@ describe("the tab bar (补足 B11 / C14)", () => {
   // At 1× text: RN's jest window is 2×, where the bar is the stacked rows (handoff 2d), not the capsule.
   beforeEach(() => Object.assign(mockWindow, { fontScale: 1 }));
   afterEach(() => Object.assign(mockWindow, RN_JEST_WINDOW));
-  const bar =(titles: string[], index = 0) => {
+  const bar =(titles: string[], index = 0, badge?: string) => {
     const routes = ["Life", "Applications", "Letters", "Circle"].map((name) => ({ key: `${name}-k`, name }));
-    const descriptors = Object.fromEntries(routes.map((r, i) => [r.key, { options: { title: titles[i] } }]));
+    const descriptors = Object.fromEntries(routes.map((r, i) => [r.key, { options: { title: titles[i], tabBarBadge: r.name === badge ? 1 : undefined } }]));
     const navigation = { emit: () => ({ defaultPrevented: false }), navigate: jest.fn() };
     const props = { state: { index, routes }, descriptors, navigation, insets: {} } as unknown as Parameters<typeof TabBar>[0];
     return <TabBar {...props} />;
@@ -299,6 +299,15 @@ describe("the tab bar (补足 B11 / C14)", () => {
     // No capsule: the page's ground under a hairline.
     expect(flat(screen.getByTestId("tab-bar-ground"))).toMatchObject({ backgroundColor: v4.light.main, borderTopColor: t.hair, borderTopWidth: 1 });
     expect(flat(screen.getByTestId("tab-bar")).borderRadius).toBeUndefined();
+  });
+
+  it("第六十七批 五.2: the unread dot is 8 of ink in a 2px ring of the bar's ground, as the officer app's; never the danger colour", () => {
+    const t = themeFor("CHINESE", "light");
+    wrap(bar(["本世", "转生", "书信", "朋友圈"], 0, "Letters"), signedIn());
+    const dot = flat(screen.getByTestId("tab-Letters-badge", H));
+    expect(dot).toMatchObject({ width: 12, height: 12, borderWidth: 2, backgroundColor: t.ink, borderColor: t.s0 });
+    expect(dot.backgroundColor).not.toBe(t.neg);
+    expect(screen.queryByTestId("tab-Life-badge", H)).toBeNull();
   });
 
   it("one label past the pillar's threshold (core's pillarIsWide): all four may take two lines, not only that one", () => {
