@@ -271,6 +271,7 @@ export function QueueTab({
           onRetry={() => void refresh()}
           role={role}
           area={t("officer_app.areas.queue")}
+          error={pending?.error}
           emptyTitle={t("officer_app.desk.empty_title")}
           emptyBody={t("officer_app.desk.empty_body")}
         />

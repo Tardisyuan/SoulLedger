@@ -6,7 +6,9 @@
  * 第三十批 (卷宗): the civilization colour only in the 2px top line, the seal, the spine and focus -- the primary
  * button is ink-filled; the tinted status tag (`Tag`) and the touch sizes (`touch`) are here too.
  */
-import { fetchFailureOf } from "@soulledger/core/api/client";
+import { fetchFailureOf, responseCode, responseStatus } from "@soulledger/core/api/client";
+import { requestIdOf } from "@soulledger/core/api/requestStamp";
+import type { SoulErrorMessage } from "@soulledger/core/api/soul";
 import { DOOR_ICON, officerDoors, type OfficerDoorKey, type OfficerPage } from "@soulledger/core/domain/doors";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
@@ -15,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { isDenied } from "./rules";
-import { BusyLine, Button, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press, sharedTouch, withAlpha } from "./shared";
+import { BusyLine, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, ScreenError, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press, sharedTouch } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -41,11 +43,14 @@ export const TAG_SHAPE = {
 
 export type TagTone = "neutral" | "pos" | "neg" | "warn";
 
-/** A tinted tag: no border, radius 4, 28 high. Neutral is `card2` under `sub`; the other three a tint of their colour. */
+/**
+ * A tinted tag: no border, radius 4, 28 high. Neutral is `card2` under `sub`; the other three their colour on the
+ * `posBg` / `negBg` / `warnBg` tint, the grounds the soul app's `Badge` reads (第六十七批 五.1; it was the colour at 14%).
+ */
 export function Tag({ tone = "neutral", children, testID }: { tone?: TagTone; children: string; testID?: string }) {
   const t = useTheme();
   const ink = tone === "neutral" ? t.inkMuted : t[tone];
-  const ground = tone === "neutral" ? t.s2 : withAlpha(ink, 0.14);
+  const ground = tone === "neutral" ? t.s2 : t[`${tone}Bg`];
   return (
     <View testID={testID} style={[styles.tag, { backgroundColor: ground }]}>
       <Txt variant="caption" numberOfLines={2} style={{ color: ink }}>
@@ -133,6 +138,18 @@ export function LoadingRows({ inContent = false }: { inContent?: boolean } = {})
 }
 
 /**
+ * A failed officer request in the shape the shared `ScreenError` reads: no answer is `network`; otherwise the body's
+ * `code`, or the status, carried in `unknown` (the soul app's `soulErrorMessage`, without pulling in the soul client).
+ */
+export function failureOf(error: unknown): SoulErrorMessage {
+  const status = responseStatus(error);
+  const message: SoulErrorMessage =
+    status === null ? { key: "soul_app.errors.network" } : { key: "soul_app.errors.unknown", params: { code: responseCode(error) ?? String(status) } };
+  const requestId = requestIdOf(error);
+  return requestId ? { ...message, requestId } : message;
+}
+
+/**
  * One body for all four states, so no tab can forget one. `denied` carries the role and the area:
  * 「你的角色「{role}」看不到{area}」 -- and the tab itself stays in the bar.
  */
@@ -143,6 +160,7 @@ export function StateView({
   emptyBody,
   role,
   area,
+  error,
 }: {
   state: ViewState;
   onRetry?: () => void;
@@ -150,20 +168,24 @@ export function StateView({
   emptyBody?: string;
   role?: string;
   area?: string;
+  /** What failed, for the code at the foot of the error state. */
+  error?: unknown;
 }) {
   const t = useTheme();
   const { t: tr, enumLabel } = useI18n();
   if (state === "loading") return <LoadingRows />;
   if (state === "gone") return <GoneView />;
   if (state === "error") {
+    // 第六十七批 五.3: the soul app's full-page error, not a red Notice (第六十一批 E2).
     return (
-      <View testID="state-error" style={styles.state}>
-        <Notice tone="neg">{tr("officer_app.state.error_title")}</Notice>
-        <Txt variant="caption" tone="muted">
-          {tr("officer_app.state.error_body")}
-        </Txt>
-        {onRetry ? <Button testID="state-retry" kind="secondary" title={tr("soul_app.common.retry")} onPress={onRetry} /> : null}
-      </View>
+      <ScreenError
+        testID="state-error"
+        retryTestID="state-retry"
+        title={tr("officer_app.state.error_title")}
+        body={tr("officer_app.state.error_body")}
+        error={error ? failureOf(error) : undefined}
+        onRetry={onRetry}
+      />
     );
   }
   if (state === "denied") {
@@ -594,11 +616,12 @@ export function roleName(enumLabel: ReturnType<typeof useI18n>["enumLabel"], rol
 export const TAB_FONT_SCALE = 1.3;
 
 /**
- * At least 56 high plus the safe area, equal parts (each at least 64 wide), surface-1 with a 1px top line: one cell per door that
+ * At least 56 high plus the safe area, equal parts (each at least 64 wide), the page's ground (s0, as the soul app's bar;
+ * 第六十七批 五.2, it was surface-1) with a 1px top line: one cell per door that
  * has a page this officer gets (第三十八批 四). In zh each cell is the door's glyph in the serif (18 / 22) over its name;
  * in en / egy it is the shared 24px line icon (`DOOR_ICON`, the web's set) over its name (`officer_app.doors.*.label`,
  * Geist 500 11 / 16, batch 54 H3) --`.glyph` is drawn only in zh. The current door in ink (the icon's stroke 1.8), with a 14 x 2
- * ink line 3 under the glyph box (第四十八批第三节 A1; it was the civilization's colour). The unread dot (8, `neg`, a 2px ring of the bar's ground) sits on
+ * ink line 3 under the glyph box (第四十八批第三节 A1; it was the civilization's colour). The unread dot (8, ink -- unread is not an error, 第六十七批 五.2 -- with a 2px ring of the bar's ground) sits on
  * 我's glyph box, 4 past its right edge and 1 above its top (九.5).
  */
 export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; onSelect: (tab: TabKey) => void; unread?: boolean; tabs?: readonly TabKey[] }) {
@@ -608,7 +631,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
   const { bottom } = useSafeAreaInsets();
   const on = doorOf(current);
   return (
-    <View testID="tab-bar" accessibilityRole="tablist" style={[styles.tabBar, { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: bottom }]}>
+    <View testID="tab-bar" accessibilityRole="tablist" style={[styles.tabBar, { backgroundColor: t.s0, borderTopColor: t.hair, paddingBottom: bottom }]}>
       {DOORS.map((door) => {
         const first = DOOR_PAGES[door].find((page) => !tabs || tabs.includes(page));
         if (!first) return null;
@@ -637,7 +660,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
                 </Svg>
               )}
               {selected ? <View testID={`door-${door}-current`} style={[styles.currentLine, { backgroundColor: t.ink }]} /> : null}
-              {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.neg, borderColor: t.s1 }]} /> : null}
+              {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.ink, borderColor: t.s0 }]} /> : null}
             </View>
             <Txt variant="caption" numberOfLines={1} maxFontSizeMultiplier={TAB_FONT_SCALE} style={{ color: colour, fontSize: 11, lineHeight: 16, fontFamily: family.ui[zh ? 400 : 500] }}>
               {tr(`officer_app.doors.${door}.label`)}

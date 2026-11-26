@@ -9,8 +9,8 @@ import { AccessibilityInfo, Animated, AppState, StyleSheet } from "react-native"
 
 import { OnlineContext, type Online } from "@soulledger/mobile-ui/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
-import { RefreshFailed, Row, TAB_CODES, TabBar, doorOf, visibleTabs } from "../kit";
-import { EASE, ToastProvider, motion, themeFor, useI18n } from "../shared";
+import { RefreshFailed, Row, TAB_CODES, TabBar, Tag, doorOf, visibleTabs } from "../kit";
+import { EASE, ToastProvider, motion, themeFor, useI18n, withAlpha } from "../shared";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, overviewParts } from "../screens/queue";
@@ -120,6 +120,15 @@ describe("the to-do tab", () => {
     mockTodo.mockRejectedValueOnce(httpError(500)).mockResolvedValue({ data: TODO });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     expect(await screen.findByTestId("state-error")).toBeTruthy();
+    // 第六十七批 五.3: the soul app's full-page error -- title, line, an ink 「重试」, the code faint at the foot; no red box.
+    const t = themeFor("CHINESE", "light");
+    expect(screen.getByText("没取到")).toBeTruthy();
+    expect(screen.getByText("检查网络后重试。已打开的条目不受影响。")).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByTestId("state-retry").props.style).backgroundColor).toBe(t.ink);
+    expect(screen.getByTestId("error-code")).toHaveTextContent(/^500 · \d\d:\d\d:\d\d$/);
+    expect(StyleSheet.flatten(screen.getByTestId("error-code").props.style).color).toBe(t.faintText);
+    const red = screen.UNSAFE_root.findAll((n) => typeof n.type === "string" && StyleSheet.flatten(n.props.style)?.backgroundColor === t.negBg);
+    expect(red).toHaveLength(0);
     fireEvent.press(screen.getByTestId("state-retry"));
     expect(await screen.findByText("审批节点 · 1")).toBeTruthy();
   });
@@ -1012,5 +1021,33 @@ describe("the door bar's marks follow the interface language", () => {
     const line = StyleSheet.flatten(screen.getByTestId("door-desk-current").props.style);
     expect(line.backgroundColor).toBe(t.ink);
     expect(line.backgroundColor).not.toBe(t.plaque);
+  });
+
+  it("第六十七批 五.2: the soul app's bar -- the page's ground under a hairline; the unread dot 8 of ink in a 2px ring of that ground", () => {
+    renderOfficer(<TabBar current="queue" onSelect={() => {}} unread />);
+    const t = themeFor("CHINESE", "light");
+    const bar = StyleSheet.flatten(screen.getByTestId("tab-bar").props.style);
+    expect(bar).toMatchObject({ backgroundColor: t.s0, borderTopColor: t.hair, borderTopWidth: 1 });
+    expect(bar.backgroundColor).not.toBe(t.s1);
+    const dot = StyleSheet.flatten(screen.getByTestId("door-me-unread").props.style);
+    expect(dot).toMatchObject({ width: 12, height: 12, borderWidth: 2, backgroundColor: t.ink, borderColor: t.s0 });
+    expect(dot.backgroundColor).not.toBe(t.neg);
+  });
+});
+
+describe("Tag", () => {
+  it("第六十七批 五.1: pos / neg / warn sit on the posBg / negBg / warnBg tints, as the shared Badge; neutral on s2", () => {
+    const t = themeFor("CHINESE", "light");
+    renderOfficer(
+      <>
+        <Tag testID="tag-neutral">◌ 其他</Tag>
+        <Tag testID="tag-pos" tone="pos">✓ 已办</Tag>
+        <Tag testID="tag-neg" tone="neg">! 逾期</Tag>
+        <Tag testID="tag-warn" tone="warn">↺ 退回</Tag>
+      </>
+    );
+    const ground = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).backgroundColor;
+    expect([ground("tag-neutral"), ground("tag-pos"), ground("tag-neg"), ground("tag-warn")]).toEqual([t.s2, t.posBg, t.negBg, t.warnBg]);
+    expect(ground("tag-neg")).not.toBe(withAlpha(t.neg, 0.14));
   });
 });
