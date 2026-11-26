@@ -75,7 +75,7 @@ function NetworkNotice({ onRetry }: { onRetry: () => void }) {
   return (
     <View testID="login-error" accessibilityRole="alert" style={[styles.network, { borderColor: theme.neg, backgroundColor: theme.s0 }]}>
       <View style={styles.fill}>
-        <Txt testID="login-network-title" style={[styles.noticeTitle, { color: theme.negInk }]}>
+        <Txt testID="login-network-title" variant="section" style={{ color: theme.negInk }}>
           {t("soul_app.mfa.login.network")}
         </Txt>
         <Txt testID="login-network-body" variant="caption" tone="muted">
@@ -117,7 +117,7 @@ function LapsedNotice({ lapse, bio }: { lapse: Lapse; bio: string }) {
         ◇
       </Txt>
       <View style={styles.fill}>
-        <Txt testID="login-lapsed-title" style={styles.noticeTitle}>
+        <Txt testID="login-lapsed-title" variant="section">
           {t(keys.title, { bio })}
         </Txt>
         <Txt testID="login-lapsed-body" variant="caption" tone="muted">
@@ -385,7 +385,7 @@ export function LoginScreen() {
             accessibilityLiveRegion="polite"
             style={[styles.gapTop, styles.resetNotice, { borderColor: theme.ink, borderLeftColor: theme.pos }]}
           >
-            <Txt testID="login-reset-title" style={styles.resetTitle}>
+            <Txt testID="login-reset-title" variant="section">
               {t("soul_app.forgot_password.success_title")}
             </Txt>
             <Txt testID="login-reset-body" variant="caption" tone="muted">
@@ -457,7 +457,7 @@ export function LoginScreen() {
         ) : (
         <>
         {bioFailed ? (
-          <Txt testID="login-bio-failed" accessibilityRole="alert" style={[styles.gapTop, styles.noticeTitle]}>
+          <Txt testID="login-bio-failed" accessibilityRole="alert" variant="section" style={styles.gapTop}>
             {t(bioFailed === "locked" ? "soul_app.bio.locked" : "soul_app.bio.failed", { bio: bio.word })}
           </Txt>
         ) : null}
@@ -744,7 +744,6 @@ const styles = StyleSheet.create({
   forgotAside: { marginVertical: -12 },
   underline: { textDecorationLine: "underline" },
   resetNotice: { gap: 4, borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
-  resetTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   footer: { borderTopWidth: 1, marginHorizontal: 24, marginTop: 24, paddingTop: 24, paddingBottom: 16 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
@@ -753,7 +752,6 @@ const styles = StyleSheet.create({
   expiry: { borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
   expiryValue: { fontSize: 16, lineHeight: 24, fontFamily: family.mono[500] },
   inlineMono: { fontSize: 12 },
-  noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   network: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   lapsed: { flexDirection: "row", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   list: { borderWidth: 1, borderRadius: radius.sheet, overflow: "hidden" },

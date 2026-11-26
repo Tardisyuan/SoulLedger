@@ -140,7 +140,7 @@ export function LoginSecondStep({
           <Icon name="back" size={18} color={theme.ink} strokeWidth={1.4} />
         </Press>
         <BrandMark size={24} color={theme.ink} />
-        <Txt style={styles.brand}>{t("soul_app.app_name")}</Txt>
+        <Txt variant="title">{t("soul_app.app_name")}</Txt>
       </View>
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
       <ScrollView style={{ backgroundColor: theme.s1 }} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -265,7 +265,6 @@ const styles = StyleSheet.create({
   mono: { fontFamily: family.mono[400] },
   bar: { height: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 4, paddingRight: 16 },
   backHit: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  brand: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
   body: { paddingVertical: 32, paddingHorizontal: 24, gap: 20, flexGrow: 1 },
   titleBlock: { gap: 4 },
   recovery: { fontSize: 24, letterSpacing: 2 },

@@ -22,7 +22,7 @@ export function CoverRule() {
 
 export function Heading({ children, size = 24 }: { children: ReactNode; size?: 24 | 28 }) {
   return (
-    <Txt accessibilityRole="header" style={size === 28 ? styles.h28 : styles.h24}>
+    <Txt accessibilityRole="header" variant={size === 28 ? "display" : "title"}>
       {children}
     </Txt>
   );
@@ -228,8 +228,6 @@ export function ButtonPair({ children, style }: { children: ReactNode; style?: S
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   rule: { height: 1 },
-  h24: { fontFamily: family.ui[600], fontSize: 24, lineHeight: 32 },
-  h28: { fontFamily: family.ui[600], fontSize: 32, lineHeight: 40 },
   checkRow: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12 },
   box: { width: 20, height: 20, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   tick: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },

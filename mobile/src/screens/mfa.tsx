@@ -84,7 +84,7 @@ function WizardHeader({ step, onClose }: { step: 1 | 2 | 3; onClose?: () => void
         ) : (
           <View style={styles.closeGap} />
         )}
-        <Txt accessibilityRole="header" style={styles.barTitle}>
+        <Txt accessibilityRole="header" variant="title">
           {tr("soul_app.mfa.setup.title")}
         </Txt>
         <Txt testID="wizard-step" variant="value" tone="muted" style={styles.stepText}>
@@ -632,7 +632,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
       </ScrollView>
 
       <MfaSheet testID="regen-sheet" open={asking === "regen"} onClose={close} closeLabel={tr("soul_app.common.cancel")}>
-        <Txt accessibilityRole="header" style={styles.sheetTitle}>
+        <Txt accessibilityRole="header" variant="title">
           {tr("soul_app.mfa.regen.title")}
         </Txt>
         <Txt variant="bodyLg">{tr("soul_app.mfa.regen.body", { n: String(left) })}</Txt>
@@ -651,7 +651,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
       </MfaSheet>
 
       <MfaSheet testID="disable-sheet" open={asking === "disable"} onClose={close} closeLabel={tr("soul_app.common.cancel")}>
-        <Txt accessibilityRole="header" style={styles.sheetTitle}>
+        <Txt accessibilityRole="header" variant="title">
           {tr("soul_app.mfa.disable.title")}
         </Txt>
         <Txt variant="bodyLg">{tr("soul_app.mfa.disable.body")}</Txt>
@@ -770,7 +770,6 @@ const styles = StyleSheet.create({
   bar: { height: 56, flexDirection: "row", alignItems: "center", gap: 4, paddingRight: 16, paddingLeft: 4, borderBottomWidth: 1 },
   closeHit: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   closeGap: { width: 12 },
-  barTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
   stepText: { marginLeft: "auto" },
   page: { padding: 16, paddingTop: 24, gap: 16 },
   footer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, borderTopWidth: 1, gap: 8 },
@@ -793,5 +792,4 @@ const styles = StyleSheet.create({
   fact: { minHeight: 56, justifyContent: "center", borderTopWidth: 1 },
   factRow: { flexDirection: "row", alignItems: "center" },
   low: { flexDirection: "row", gap: 12, padding: 12, borderWidth: 1, marginTop: 8 },
-  sheetTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
 });

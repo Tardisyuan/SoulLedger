@@ -23,7 +23,7 @@ import { noteOpened } from "../recentOpened";
 import { ActionButton, EdgeBack, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
-import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, family, radius, space, useI18n, useOnline, useRemote, useTheme, Press } from "../shared";
+import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, Press } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
 import { SealSheet } from "./sealSheet";
@@ -263,7 +263,7 @@ function SealedStrip({ civilization, court, at }: { civilization: string | null 
     <View testID="detail-sealed" style={{ flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.dialog, backgroundColor: theme.s2 }}>
       <DossierSeal testID="detail-sealed-seal" civilization={civilization} court={court} size={44} stamp label={t("officer_app.seal.a11y")} />
       <View style={{ flex: 1, gap: 2 }}>
-        <Txt style={{ fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 }}>{t("officer_app.detail.sealed")}</Txt>
+        <Txt variant="section">{t("officer_app.detail.sealed")}</Txt>
         <Txt variant="caption" tone="muted">
           {t("officer_app.detail.sealed_meta", { time: formatWhen(at) })}
         </Txt>

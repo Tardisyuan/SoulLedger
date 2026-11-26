@@ -52,7 +52,7 @@ import { family } from "@soulledger/mobile-ui/src/fonts";
 import { radius } from "@soulledger/mobile-ui/src/theme";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { RESEND_AFTER_SECONDS, RESET_CODE, RESET_CODE_TTL_SECONDS, formatCountdown, isPlausibleEmail } from "../rules";
-import { Button, GUTTER, Input, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { Button, GUTTER, Input, Screen, SectionLabel, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "@soulledger/mobile-ui/src/passwordRulesView";
 
 /**
@@ -97,15 +97,13 @@ export function ForgotPasswordScreen({ onDone, onCancel }: { onDone: (soulCode?:
 
 // ── pieces ─────────────────────────────────────────────────────────────
 
-/** kicker (mono 11, .14em) + h1 (28/36, 600), closed by the 3px ink cover rule. */
+/** kicker (`SectionLabel`) + the serif display title, closed by the 3px ink cover rule. */
 function Head({ kicker, title }: { kicker: string; title: string }) {
   const theme = useTheme();
   return (
     <View style={[styles.head, { borderBottomColor: theme.ink }]}>
-      <Txt tone="subtle" style={styles.kicker}>
-        {kicker}
-      </Txt>
-      <Txt accessibilityRole="header" style={styles.h1}>
+      <SectionLabel>{kicker}</SectionLabel>
+      <Txt accessibilityRole="header" variant="display">
         {title}
       </Txt>
     </View>
@@ -126,7 +124,7 @@ export function ErrorBanner({ banner, testID }: { banner: Banner; testID?: strin
       accessibilityRole="alert"
       style={[styles.banner, { borderColor: theme.neg, backgroundColor: theme.s2, borderLeftColor: theme.neg }]}
     >
-      <Txt testID={testID ? `${testID}-title` : undefined} style={[styles.bannerTitle, { color: theme.neg }]}>
+      <Txt testID={testID ? `${testID}-title` : undefined} variant="section" style={{ color: theme.neg }}>
         {`! ${banner.title}`}
       </Txt>
       {banner.body ? (
@@ -503,7 +501,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
           accessibilityLiveRegion="polite"
           style={[styles.status, { borderColor: theme.hair2, backgroundColor: theme.s2, borderLeftColor: theme.ink }]}
         >
-          <Txt testID="forgot-sent-title" style={styles.strong}>
+          <Txt testID="forgot-sent-title" variant="section">
             {t("soul_app.forgot_password.sent_neutral")}
           </Txt>
           <Txt variant="caption" tone="muted">
@@ -589,11 +587,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
 const styles = StyleSheet.create({
   page: { gap: 16, paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 32 },
   head: { gap: 8, paddingBottom: 16, borderBottomWidth: 3 },
-  kicker: { fontFamily: family.mono[400], fontSize: 12, lineHeight: 16, letterSpacing: 1.5 },
-  h1: { fontFamily: family.ui[600], fontSize: 32, lineHeight: 40 },
-  strong: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   banner: { gap: 8, borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
-  bannerTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   action: { alignSelf: "flex-start", minHeight: 44, borderWidth: 1, borderRadius: radius.control, justifyContent: "center", paddingHorizontal: 16, marginTop: 4 },
   actionText: { fontFamily: family.ui[500], fontSize: 16, lineHeight: 24 },
   pressed: { opacity: 0.8 },

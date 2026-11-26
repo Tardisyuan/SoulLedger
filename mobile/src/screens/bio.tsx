@@ -21,7 +21,7 @@ import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
 export function SheetTitle({ children }: { children: string }) {
   return (
-    <Txt accessibilityRole="header" style={styles.sheetTitle}>
+    <Txt accessibilityRole="header" variant="title">
       {children}
     </Txt>
   );
@@ -276,7 +276,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   forget: { minHeight: 48, borderWidth: 1, borderRadius: 4, alignItems: "center", justifyContent: "center", marginTop: 8 },
   forgetCancel: { minHeight: 48, alignItems: "center", justifyContent: "center" },
-  sheetTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
   row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   dim: { opacity: 0.6 },
   on: { fontFamily: family.ui[600] },
