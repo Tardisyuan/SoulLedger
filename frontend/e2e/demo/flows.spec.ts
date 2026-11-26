@@ -93,8 +93,10 @@ for (const reduced of [false, true]) {
 
 // Only a flow whose current stop names the account can be decided (`canDecide` in demo/flows.ts, the server's rule): the
 // Egyptian judge's heart-weighing flows wait on the judges (stops 2 and 4, a 通知 between), then on named actors.
-// No demo account fills every stop of any recorded flow, so none can walk one to its end alone, as on the server.
 const judgedFlow = () => rows(recording("judge_eg"), "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type === "HEART_WEIGHING")?.id;
+// The one recorded flow a demo account fills at every stop (scripts/demo-seed.py `seed_walkable_flow`): the European
+// judge's 炼狱复核, three stops all the role JUDGE's.
+const walkableFlow = () => rows(recording("judge_eu"), "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type === "PURGATORY_REVIEW")?.id;
 
 async function decide(page: Page, verdict: string): Promise<void> {
   const radio = page.locator(`input[type="radio"][value="${verdict}"]`).first();
@@ -127,6 +129,33 @@ test("an approval flow moves on through the judge's stops, and stops offering a 
   await expect(main).toBeVisible();
   await expect(submit).toHaveCount(0);
   clean(seen, "workflow approve");
+});
+
+test("an approval flow can be walked to its end", async ({ page, context }) => {
+  test.setTimeout(60000);
+  const seen = watch(context, page);
+  await enter(page, "judge_eu");
+  const id = walkableFlow();
+  expect(id).toBeTruthy();
+  await page.goto(`/workflow/${id}`);
+  const main = page.locator("main");
+  const submit = page.getByRole("button", { name: "提交决定" });
+  await expect(submit).toBeVisible();
+  // `title` carries the raw status (<DomainEnum>); the words 流程完成 also appear in the page's legend.
+  const done = page.getByTitle("COMPLETED").filter({ visible: true }).first();
+  let decided = 0;
+  for (; decided < 6 && !(await done.isVisible()); decided += 1) {
+    const before = await main.innerText();
+    await decide(page, "PASSED");
+    await expect.poll(async () => (await main.innerText()) !== before).toBe(true);
+    await page.waitForTimeout(150);
+  }
+  expect(decided).toBe(3);
+  await expect(done).toBeVisible();
+  await expect(submit).toHaveCount(0);
+  await page.reload();
+  await expect(done).toBeVisible();
+  clean(seen, "workflow walked to its end");
 });
 
 test("an approval flow can be rejected", async ({ page, context }) => {

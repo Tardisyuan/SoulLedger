@@ -76,7 +76,8 @@ from apps.soul_accounts.models import SoulAccount  # noqa: E402
 from apps.souls.models import Soul  # noqa: E402
 from apps.souls.record_models import SoulRecord  # noqa: E402
 from apps.tenants.models import Tenant  # noqa: E402
-from apps.workflow.models import ApprovalWorkflow  # noqa: E402
+from apps.workflow.models import ApprovalWorkflow, CaseType  # noqa: E402
+from apps.workflow.services import WorkflowService  # noqa: E402
 from tests.sentence_plan_support import execute_only, serve  # noqa: E402
 
 random.seed(20261102)
@@ -792,6 +793,19 @@ def seed_wangsi(tenants, judge):
     print("wangsi grievances:", Judgment.all_objects.filter(grievance_status="FILED").count())
 
 
+def seed_walkable_flow(judge):
+    """One flow a demo account can decide from its first stop to its end (user 2026-11-27): every other recorded flow
+    names an actor or another role at some stop, so the demo, deciding by the server's rule (`canDecide`), never showed
+    「流程完成」. 炼狱复核流程's three stops all go to the role JUDGE (`seed_template`: they name nobody), and the
+    European judge sits in 炼狱. Started by hand for a soul already there, as `POST /workflows/start/` does."""
+    soul = Soul.all_objects.get(name="Lancelot", tenant=judge.tenant)
+    flow = WorkflowService.start_workflow(
+        soul, case_type=CaseType.PURGATORY_REVIEW, tenant=judge.tenant, notes="炼狱期满,请复核可否升入天国。",
+        exclusive=True, picked_by=judge, manually_started=True,
+    )
+    print("walkable flow:", flow.number, [(n.node_order, n.approver_type, n.approver_role) for n in flow.nodes.order_by("node_order")])
+
+
 def seed_rebirth_states(admin):
     """转生申请的三种流程状态各一份(第六十一批 四):异常处理中、复议中、已终止;已终止那份起了冷却,灵魂随即申请缩短
     (`can_reject`)。只动地府里不在灵魂入口(SOUL_VIEW)上的那几位,入口那位的转生页照旧。"""
@@ -1119,6 +1133,7 @@ def main():
     seed_accounts(tenants)
     seed_rebirth_states(demo[0])
     seed_wangsi(tenants, demo[1])
+    seed_walkable_flow(demo[3])
     seed_soul_circle()
     seed_soul_logins()
     seed_appeals()
