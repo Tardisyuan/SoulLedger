@@ -59,6 +59,7 @@ import { JudgmentAppealScreen } from "./screens/appeals";
 import { WangsiGrievanceScreen } from "./screens/wangsi";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
+import { listenForTaps } from "@soulledger/mobile-ui/src/pushCore";
 import { NotificationHistoryScreen } from "./screens/notificationHistory";
 import { AppLock } from "./appLock";
 import { appLockOn } from "./deviceLogin";
@@ -270,9 +271,6 @@ function AssistRoot({ profile, signedIn, ready, children }: { profile: MeProfile
   );
 }
 
-/** Notification ids already landed in this process. */
-const HANDLED_TAPS = new Set<string>();
-
 /**
  * The push glue that needs the navigator: taps (while running, and the one that
  * cold-started the app) become a landing, held until a soul is signed in and
@@ -286,30 +284,16 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   // Recovery codes on screen (两步验证 step ③): a tapped notification waits until they are saved.
   const held = useNavigationHeld();
 
-  useEffect(() => {
-    let alive = true;
-    const hold = (r: Notifications.NotificationResponse) => {
-      // The "last response" outlives this component (a retryBoot remounts it): a tap
-      // is landed once, never again — or it lands a later session on an old record.
-      const id = r.notification.request.identifier;
-      if (HANDLED_TAPS.has(id)) return;
-      HANDLED_TAPS.add(id);
-      pending.current = landingOf(r.notification.request.content.data);
-      setArrived((n) => n + 1);
-    };
-    Notifications.getLastNotificationResponseAsync()
-      .then((r) => {
-        if (!r) return;
-        Notifications.clearLastNotificationResponse();
-        if (alive) hold(r);
-      })
-      .catch(() => {});
-    const sub = Notifications.addNotificationResponseReceivedListener(hold);
-    return () => {
-      alive = false;
-      sub.remove();
-    };
-  }, []);
+  useEffect(
+    // The "last response" outlives this component (a retryBoot remounts it): a tap is landed once, never
+    // again — or it lands a later session on an old record. listenForTaps keeps both guards.
+    () =>
+      listenForTaps((data) => {
+        pending.current = landingOf(data);
+        setArrived((n) => n + 1);
+      }),
+    []
+  );
 
   useEffect(() => {
     if (!signedIn) return;

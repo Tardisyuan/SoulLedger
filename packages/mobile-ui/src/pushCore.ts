@@ -64,6 +64,37 @@ export function installNotificationHandler(): void {
   });
 }
 
+/** Notification ids already handed over in this process. */
+const HANDLED_TAPS = new Set<string>();
+
+/**
+ * Calls `onTap` with the payload of each tapped notification: the one that opened the app (the last response) and
+ * every later one, each id once (a09551f7a). Both guards are needed: the last response outlives the listener (a
+ * remount, e.g. a new sign-in, would land it again on a later session), so it is cleared once read; and some
+ * platforms hand the cold-start tap to the listener as well, so an id already handed over is dropped.
+ */
+export function listenForTaps(onTap: (data: unknown) => void): () => void {
+  let alive = true;
+  const hold = (r: Notifications.NotificationResponse) => {
+    const id = r.notification.request.identifier;
+    if (HANDLED_TAPS.has(id)) return;
+    HANDLED_TAPS.add(id);
+    onTap(r.notification.request.content.data);
+  };
+  Notifications.getLastNotificationResponseAsync()
+    .then((r) => {
+      if (!r) return;
+      Notifications.clearLastNotificationResponse();
+      if (alive) hold(r);
+    })
+    .catch(() => {});
+  const sub = Notifications.addNotificationResponseReceivedListener(hold);
+  return () => {
+    alive = false;
+    sub.remove();
+  };
+}
+
 const PLATFORM: DevicePlatform = Platform.OS === "ios" ? "IOS" : "ANDROID";
 
 export interface PushConfig {

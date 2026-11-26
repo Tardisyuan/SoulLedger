@@ -9,7 +9,7 @@ import { officerAppApi } from "@soulledger/core/api/officer-app";
 import * as Notifications from "expo-notifications";
 
 import { landingOf, type Landing } from "./rules";
-import { pushCore } from "./shared";
+import { listenForTaps, pushCore } from "./shared";
 
 export { easProjectId, installNotificationHandler, permission, type Permission, type Registration } from "./shared";
 
@@ -39,25 +39,11 @@ export function listenForArrivals(onArrive: () => void): () => void {
 
 /**
  * Calls `onLand` for a tapped notification: one that opened the app (the last response) and every
- * later one. A response whose payload names nowhere is ignored.
+ * later one, each notification once (`listenForTaps`). A response whose payload names nowhere is ignored.
  */
 export function listenForLandings(onLand: (landing: Landing) => void): () => void {
-  let alive = true;
-  const handle = (data: unknown) => {
+  return listenForTaps((data) => {
     const landing = landingOf(data);
-    if (alive && landing) onLand(landing);
-  };
-  void Notifications.getLastNotificationResponseAsync()
-    .then((last) => {
-      if (last) {
-        handle(last.notification.request.content.data);
-        Notifications.clearLastNotificationResponse?.();
-      }
-    })
-    .catch(() => {});
-  const sub = Notifications.addNotificationResponseReceivedListener((response) => handle(response.notification.request.content.data));
-  return () => {
-    alive = false;
-    sub.remove();
-  };
+    if (landing) onLand(landing);
+  });
 }

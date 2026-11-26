@@ -64,7 +64,7 @@ export { RememberedCard } from "@soulledger/mobile-ui/src/rememberedCard";
 export { LOCK_AFTER_MS, LockView, useAppLock } from "@soulledger/mobile-ui/src/lockView";
 export { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "@soulledger/mobile-ui/src/brandMark";
 export { ColdStartView, coldStart } from "@soulledger/mobile-ui/src/coldStartView";
-export { easProjectId, installNotificationHandler, permission, pushCore, type Permission, type Registration } from "@soulledger/mobile-ui/src/pushCore";
+export { easProjectId, installNotificationHandler, listenForTaps, permission, pushCore, type Permission, type Registration } from "@soulledger/mobile-ui/src/pushCore";
 export {
   fileField,
   hydratePersistentStore,
