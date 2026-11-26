@@ -1336,7 +1336,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   link: { textDecorationLine: "underline" },
-  noSpacing: { letterSpacing: 0 },
   rule: { marginVertical: 16 },
   record: { paddingVertical: 12, gap: 4 },
   verdictSeal: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },

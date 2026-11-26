@@ -359,7 +359,7 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
 
 const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP, marginTop: 12 },
-  tile: { borderWidth: 1, borderRadius: 0, overflow: "hidden", justifyContent: "center", alignItems: "center" },
+  tile: { borderWidth: 1, borderRadius: radius.none, overflow: "hidden", justifyContent: "center", alignItems: "center" },
   fill: { width: "100%", height: "100%" },
   dim: { opacity: GONE_OPACITY },
   broken: { textAlign: "center", paddingHorizontal: 8 },

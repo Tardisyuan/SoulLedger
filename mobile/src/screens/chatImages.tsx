@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", marginBottom: 16 },
   mineRow: { justifyContent: "flex-end" },
   endAligned: { alignItems: "flex-end" },
-  frame: { borderWidth: 1, borderRadius: 0, overflow: "hidden" },
+  frame: { borderWidth: 1, borderRadius: radius.none, overflow: "hidden" },
   rounded: { borderRadius: radius.dialog },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 8 },
   centered: { textAlign: "center" },
