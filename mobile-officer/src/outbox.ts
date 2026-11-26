@@ -17,6 +17,7 @@
  * keeps it for the same officer's next sign-in (session.tsx, owner.ts `dropUnowned`). It is stored as
  * `{ owner, items }` (owner.ts): another officer on this phone reads it as empty and never sends it.
  */
+import { errorCode, errorStatus } from "@soulledger/core/api/errors";
 import { newReplyTxn, soulInboxApi } from "@soulledger/core/api/soul-inbox";
 import { platform } from "@soulledger/core/platform";
 import { useSyncExternalStore } from "react";
@@ -115,18 +116,15 @@ export function clearOutbox(): void {
   listeners.forEach((l) => l());
 }
 
-const statusOf = (e: unknown): number | undefined => (e as { response?: { status?: number } })?.response?.status;
-const codeOf = (e: unknown): string | undefined => (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
-
 /** What the server's refusal means for the officer. 403 / 404: the thread is no longer this hall's to see. */
 export function outboxReasonOf(error: unknown): OutboxReason {
-  const status = statusOf(error);
+  const status = errorStatus(error);
   if (status === 403 || status === 404) return "left_hall";
-  if (status === 409 && codeOf(error) === "closed") return "archived";
+  if (status === 409 && errorCode(error) === "closed") return "archived";
   // The soul was dispatched elsewhere (feat-letters): not this hall's to answer now, retrying would not help.
-  if (status === 409 && codeOf(error) === "not_current_hall") return "moved";
+  if (status === 409 && errorCode(error) === "not_current_hall") return "moved";
   // Another officer holds it now: only 转给我 changes that, and it is theirs to decide.
-  if (status === 409 && codeOf(error) === "assigned_to_other") return "assigned";
+  if (status === 409 && errorCode(error) === "assigned_to_other") return "assigned";
   return "retry";
 }
 
@@ -164,7 +162,7 @@ async function run(): Promise<number> {
       clearDraft(entry.id);
       sent += 1;
     } catch (e) {
-      if (statusOf(e) === undefined) break; // no answer: still offline, try again on the next return
+      if (errorStatus(e) === undefined) break; // no answer: still offline, try again on the next return
       fail(entry.id, outboxReasonOf(e));
     }
   }

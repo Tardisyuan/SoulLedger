@@ -52,6 +52,16 @@ it("a refused file keeps its row with only 移除; a network failure offers 重�
   expect(await screen.findByTestId("attach-retry-2")).toBeTruthy();
 });
 
+// The error was read as `(e as …).response` without `?.`: a rejection with no value threw inside the catch, and the
+// row stayed 上传中 for good.
+it("a rejection with no value at all is a network failure with 重试", async () => {
+  mockPick.mockResolvedValue([photo]);
+  mockUpload.mockRejectedValueOnce(undefined);
+  renderOfficer(ui());
+  fireEvent.press(screen.getByTestId("attach-library"));
+  expect(await screen.findByTestId("attach-retry-1")).toBeTruthy();
+});
+
 it("refuses a wrong type without sending", async () => {
   mockPick.mockResolvedValue([{ ...photo, name: "a.zip", type: "application/zip" }]);
   renderOfficer(ui());

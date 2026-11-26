@@ -6,6 +6,7 @@
  * 批语按案子与动作留着(keptText.ts):取消弹层、切 tab 再回来,写了一半的字还在。
  * 不持 `judgment.execute`(后端 city_god_views 解送 / 退回都要它)的人不画这两个按钮(RBAC A6)。
  */
+import { answered, errorCode } from "@soulledger/core/api/errors";
 import { cityGodCasesApi, CITY_GOD_CASE_ERROR_CODES } from "@soulledger/core/api/judgment";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
@@ -21,8 +22,8 @@ import { Input, Notice, Screen, Sheet, Txt, space, useI18n, useOnline, useRemote
 const CITY_GOD_NOTE_MAX = 2000;
 
 function refusalKey(e: unknown): string {
-  if (!(e as { response?: unknown } | null)?.response) return "officer_app.confirm.reasons.network";
-  const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+  if (!answered(e)) return "officer_app.confirm.reasons.network";
+  const code = errorCode(e);
   return code && (CITY_GOD_CASE_ERROR_CODES as readonly string[]).includes(code) ? `cityGodCases.error.${code}` : "judgment.claim.refused.generic";
 }
 

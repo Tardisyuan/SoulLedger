@@ -7,6 +7,7 @@
  * by itself on the first sign-in page of the process); the password stays below it. A credential the server no longer
  * takes (password changed, device signed out, turned off elsewhere) is dropped here and the page says so.
  */
+import { errorCode } from "@soulledger/core/api/errors";
 import { maskUsername } from "@soulledger/core/domain/maskUsername";
 import { mfaDigits } from "@soulledger/core/domain/mfa";
 import { useEffect, useState } from "react";
@@ -65,7 +66,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
       const result = await signInWithCredential(known.username, read.credential);
       if (result.kind === "mfa") setStep({ name: "mfa", pendingToken: result.pendingToken, recovery: false });
     } catch (e) {
-      const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const code = errorCode(e);
       if (code === "device_login_revoked" || code === "device_login_invalid") {
         officerDevice.clearCredential();
         setBioOn(false);

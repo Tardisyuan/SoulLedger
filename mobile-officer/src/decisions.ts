@@ -3,6 +3,7 @@
  * which is otherwise pure: the low-level approve / reject calls live only here (`decisionsAreChecked.test.ts`),
  * and every screen reaches this through `confirmedDecision` (deviceCheck.ts).
  */
+import { errorStatus } from "@soulledger/core/api/errors";
 import { dispatchApi } from "@soulledger/core/api/dispatch";
 import { judgmentApi, type ConcludeJudgmentPayload } from "@soulledger/core/api/judgment";
 import type { TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
@@ -42,7 +43,7 @@ export async function submitDecision({ detail, verdict, reason, days, passVerdic
       if (crossTarget) await soulAccountsApi.decideCrossCivilization(detail.id, true, crossTarget);
       else
         await soulAccountsApi.decideCrossCivilization(detail.id, false).catch((e: unknown) => {
-          if ((e as { response?: { status?: number } })?.response?.status !== 409) throw e;
+          if (errorStatus(e) !== 409) throw e;
         });
     }
     await workflowApi.approveNode(detail.workflow_id, detail.node_id, {

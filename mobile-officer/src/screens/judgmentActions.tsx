@@ -7,6 +7,7 @@
  * 暂缓 / 取消暂缓」(`judgmentAdminItems`)。四项都要理由,因为是替别人做决定,原经办人会收到通知(服务端发)。
  * 有人请求改派时主按钮就是「改派给…」;没有就只有 ⋯。改派的选人底页与转信同一个(`PeoplePickerSheet`)。
  */
+import { errorStatus } from "@soulledger/core/api/errors";
 import { judgmentApi, type AssignableOfficer, type Judgment } from "@soulledger/core/api/judgment";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
@@ -241,7 +242,7 @@ export function JudgmentActionBar({
         onSubmit={(reason) =>
           run(() => judgmentApi.requestReassign(data.id, reason.trim()), "officer_app.case.done_reassign").catch((e: unknown) => {
             // 10 分钟内已经请求过:服务端已经通知过了,界面按「已请求」处理。
-            if ((e as { response?: { status?: number } })?.response?.status === 429) {
+            if (errorStatus(e) === 429) {
               setOverlay(null);
               onAsked();
               return;

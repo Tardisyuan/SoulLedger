@@ -3,6 +3,7 @@
  * push lands, where "continue on desktop" points. Pure functions so a test can pin each; the one that
  * sends a decision is `decisions.ts` (cq-apps 2026-10-30 #9).
  */
+import { answered, errorCode, errorStatus } from "@soulledger/core/api/errors";
 import { localName } from "@soulledger/core/domain/localName";
 import { NOTIFICATION_CATEGORIES, NOTIFICATION_LOCKED, passwordReasonKeys, type NotificationCategory } from "@soulledger/core/api/auth";
 import type { DispatchRecord } from "@soulledger/core/api/dispatch";
@@ -178,8 +179,7 @@ export type FailureReason = DecisionFailureCode | "network" | "other";
 export function decisionFailure(error: unknown): { reason: FailureReason; handledBy: string | null } {
   const known = decisionFailureOf(error);
   if (known) return { reason: known.code, handledBy: known.handledBy?.name ?? null };
-  const response = (error as { response?: unknown })?.response;
-  return { reason: response ? "other" : "network", handledBy: null };
+  return { reason: answered(error) ? "other" : "network", handledBy: null };
 }
 
 export function failureReasonKey(reason: FailureReason): string {
@@ -198,9 +198,9 @@ export function failureReasonKey(reason: FailureReason): string {
 
 /** The 409 `hall_required` body of `officer-login/`, or null. */
 export function hallChoiceOf(error: unknown): { halls: { code: string; display_name: string }[] } | null {
-  const response = (error as { response?: { status?: number; data?: { code?: string; halls?: unknown } } })?.response;
-  if (response?.status !== 409 || response.data?.code !== "hall_required" || !Array.isArray(response.data.halls)) return null;
-  return { halls: response.data.halls as { code: string; display_name: string }[] };
+  const halls = (error as { response?: { data?: { halls?: unknown } } } | null)?.response?.data?.halls;
+  if (errorStatus(error) !== 409 || errorCode(error) !== "hall_required" || !Array.isArray(halls)) return null;
+  return { halls: halls as { code: string; display_name: string }[] };
 }
 
 /** The two-step verification's own sign-in ran out: the screen goes back to the password. */
@@ -209,16 +209,16 @@ export const MFA_TIMED_OUT = "officer_app.mfa.reasons.expired";
 /** Why a login or a two-step verification was refused, as an i18n key under `officer_app`. */
 /** `recovery`: the second step was a recovery code -- a wrong one says so, not 「动态码不对」 (as the soul app and the web). */
 export function loginFailureKey(error: unknown, step: "login" | "mfa", recovery = false): string {
-  const response = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
-  if (!response) return `officer_app.${step}.reasons.network`;
-  const code = response.data?.code;
-  if (response.status === 429 || code === "login_locked" || code === "locked") return `officer_app.${step}.reasons.locked`;
+  if (!answered(error)) return `officer_app.${step}.reasons.network`;
+  const code = errorCode(error);
+  const status = errorStatus(error);
+  if (status === 429 || code === "login_locked" || code === "locked") return `officer_app.${step}.reasons.locked`;
   // `pending_invalid`: this sign-in timed out (the pending token, 5 minutes) -- start again. `expired` is only a stale
   // code (60-120 s old) and reads as a wrong one, as on the soul app (`mobile/src/mfa.ts`); the two were swapped here.
   if (step === "mfa" && code === "pending_invalid") return MFA_TIMED_OUT;
   const wrong = recovery ? "mfa.verify.error_recovery_wrong" : "officer_app.mfa.reasons.wrong";
   if (step === "mfa" && (code === "wrong" || code === "expired")) return wrong;
-  if (response.status === 401 || response.status === 400) return step === "login" ? "officer_app.login.reasons.bad_credentials" : wrong;
+  if (status === 401 || status === 400) return step === "login" ? "officer_app.login.reasons.bad_credentials" : wrong;
   return `officer_app.${step}.reasons.other`;
 }
 
@@ -354,7 +354,7 @@ export function withTemplate(current: string, template: string, values: { soul_n
 
 /** 503: the letters service is off or down. Not the officer's doing and nothing to retry at once: said quietly. */
 export function lettersUnavailable(error: unknown): boolean {
-  return statusOf(error) === 503;
+  return errorStatus(error) === 503;
 }
 
 /** Why a reply (or the thread) failed, as an i18n key. */
@@ -366,9 +366,9 @@ export const MOVED = "officer_app.letter.moved";
 export function replyFailureKey(error: unknown): string {
   if (lettersUnavailable(error)) return "officer_app.letter.unavailable";
   // feat-letters: the soul was dispatched to another hall -- this one may not answer it now.
-  if (statusOf(error) === 409 && (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "not_current_hall") return MOVED;
-  if (statusOf(error) === 409 && (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "assigned_to_other") return ASSIGNED_TO_OTHER;
-  if (statusOf(error) === 409) return "soul_inbox.errors.closed";
+  if (errorStatus(error) === 409 && errorCode(error) === "not_current_hall") return MOVED;
+  if (errorStatus(error) === 409 && errorCode(error) === "assigned_to_other") return ASSIGNED_TO_OTHER;
+  if (errorStatus(error) === 409) return "soul_inbox.errors.closed";
   return "officer_app.letter.failed";
 }
 
@@ -390,12 +390,10 @@ export function adminHelpUrl(): string {
 
 // ── account: forgot / change password, two-step verification ───────────
 
-const statusOf = (error: unknown): number | undefined => (error as { response?: { status?: number } })?.response?.status;
-
 /** Why the e-mail reset request failed: only 429 is told apart; no answer at all is the network. */
 export function forgotFailureKey(error: unknown): string {
-  if (!(error as { response?: unknown })?.response) return "officer_app.login.reasons.network";
-  return statusOf(error) === 429 ? "auth.rate_limited" : "auth.forgot_failed";
+  if (!answered(error)) return "officer_app.login.reasons.network";
+  return errorStatus(error) === 429 ? "auth.rate_limited" : "auth.forgot_failed";
 }
 
 /**
@@ -410,7 +408,7 @@ export function passwordFailure(error: unknown): { network: boolean; old: string
   const lines = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" ? [v] : []);
   const body = (response.data && typeof response.data === "object" ? response.data : {}) as Record<string, unknown>;
   // Too many wrong old passwords: the server's sentence is Chinese only, so it is said by key (as the web's profile).
-  if (statusOf(error) === 429 || body.code === "login_locked") return { network: false, old: ["profile.password_locked"], next: [], other: [] };
+  if (errorStatus(error) === 429 || body.code === "login_locked") return { network: false, old: ["profile.password_locked"], next: [], other: [] };
   // A validation problem (`invalid`): its `errors` name the fields; its `detail` repeats one of them.
   const fields = problemFieldMessages(error);
   return {
@@ -432,19 +430,18 @@ export { splitCommonReasons } from "@soulledger/core/api/auth";
 export type ResetFailure = { kind: "network" | "invalid" | "rate" | "other" } | { kind: "weak"; reasons: string[] };
 
 export function resetFailure(error: unknown): ResetFailure {
-  const response = (error as { response?: { status?: number; data?: { code?: unknown } } })?.response;
-  if (!response) return { kind: "network" };
-  if (response.data?.code === "reset_link_invalid") return { kind: "invalid" };
-  if (response.data?.code === "weak_password") return { kind: "weak", reasons: passwordReasonKeys(response.data) };
-  return { kind: response.status === 429 ? "rate" : "other" };
+  if (!answered(error)) return { kind: "network" };
+  const code = errorCode(error);
+  if (code === "reset_link_invalid") return { kind: "invalid" };
+  if (code === "weak_password") return { kind: "weak", reasons: passwordReasonKeys((error as { response: { data?: unknown } }).response.data) };
+  return { kind: errorStatus(error) === 429 ? "rate" : "other" };
 }
 
 /** Why a two-step confirm / disable was refused, as an i18n key; `fallback` is the key for a plain refusal. */
 export function mfaManageFailureKey(error: unknown, fallback: string): string {
-  const response = (error as { response?: { data?: { code?: string } } })?.response;
-  if (!response) return "officer_app.mfa.reasons.network";
-  if (statusOf(error) === 429 || response.data?.code === "locked") return "officer_app.mfa.reasons.locked";
-  if (response.data?.code === "expired") return "mfa.verify.error_expired";
+  if (!answered(error)) return "officer_app.mfa.reasons.network";
+  if (errorStatus(error) === 429 || errorCode(error) === "locked") return "officer_app.mfa.reasons.locked";
+  if (errorCode(error) === "expired") return "mfa.verify.error_expired";
   return fallback;
 }
 
@@ -488,7 +485,7 @@ export function deskUrl(target: Parameters<typeof deskPath>[0]): string {
 
 /** 403 means the role cannot see the area: the "denied" state, not an error. */
 export function isDenied(error: unknown): boolean {
-  return (error as { response?: { status?: number } })?.response?.status === 403;
+  return errorStatus(error) === 403;
 }
 
 /**

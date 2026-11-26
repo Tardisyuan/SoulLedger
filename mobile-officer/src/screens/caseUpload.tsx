@@ -3,6 +3,7 @@
  * 每个文件一行各自显示进度;传完通知父级重新取列表,失败的行留在原处,能重试的给「重试」,服务端明确拒绝的只给「移除」。
  * 错误文案与网页共用 `case.attachments.*`。离线三个按钮置灰并写原因;没认领(也没有 judgment.execute)只写一行;已结案不画入口。
  */
+import { answered, errorCode } from "@soulledger/core/api/errors";
 import { judgmentApi, type CaseAttachmentList } from "@soulledger/core/api/judgment";
 import { useRef, useState } from "react";
 import { View } from "react-native";
@@ -53,13 +54,13 @@ export function CaseUpload({ judgmentId, list, canWrite, onUploaded }: { judgmen
       onUploaded();
     } catch (e) {
       if (controller.signal.aborted) return drop(key);
-      const res = (e as { response?: { data?: { code?: string } } }).response;
-      const code = res?.data?.code;
+      // By shape, so a thrown null or undefined reads as no answer instead of throwing here.
+      const code = errorCode(e);
       if (code && ERROR_KEY[code]) {
         const max = code === "too_many" ? (list?.max_count ?? 30) : maxMb;
         patch(key, { state: "failed", message: t(ERROR_KEY[code], { max: String(max) }), retryable: false });
       } else {
-        patch(key, { state: "failed", message: t(res ? "case.attachments.failed_generic" : "case.attachments.failed_network"), retryable: true });
+        patch(key, { state: "failed", message: t(answered(e) ? "case.attachments.failed_generic" : "case.attachments.failed_network"), retryable: true });
       }
     }
   };

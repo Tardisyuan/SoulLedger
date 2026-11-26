@@ -6,6 +6,7 @@
  *  - 刑期用的是这扇门的默认年数时,副行「默认 N 年」(下判本身不上手机)。
  * 读的是这个灵魂「执行中」那一段的处置(`section=executing`),要 `disposition.read`;没有就整行不画。
  */
+import { answered } from "@soulledger/core/api/errors";
 import { dispositionApi, releaseRefusalOf, type Disposition } from "@soulledger/core/api/disposition";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
@@ -68,7 +69,7 @@ function Serving({ soulId }: { soulId: string }) {
           toast(t(unconfirmed, { bio: bio.start }), "failure");
           return;
         }
-        if (!(e as { response?: unknown } | null)?.response) {
+        if (!answered(e)) {
           // No answer at all (o13b: the check passed, nothing reached the server). Not 释放失败: say 网络错误 and
           // keep the sheet, so one more tap tries again; a release that did land answers that tap with not_serving.
           toast(t("officer_app.confirm.reasons.network"), "failure");

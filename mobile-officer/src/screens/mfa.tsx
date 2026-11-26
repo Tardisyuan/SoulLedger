@@ -11,6 +11,7 @@
  * else: not in the session, a store, a log line or a navigation param, and they go with the unmount.
  * Step 4 cannot be left until the officer has ticked 「我已妥善保存」 and pressed 完成.
  */
+import { errorCode } from "@soulledger/core/api/errors";
 import { mfaApi, type MfaSetupResponse, type MfaStatus } from "@soulledger/core/api/auth";
 import { mfaDigits, secretLines } from "@soulledger/core/domain/mfa";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -318,7 +319,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
           setStep(2);
         },
         (e: unknown) => {
-          const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+          const code = errorCode(e);
           if (code === "wrong_password") {
             setPasswordError(t("mfa.setup.password_wrong"));
             setRefusals((n) => n + 1);

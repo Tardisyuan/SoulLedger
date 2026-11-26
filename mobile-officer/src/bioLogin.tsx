@@ -4,6 +4,7 @@
  * while the typed password is still in memory. The store is `deviceLogin.ts`; the sign-in page's half is in
  * `screens/login.tsx`; the foreground lock is `appLock.tsx`.
  */
+import { answered, errorCode, errorStatus } from "@soulledger/core/api/errors";
 import { platform } from "@soulledger/core/platform";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
@@ -40,10 +41,9 @@ export function useBio(read = true): { ready: boolean; enrolled: boolean; word: 
 
 /** Why 「开启」 was refused, as a key. */
 export function enableFailureKey(error: unknown): string {
-  const response = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
-  if (!response) return "officer_app.login.reasons.network";
-  if (response.status === 429) return "officer_app.login.reasons.locked";
-  if (response.data?.code === "wrong_password") return "officer_app.bio_login.wrong_password";
+  if (!answered(error)) return "officer_app.login.reasons.network";
+  if (errorStatus(error) === 429) return "officer_app.login.reasons.locked";
+  if (errorCode(error) === "wrong_password") return "officer_app.bio_login.wrong_password";
   return "officer_app.login.reasons.other";
 }
 

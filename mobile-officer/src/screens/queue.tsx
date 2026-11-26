@@ -12,6 +12,7 @@
  * one: 城隍初审中 opens 待办 filtered to 城隍初审. 申诉 / 跨殿联审 / 待发勾魂牒 have no screen in this app, so no chip.
  * A chip whose count is 0 or null is not drawn.
  */
+import { errorStatus } from "@soulledger/core/api/errors";
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
@@ -204,7 +205,7 @@ export function QueueTab({
       .then(refresh)
       .catch((e: unknown) => {
         // 409 on a claim: someone was first. Say so; the list and the counts are asked again.
-        if (kind === "claim" && (e as { response?: { status?: number } })?.response?.status === 409) {
+        if (kind === "claim" && errorStatus(e) === 409) {
           toast(t("officer_app.queue.claim_taken"), "failure");
           void refresh();
         } else toast(t(kind === "claim" ? "officer_app.queue.claim_failed" : "officer_app.desk.release_failed"), "failure");

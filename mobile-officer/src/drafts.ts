@@ -14,6 +14,7 @@
  * An emptied box that the server may have a copy of stays as a blank entry until the server has forgotten it too;
  * otherwise the next opening would bring the words back.
  */
+import { errorStatus } from "@soulledger/core/api/errors";
 import { soulInboxApi } from "@soulledger/core/api/soul-inbox";
 import { normalizeDraft } from "@soulledger/core/domain/letters";
 import { platform } from "@soulledger/core/platform";
@@ -72,8 +73,6 @@ export function saveDraft(id: string, text: string): void {
   else write([{ id, text: next, at: Date.now(), dirty: true, remote: mine?.remote ?? false }, ...rest].slice(0, DRAFT_KEEP));
 }
 
-const statusOf = (e: unknown): number | undefined => (e as { response?: { status?: number } })?.response?.status;
-
 /** Carry one draft up. Never throws, never speaks: the words are safe here either way. */
 function pushDraft(id: string): void {
   const mine = read().find((d) => d.id === id);
@@ -87,7 +86,7 @@ function pushDraft(id: string): void {
   };
   // 409 closed, or the letter is no longer this officer's to see: asking again would not change the answer.
   soulInboxApi.saveDraft(id, mine.text).then(settled, (e: unknown) => {
-    if ([403, 404, 409].includes(statusOf(e) ?? 0)) settled();
+    if ([403, 404, 409].includes(errorStatus(e) ?? 0)) settled();
   });
 }
 

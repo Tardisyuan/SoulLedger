@@ -1,4 +1,5 @@
 /** 我的: profile (the name opens its edit screen), two-step verification (opens its screen), change password, language, theme, push, about, sign out. */
+import { errorStatus } from "@soulledger/core/api/errors";
 import { authApi, mfaApi } from "@soulledger/core/api/auth";
 import { officerAppApi } from "@soulledger/core/api/officer-app";
 import { SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
@@ -203,7 +204,7 @@ function EmailFact({ email, verified }: { email: string; verified: boolean }) {
       .sendEmailVerification()
       .then(
         () => toast(t("profile.email_verification_sent"), "success"),
-        (e: unknown) => toast(t((e as { response?: { status?: number } })?.response?.status === 429 ? "auth.rate_limited" : "profile.email_verification_failed"), "failure")
+        (e: unknown) => toast(t(errorStatus(e) === 429 ? "auth.rate_limited" : "profile.email_verification_failed"), "failure")
       )
       .finally(() => setBusy(false));
   };

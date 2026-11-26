@@ -6,6 +6,7 @@
  * (ink 实底,不用危险色;结论一经记下就改不了,不属实也一样 —— review 2026-11-01);等级不到「重」时两个「属实」置灰,原因写在它们之间。阳寿已到或已结案:只剩
  * 不属实 / 属实(只记结论),上面一句 `late_hint`。规则都在服务端(`apps/judgment/wangsi.py`),这里只照着画。
  */
+import { answered, errorCode } from "@soulledger/core/api/errors";
 import { judgmentApi, wangsiApi, WANGSI_ERROR_CODES, type Judgment } from "@soulledger/core/api/judgment";
 import { GRIEVANCE_LEVELS, GRIEVANCE_RELEASE_LEVELS } from "@soulledger/core/domain/diyuCase";
 import { formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
@@ -22,8 +23,8 @@ type T = (key: string, vars?: Record<string, string>) => string;
 
 /** 拒绝的 code → 文案;认不得的退回通用一句。 */
 export function wangsiRefusalText(e: unknown, t: T): string {
-  if (!(e as { response?: unknown } | null)?.response) return t("officer_app.confirm.reasons.network");
-  const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+  if (!answered(e)) return t("officer_app.confirm.reasons.network");
+  const code = errorCode(e);
   return code && (WANGSI_ERROR_CODES as readonly string[]).includes(code) ? t(`judgment.wangsi.error.${code}`) : t("common.error");
 }
 

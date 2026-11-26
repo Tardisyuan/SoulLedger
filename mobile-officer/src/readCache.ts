@@ -15,6 +15,7 @@
  * `clearDrafts()`: the next officer on the phone must not find the last one's cases. Stored as
  * `{ owner, lists, details }` (owner.ts), so whatever a path that did not clear left behind reads as empty.
  */
+import { answered } from "@soulledger/core/api/errors";
 import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -156,7 +157,7 @@ export function useShownAt(): number | null {
   );
 }
 
-const hasAnswer = (error: unknown): boolean => (error as { response?: unknown } | null)?.response != null;
+const hasAnswer = answered;
 
 /**
  * `useRemote` with the cache behind it. Online it fetches and writes the cache; offline it answers from
