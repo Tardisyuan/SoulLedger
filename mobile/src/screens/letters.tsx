@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   findBlock: { paddingHorizontal: 20, paddingVertical: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: "transparent" },
   codeBox: { minHeight: 48, borderWidth: 1, borderRadius: radius.control, justifyContent: "center" },
   codeInput: { minHeight: 46, paddingHorizontal: 12, fontFamily: family.mono[500], fontSize: 16, letterSpacing: 2.2 },
-  card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
+  card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderRadius: radius.dialog, padding: 16 },
   write: { minHeight: ANDROID ? 48 : 44, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   writeText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 16 },
   circle: { gap: 2 },

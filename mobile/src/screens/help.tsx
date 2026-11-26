@@ -18,6 +18,7 @@ import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useSession } from "../session";
 import { Button, Screen, SectionLabel, Txt, useLayout, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 
@@ -162,6 +163,6 @@ const styles = StyleSheet.create({
   row: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
   answer: { paddingTop: 0, paddingBottom: 16 },
   write: { paddingVertical: 24, gap: 8 },
-  card: { borderWidth: 1, padding: 16, gap: 8, marginBottom: 24 },
+  card: { borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 8, marginBottom: 24 },
   cardTitle: { fontFamily: family.ui[600] },
 });

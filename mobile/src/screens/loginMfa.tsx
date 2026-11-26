@@ -27,6 +27,7 @@ import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { recoveryOf, stateOfFailure, type StepState } from "../mfa";
 import { useSession, type MfaChallenge } from "../session";
 import { Button, Input, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { CheckRow, CoverRule, DigitField, Heading, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 4 },
   recovery: { fontSize: 24, letterSpacing: 2 },
   lost: { padding: 16, paddingTop: 24, gap: 20 },
-  card: { borderWidth: 1, padding: 16, gap: 8 },
+  card: { borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 8 },
   cardRow: { flexDirection: "row", gap: 16 },
   cardKey: { minWidth: 40 },
   note: { flexDirection: "row", gap: 12, alignItems: "baseline" },

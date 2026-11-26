@@ -27,7 +27,7 @@ import { Emblem, Node } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { termServed } from "../rules";
 import { SessionContext } from "../session";
-import { civKeyOf } from "@soulledger/mobile-ui/src/theme";
+import { civKeyOf, radius } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   Empty,
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   servedTrack: { flex: 1, height: 6 },
   servedBar: { height: 6 },
   sectionBody: { gap: 12 },
-  newTag: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
+  newTag: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 4, paddingVertical: 2 },
   axis: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
   axisStep: { flex: 1, flexDirection: "row", alignItems: "center" },
   linkH: { flex: 1, height: 2, marginHorizontal: 8 },
@@ -627,6 +627,6 @@ const styles = StyleSheet.create({
   stationGap: { paddingBottom: 20 },
   here: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   why: { marginTop: 12, borderLeftWidth: 2, paddingLeft: 12 },
-  blocked: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 8 },
+  blocked: { borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, padding: 16, gap: 8 },
   blockedStation: { borderTopWidth: 1, paddingTop: 12, gap: 4 },
 });

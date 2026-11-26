@@ -1419,7 +1419,7 @@ const styles = StyleSheet.create({
   residenceBox: { alignSelf: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 8, paddingVertical: 4 },
   residenceNote: { marginTop: 8 },
   homecomingWrap: { paddingTop: GUTTER, paddingBottom: GUTTER, borderBottomWidth: 1 },
-  homecoming: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
+  homecoming: { borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, padding: 16, gap: 12 },
   homecomingHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   /** Room under the divider for the ask button, which floats at the right over the foot. */
   foot: { paddingTop: 24, paddingBottom: 48 },

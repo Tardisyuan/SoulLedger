@@ -28,6 +28,7 @@ import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { fileField } from "@soulledger/mobile-ui/src/platform";
 import { AlertTxt, FadeModal, PhotoPager, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
   track: { height: 3, width: "100%" },
   bar: { height: 3 },
   actions: { flexDirection: "row", gap: 4, flexWrap: "wrap" },
-  action: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  action: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   corner: { position: "absolute", top: 4, right: 4, width: 22, height: 22, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   add: { borderStyle: "dashed", borderWidth: 1, gap: 4 },
   count: { marginTop: 8, fontSize: 12 },

@@ -11,6 +11,7 @@ import { StyleSheet, View } from "react-native";
 
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { family } from "@soulledger/mobile-ui/src/fonts";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp } from "../rules";
 import { Button, Empty, FadeModal, OneLine, Press, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
   head: { paddingTop: 24, paddingBottom: 8 },
   row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
   titleLine: { flexDirection: "row", alignItems: "center", gap: 8 },
-  tag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  tag: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   signOut: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center", paddingHorizontal: 8 },
   underline: { textDecorationLine: "underline" },
   dim: { opacity: 0.5 },
@@ -221,6 +222,6 @@ const styles = StyleSheet.create({
   stamp: { fontSize: 12, letterSpacing: 0.4 },
   bold: { fontFamily: family.ui[600] },
   scrim: { flex: 1, justifyContent: "flex-end" },
-  sheet: { borderTopWidth: 3, padding: 20, gap: 12 },
-  stranger: { marginTop: 32, marginBottom: 32, borderWidth: 1, padding: 16, gap: 12 },
+  sheet: { borderTopWidth: 3, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden", padding: 20, gap: 12 },
+  stranger: { marginTop: 32, marginBottom: 32, borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 12 },
 });

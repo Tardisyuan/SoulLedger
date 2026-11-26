@@ -2209,7 +2209,7 @@ export const styles = StyleSheet.create({
   buttonText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, textAlign: "center" },
   // M10: the busy line's track, along the button's inner foot.
   busyTrack: { position: "absolute", left: 0, right: 0, bottom: 0, height: touch.topline, overflow: "hidden" },
-  notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
+  notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
   failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
   failedText: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
   small: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: space[3], paddingVertical: space[2] },

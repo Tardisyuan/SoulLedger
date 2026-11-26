@@ -44,6 +44,7 @@ import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useDay } from "./lifeProgress";
 import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 import { useDiscardGuard } from "./discardGuard";
 import { ButtonPair, MfaSheet } from "./mfaParts";
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   compensation: { gap: 2, marginTop: 4 },
   form: { paddingVertical: 24, gap: 20 },
   count: { alignSelf: "flex-end", marginTop: 4 },
-  tag: { borderWidth: 2, paddingHorizontal: 4 },
+  tag: { borderWidth: 2, borderRadius: radius.control, paddingHorizontal: 4 },
   ladder: { gap: 8, marginTop: 4 },
   station: { flexDirection: "row", gap: 8 },
   awaiting: { paddingHorizontal: 8, paddingVertical: 4 },

@@ -26,6 +26,7 @@ import { Emblem, Icon, type IconName } from "@soulledger/mobile-ui/src/emblems";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useAskLogout } from "../logout";
 import { translate, useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { PRIMER_SEEN_KEY, easProjectId, hasRegisteredDevice, permission, registerDevice, requestPermission, type Permission } from "../push";
 import { useSession } from "../session";
 import {
@@ -709,13 +710,13 @@ const styles = StyleSheet.create({
   current: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 },
   currentStacked: { alignSelf: "flex-start", marginTop: 4 },
   saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 12 },
-  saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
+  saveFailed: { marginTop: 12, borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, padding: 16, gap: 12 },
   saveRow: { flexDirection: "row", gap: 8 },
   saveActions: { flexDirection: "row", gap: 12 },
   foot: { paddingTop: 12, paddingBottom: 16 },
   dimmed: { opacity: 0.55 },
   notice: { paddingBottom: 12 },
-  denied: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
+  denied: { borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, padding: 16, gap: 12 },
   end: { paddingTop: 24, paddingBottom: 32, gap: 16, alignItems: "stretch" },
   groupLabel: { paddingTop: 24, paddingBottom: 8 },
   rows: { borderTopWidth: 1 },

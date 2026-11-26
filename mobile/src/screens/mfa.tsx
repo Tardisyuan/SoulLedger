@@ -31,6 +31,7 @@ import { secretLines, stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { useSession } from "../session";
 import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
@@ -786,7 +787,7 @@ const styles = StyleSheet.create({
   code: { width: "46%", fontFamily: family.mono[500], fontSize: 20, lineHeight: 28, letterSpacing: 0.7 },
   manage: { padding: 16, gap: 16 },
   panel: { borderWidth: 1, padding: 16 },
-  tag: { alignSelf: "flex-start", height: 24, paddingHorizontal: 8, marginBottom: 8, justifyContent: "center", borderWidth: 1 },
+  tag: { alignSelf: "flex-start", height: 24, paddingHorizontal: 8, marginBottom: 8, justifyContent: "center", borderWidth: 1, borderRadius: radius.control },
   tagText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 16 },
   panelBody: { marginBottom: 12 },
   fact: { minHeight: 56, justifyContent: "center", borderTopWidth: 1 },

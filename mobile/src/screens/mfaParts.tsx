@@ -11,7 +11,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { clockOf, digitsOf, type StepState } from "../mfa";
-import { FadeModal, Interp, Input, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
+import { FadeModal, GUTTER, Interp, Input, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** A plain hairline at the top of every screen in this flow (第四十八批 A10; it was 3px in the civilization's colour). */
 export function CoverRule() {
@@ -182,10 +183,9 @@ export function StepNotice({ state, password, recovery }: { state: StepState; pa
 }
 
 /**
- * A confirmation sheet from the bottom: a 3px line in the main colour on its top edge, a dimmed screen behind.
- * A modal of its own rather than the library bottom sheet: this one holds a text field, and the keyboard has to
- * lift it (`KeyboardAvoidingView`); the library sheet needs its own input component for that. Closes on the
- * scrim and on Android's back key.
+ * A confirmation sheet from the bottom: a 1px hairline on its top edge, the sheet's 12 top corners (第五十五批), a
+ * dimmed screen behind. A modal of its own, with a `KeyboardAvoidingView` so the keyboard lifts the text field it
+ * holds; folding it into the library `Sheet` is a separate change. Closes on the scrim and on Android's back key.
  */
 export function MfaSheet({
   testID,
@@ -236,8 +236,16 @@ const styles = StyleSheet.create({
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   underline: { textDecorationLine: "underline" },
   digits: { fontSize: 32, letterSpacing: 14, minHeight: 54 },
-  card: { borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
+  card: { borderWidth: 1, borderRadius: radius.dialog, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
   cardTitle: { fontFamily: family.ui[600] },
-  sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: 16, gap: 16 },
+  sheet: {
+    borderTopWidth: 1,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    overflow: "hidden",
+    paddingTop: 24,
+    paddingHorizontal: GUTTER,
+    gap: 16,
+  },
   pair: { flexDirection: "row", gap: 8 },
 });

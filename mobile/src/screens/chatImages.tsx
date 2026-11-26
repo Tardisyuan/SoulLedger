@@ -25,7 +25,7 @@ import type { Outgoing } from "../chat";
 import { bubbleStamp } from "../chatRules";
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
-import { ON_PLAQUE } from "@soulledger/mobile-ui/src/theme";
+import { ON_PLAQUE, radius } from "@soulledger/mobile-ui/src/theme";
 import { AlertTxt, FadeModal, Loader, OneLine, PhotoPager, Txt, thumbRef, useFrontPhoto, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
@@ -363,5 +363,5 @@ const styles = StyleSheet.create({
   viewerText: { color: "#FFFFFF" },
   counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   counter: { color: ON_PLAQUE, fontSize: 14, lineHeight: 20 },
-  button: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  button: { borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
 });

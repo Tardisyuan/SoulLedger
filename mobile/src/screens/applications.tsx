@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   formTitle: { marginTop: 16 },
   stateNote: { marginTop: 8 },
   landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
-  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   badgeItem: { flexShrink: 0, maxWidth: "100%" },
   handler: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4 },
