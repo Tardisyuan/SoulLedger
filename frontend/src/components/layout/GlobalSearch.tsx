@@ -18,7 +18,8 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { SoulStateBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { useRegisteredCommands } from "@/src/lib/shellCommands";
 import { pushRecent, readRecent, type RecentItem } from "@/src/lib/recentOpened";
-import { GlobalSearchEntries, isSearchShortcut, onSearchOpenRequest, takePendingOpen } from "./GlobalSearchEntry";
+import { GlobalSearchEntries, isSearchShortcut, takePendingOpen } from "./GlobalSearchEntry";
+import { isMac } from "@/src/lib/platformKeys";
 import { openShortcutHelp } from "./ShortcutHelp";
 
 /**
@@ -100,7 +101,6 @@ function flattenPages(menus: readonly SidebarMenu[]): SidebarMenu[] {
 }
 
 const isForbidden = (error: unknown) => (error as { response?: { status?: number } } | null)?.response?.status === 403;
-const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const SUBTLE = "text-[oklch(var(--color-ink-subtle))]";
@@ -146,8 +146,6 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
-  // The sidebar's 「搜索、跳转、下指令」 opens this same palette (v4 S01).
-  useEffect(() => onSearchOpenRequest(() => show()));
 
   // This component arrives by `next/dynamic`; a press on the placeholder before then opens it now.
   useEffect(() => {

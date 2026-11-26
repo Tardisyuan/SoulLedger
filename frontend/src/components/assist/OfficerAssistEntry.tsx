@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useIsMac } from "@/src/lib/platformKeys";
 import type { OfficerAssist } from "./useOfficerAssist";
 
 /**
@@ -8,8 +9,6 @@ import type { OfficerAssist } from "./useOfficerAssist";
  * arrives by `next/dynamic` (B3, 2026-10-30). The open state and ⌘J live in `useOfficerAssist`, also in the shell,
  * so neither a click nor the shortcut waits on the panel's chunk.
  */
-
-const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 function AskIcon() {
   return (
@@ -23,8 +22,10 @@ function AskIcon() {
 /** 1b: first in the toolbar's action group (规范 v3 工具条:44×44、中性 ink-muted,悬停 / 打开时 canvas 底). */
 export function OfficerAssistEntry({ assist }: { assist: OfficerAssist }) {
   const { t } = useI18n();
+  // A hook, not a render-time navigator read: the shell is server-rendered (hydration).
+  const mac = useIsMac();
   if (!assist.visible) return null;
-  const shortcut = isMac() ? "⌘J" : "Ctrl+J";
+  const shortcut = mac ? "⌘J" : "Ctrl+J";
   return (
     <button
       ref={assist.entryRef}
