@@ -24,8 +24,8 @@ from apps.authentication.models import User
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 from tests.conftest import sign_in
+from tests.shard_support import _sync, sharded
 from tests.soul_account_support import officer_client, ready_soul
-from tests.test_shard_sync import _sync, sharded
 
 pytestmark = pytest.mark.django_db
 

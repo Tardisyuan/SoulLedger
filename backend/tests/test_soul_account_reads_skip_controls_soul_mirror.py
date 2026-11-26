@@ -15,8 +15,8 @@ from unittest import mock
 
 import pytest
 
+from tests.shard_support import CIVS, sharded
 from tests.test_control_locks_in_a_write_cut_hall import _admin, _client, _soul_account, world  # noqa: F401
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _in_hall
 
 PASSWORD = "Fresh-soul-9!pw"

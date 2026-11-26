@@ -11,8 +11,8 @@ from django.utils import timezone
 from apps.judgment import claims
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul
+from tests.shard_support import sharded
 from tests.test_judgment_claim import BASE, _case, world  # noqa: F401  (world is a fixture)
-from tests.test_shard_sync import sharded
 
 
 def _held_by_rule(judgment) -> bool:

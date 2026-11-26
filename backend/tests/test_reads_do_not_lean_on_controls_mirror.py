@@ -29,9 +29,9 @@ import pytest
 from django.db import connections, transaction
 from django.utils import timezone
 
+from tests.shard_support import CIVS, sharded
 from tests.soul_push_support import enqueued  # noqa: F401
 from tests.test_control_locks_in_a_write_cut_hall import _admin, _client, _soul_account, world  # noqa: F401
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _in_hall
 
 SHARDS = {f"civ_{c.lower()}" for c in CIVS}

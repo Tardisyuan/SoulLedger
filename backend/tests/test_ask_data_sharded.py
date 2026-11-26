@@ -15,7 +15,7 @@ from apps.judgment.models import Judgment
 from apps.soul_assist.ask_data import executor, service
 from apps.souls.models import Soul, SoulState
 from tests import ask_data_wall
-from tests.test_shard_sync import HAS_SHARDS, _sync
+from tests.shard_support import HAS_SHARDS, _sync
 from tests.test_sharded_writes import _assign, _in_hall, cut
 
 SQLITE = connection.vendor == "sqlite"

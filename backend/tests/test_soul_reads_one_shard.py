@@ -30,7 +30,7 @@ from apps.core.sharding import alias_for_civilization
 from apps.soul_accounts.authentication import SoulJWTAuthentication
 from tests import endpoint_answers as shadow
 from tests import test_sharded_reads_equal_single_db as world_of
-from tests.test_shard_sync import CIVS, HAS_SHARDS, _sync, sharded
+from tests.shard_support import CIVS, HAS_SHARDS, _sync, sharded
 from tests.test_sharded_reads_equal_single_db import _chat_on, _seed_in_report, _small_pages  # noqa: F401 -- autouse
 
 SEED = world_of.SEED

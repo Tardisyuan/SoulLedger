@@ -17,7 +17,7 @@ from asgiref.sync import async_to_sync
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from tests.test_shard_sync import CIVS, sharded
+from tests.shard_support import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 

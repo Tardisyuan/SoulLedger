@@ -34,7 +34,7 @@ from rest_framework.pagination import PageNumberPagination
 from apps.core.shard_reads import FANOUT, crossing_keys, read_context
 from apps.core.sharding import SHARD, NoShardContext, alias_for_civilization, placement, tenant_path
 from tests import endpoint_answers as shadow
-from tests.test_shard_sync import CIVS, HAS_SHARDS, sharded
+from tests.shard_support import CIVS, HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_READS_SEED") or random.SystemRandom().randrange(10 ** 6))
 PAGE_SIZE = 3
@@ -228,8 +228,8 @@ def _build(rng):
     from apps.authentication.models import User, UserRole
     from apps.souls.models import Soul, SoulState
     from apps.tenants.models import Tenant
+    from tests.shard_support import _reconcile, _sync
     from tests.test_admin_is_civilization_scoped import EXTRA_ROWS, _client, _list_routes, _make
-    from tests.test_shard_sync import _reconcile, _sync
     from tests.test_tenant_scoping_contract import _model_for
     from tests.test_tenant_scoping_contract import _tenant_path as scoping_path
 

@@ -22,8 +22,8 @@ from collections import Counter
 import pytest
 from django.conf import settings
 
+from tests.shard_support import CIVS, HAS_SHARDS
 from tests.test_cross_civilization_saga import RUN, _ownership, _world, seed_of
-from tests.test_shard_sync import CIVS, HAS_SHARDS
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 #: (seed, forced write cut): one drawn per run, only the target's civilization cut, only the source's, both.

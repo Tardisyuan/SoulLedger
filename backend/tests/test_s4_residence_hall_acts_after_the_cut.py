@@ -25,8 +25,8 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction
 
+from tests.shard_support import CIVS, sharded
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import HALLS, _audited, _client, _read, _route, _settled
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _in_hall, cut
 
 PAIRS = [("CHINESE", "GREEK"), ("EGYPTIAN", "EUROPEAN")]
@@ -57,7 +57,7 @@ def _halls(pair):
     from apps.org.ownership import tenant_root
     from apps.realms.models import Realm
     from tests import sentence_plan_support as plan
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     home, res = (plan.tenant(HALLS[c]) for c in pair)
     for hall in (home, res):

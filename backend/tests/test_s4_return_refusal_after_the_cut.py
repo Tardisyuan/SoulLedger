@@ -19,6 +19,7 @@ an amendment case -- on a world built AFTER both civilizations are write-cut, ov
 import pytest
 from django.conf import settings
 
+from tests.shard_support import sharded
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import _plan_url, _read
 from tests.test_s4_residence_hall_acts_after_the_cut import (
     PAIRS,
@@ -28,7 +29,6 @@ from tests.test_s4_residence_hall_acts_after_the_cut import (
     _pending,
     _quiet,
 )
-from tests.test_shard_sync import sharded
 from tests.test_sharded_writes import _in_hall, cut
 
 

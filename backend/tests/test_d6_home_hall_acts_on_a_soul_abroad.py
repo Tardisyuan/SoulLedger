@@ -33,8 +33,8 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction
 
+from tests.shard_support import CIVS, sharded
 from tests.test_cross_civilization_saga import _ownership, _walk
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _in_hall, cut
 
 CUTS = ("both",)  # sharded: every civilization on its shard (the partial cut-overs are gone, 2026-11-21)
@@ -83,8 +83,8 @@ def _abroad(w, *, third_stop=False, pending_from_third=None):
     from apps.realms.models import Realm
     from apps.sentence_plan import requests
     from tests import sentence_plan_support as plan
+    from tests.shard_support import _sync
     from tests.test_judgment_appeals import _realm_for
-    from tests.test_shard_sync import _sync
 
     home, res, third = (plan.tenant(HALLS[w[k]]) for k in ("home", "residence", "third"))
     for hall in (home, res, third):
@@ -159,7 +159,7 @@ def _settled(where, mode):
     dead = [(a, m.kind, m.last_error[:300]) for a, m in shard_saga.failed()]
     assert not left and not dead, f"{where}: messages pending {left}, FAILED {dead}"
     if mode != "none":
-        from tests.test_shard_sync import _sync
+        from tests.shard_support import _sync
 
         _sync()  # what beat does: the shadows of the civilizations not cut follow control, then ownership
         _ownership()
@@ -287,7 +287,7 @@ def test_an_appeal_amendment_withdrawing_the_current_foreign_stop_brings_the_sou
     reviewer = plan.officer(f"d6a_rev_{mode}", "JUDGE", x["home"])
     appeal = JudgmentAppeal.objects.create(judgment=judgment, soul=x["soul"], tenant=x["home"], round=1, reason="冤",
                                            original_verdict=judgment.verdict, status="IN_REVIEW", reviewer=reviewer)
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     _sync()  # the appeal is the home hall's row: on its shard before the cut, as every other row of the world
     from django.urls import reverse
@@ -409,7 +409,7 @@ def test_retrying_the_next_stop_while_the_soul_is_abroad_is_refused_and_writes_n
     x = _abroad(w, third_stop=True)
     node3 = plan.node(x["plan"], 3)
     SentencePlanService._dispatch_not_started(x["soul"], x["plan"], node3)  # a refusal on record: retryable
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     _sync()
     client = _client(x["home"], f"d6rt_{mode}")
@@ -440,7 +440,7 @@ def test_a_refused_flow_is_not_reheard_in_the_home_hall_while_its_soul_resides_o
     from apps.tenants.shard_saga import relay_until_quiet
     from apps.workflow.models import ApprovalWorkflow
     from tests import sentence_plan_support as plan
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     w, where = world, _where(world, mode)
     home, res = plan.tenant(HALLS[w["home"]]), plan.tenant(HALLS[w["residence"]])

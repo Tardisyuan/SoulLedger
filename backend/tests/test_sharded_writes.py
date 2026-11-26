@@ -23,7 +23,7 @@ from django.db import connections, router, transaction
 from django.test import RequestFactory, override_settings
 
 from apps.core.sharding import SHARD, NoShardContext, placement
-from tests.test_shard_sync import CIVS, sharded
+from tests.shard_support import CIVS, sharded
 
 GREEK, EGYPT = "civ_greek", "civ_egyptian"
 
@@ -33,7 +33,7 @@ def _halls():
     its root unit), built in the one-database form before `cut()`."""
     from apps.org.ownership import tenant_root
     from apps.tenants.models import Tenant
-    from tests.test_shard_sync import _sync
+    from tests.shard_support import _sync
 
     halls = {civ: Tenant.objects.create(code=f"W4_{civ[:2]}", display_name=civ, declared_civilization=civ)
              for civ in CIVS}
@@ -666,8 +666,8 @@ def test_the_moderation_queue_counts_open_reports_across_shard_and_control():
     on control, which counted none sharded; it is read for the shown rows by ids now."""
     from apps.authentication.models import User
     from apps.social.models import Post, Report, ReportStatus, Visibility
+    from tests.shard_support import _sync
     from tests.soul_account_support import officer_client, ready_soul
-    from tests.test_shard_sync import _sync
 
     halls = _halls()
     hall = halls["GREEK"]

@@ -35,7 +35,7 @@ from django.test import override_settings
 
 from apps.core.sharding import SHARD, placement
 from tests import endpoint_answers as shadow
-from tests.test_shard_sync import HAS_SHARDS, sharded
+from tests.shard_support import HAS_SHARDS, sharded
 
 SEED = int(os.environ.get("SHARDED_WRITES_SEED") or random.SystemRandom().randrange(10 ** 6))
 GREEK = "civ_greek"

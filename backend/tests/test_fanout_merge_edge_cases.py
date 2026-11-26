@@ -12,7 +12,7 @@ from django.test import override_settings
 
 from apps.core.shard_reads import CONTROL_READS, FANOUT, read_context
 from apps.core.sharding import CONTROL, placement
-from tests.test_shard_sync import CIVS, _sync, sharded
+from tests.shard_support import CIVS, _sync, sharded
 
 
 def _world(n=3):

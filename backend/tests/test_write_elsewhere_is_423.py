@@ -11,8 +11,8 @@ an account for its soul while the soul resides in another civilization, every ci
 import pytest
 from django.conf import settings
 
+from tests.shard_support import sharded
 from tests.test_d6_home_hall_acts_on_a_soul_abroad import _abroad, _client
-from tests.test_shard_sync import sharded
 from tests.test_sharded_writes import cut
 
 

@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.shard_support import CIVS, sharded
 from tests.test_control_locks_in_a_write_cut_hall import _client
-from tests.test_shard_sync import CIVS, sharded
 from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
 APPS = Path(__file__).resolve().parents[1] / "apps"
