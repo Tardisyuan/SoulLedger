@@ -10,7 +10,12 @@ interface ToastItem {
   id: string;
   message: string;
   type: ToastType;
+  /** 自动收起前停留多久;`null` = 不自动收起。 */
+  stay: number | null;
   timer: ReturnType<typeof setTimeout> | undefined;
+  /** 指针在上面 / 焦点在里面:这两种时候不计时。 */
+  hover: boolean;
+  focus: boolean;
 }
 
 // ── Pure DOM toast — no React state, no effects, no portals ──
@@ -112,8 +117,32 @@ function buildToastEl(item: ToastItem): HTMLElement {
   el.appendChild(closeBtn);
 
   el.querySelector(`#toast-close-${item.id}`)?.addEventListener("click", () => removeToast(item.id));
+  // 正在读、正在点的时候不收(审计 2026-11-26 B4):悬停或聚焦时停表,离开后**重新计满**。
+  el.addEventListener("mouseenter", () => { item.hover = true; arm(item); });
+  el.addEventListener("mouseleave", () => { item.hover = false; arm(item); });
+  el.addEventListener("focusin", () => { item.focus = true; arm(item); });
+  el.addEventListener("focusout", (e) => { item.focus = el.contains(e.relatedTarget as Node | null); arm(item); });
 
   return el;
+}
+
+/**
+ * (Re)start the auto-dismiss timer from full, or hold it: while hovered, focused, or the tab is hidden —
+ * a confirmation that expired in a background tab was never read.
+ */
+function arm(item: ToastItem) {
+  clearTimeout(item.timer);
+  item.timer =
+    item.stay === null || item.hover || item.focus || document.hidden
+      ? undefined
+      : setTimeout(() => removeToast(item.id), item.stay);
+}
+
+let watchingVisibility = false;
+function watchVisibility() {
+  if (watchingVisibility) return;
+  watchingVisibility = true;
+  document.addEventListener("visibilitychange", () => toasts.forEach(arm));
 }
 
 function removeToast(id: string) {
@@ -150,8 +179,9 @@ export function showToast(
 
   const id = String(nextId++);
   const stay = type === "error" ? null : (duration ?? TOAST_DURATION[type] ?? TOAST_DURATION.info);
-  const timer = stay === null ? undefined : setTimeout(() => removeToast(id), stay);
-  const item: ToastItem = { id, message, type, timer };
+  const item: ToastItem = { id, message, type, stay, timer: undefined, hover: false, focus: false };
+  arm(item);
+  watchVisibility();
   // 叠满了:最早的先走,再放新的。
   while (toasts.length >= MAX_TOASTS) removeToast(toasts[0].id);
   toasts = [...toasts, item];
