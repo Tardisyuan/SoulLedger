@@ -440,8 +440,9 @@ function schemaPaths() {
   return Object.entries(schema.paths)
     .filter(([p, ops]) => ops.get && p.startsWith("/api/v1/"))
     .map(([p]) => p)
-    // Soul-app and export paths are not this console's; a blob is not recordable.
-    .filter((p) => !/^\/api\/v1\/(me|soul-auth|officer-app)\//.test(p) && !/(export|export_csv|print|file|download)\/?$/.test(p));
+    // Soul-app and export paths are not this console's; a blob is not recordable. The verdict PDF is a blob too, and
+    // with no renderer configured here it answered 503 for every concluded case (2026-11-27: 41 for the admin).
+    .filter((p) => !/^\/api\/v1\/(me|soul-auth|officer-app)\//.test(p) && !/(export|export_csv|print|file|download|\.pdf)\/?$/.test(p));
 }
 
 /** One role: sign in, walk, sweep, ask again in English, write both files. `origin` is the Django this role talks to. */
