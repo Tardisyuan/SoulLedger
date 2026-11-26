@@ -23,7 +23,8 @@ prepush_env() {
 # tree_is_clean looks for untracked files only where remote_sync sends them; demo-remote.sh sends every untracked
 # file, so it asks for `git status --porcelain` to be empty. The difference is deliberate.
 sync_files() {
-    git ls-files -z
+    # A tracked file deleted here but not yet committed is still in `git ls-files`; rsync would stop on it (exit 23).
+    git ls-files -z | perl -0 -ne 'chop; print "$_\0" if -e $_ || -l $_'
     git ls-files -z -o --exclude-standard -- "$@"
 }
 

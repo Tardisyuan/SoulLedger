@@ -220,3 +220,20 @@ class TestTheCommandLine:
         sh = subprocess.run(["bash", "-c", 'eval "$1"; printf "%s|%s" "$RUN_BACKEND" "$FULL_F"', "_", out],
                             capture_output=True, text=True, check=True).stdout
         assert sh == "1|a root-level file this script does not recognise\na file was deleted or renamed: frontend/src/gone.ts\n"
+
+
+def test_sync_files_leaves_out_a_tracked_file_deleted_but_not_committed(tmp_path):
+    """`git ls-files` still lists it, and rsync stopped on it with exit 23 (gates, mobile sync; 2026-11-27)."""
+    git = ["git", "-C", str(tmp_path), "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    for name in ("kept", "gone"):
+        (tmp_path / name).write_text(name)
+    subprocess.run([*git, "add", "."], check=True)
+    subprocess.run([*git, "commit", "-qm", "x"], check=True)
+    (tmp_path / "gone").unlink()
+    (tmp_path / "new").write_text("new")
+    out = subprocess.run(
+        ["bash", "-c", f'source "{ROOT}/scripts/remote-common.sh"; sync_files'],
+        cwd=tmp_path, capture_output=True, check=True,
+    ).stdout.split(b"\0")
+    assert sorted(f for f in out if f) == [b"kept", b"new"]
