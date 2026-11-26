@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DIYU_STATIONS, diyuStationOrdinal, eventsApi, soulsApi, type Soul } from "@soulledger/core/api";
+import { DIYU_STATIONS, diyuStationOrdinal, soulsApi, type Soul } from "@soulledger/core/api";
 import { soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { responseCode } from "@soulledger/core/api/client";
 import { SoulUnderworldMap } from "./SoulUnderworldMap";
 import { stayFrom, stayText } from "@/src/lib/journeyModel";
+import { soulStationEventsQuery } from "@soulledger/core/hooks/sharedQueries";
 
 const ROW = "border-t border-[oklch(var(--color-line))] py-3";
 const DT = "text-2xs text-[oklch(var(--color-ink-subtle))]";
@@ -66,11 +67,8 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
   const [moving, setMoving] = useState(false);
   // 与 SoulUnderworldMap 同一个键:按时间正序的第一页(一世十三站,够用)。
   const moves = useQuery({
-    queryKey: [...soulKeys.all, "station-events", soul.id],
-    queryFn: () =>
-      eventsApi.list({ soul: soul.id, event_type: "DIYU_STATION_CHANGED", ordering: "create_time" }).then((r) => r.data.results ?? []),
+    ...soulStationEventsQuery(soul.id),
     enabled: soul.civilization === "CHINESE",
-    staleTime: 60_000,
   });
   if (soul.civilization !== "CHINESE") return null;
   const at = diyuStationOrdinal(soul.diyu_station);

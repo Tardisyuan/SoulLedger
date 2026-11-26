@@ -16,6 +16,7 @@ import { showToast } from "@/src/components/ui/Toast";
 import { mayRegisterUnder, tudiRefusalMessage } from "./tudiDisplay";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { tudiGodListQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /*
  * 以土地公名义登记死亡(第五十七批 S-6):和「记录身故」是同一件事(灵魂进审判、开案、到十三站的土地庙),
@@ -52,8 +53,7 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
   const [idempotencyKey] = useState(() => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
 
   const gods = useQuery({
-    queryKey: [...tudiGodKeys.all, "list"],
-    queryFn: () => tudiGodsApi.list().then((r) => r.data.results),
+    ...tudiGodListQuery(),
     enabled: !tudi,
   });
   const souls = useQuery({

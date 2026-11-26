@@ -5,7 +5,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { judgmentApi } from "@soulledger/core/api/judgment";
 import { crossTenantJudgmentsApi, dispatchApi } from "@soulledger/core/api/dispatch";
 import { civShortCode } from "@soulledger/core/config/civilizations";
-import { judgmentKeys } from "@soulledger/core/query_keys";
+import { dispatchKeys, judgmentKeys } from "@soulledger/core/query_keys";
 import { formatListDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -54,7 +54,7 @@ export function Zongbu() {
     })),
   });
   const dispatches = useQuery({
-    queryKey: ["dispatch", "zongbu"],
+    queryKey: [...dispatchKeys.all, "zongbu"],
     queryFn: async () => (await dispatchApi.list({ ordering: "-proposed_at" })).data,
   });
   const crossings = useQuery({

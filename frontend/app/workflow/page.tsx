@@ -6,6 +6,7 @@ import { Suspense, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi } from "@soulledger/core/api";
+import { workflowKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
@@ -36,6 +37,7 @@ import type {
   FrontendNode,
   TemplatePreviewData,
 } from "@/src/components/workflow/page/types";
+import { workflowTemplatesQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /* 模板列表的行(第三十六批 第一节第 3 条,四个文明同一写法):文明色只给顶线、印、卷宗脊、焦点四处 ——
    选中是墨 7% 的底加 3px 墨色竖线(与案卷台的选中行同一写法,用户 2026-11-14),别处不上文明色。分组标题与案卷台的分组同一写法(12 · 500 · faint · .06em)。 */
@@ -86,13 +88,7 @@ function WorkflowPageContent() {
     isError: isTemplatesError,
     error: templatesError,
     refetch: refetchTemplates,
-  } = useQuery({
-    queryKey: ["workflow-templates"],
-    queryFn: async () => {
-      const res = await workflowApi.templates.list();
-      return res.data;
-    },
-  });
+  } = useQuery(workflowTemplatesQuery());
 
   // WorkflowTemplateViewSet sets pagination_class = None, so this list is a
   // bare array — there was never a `.results` on it to unwrap.
@@ -105,7 +101,7 @@ function WorkflowPageContent() {
       await workflowApi.templates.delete(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workflow-templates"] });
+      queryClient.invalidateQueries({ queryKey: workflowKeys.templates.all });
       setEditingTemplateId(null);
     },
     onError: () => showToast(t("workflow.delete_error"), "error"),

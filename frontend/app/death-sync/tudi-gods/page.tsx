@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { tudiGodKeys, tudiGodsApi, type TudiGod } from "@soulledger/core/api";
+import type { TudiGod } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -19,6 +19,7 @@ import { TudiGodEditor } from "@/src/components/tudi-gods/TudiGodEditor";
 import { TudiRegisterDeathDialog } from "@/src/components/tudi-gods/TudiRegisterDeathDialog";
 import { mayRegisterUnder } from "@/src/components/tudi-gods/tudiDisplay";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { tudiGodListQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /*
  * 系统设置 › 土地公(Design 第五十七批 S-5),和「城隍」并列,照城隍管理:列表 + 右侧抽屉。
@@ -40,7 +41,7 @@ function TudiGodsContent() {
   const registrable = (g: TudiGod) => canRegister && mayRegisterUnder(g, user?.id, canEdit);
   const [editing, setEditing] = useState<TudiGod | "new" | null>(null);
   const [registering, setRegistering] = useState<TudiGod | null>(null);
-  const list = useQuery({ queryKey: [...tudiGodKeys.all, "list"], queryFn: () => tudiGodsApi.list().then((r) => r.data.results) });
+  const list = useQuery(tudiGodListQuery());
 
   const columns: DataTableColumn[] = [
     { key: "name", header: t("earthGods.title"), pinned: true },

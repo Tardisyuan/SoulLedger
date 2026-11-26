@@ -39,6 +39,7 @@ import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { AuditAskBox } from "@/src/components/audit/AuditAskBox";
 import { auditResourceLabel, datePresetStart, type DatePreset } from "@/src/components/audit/auditLabels";
 import { isAdminRole, isSystemAdminRole } from "@soulledger/core/domain/roles";
+import { auditActionsQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /** 代看的两行摘要从 `changes` 按界面语言现拼(库里存的描述是 zh 固定句式)。其它动作返回 null。 */
 function impersonationSummary(g: AuditGroup, t: (key: string, params?: Record<string, string>) => string): string | null {
@@ -288,10 +289,8 @@ function AuditPageContent() {
   };
 
   const { data: actionValues = [] } = useQuery({
-    queryKey: ["audit-actions"],
-    queryFn: async () => (await auditApi.actions()).data.map((a) => a.value),
+    ...auditActionsQuery(),
     enabled: canReadAudit,
-    staleTime: Infinity,
   });
   const { data: resourceValues = [] } = useQuery({
     queryKey: ["audit-resources"],

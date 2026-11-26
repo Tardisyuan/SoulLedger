@@ -36,7 +36,7 @@ import {
 } from "@soulledger/core/api/reincarnation";
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
-import { isArchivableConflict, tudiGodKeys, tudiGodsApi } from "@soulledger/core/api";
+import { isArchivableConflict } from "@soulledger/core/api";
 import { fetchFailureOf, responseCode, problemDetail, responseStatus } from "@soulledger/core/api/client";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -94,6 +94,7 @@ import { DossierTabs } from "@/src/components/dossier/DossierTabs";
 import { dossierTabHrefs } from "@/src/components/dossier/dossierTabHrefs";
 import { useSpineNow } from "@/src/components/dossier/useSpineNow";
 import { dossierWhere } from "@/src/components/dossier/dossierWhere";
+import { tudiGodListQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 /* D1:世数不是状态,更不给「轮回中」的色 —— 与状态徽章同一副 ink 字 / ink3 框。 */
@@ -217,8 +218,7 @@ export default function SoulDetailPage() {
   const tudiCandidate = soul?.civilization === "CHINESE" && soul.current_state === "ALIVE" && hasPermission("tudi.register");
   const canManageTudi = hasPermission("tudi.manage");
   const tudiGods = useQuery({
-    queryKey: [...tudiGodKeys.all, "list"],
-    queryFn: () => tudiGodsApi.list().then((r) => r.data.results),
+    ...tudiGodListQuery(),
     enabled: tudiCandidate && !canManageTudi,
   });
   const mayRegisterByTudi =

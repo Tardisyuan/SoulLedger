@@ -19,6 +19,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { auditResourceLabel } from "@/src/components/audit/auditLabels";
 import { isAdminRole, isSystemAdminRole } from "@soulledger/core/domain/roles";
+import { auditActionsQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /**
  * /audit/stats(第三十七批 W-9b)。单独一个页签，不放在列表上方:列表一筛选，上面的数字却不动，
@@ -40,10 +41,8 @@ export default function AuditStatsPage() {
     enabled: canReadAudit,
   });
   const { data: actionValues = [] } = useQuery({
-    queryKey: ["audit-actions"],
-    queryFn: async () => (await auditApi.actions()).data.map((a) => a.value),
+    ...auditActionsQuery(),
     enabled: canReadAudit,
-    staleTime: Infinity,
   });
 
   const actions = useMemo(

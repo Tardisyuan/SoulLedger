@@ -42,6 +42,7 @@ import { getCivilizationFromTenantCode } from "@soulledger/core/config/civilizat
 import { NUMBERING_SAMPLE } from "@/src/lib/civilizationIdentity";
 import { cn } from "@/lib/utils";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { dispatchKeys } from "@soulledger/core/query_keys";
 
 // `useSearchParams` needs a Suspense boundary under the App Router build.
 export default function ProposeDispatchPage() {
@@ -156,7 +157,7 @@ function ProposeDispatchForm() {
   const { data: soulsResponse, isLoading: soulsLoading, isPlaceholderData: soulsStale, isError: soulsError } = useQuery({
     // `soulSearch` is IN the key. Without it every query would read the first
     // search's cached page and the box would look broken rather than slow.
-    queryKey: ["dispatch", "souls", soulSearch],
+    queryKey: [...dispatchKeys.all, "souls", soulSearch],
     queryFn: () => soulsApi.list({ page: 1, search: soulSearch || undefined }),
     enabled: !!user,
     // Keeps the previous page on screen while the next search resolves, so the
@@ -170,7 +171,7 @@ function ProposeDispatchForm() {
   const soulCount = soulsResponse?.data?.count ?? souls.length;
 
   const { data: statsData, isLoading: tenantsLoading, isError: tenantsError } = useQuery({
-    queryKey: ["dispatch", "tenants"],
+    queryKey: [...dispatchKeys.all, "tenants"],
     queryFn: () => ledgerApi.statsOverview(),
     enabled: !!user,
   });

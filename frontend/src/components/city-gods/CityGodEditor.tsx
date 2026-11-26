@@ -16,6 +16,7 @@ import { Segmented } from "@/src/components/ui/Segmented";
 import { showToast } from "@/src/components/ui/Toast";
 import { cityGodFieldMessage, cityGodFieldRefusal, type CityGodFieldRefusal } from "./cityGodDisplay";
 import { responseCode, responseData } from "@soulledger/core/api/client";
+import { cityGodOfficerChoicesQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /*
  * 编辑城隍(第五十三批 G-2):右侧抽屉,不离开列表。地名是标签输入(回车加一个,去掉首尾空格,重复的不加);
@@ -134,7 +135,7 @@ export function CityGodEditor({ god, gods, onClose }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [blocked, setBlocked] = useState<number | null>(null);
 
-  const choices = useQuery({ queryKey: [...cityGodKeys.all, "officer-choices"], queryFn: () => cityGodsApi.officerChoices().then((r) => r.data) });
+  const choices = useQuery(cityGodOfficerChoicesQuery());
   const currentDefault = gods.find((g) => g.is_default && g.id !== god?.id);
 
   const save = useMutation({

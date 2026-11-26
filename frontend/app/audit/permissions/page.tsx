@@ -21,6 +21,7 @@ import { Segments } from "@/src/components/dashboard/TrendsPanel";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { auditResourceLabel, datePresetStart, PERMISSION_RESOURCES, type DatePreset } from "@/src/components/audit/auditLabels";
 import { localDayKey } from "@/lib/auditGrouping";
+import { auditActionsQuery } from "@soulledger/core/hooks/sharedQueries";
 
 /** 「显示更多」依次取到的条数;最后一档就是后端的 `TIMELINE_MAX_LIMIT`。 */
 const LIMITS = [50, 200, 500] as const;
@@ -135,10 +136,8 @@ export default function PermissionChangesPage() {
   };
 
   const { data: actionValues = [] } = useQuery({
-    queryKey: ["audit-actions"],
-    queryFn: async () => (await auditApi.actions()).data.map((a) => a.value),
+    ...auditActionsQuery(),
     enabled: canReadAudit,
-    staleTime: Infinity,
   });
 
   const startDate = datePresetStart(datePreset);
