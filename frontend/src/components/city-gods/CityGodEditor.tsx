@@ -13,6 +13,7 @@ import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { Segmented } from "@/src/components/ui/Segmented";
+import { Switch } from "@/src/components/ui/Switch";
 import { showToast } from "@/src/components/ui/Toast";
 import { cityGodFieldMessage, cityGodFieldRefusal, type CityGodFieldRefusal } from "./cityGodDisplay";
 import { responseCode, responseData } from "@soulledger/core/api/client";
@@ -281,19 +282,17 @@ export function CityGodEditor({ god, gods, onClose }: Props) {
           </div>
 
           <div className="space-y-1">
-            <label className="flex items-center gap-2 text-sm text-[oklch(var(--color-ink))]">
-              <input
-                type="checkbox"
-                role="switch"
-                data-testid="city-god-default"
-                checked={isDefault}
-                onChange={(e) => {
-                  setIsDefault(e.target.checked);
-                  setRefusal(null);
-                }}
-              />
+            <Switch
+              checked={isDefault}
+              label={t("cityGods.is_default")}
+              className="text-sm"
+              onChange={(on) => {
+                setIsDefault(on);
+                setRefusal(null);
+              }}
+            >
               {t("cityGods.is_default")}
-            </label>
+            </Switch>
             <p className={HINT}>
               {t("cityGods.default_hint")}
               {currentDefault ? ` ${t("cityGods.default_current", { name: currentDefault.name })}` : ""}

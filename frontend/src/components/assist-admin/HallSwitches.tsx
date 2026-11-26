@@ -6,7 +6,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { MONO, SUBTLE, Switch, count } from "./parts";
+import { MONO, SUBTLE, count } from "./parts";
+import { Switch } from "@/src/components/ui/Switch";
 
 type RowState = { kind: "saved" } | { kind: "failed"; on: boolean } | undefined;
 

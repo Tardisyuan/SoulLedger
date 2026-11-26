@@ -54,56 +54,6 @@ export function Section({ title, aside, children, id }: { title: ReactNode; asid
 }
 
 /**
- * The console's switch (same drawing as SchedulerJobRow). Disabled switches keep
- * their value and say why through `aria-describedby` (canvas 1a 五).
- */
-export function Switch({
-  checked,
-  label,
-  onChange,
-  disabled = false,
-  describedBy,
-}: {
-  checked: boolean;
-  label: string;
-  onChange: (next: boolean) => void;
-  disabled?: boolean;
-  describedBy?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      aria-disabled={disabled || undefined}
-      aria-describedby={describedBy}
-      onClick={() => !disabled && onChange(!checked)}
-      // 规范 v2 A1「开关」,与 SchedulerJobRow 同一套:开 = ink 实底、纸色滑块在右;关 = 空底、ink3 框与
-      // 滑块在左;禁用 = s2 底、line 框(不调透明度)。v2 撤掉了强调色,accent 指向 ink —— 这里原先开 = accent
-      // 底 + ink 滑块,两者同色,打开时整块一片(2026-09-30 用户截图)。
-      // 点击区 `--control-h-sm`(触屏 44、精确指针 32),32 × 18 的轨道画在里面(同 SchedulerJobRow)。
-      className={`inline-flex size-(--control-h-sm) shrink-0 items-center justify-center ${disabled ? "cursor-not-allowed" : ""}`}
-    >
-      <span
-        aria-hidden="true"
-        className={`relative inline-flex h-[18px] w-8 items-center border-[1.5px] p-0.5 transition-colors duration-instant ${
-          disabled
-            ? "border-[oklch(var(--color-line))] bg-[oklch(var(--color-disabled-surface))]"
-            : checked
-              ? "bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
-              : "bg-transparent border-[oklch(var(--color-line-strong))]"
-        } ${checked ? "justify-end" : "justify-start"}`}
-      >
-        <span
-          className={`block size-[11px] ${checked && !disabled ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`}
-        />
-      </span>
-    </button>
-  );
-}
-
-/**
  * 「评测专用 · 不能登录」 after the row's status tag in the souls and users lists (user 2026-09-29: the two
  * eval identities are shown, not hidden). Design's version: the status tag's size and padding, a dashed
  * border in the neutral subtle ink — not a feedback colour, it is not a state.

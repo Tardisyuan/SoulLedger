@@ -11,6 +11,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { Switch } from "@/src/components/ui/Switch";
 import { SIX_PATHS } from "@/src/components/souls/RebirthFormSelect";
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { cn } from "@/lib/utils";
@@ -427,25 +428,14 @@ function MfaRoleRow({ row, checked, disabled, onChange }: { row: TenantMfaRoleRo
       {row.always ? (
         <span className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("mfa.admin.always")}</span>
       ) : (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-label={`${name} · ${t(checked ? "mfa.admin.require" : "mfa.admin.not_require")}`}
+        <Switch
+          checked={checked}
+          label={`${name} · ${t(checked ? "mfa.admin.require" : "mfa.admin.not_require")}`}
           disabled={disabled}
-          onClick={() => onChange(!checked)}
-          className="flex h-11 items-center gap-2 text-xs text-[oklch(var(--color-ink))] disabled:cursor-not-allowed"
+          onChange={onChange}
         >
-          <span
-            aria-hidden="true"
-            className={`relative inline-flex h-[18px] w-8 items-center border-[1.5px] p-0.5 transition-colors duration-instant ${
-              checked ? "justify-end bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]" : "justify-start bg-transparent border-[oklch(var(--color-line-strong))]"
-            }`}
-          >
-            <span className={`block size-[11px] ${checked ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`} />
-          </span>
           {t(checked ? "mfa.admin.require" : "mfa.admin.not_require")}
-        </button>
+        </Switch>
       )}
     </li>
   );
