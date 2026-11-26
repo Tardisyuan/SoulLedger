@@ -25,7 +25,6 @@ from apps.social.models import ModerationScore, ReportEntry, ReportStatus
 BATCH = 30
 MAX_TEXT = 1000
 MAX_REASON = 200
-_JSON = re.compile(r"\{.*\}", re.S)
 #: 注入句式:叫模型改分、忽略规则、冒充系统。ponytail: 只认常见说法,以后见到新的就加进来。
 INJECTION = re.compile(
     r"(打\s*0\s*分|零分|低分|分数.{0,6}(改|设|给)|忽略.{0,6}(以上|之前|上面|规则|指令)|系统提示|你现在是|</\s*data>"
@@ -85,16 +84,6 @@ def _prepared(row, words, reasons, media):
             "signals": signals}
 
 
-def _parse(text):
-    m = _JSON.search(text or "")
-    try:
-        value = json.loads(m.group(0)) if m else None
-    except ValueError:
-        return None
-    rows = value.get("scores") if isinstance(value, dict) else None
-    return rows if isinstance(rows, list) else None
-
-
 def validate(raw, refs):
     """模型的输出 → {ref: (分, 理由)}。不认识的序号、不是 0–100 整数的分丢掉;同一序号只认第一个。"""
     kept = {}
@@ -123,7 +112,7 @@ def _score(items, kind, request, lang, conn):
     try:
         done = features.complete("moderation", request, system=SYSTEM,
                                  facts=json.dumps({"language": lang, "items": len(items)}), prompt=blocks, conn=conn)
-        model = validate(_parse(done.text) or [], set(range(len(items))))
+        model = validate(features.json_list(done.text, "scores") or [], set(range(len(items))))
     except features.FeatureUnavailableError:
         done, model = None, {}
     out = []

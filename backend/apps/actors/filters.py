@@ -2,13 +2,13 @@
 Actor FilterSet — filtering, search, and ordering for Actor API.
 """
 import django_filters as filters
-from django.db.models import Q
 
 from apps.actors.models import Actor, ActorRole
+from apps.core.shard_search import SearchFieldsMixin
 from apps.souls.models import Civilization
 
 
-class ActorFilter(filters.FilterSet):
+class ActorFilter(SearchFieldsMixin, filters.FilterSet):
     """
     FilterSet for Actor API endpoints.
     Supports search, exact match, and boolean filtering.
@@ -28,12 +28,3 @@ class ActorFilter(filters.FilterSet):
 
     search_fields = ["name", "name_zh", "name_en", "name_egy", "title", "description"]
     ordering_fields = ["civilization", "role", "name"]
-
-    def filter_search(self, queryset, name, value):
-        """Search across multiple fields."""
-        if not value:
-            return queryset
-        q = Q()
-        for field in self.search_fields:
-            q |= Q(**{f"{field}__icontains": value})
-        return queryset.filter(q)

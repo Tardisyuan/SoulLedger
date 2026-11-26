@@ -11,6 +11,21 @@ from apps.core.models import AuditUserFields
 from apps.core.soft_delete import SoftDeleteMixin
 
 
+class _TenantFromRequest:
+    """On first save with no tenant, take the current request's tenant (`request.tenant`), if there is one.
+    (Post, Comment, Reaction, Follow; `souls.Soul.save` has its own, which also falls back to the user's.)"""
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.tenant_id is None:
+            from apps.core.request_local import get_current_request
+            request = get_current_request()
+            if request:
+                tenant = getattr(request, "tenant", None)
+                if tenant:
+                    self.tenant = tenant
+        super().save(*args, **kwargs)
+
+
 class Visibility(models.TextChoices):
     PUBLIC = "PUBLIC", "Public"
     TENANT = "TENANT", "Tenant Only"
@@ -37,7 +52,7 @@ class ReactionType(models.TextChoices):
     ETERNAL_LIGHT = "ETERNAL_LIGHT", "Eternal Light"
 
 
-class Post(AuditUserFields, models.Model):
+class Post(_TenantFromRequest, AuditUserFields, models.Model):
     """
     A social post by a user within a tenant.
     """
@@ -89,17 +104,6 @@ class Post(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"Post({self.pk}) by {self.author_id}"
-
-    def save(self, *args, **kwargs):
-        # Auto-set tenant from request context on first save
-        if self._state.adding and self.tenant_id is None:
-            from apps.core.request_local import get_current_request
-            request = get_current_request()
-            if request:
-                tenant = getattr(request, "tenant", None)
-                if tenant:
-                    self.tenant = tenant
-        super().save(*args, **kwargs)
 
 
 #: 帖子图片存在 MEDIA_ROOT 之下、这个前缀之内。**这个前缀不公开服务**:nginx 对
@@ -157,7 +161,7 @@ class PostMedia(SoftDeleteMixin, models.Model):
         return f"PostMedia({self.pk}) #{self.position} on {self.post_id}"
 
 
-class Comment(AuditUserFields, models.Model):
+class Comment(_TenantFromRequest, AuditUserFields, models.Model):
     """
     A comment on a post, with optional nesting via parent.
     """
@@ -210,18 +214,8 @@ class Comment(AuditUserFields, models.Model):
     def __str__(self):
         return f"Comment({self.pk}) on {self.post_id}"
 
-    def save(self, *args, **kwargs):
-        if self._state.adding and self.tenant_id is None:
-            from apps.core.request_local import get_current_request
-            request = get_current_request()
-            if request:
-                tenant = getattr(request, "tenant", None)
-                if tenant:
-                    self.tenant = tenant
-        super().save(*args, **kwargs)
 
-
-class Reaction(AuditUserFields, models.Model):
+class Reaction(_TenantFromRequest, AuditUserFields, models.Model):
     """
     A reaction on a post or comment. Exactly one of post/comment must be set.
     """
@@ -304,18 +298,8 @@ class Reaction(AuditUserFields, models.Model):
         if bool(self.post) == bool(self.comment):
             raise ValidationError("Exactly one of post or comment must be set.")
 
-    def save(self, *args, **kwargs):
-        if self._state.adding and self.tenant_id is None:
-            from apps.core.request_local import get_current_request
-            request = get_current_request()
-            if request:
-                tenant = getattr(request, "tenant", None)
-                if tenant:
-                    self.tenant = tenant
-        super().save(*args, **kwargs)
 
-
-class Follow(AuditUserFields, models.Model):
+class Follow(_TenantFromRequest, AuditUserFields, models.Model):
     """
     A follow relationship between two users within a tenant.
     """
@@ -370,16 +354,6 @@ class Follow(AuditUserFields, models.Model):
         super().clean()
         if self.follower_id == self.following_id:
             raise ValidationError("Users cannot follow themselves.")
-
-    def save(self, *args, **kwargs):
-        if self._state.adding and self.tenant_id is None:
-            from apps.core.request_local import get_current_request
-            request = get_current_request()
-            if request:
-                tenant = getattr(request, "tenant", None)
-                if tenant:
-                    self.tenant = tenant
-        super().save(*args, **kwargs)
 
 
 class UserProfile(models.Model):

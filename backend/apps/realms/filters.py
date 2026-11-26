@@ -2,13 +2,13 @@
 Realm FilterSet — filtering, search, and ordering for Realm API.
 """
 import django_filters as filters
-from django.db.models import Q
 
+from apps.core.shard_search import SearchFieldsMixin
 from apps.realms.models import Realm, RealmType
 from apps.souls.models import Civilization
 
 
-class RealmFilter(filters.FilterSet):
+class RealmFilter(SearchFieldsMixin, filters.FilterSet):
     """
     FilterSet for Realm API endpoints.
     Supports search, exact match, range, and boolean filtering.
@@ -31,12 +31,3 @@ class RealmFilter(filters.FilterSet):
 
     search_fields = ["realm_code", "name_local", "name_zh", "name_en", "name_egy", "description"]
     ordering_fields = ["civilization", "realm_type", "tier", "name_en"]
-
-    def filter_search(self, queryset, name, value):
-        """Search across multiple fields."""
-        if not value:
-            return queryset
-        q = Q()
-        for field in self.search_fields:
-            q |= Q(**{f"{field}__icontains": value})
-        return queryset.filter(q)

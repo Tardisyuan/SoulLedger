@@ -18,17 +18,16 @@ router 注册的 viewset 逐条断言)。官员自己在 `/api/v1/social/` 的�
 from django.db import models
 from django.db.models import Case, Count, F, Prefetch, Q, Value, When
 from django.db.models.functions import Substr
-from django.utils.dateparse import parse_date
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
+from apps.core.query_params import parse_date_param
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.social import moderation as mod
@@ -612,24 +611,10 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
         "handling", "handled_reason", "handled_by_ref", "handled_by_name", "handled_at", "author_deleted",
     )
 
-    @staticmethod
-    def _date(params, name):
-        """`YYYY-MM-DD` 或空;别的一律 400(`parse_date` 对 2026-02-30 抛 ValueError,不能让它 500)。"""
-        raw = params.get(name)
-        if not raw:
-            return None
-        try:
-            value = parse_date(raw)
-        except ValueError:
-            value = None
-        if value is None:
-            raise ValidationError({name: f"'{raw}' is not a date (expected YYYY-MM-DD)."})
-        return value
-
     def get_queryset(self):
         params = self.request.query_params
         kind, handling = params.get("type"), params.get("handling")
-        date_from, date_to = self._date(params, "date_from"), self._date(params, "date_to")
+        date_from, date_to = parse_date_param(params, "date_from"), parse_date_param(params, "date_to")
         # `all_objects`:删除的行也要。每个模型各自过一次租户隔离。
         parts = [
             self._part(scope_to_tenant(model.all_objects.all(), self.request), model, k, handling, date_from, date_to)
