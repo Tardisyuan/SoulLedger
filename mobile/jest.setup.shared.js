@@ -109,6 +109,25 @@ afterAll(failOnActWarnings);
 const { configure } = require("@testing-library/react-native");
 configure({ asyncUtilTimeout: 5000 });
 
+// A failing matcher prints what it received, and pretty-format walks a ReactTestInstance's `_fiber` -- child,
+// sibling, return, alternate -- ten levels deep: seconds per print on a loaded machine. Inside a waitFor every miss
+// prints, so `waitFor(() => expect(queryByTestId(x)).toBeNull())` spent the whole 5 s budget printing the element it
+// was waiting to see go, while the 16 ms that would have removed it waited behind (circleMedia.test.tsx close, 2026-11-27:
+// a close's fade-out took 8485 ms to finish under load, 48 ms with this). pretty-format asks `toJSON` first.
+{
+  const { act, create } = require("react-test-renderer");
+  let probe;
+  act(() => {
+    probe = create(require("react").createElement("View"));
+  });
+  const ReactTestInstance = Object.getPrototypeOf(probe.root);
+  act(() => probe.unmount());
+  ReactTestInstance.toJSON = function toJSON() {
+    const { type } = this;
+    return { type: typeof type === "string" ? type : type?.displayName || type?.name || "Unknown", props: this.props };
+  };
+}
+
 // A FlatList re-windows its rows 50 ms after every update it sees
 // (VirtualizedList `_scheduleCellsToRenderUpdate`: a setTimeout, then setState).
 // Under jest there is no layout, so that timer is all that moves the window, and
