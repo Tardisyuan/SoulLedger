@@ -200,6 +200,7 @@ export function Fab({ onPress, label }: { onPress: () => void; label: string }) 
 }
 
 export function LettersScreen() {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const chat = useChat();
@@ -231,7 +232,7 @@ export function LettersScreen() {
   if (chat.availability === "not_configured") {
     return (
       <Screen scroll={false} edges={["left", "right"]}>
-        <View style={styles.pad}>
+        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           <Notice tone="neutral" testID="chat-not-configured">
             {tr("soul_app.chat.not_configured")}
           </Notice>
@@ -242,7 +243,7 @@ export function LettersScreen() {
   if (!chat.conversations) {
     return (
       <Screen scroll={false} edges={["left", "right"]}>
-        <View style={styles.pad}>
+        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           {chat.listError ? (
             <Notice tone="neutral" onRetry={() => void chat.reload()} testID="chat-list-error">
               {tr("soul_app.chat.unavailable.list")}
@@ -282,7 +283,7 @@ export function LettersScreen() {
             ListHeaderComponent={
               <>
                 {chat.availability === "unavailable" ? (
-                  <View style={styles.pad}>
+                  <View style={[styles.pad, { paddingHorizontal: gutter }]}>
                     <Notice tone="neutral" onRetry={chat.reconnect} testID="chat-unavailable">
                       {tr("soul_app.chat.unavailable.list")}
                     </Notice>
@@ -368,6 +369,7 @@ async function everyPage(load: (page: number) => Promise<PaginatedSoulCards>): P
 type Lookup = { state: "idle" } | { state: "busy" } | { state: "found"; card: SoulChatLookupResult } | { state: "not_found" } | { state: "error"; key: string; params?: Record<string, string> };
 
 export function FindSoulScreen() {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const chat = useChat();
@@ -430,7 +432,7 @@ export function FindSoulScreen() {
 
   return (
     <Screen edges={["left", "right", "bottom"]} testID="find-soul">
-      <View style={[styles.findBlock, { borderBottomColor: t.hair }]}>
+      <View style={[styles.findBlock, { paddingHorizontal: gutter }, { borderBottomColor: t.hair }]}>
         <SectionLabel>{tr("soul_app.chat.find.by_code")}</SectionLabel>
         <View style={[styles.codeBox, { backgroundColor: t.s1, borderColor: lookup.state === "error" ? t.negStrong : t.inkSubtle }]}>
           <TextInput
@@ -479,7 +481,7 @@ export function FindSoulScreen() {
           </Notice>
         ) : null}
       </View>
-      <View style={styles.findBlock}>
+      <View style={[styles.findBlock, { paddingHorizontal: gutter }]}>
         <SectionLabel>{tr("soul_app.chat.find.from_circle")}</SectionLabel>
         <Txt variant="meta" tone="subtle">
           {tr("soul_app.chat.find.circle_hint")}

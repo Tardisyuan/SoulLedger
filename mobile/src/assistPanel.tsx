@@ -258,6 +258,7 @@ function HeadButton({ label, onPress, testID }: { label: string; onPress: () => 
 }
 
 function Conversation({ assist }: { assist: Assist }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const { thread, pending, failure } = assist;
@@ -278,7 +279,7 @@ function Conversation({ assist }: { assist: Assist }) {
         ref={scroller}
         testID="assist-scroll"
         style={styles.fill}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, { paddingHorizontal: gutter }]}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={100}
         onScroll={({ nativeEvent: n }) => setFollow(n.contentSize.height - n.contentOffset.y - n.layoutMeasurement.height <= 8)}
@@ -534,10 +535,11 @@ function Limited({ retryAt }: { retryAt: string | null }) {
 
 /** 1g ①: the entry was shown from a stale profile. Closing hides it (assist.tsx). */
 function NotConfigured({ assist }: { assist: Assist }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   return (
-    <View style={styles.body}>
+    <View style={[styles.body, { paddingHorizontal: gutter }]}>
       <View testID="assist-not-configured" style={[styles.card, { borderColor: t.hair2, backgroundColor: t.s1 }]}>
         <Txt variant="nav">{tr("soul_app.assist.not_configured_title")}</Txt>
         <Txt variant="caption" tone="muted">
@@ -570,6 +572,7 @@ function LettersCard({ assist }: { assist: Assist }) {
 
 /** 1h: once per account, in place of the empty state. */
 function Intro({ onAck }: { onAck: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   // 一二三 in Chinese, 1 2 3 elsewhere (Design batch 37 §3).
@@ -580,7 +583,7 @@ function Intro({ onAck }: { onAck: () => void }) {
     [zh ? "三" : "3", "soul_app.assist.intro_ro_title", "soul_app.assist.intro_ro_body"],
   ];
   return (
-    <ScrollView style={styles.fill} contentContainerStyle={styles.body}>
+    <ScrollView style={styles.fill} contentContainerStyle={[styles.body, { paddingHorizontal: gutter }]}>
       <View testID="assist-intro" style={styles.gap}>
         <Txt variant="title">{tr("soul_app.assist.intro_title")}</Txt>
         {items.map(([n, title, body]) => (
@@ -658,6 +661,7 @@ function Composer({ assist }: { assist: Assist }) {
 
 /** 1f: start page (ink hairline) + mono time + first question in the serif; delete is a 44pt target, no swipe. */
 function History({ assist, onOpened }: { assist: Assist; onOpened: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const [asking, setAsking] = useState<AssistConversation | null>(null);
@@ -684,7 +688,7 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
   };
   return (
     <View style={styles.fill}>
-      <ScrollView style={styles.fill} contentContainerStyle={styles.body}>
+      <ScrollView style={styles.fill} contentContainerStyle={[styles.body, { paddingHorizontal: gutter }]}>
         {!list ? <Skeleton lines={3} /> : null}
         {list?.length === 0 ? (
           <Txt testID="assist-history-empty" variant="body" tone="muted">
@@ -766,10 +770,11 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
 
 /** The delete confirmation, over the list inside the drawer (a second Modal over a Modal is unreliable). */
 function Confirm({ children }: { children: ReactNode }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   return (
     <View style={[StyleSheet.absoluteFill, styles.confirmScrim, { backgroundColor: t.scrim }]}>
-      <View testID="assist-delete-sheet" accessibilityViewIsModal style={[styles.confirm, { backgroundColor: t.s1, borderTopColor: t.negStrong }]}>
+      <View testID="assist-delete-sheet" accessibilityViewIsModal style={[styles.confirm, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderTopColor: t.negStrong }]}>
         {children}
       </View>
     </View>

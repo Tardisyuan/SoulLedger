@@ -694,7 +694,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
         </View>
       ) : null}
       <Sheet open={asking} onClose={() => setAsking(false)} edge={t.lamp} closeLabel={tr("soul_app.circle.react.lamp_cancel")}>
-        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingBottom: 24 + insets.bottom }]}>
+        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingHorizontal: gutter }, { paddingBottom: 24 + insets.bottom }]}>
           <View style={styles.line}>
             <Icon name="lampLit" size={22} color={t.lamp} strokeWidth={1.2} />
             <Txt variant="title" style={styles.sheetTitle}>
@@ -788,6 +788,7 @@ function CommentRow({
  * more before anything is sent. Deleting cannot be undone, so it is never one tap.
  */
 function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | "comment"; id: string } | null; onClose: () => void; onDeleted: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
@@ -817,7 +818,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
       <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} accessibilityRole="button" onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
         {asking ? (
-          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 24 + insets.bottom }]}>
+          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 24 + insets.bottom }]}>
             <Txt variant="title" style={styles.sheetTitle}>
               {tr(target?.kind === "post" ? "soul_app.circle.delete.post_title" : "soul_app.circle.delete.comment_title")}
             </Txt>
@@ -829,7 +830,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
           </View>
         ) : (
           <View testID="delete-menu" accessibilityViewIsModal style={[styles.menu, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
-            <Press testID="delete-row" accessibilityRole="button" onPress={() => setAsking(true)} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+            <Press testID="delete-row" accessibilityRole="button" onPress={() => setAsking(true)} style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: t.hair }]}>
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.circle.delete.action")}
               </Txt>

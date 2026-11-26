@@ -50,7 +50,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
 import { radius } from "@soulledger/mobile-ui/src/theme";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
-import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press, useLayout } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
@@ -75,6 +75,7 @@ const Mono = ({ children, tone = "muted" }: { children: string; tone?: "muted" |
 );
 
 export function ConversationScreen({ id, landed }: { id: string; landed?: boolean }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const chat = useChat();
@@ -355,7 +356,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         <PlaqueFrame testID="header">
           <Header onBack={navigation.goBack} title="" />
         </PlaqueFrame>
-        <View style={styles.pad}>
+        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           {chat.availability === "not_configured" ? (
             <Notice tone="neutral" testID="chat-not-configured">
               {tr("soul_app.chat.not_configured")}
@@ -481,7 +482,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         data={rows}
         keyExtractor={lineKey}
         style={[styles.fill, sealed && styles.sealed]}
-        contentContainerStyle={styles.thread}
+        contentContainerStyle={[styles.thread, { paddingHorizontal: gutter }]}
         keyboardShouldPersistTaps="handled"
         onEndReached={prevBatch ? older : undefined}
         onEndReachedThreshold={0.5}
@@ -520,7 +521,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       />
       <ChatImageViewer images={gallery} index={viewing} onClose={() => setViewing(null)} />
       {mode.kind === "hall" && hallLast ? (
-        <View style={styles.hallState}>
+        <View style={[styles.hallState, { paddingHorizontal: gutter }]}>
           <Txt testID="hall-state" variant="body" tone="muted" style={styles.hallStateText}>
             {tr(hallLast === "soul" ? "soul_app.chat.state.awaiting_hall" : "soul_app.chat.state.awaiting_me")}
           </Txt>
@@ -581,6 +582,7 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
  * 「拉黑」 (2026-11-01) asks first (`BlockSheet`); absent once I have blocked them.
  */
 function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onBlock?: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const page = usePageTheme();
   const { t: tr } = useI18n();
@@ -601,21 +603,21 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
         <View style={[styles.fill, { backgroundColor: page.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setOpen(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
           <View testID="chat-menu-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: page.s1, borderTopColor: page.hair2, paddingBottom: 20 + insets.bottom }]}>
-            <Press testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
+            <Press testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: page.hair }]}>
               <Txt variant="bodyLg">{tr("soul_app.chat.menu.profile")}</Txt>
             </Press>
             <Press
               testID="chat-menu-report"
               accessibilityRole="button"
               onPress={go(() => navigation.navigate("CircleReport", { target: "USER", id: String(userId), preview: name }))}
-              style={[styles.menuRow, { borderBottomColor: page.hair }]}
+              style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: page.hair }]}
             >
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.chat.menu.report")}
               </Txt>
             </Press>
             {onBlock ? (
-              <Press testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
+              <Press testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: page.hair }]}>
                 <Txt variant="bodyLg" tone="neg">
                   {tr("soul_app.chat.menu.block")}
                 </Txt>
@@ -636,6 +638,7 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
 
 /** 拉黑 asks once: what it does, and where it is undone. */
 function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; open: boolean; busy: boolean; onConfirm: () => void; onClose: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
@@ -643,7 +646,7 @@ function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; op
     <FadeModal visible={open} onRequestClose={onClose}>
       <View style={[styles.fill, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} accessibilityRole="button" onPress={onClose} accessibilityLabel={tr("soul_app.common.cancel")} />
-        <View testID="block-sheet" accessibilityViewIsModal style={[styles.sheet, styles.confirmSheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
+        <View testID="block-sheet" accessibilityViewIsModal style={[styles.sheet, styles.confirmSheet, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
           <Txt variant="bodyLg">{tr("soul_app.chat.block.confirm_title", { name })}</Txt>
           <Txt variant="caption" tone="muted">
             {tr("soul_app.chat.block.confirm_body")}
@@ -707,9 +710,10 @@ function Band({
   onDecline: () => void;
   onBlock: () => void;
 }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
-  const box = [styles.band, { backgroundColor: t.s1, borderBottomColor: t.hair }];
+  const box = [styles.band, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderBottomColor: t.hair }];
   const line = (icon: "info" | "lock", text: ReactNode, testID: string) => (
     <View style={styles.bandRow}>
       <View style={styles.nudge}>
@@ -997,6 +1001,7 @@ function Dock({
   /** The screen hands a deleted letter's words back through this. */
   restore: RefObject<((text: string) => void) | null>;
 }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const input = useRef<TextInput>(null);
@@ -1011,7 +1016,7 @@ function Dock({
   switch (mode.kind) {
     case "outgoing_locked":
       return (
-        <View testID="dock-locked" style={[styles.dock, pad, { backgroundColor: t.s1 }]}>
+        <View testID="dock-locked" style={[styles.dock, { paddingHorizontal: gutter }, pad, { backgroundColor: t.s1 }]}>
           <View style={[styles.lockedLine, { borderColor: t.hair2 }]}>
             <Txt variant="body" tone="subtle">
               {tr("soul_app.chat.request.locked")}
@@ -1037,7 +1042,7 @@ function Dock({
       return <View style={{ height: bottom }} />;
     case "hall_sealed":
       return (
-        <View style={[styles.dock, pad]}>
+        <View style={[styles.dock, { paddingHorizontal: gutter }, pad]}>
           <Button testID="go-current-hall" kind="secondary" title={tr("soul_app.chat.hall.go_current", { hall: hallName })} onPress={onHall} />
         </View>
       );
@@ -1046,7 +1051,7 @@ function Dock({
         mode.kind === "incoming" ? "soul_app.chat.compose.reply_placeholder" : mode.kind === "hall" ? "soul_app.chat.compose.hall_placeholder" : "soul_app.chat.compose.placeholder";
       const size = ANDROID ? 48 : 44;
       return (
-        <View testID="composer" style={[styles.dock, styles.composer, pad]}>
+        <View testID="composer" style={[styles.dock, { paddingHorizontal: gutter }, styles.composer, pad]}>
           {/* A request room (throttled) takes text only: the server refuses an image there. */}
           {mode.kind === "free" || mode.kind === "hall" ? <ImageButton size={size} onPress={onImage} disabled={picking} /> : null}
           <TextInput

@@ -186,7 +186,7 @@ export function SignInsScreen() {
       </View>
       <FadeModal visible={asking} onRequestClose={() => setAsking(false)}>
         <View style={[styles.scrim, { backgroundColor: theme.scrim }]}>
-          <View testID="sign-out-others-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.s1, borderTopColor: theme.negStrong }]}>
+          <View testID="sign-out-others-sheet" accessibilityViewIsModal style={[styles.sheet, { paddingHorizontal: gutter }, { backgroundColor: theme.s1, borderTopColor: theme.negStrong }]}>
             <Txt variant="bodyLg" style={styles.bold}>
               {t("profile.devices.confirm_title", { n: String(others) })}
             </Txt>
