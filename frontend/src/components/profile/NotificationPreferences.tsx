@@ -13,6 +13,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/src/components/ui/Switch";
 import { isAdminRole } from "@soulledger/core/api/perm";
 
 export const NOTIFICATION_PREFS_ANCHOR = "notifications";
@@ -162,27 +163,5 @@ function Cell({
       </button>
     );
   }
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={name}
-      disabled={disabled}
-      onClick={() => onToggle(!on)}
-      // 与 SchedulerJobRow 的开关同一张皮:44 的点击区里画 32 × 18 的轨道。
-      className="group inline-flex size-(--control-h-sm) shrink-0 items-center justify-center disabled:cursor-not-allowed"
-    >
-      <span
-        aria-hidden="true"
-        className={`relative inline-flex h-[18px] w-8 items-center border-[1.5px] p-0.5 transition-colors duration-instant group-disabled:border-[oklch(var(--color-line))] group-disabled:bg-[oklch(var(--color-disabled-surface))] ${
-          on
-            ? "justify-end bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
-            : "justify-start bg-transparent border-[oklch(var(--color-line-strong))]"
-        }`}
-      >
-        <span className={`block size-[11px] ${on ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`} />
-      </span>
-    </button>
-  );
+  return <Switch checked={on} label={name} disabled={disabled} onChange={onToggle} />;
 }
