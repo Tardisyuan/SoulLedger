@@ -44,7 +44,7 @@ function renderApp() {
   );
 }
 
-function signedIn(extra: Record<string, Reply | Reply[]> = {}) {
+function signedIn(extra: Record<string, Reply | Promise<Reply> | (Reply | Promise<Reply>)[]> = {}) {
   secure.set(REFRESH_TOKEN_KEY, "R");
   return stubApi({
     "/me/": { status: 200, data: PROFILE },
