@@ -396,7 +396,14 @@ function approveNode(rec: Recording, id: string, body: Row): Answer {
     approver_username: me.name,
   };
   patchRow("/nodes/", String(node.id), decided);
-  let next = passed ? nodes.find((n) => Number(n.node_order) > Number(node.node_order) && n.status === "PENDING") : undefined;
+  const after = (n: Row) => nodes.find((m) => Number(m.node_order) > Number(n.node_order) && m.status === "PENDING");
+  let next = passed ? after(node) : undefined;
+  // A 通知 stop is run, not decided, and passed on from, as `_enter` does on the server: without this the flow would
+  // wait on a stop nobody may decide (`canDecide`).
+  while (next?.kind === "NOTIFY") {
+    patchRow("/nodes/", String(next.id), { status: "TRAVERSED", decided_at: now() });
+    next = after(next);
+  }
   // Reaching the end stop finishes the flow, as `_enter` does on the server: nothing is left to decide there.
   if (next?.kind === "END") {
     patchRow("/nodes/", String(next.id), { status: "TRAVERSED", decided_at: now() });
@@ -869,14 +876,34 @@ const todoItem = (kind: string, id: unknown, title: unknown, createdAt: unknown,
 });
 
 /**
+ * Whether this account may decide the flow's current stop now: the server's one rule behind 「待我处理」 and the detail's
+ * `can_approve` (todo.py `_waiting_workflows`, decision_codes.py `block_for`, `ApprovalNode.can_approve`). It needs
+ * `workflow.approve`, a current stop still PENDING that the engine does not run (通知 / 结束), and that stop's approver
+ * to be this account: an ACTOR stop by the account's actor (the demo accounts have none), a ROLE stop by its role.
+ * ponytail: 会签 and 加签 are not modelled (no recording has either); add `open_slot` / co-signers if one ever does.
+ */
+function canDecide(rec: Recording, flowId: unknown): boolean {
+  const user = rec.login.user as Row;
+  if (!(user.permissions as unknown[] | undefined)?.includes("workflow.approve")) return false;
+  const answer = read(rec, `/workflows/${flowId}/`, qs());
+  const flow = answer.data as Row | null;
+  if (answer.status !== 200 || !flow || flow.status !== "IN_PROGRESS") return false;
+  const node = ((flow.nodes ?? []) as Row[]).find((n) => n.id === flow.current_node);
+  if (!node || node.status !== "PENDING" || node.kind === "NOTIFY" || node.kind === "END") return false;
+  if (node.approver_type === "ACTOR") return node.approver_actor != null && node.approver_actor === (user.actor_id ?? user.actor);
+  if (node.approver_type === "ROLE") return !!node.approver_role && node.approver_role === user.role;
+  return false;
+}
+
+/**
  * 「待我处理」 whole (todo.py `build`, every row of every group): approvals and rebirths from the flows as they stand
- * (in the demo every open flow is this account's), letters from the inbox, the rest as recorded — the city god's and
+ * whose current stop is this account's (`canDecide`), letters from the inbox, the rest as recorded — the city god's and
  * 枉死城's rows only while their case still waits there.
  */
 function todoNow(rec: Recording): Record<string, Row[]> {
   const recorded = read(rec, "/officer-app/todo/", qs()).data as Record<string, TodoGroup | undefined> | null;
   const groups: Record<string, Row[]> = Object.fromEntries(Object.values(TODO_FIELDS).map((f) => [f, [...(recorded?.[f]?.items ?? [])]]));
-  const flows = rowsNow(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS")
+  const flows = rowsNow(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS" && canDecide(rec, w.id))
     .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
   groups.approvals = flows.filter((w) => w.case_type !== "REBIRTH_APPLICATION")
     .map((w) => todoItem("approval", w.id, w.workflow_name, w.created_at, { title_en: w.workflow_name_en ?? "" }));
@@ -937,11 +964,12 @@ function officerAppRead(rec: Recording, path: string, query: URLSearchParams): A
     const flow = find(rec, "/workflows/", kind === "rebirth" ? (app?.appeal_workflow ?? app?.workflow) : id);
     if (!flow) return { status: 404, data: { type: "about:blank", title: "Not Found", status: 404, code: "not_found", detail: "Not found." } };
     const open = flow.status === "IN_PROGRESS";
+    const mine = open && canDecide(rec, flow.id);
     return ok({
       kind, id, title: kind === "rebirth" ? flow.soul_name : flow.workflow_name, title_en: kind === "rebirth" ? "" : (flow.workflow_name_en ?? ""),
       workflow_id: String(flow.id), created_at: flow.created_at, facts: {},
       ...(app ? { soul_code: app.soul_code, is_appeal: !!flow.is_appeal } : {}),
-      actionable: open, state: open ? "actionable" : "already_handled", handled_by: null, handled_at: null, cosigners: [], waiting_on_cosigner: null,
+      actionable: mine, state: mine ? "actionable" : open ? "permission_changed" : "already_handled", handled_by: null, handled_at: null, cosigners: [], waiting_on_cosigner: null,
     });
   }
   return null;
@@ -1022,7 +1050,7 @@ export function derived(rec: Recording, path: string, query: URLSearchParams): A
   if (workflow) {
     const answer = read(rec, path, query);
     const row = answer.data as Row | null;
-    if (answer.status === 200 && row && row.status === "IN_PROGRESS") return ok({ ...row, can_approve: true });
+    if (answer.status === 200 && row && row.status === "IN_PROGRESS") return ok({ ...row, can_approve: canDecide(rec, workflow[1]) });
     return answer;
   }
   return null;

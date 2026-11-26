@@ -22,17 +22,38 @@ const post = (path: string, body: Row = {}) => write(rec, "POST", path, new URLS
 const me = () => (rec.login.user as Row).id;
 
 describe("/officer-app/todo/", () => {
-  it("lists every open plain flow as an approval, and `?kind=` answers that one group as {count, items}", () => {
-    const open = rowsNow(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION");
-    expect(open.length).toBeGreaterThan(0);
-    const todo = get("/officer-app/todo/") as Record<string, { count: number; items: Row[] }>;
-    expect(todo.approvals.count).toBe(open.length);
-    const openIds = new Set(open.map((w) => w.id));
-    expect(todo.approvals.items.every((i) => i.kind === "approval" && openIds.has((i.target as Row).id))).toBe(true);
-    expect(todo.approvals.items.length).toBe(Math.min(10, open.length));
-    const group = get("/officer-app/todo/", { kind: "approval", offset: "0" });
+  type Todo = Record<string, { count: number; items: Row[] }>;
+  const ids = (todo: Todo, field: string) => todo[field].items.map((i) => (i.target as Row).id).sort();
+
+  // The server lists a flow only when its current stop names this account (todo.py `_waiting_workflows`); the
+  // recording holds what it answered, so the demo's computed lists must be those, for a judge and for the admin.
+  it.each(["judge", "judge_eg", "admin"] as const)("%s: approvals and rebirths are the server's, not every open flow", async (role) => {
+    const r = await recording(role, "zh");
+    const recorded = read(r, "/officer-app/todo/", new URLSearchParams()).data as Todo;
+    const todo = derived(r, "/officer-app/todo/", new URLSearchParams())!.data as Todo;
+    for (const field of ["approvals", "rebirths"]) {
+      expect(todo[field].count).toBe(recorded[field].count);
+      expect(ids(todo, field)).toEqual(ids(recorded, field));
+    }
+  });
+
+  it("an open flow whose stop names someone else is not this judge's: absent from the list, and not decidable", () => {
+    // What the server said of each when the recording asked it (`can_approve` is per requester).
+    const recordedCan = (id: unknown) => (read(rec, `/workflows/${id}/`, new URLSearchParams()).data as Row | null)?.can_approve;
+    const theirs = rowsNow(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS" && recordedCan(w.id) === false);
+    expect(theirs.length).toBeGreaterThan(0);
+    const listed = new Set(ids(get("/officer-app/todo/") as Todo, "approvals"));
+    for (const w of theirs) {
+      expect(listed.has(w.id)).toBe(false);
+      expect(get(`/workflows/${w.id}/`).can_approve).toBe(false);
+    }
+  });
+
+  it("`?kind=` answers that one group as {count, items}", () => {
+    const whole = get("/officer-app/todo/") as Todo;
+    const group = get("/officer-app/todo/", { kind: "rebirth", offset: "0" });
     expect(Object.keys(group).sort()).toEqual(["count", "items"]);
-    expect(group.count).toBe(open.length);
+    expect(group.count).toBe(whole.rebirths.count);
     // Not the whole to-do: no other group's field is in the answer.
     expect(get("/officer-app/todo/", { kind: "wangsi", offset: "0" })).not.toHaveProperty("approvals");
   });
@@ -46,13 +67,35 @@ describe("/officer-app/todo/", () => {
     expect(get(`/officer-app/items/rebirth/${app!.id}/`).workflow_id).toBe(app!.appeal_workflow ?? app!.workflow);
   });
 
-  it("an approval decided to its end leaves the group", () => {
-    const flow = rowsNow(rec, "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION")!;
-    const before = (get("/officer-app/todo/", { kind: "approval" }) as { count: number }).count;
-    for (let i = 0; i < 20 && rowsNow(rec, "/workflows/").find((w) => w.id === flow.id)?.status === "IN_PROGRESS"; i++) {
-      post(`/workflows/${flow.id}/approve_node/`, { verdict: "PASSED" });
+  it("an approval decided to its end leaves the group", async () => {
+    const eg = await recording("judge_eg", "zh");
+    const count = () => (derived(eg, "/officer-app/todo/", new URLSearchParams({ kind: "approval" }))!.data as { count: number }).count;
+    const flow = rowsNow(eg, "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION")!;
+    const before = count();
+    expect(before).toBeGreaterThan(0);
+    for (let i = 0; i < 20 && rowsNow(eg, "/workflows/").find((w) => w.id === flow.id)?.status === "IN_PROGRESS"; i++) {
+      write(eg, "POST", `/workflows/${flow.id}/approve_node/`, new URLSearchParams(), { verdict: "PASSED" });
     }
-    expect((get("/officer-app/todo/", { kind: "approval" }) as { count: number }).count).toBe(before - 1);
+    expect(count()).toBe(before - 1);
+  });
+
+  it("a decision moves the flow past a 通知 stop; it stays this judge's while the next stop is the judges', then leaves", async () => {
+    const eg = await recording("judge_eg", "zh");
+    const listed = () => ids(derived(eg, "/officer-app/todo/", new URLSearchParams())!.data as Todo, "approvals");
+    const detailOf = (id: unknown) => derived(eg, `/workflows/${id}/`, new URLSearchParams())!.data as Row;
+    const flow = rowsNow(eg, "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION")!;
+    const stop = () => ((detailOf(flow.id).nodes as Row[]).find((n) => n.id === detailOf(flow.id).current_node) ?? {}) as Row;
+    const decideOnce = () => write(eg, "POST", `/workflows/${flow.id}/approve_node/`, new URLSearchParams(), { verdict: "PASSED" });
+    // The recorded chain: 2 the judges' (current), 3 通知, 4 the judges', 5 a named actor's.
+    expect([stop().node_order, stop().approver_role]).toEqual([2, "JUDGE"]);
+    decideOnce();
+    expect([stop().node_order, stop().kind, stop().approver_role]).toEqual([4, "APPROVAL", "JUDGE"]);
+    expect(listed()).toContain(flow.id);
+    expect(detailOf(flow.id).can_approve).toBe(true);
+    decideOnce();
+    expect([stop().node_order, stop().approver_type]).toEqual([5, "ACTOR"]);
+    expect(listed()).not.toContain(flow.id);
+    expect(detailOf(flow.id).can_approve).toBe(false);
   });
 });
 
