@@ -441,10 +441,9 @@ unwatched gap.
 
 ## Testing, gates and CI
 
-**Two workflows check code, on different schedules.**
+**One workflow checks code, and not on pull requests.** (`pr-checks.yml`, a cheap per-PR check added
+2026-11-14, never ran and was deleted on 2026-11-26.)
 
-- **`pr-checks.yml` runs on every pull request**: static checks and a smoke test, about ten minutes, no
-  secrets and a read-only token. It is what a contributor sees on a PR.
 - **`ci.yml` is the full suite**: daily on main at 03:00 UTC (skipped when main has no commit from the last
   24 hours), on a pushed `v*` tag, and by hand. `security.yml` runs weekly (Monday 04:00 UTC) and by hand.
   The full suite does not run on pull requests or branch pushes: it once spent the whole Actions quota when

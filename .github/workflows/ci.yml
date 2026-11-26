@@ -14,7 +14,7 @@ name: CI
 #     run). A manual or tag run always runs;
 #   - on a pushed tag `v*`: a release gets a full run before it ships;
 #   - by hand: Actions tab, or `gh workflow run ci.yml --ref <branch>`.
-# Not on push to branches and not on pull_request (a PR gets the cheap pr-checks.yml instead). `concurrency` cancels a
+# Not on push to branches and not on pull_request. `concurrency` cancels a
 # superseded run on the same ref, and every job has `timeout-minutes`, so one
 # hung test cannot hold a runner for the 360-minute default.
 # Run length (2026-10-30, estimated from the job list below, not measured on
@@ -217,23 +217,7 @@ jobs:
     if: needs.changes.outputs.run == 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-      # Installed at the workspace root, not in `frontend`. `frontend` is an
-      # npm workspace and depends on `@soulledger/core`, which lives in
-      # `packages/core` — outside `frontend`, so `cd frontend && npm ci` cannot
-      # see it. The root lockfile is the only lockfile; frontend no longer has
-      # one.
-      # npm 11, not the npm 10 bundled with node 20 — the lockfile is npm 11's, and npm 10's
-      # `npm ci` exits 0 with an incomplete tree (no typescript, no .bin; CLAUDE.md, 2026-09-17).
-      # npm 11 skips install scripts, so the native ones are rebuilt explicitly.
-      - name: Install dependencies
-        run: |
-          npx -y npm@11 ci
-          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - uses: ./.github/actions/setup-node-npm11
       # `@soulledger/core` has its own tsconfig and its own eslint config; the
       # frontend's `eslint .` cannot reach outside its base path, so a job that
       # only ran the frontend's gates would be checking 5,196 fewer lines than
@@ -315,18 +299,7 @@ jobs:
     if: needs.changes.outputs.run == 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-      # npm 11, not the npm 10 bundled with node 20 — the lockfile is npm 11's, and npm 10's
-      # `npm ci` exits 0 with an incomplete tree (no typescript, no .bin; CLAUDE.md, 2026-09-17).
-      # npm 11 skips install scripts, so the native ones are rebuilt explicitly.
-      - name: Install dependencies
-        run: |
-          npx -y npm@11 ci
-          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - uses: ./.github/actions/setup-node-npm11
       - name: Typecheck mobile
         run: npm run typecheck --workspace @soulledger/mobile
       - name: Lint mobile
@@ -353,16 +326,7 @@ jobs:
     if: needs.changes.outputs.run == 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-      # npm 11 and the native rebuild: see the `mobile` job above.
-      - name: Install dependencies
-        run: |
-          npx -y npm@11 ci
-          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - uses: ./.github/actions/setup-node-npm11
       - name: Typecheck officer
         run: npm run typecheck --workspace @soulledger/officer
       - name: Lint officer
@@ -470,23 +434,7 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-      # Installed at the workspace root, not in `frontend`. `frontend` is an
-      # npm workspace and depends on `@soulledger/core`, which lives in
-      # `packages/core` — outside `frontend`, so `cd frontend && npm ci` cannot
-      # see it. The root lockfile is the only lockfile; frontend no longer has
-      # one.
-      # npm 11, not the npm 10 bundled with node 20 — the lockfile is npm 11's, and npm 10's
-      # `npm ci` exits 0 with an incomplete tree (no typescript, no .bin; CLAUDE.md, 2026-09-17).
-      # npm 11 skips install scripts, so the native ones are rebuilt explicitly.
-      - name: Install dependencies
-        run: |
-          npx -y npm@11 ci
-          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - uses: ./.github/actions/setup-node-npm11
       # Built, not `next dev`. `playwright.config.ts`'s `webServer` now runs
       # `npm run start:e2e`, which serves this output — see the long note there
       # for why: the dev server compiles routes on demand, so every
@@ -524,15 +472,7 @@ jobs:
       NEXT_PUBLIC_DEMO_MODE: "1"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-      - name: Install dependencies
-        run: |
-          npx -y npm@11 ci
-          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - uses: ./.github/actions/setup-node-npm11
       - name: Build the demo
         run: |
           cd frontend

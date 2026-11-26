@@ -1,0 +1,20 @@
+name: Set up node and install with npm 11
+description: >-
+  node from .nvmrc with the npm cache, then `npm ci` at the workspace root with npm 11 and the native rebuild.
+  The root lockfile is the only one: `frontend` and the apps are npm workspaces that depend on
+  `@soulledger/core` in `packages/core`, so `cd frontend && npm ci` cannot see it. npm 11, not the npm 10
+  bundled with node 20: the lockfile is npm 11's, and npm 10's `npm ci` exits 0 with an incomplete tree (no
+  typescript, no .bin; CLAUDE.md, 2026-09-17). npm 11 skips install scripts, so the native ones are rebuilt.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version-file: .nvmrc
+        cache: 'npm'
+        cache-dependency-path: package-lock.json
+    - name: Install dependencies
+      shell: bash
+      run: |
+        npx -y npm@11 ci
+        npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli

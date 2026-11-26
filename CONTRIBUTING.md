@@ -88,9 +88,7 @@ Two things that bite:
 
 ## What CI runs
 
-- **On your pull request**: [`pr-checks.yml`](.github/workflows/pr-checks.yml). It runs ruff,
-  `makemigrations --check`, `tsc` and eslint for each workspace, and a smoke test of the back end. It takes
-  about ten minutes, with a read-only token and no secrets.
+- **On your pull request**: no workflow runs. Run the checks in [Build & Test](CLAUDE.md#build--test) yourself.
 - **After merge, daily on `main`**: the full suite in [`ci.yml`](.github/workflows/ci.yml). It covers
   PostgreSQL, coverage floors, the three E2E browsers and audits.
 

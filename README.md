@@ -175,7 +175,6 @@ Test counts, measured 2026-11-06
 ([`landing-stats.json`](frontend/src/config/landing-stats.json); they go stale, so trust the latest run):
 back end 9,243 · web 5,677 · soul app 1,204 · officer app 1,095 · E2E about 270.
 
-- **On every pull request**: static checks and a smoke test (`pr-checks.yml`).
 - **Daily on main**: the full suite in `ci.yml`. That means real PostgreSQL with a coverage floor, three
   browser engines, a real Synapse, and pip and npm audit. The badge above is that run.
 - **Before a push**: the maintainer's local gate, `scripts/run-gates.sh`.

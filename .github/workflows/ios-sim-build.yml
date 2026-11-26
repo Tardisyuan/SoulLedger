@@ -50,21 +50,14 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
       - name: Select Xcode 27.2
         run: |
           sudo xcode-select -s /Applications/Xcode_27.2.app
           xcodebuild -version
-      # npm 11 (the lockfile's), install scripts rebuilt by hand, lockfile restored — CLAUDE.md, Build & Test.
-      - name: Install dependencies
-        run: |
-          npx -y npm@11 ci
-          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
-          git checkout -- package-lock.json
+      - uses: ./.github/actions/setup-node-npm11
+      # npm ci drops the lockfile's `libc` fields (CLAUDE.md, Build & Test): restored before anything reads it.
+      - name: Restore the lockfile
+        run: git checkout -- package-lock.json
       # Before prebuild, from the checked-out tree: the same key the Mac computes.
       - name: Native key
         id: key
