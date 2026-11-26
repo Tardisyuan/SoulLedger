@@ -98,7 +98,7 @@ def holds_at_least(caller, role, extra_roles=()) -> bool:
 def may_manage_user(caller, target) -> bool:
     """Whether `caller` may act on `target`'s account (reset password, deactivate, delete, edit, change roles):
     never on someone holding a codename the caller lacks (P-05). ADMIN targets have their own rule
-    (`user_admin._admin_target_refusal`); non-ADMIN callers never see them."""
+    (`user_admin.admin_target_refusal`); non-ADMIN callers never see them."""
     return holds_at_least(caller, target.role, target.extra_roles or ())
 
 
@@ -630,7 +630,7 @@ class UserMfaRefSerializer(serializers.Serializer):
 
 class SecondFactorProofSerializer(serializers.Serializer):
     """The caller's own second factor, required when the target is another ADMIN (2026-10-29 decision 8;
-    `user_admin._admin_target_refusal`): `mfa_method` = totp (the 6-digit code) or recovery (one unused recovery
+    `user_admin.admin_target_refusal`): `mfa_method` = totp (the 6-digit code) or recovery (one unused recovery
     code, spent). Same check, counter and lock as turning two-step verification off."""
 
     mfa_method = serializers.ChoiceField(choices=["totp", "recovery"], required=False)

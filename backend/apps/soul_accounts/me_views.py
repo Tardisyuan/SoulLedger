@@ -199,7 +199,7 @@ def finish_first_step(account, soul_code, *, rate_keys, ip, user_agent, device_t
         })
     # 这次登录靠「这部手机不再询问」跳过了第二步:会话记着那枚设备令牌,退出这台时一并作废。
     tokens = svc.complete_login(account, request=request, method=method,
-                                trust_hash=soul_mfa.core._hash_device(device_token) if device_token else "",
+                                trust_hash=soul_mfa.core.hash_device(device_token) if device_token else "",
                                 device_login=device_login)
     LoginLog.objects.create(user=account.user, username=sign_in_username(soul_code), status="SUCCESS",
                             ip_address=ip, user_agent=user_agent, method=method)

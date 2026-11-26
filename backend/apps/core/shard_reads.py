@@ -314,13 +314,13 @@ def _rows_abroad(soul, civ):
     mine = civilization_halls(civ).values("pk")
     found = functools.reduce(operator.or_, [
         models.Exists(f.model._base_manager.filter(**{f.attname: soul.pk})
-                      .exclude(**{f"{tenant_path(f.model)}__in": mine})) for f in _keys_to_soul()])
+                      .exclude(**{f"{tenant_path(f.model)}__in": mine})) for f in keys_to_soul()])
     # The soul's hall is on control (REFERENCE): one row to hang the EXISTS on.
     return Tenant._base_manager.using(CONTROL_ALIAS).filter(pk=soul.tenant_id).filter(found).exists()
 
 
 @functools.cache
-def _keys_to_soul():
+def keys_to_soul():
     from apps.souls.models import Soul
 
     return tuple(f for f in crossing_keys() if f.related_model._meta.concrete_model is Soul)
@@ -472,7 +472,7 @@ def route(model, hints):
     return ctx
 
 
-def _hall_of(instance):
+def hall_of(instance):
     """The hall (a Tenant) at the end of `instance`'s tenant path, or None: a row with no hall (D2). Follows the
     in-memory objects; a hop not loaded yet is read (its own route)."""
     path = tenant_path(type(instance))
@@ -499,7 +499,7 @@ def write_alias_of(instance):
         return master_alias(instance.civilization)
     if kind != SHARD or control_mastered(type(instance)):
         return CONTROL_ALIAS
-    hall = _hall_of(instance)
+    hall = hall_of(instance)
     return master_alias(hall.civilization) if hall is not None else CONTROL_ALIAS
 
 
@@ -630,7 +630,7 @@ def related_of(instance, name):
     if cached is not None or getattr(instance, f.attname) is None:
         return cached
     if (not settings.SHARDED or (instance._state.db or CONTROL_ALIAS) != CONTROL_ALIAS
-            or placement(f.related_model) != SHARD or _hall_of(instance) is not None):
+            or placement(f.related_model) != SHARD or hall_of(instance) is not None):
         return getattr(instance, name)
     found = with_fanout(f.related_model._base_manager.filter(pk=getattr(instance, f.attname))).first()
     if found is not None:
@@ -1589,7 +1589,7 @@ def _hall_from_values(model, values):
     if value is None or callable(value):
         return None
     if isinstance(value, models.Model):  # the hall itself, or the row the path goes through (its hall is the same)
-        return value if not rest else _hall_of(value)
+        return value if not rest else hall_of(value)
     hall_id = value if not rest else (f.related_model._base_manager.filter(pk=value)
                                       .values_list("__".join(rest), flat=True).first())
     tenant = django_apps.get_model("tenants", "Tenant")
@@ -1615,7 +1615,7 @@ def _install_writes():
             if db == CONTROL_ALIAS:
                 _refuse_on_control(p.model, p.using(db))
             elif p.using(db).exists():  # a write that touches nothing writes nothing (a bare-id sweep elsewhere)
-                _refuse_outside(db)
+                refuse_outside(db)
 
     def updating(original):
         def update(self, **kwargs):
@@ -1743,7 +1743,7 @@ def _install_atomic():
     serialization error), so the shards go first. Claims and numbers taken with control in autocommit (no business
     transaction open) still commit at once, before the shard row: a gap, never a reuse (apps/tenants/global_codes.py).
 
-    A write to a shard while the code holds a transaction that is not open there is refused (`_refuse_outside`): it
+    A write to a shard while the code holds a transaction that is not open there is refused (`refuse_outside`): it
     would autocommit outside the business transaction (a third database). Decided once at the enter and kept to the
     exit, so a hall set inside the block does not move the transaction."""
     from django.db import transaction as tx
@@ -1832,15 +1832,15 @@ def control_mirror_writes():
         _mirror_writes.reset(token)
 
 
-def _code_transaction_open():
+def code_transaction_open():
     aliases = [CONTROL_ALIAS, *(alias_for_civilization(c) for c in write_cut())]
     return any(not a._from_testcase for alias in aliases if alias in connections
                for a in connections[alias].atomic_blocks)
 
 
-def _refuse_outside(alias):
+def refuse_outside(alias):
     """Refuse a write to shard `alias` while the code holds a transaction that is not open there."""
-    if (alias and alias != CONTROL_ALIAS and str(alias).startswith("civ_") and _code_transaction_open()
+    if (alias and alias != CONTROL_ALIAS and str(alias).startswith("civ_") and code_transaction_open()
             and not any(not a._from_testcase for a in connections[alias].atomic_blocks)):
         raise WriteOutsideTransaction(f"a write to {alias} inside a transaction that is not open there")
 
@@ -1848,7 +1848,7 @@ def _refuse_outside(alias):
 def _before_shard_write(model, alias, inserting=True):
     """A row of `model` about to be written to shard `alias`: inside the open transaction, and -- an insert of an
     integer-pk model -- with the shard's id range assigned first (gap 4a, apps/core/shard_ids.py)."""
-    _refuse_outside(alias)
+    refuse_outside(alias)
     if inserting and str(alias).startswith("civ_") and isinstance(model._meta.pk, models.AutoField):
         from apps.core.shard_ids import ensure_ranges
 

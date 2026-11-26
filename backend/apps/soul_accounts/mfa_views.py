@@ -150,7 +150,7 @@ class SoulMfaVerifyView(APIView):
         LoginLog.objects.create(user=account.user, username=username, status="SUCCESS", ip_address=ip,
                                 user_agent=agent, method=method)
         tokens = svc.complete_login(account, request=request, method=method,
-                                    trust_hash=mfa.core._hash_device(device_token) if device_token else "",
+                                    trust_hash=mfa.core.hash_device(device_token) if device_token else "",
                                     device_login=mfa.pending_device_login_id(data["pending_token"]))
         payload = {
             **tokens,

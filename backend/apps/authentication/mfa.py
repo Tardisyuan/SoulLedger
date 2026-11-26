@@ -447,8 +447,12 @@ def confirm_second_factor(mfa, *, method, code="", request=None) -> dict:
 # ── 设备令牌 ───────────────────────────────────────────────────────────────────
 
 
-def _hash_device(raw: str) -> str:
+def hash_device(raw: str) -> str:
+    """The stored form of a device credential or remembered-device token (officer and soul sides)."""
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+_hash_device = hash_device
 
 
 def remember_device(user) -> str:

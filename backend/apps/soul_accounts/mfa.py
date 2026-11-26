@@ -119,7 +119,7 @@ def status_of(account) -> dict:
 def remember_device(account) -> str:
     raw = secrets.token_urlsafe(32)
     SoulMfaDevice.objects.create(
-        account=account, token_hash=core._hash_device(raw), expires_at=timezone.now() + DEVICE_LIFETIME)
+        account=account, token_hash=core.hash_device(raw), expires_at=timezone.now() + DEVICE_LIFETIME)
     return raw
 
 
@@ -127,7 +127,7 @@ def device_remembered(account, raw) -> bool:
     if not raw:
         return False
     row = SoulMfaDevice.objects.filter(
-        account=account, token_hash=core._hash_device(raw), expires_at__gt=timezone.now()).first()
+        account=account, token_hash=core.hash_device(raw), expires_at__gt=timezone.now()).first()
     if row is None:
         return False
     row.last_used_at = timezone.now()

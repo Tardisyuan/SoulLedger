@@ -285,7 +285,7 @@ def drink_soup(soul):
     return soul
 
 
-def _month_start():
+def month_start():
     from django.utils import timezone
 
     return timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -306,7 +306,7 @@ def quota_usage(tenant) -> dict:
     from apps.reincarnation.models import RebirthForm, Reincarnation
 
     limits = quota_of(tenant)
-    used = dict(Reincarnation.objects.filter(tenant=tenant, reincarnated_at__gte=_month_start())
+    used = dict(Reincarnation.objects.filter(tenant=tenant, reincarnated_at__gte=month_start())
                 .values_list("rebirth_form").annotate(n=Count("id")).values_list("rebirth_form", "n"))
     return {form: {"limit": limits.get(form), "used": used.get(form, 0)} for form in RebirthForm.values}
 
@@ -494,7 +494,7 @@ class ReincarnationService:
                 limit = quota_of(hall).get(rebirth_form)
                 if limit is not None:
                     used = Reincarnation.objects.filter(tenant=hall, rebirth_form=rebirth_form,
-                                                        reincarnated_at__gte=_month_start()).count()
+                                                        reincarnated_at__gte=month_start()).count()
                     if used >= limit:
                         raise RebirthQuotaFull(rebirth_form, limit, used)
 

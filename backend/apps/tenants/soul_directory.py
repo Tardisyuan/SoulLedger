@@ -88,9 +88,9 @@ def rows_abroad(soul_pk, civ):
 
 
 def _keys(model):
-    from apps.core.shard_reads import _keys_to_soul
+    from apps.core.shard_reads import keys_to_soul
 
-    return [f for f in _keys_to_soul() if f.model._meta.concrete_model is model._meta.concrete_model]
+    return [f for f in keys_to_soul() if f.model._meta.concrete_model is model._meta.concrete_model]
 
 
 def _not_own(alias, civ, soul_pks):
@@ -122,7 +122,7 @@ def note_from_shards(aliases):
     """SOUL_ROWS_IN for every crossing row on `aliases` (shards) naming a soul that is not its own there, and
     SOUL_LIVES_IN for every soul with an account whose primary is on one of them. Idempotent. Returns {alias: (souls
     with rows there and their primary elsewhere, account souls living there)}."""
-    from apps.core.shard_reads import _keys_to_soul
+    from apps.core.shard_reads import keys_to_soul
     from apps.core.shard_sync import civilization_of
     from apps.core.tenant import civilization_halls
     from apps.soul_accounts.models import SoulAccount
@@ -134,7 +134,7 @@ def note_from_shards(aliases):
         civ = civilization_of(alias)
         own = Soul._base_manager.using(alias).filter(tenant__in=civilization_halls(civ)).values("pk")  # a subquery
         away = set()
-        for f in _keys_to_soul():
+        for f in keys_to_soul():
             away |= set(f.model._base_manager.using(alias).exclude(**{f"{f.attname}__isnull": True})
                         .exclude(**{f"{f.attname}__in": own}).values_list(f.attname, flat=True).distinct())
         note_rows_in(civ, sorted(away, key=str))
@@ -149,7 +149,7 @@ def note_from_shards(aliases):
 def connect():
     from django.db.models.signals import post_save
 
-    from apps.core.shard_reads import _keys_to_soul
+    from apps.core.shard_reads import keys_to_soul
 
-    for model in {f.model._meta.concrete_model for f in _keys_to_soul()}:
+    for model in {f.model._meta.concrete_model for f in keys_to_soul()}:
         post_save.connect(_on_save, sender=model, dispatch_uid=f"soul_directory:{model._meta.label}")

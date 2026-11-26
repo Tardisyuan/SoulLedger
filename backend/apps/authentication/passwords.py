@@ -5,7 +5,7 @@
 `password_entirely_numeric` / `password_too_similar`):客户端按码显示本地化文案,
 `message` 是 Django 的英文原句,只作兜底。
 
-**作废** 两层:刷新令牌进黑名单(`_revoke_refresh_tokens`,灵魂端、两步验证重置也用它),
+**作废** 两层:刷新令牌进黑名单(`tokens.revoke_refresh_tokens`,灵魂端、两步验证重置也用它),
 再把 `User.session_version` +1 —— 官员令牌带 `sv` 声明,比对不上的 access 立刻 401
 (`OfficerJWTAuthentication`、WebSocket 握手),不等 access 自然过期。
 """
@@ -117,11 +117,10 @@ def end_sessions(user, keep_session=None) -> None:
     「登录设备」表(`SignInSession`)同步:除 `keep_session`(改密码的这台,它拿带同一个 `sid` 的新令牌)
     外全部标成已退出,它们的「30 天内不再询问」一并作废。官员与灵魂、改密码 / 邮箱重置 / 管理员重置 /
     转世都经过这里,所以只在这一处同步。"""
-    from apps.soul_accounts.services import _revoke_refresh_tokens
-
     from . import signin_sessions
+    from .tokens import revoke_refresh_tokens
 
-    _revoke_refresh_tokens(user)
+    revoke_refresh_tokens(user)
     signin_sessions.revoke_all(user, keep=keep_session)
     user.session_version = F("session_version") + 1
     user.save(update_fields=["session_version"])

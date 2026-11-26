@@ -77,5 +77,5 @@ SITES = [
     ("apps/authentication/views.py", 1, "CIVILIZATION",
      "LoginLogViewSet.get_queryset: its civilization's halls' users"),
     ("apps/authentication/user_admin.py", 1, "CIVILIZATION",
-     "_admin_target_refusal: a civilization ADMIN acts on a hall ADMIN of its civilization"),
+     "admin_target_refusal: a civilization ADMIN acts on a hall ADMIN of its civilization"),
 ]
