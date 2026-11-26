@@ -130,7 +130,6 @@ def _record_failure(workflow_pk, node_pk, now, exc) -> None:
 
 def _tell_admins(workflow_pk, node_pk) -> None:
     from apps.events.services import EventService
-    from apps.judgment.city_gods import _hall_admins
     from apps.notifications import messages
     from apps.workflow.services import WorkflowService
 
@@ -141,11 +140,11 @@ def _tell_admins(workflow_pk, node_pk) -> None:
               "workflow_en": workflow.workflow_name_en, "node_en": node.node_name_en,
               "kind": kind, "category": "approval_timeout"}
     title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
-    from apps.authentication.models import User
+    from apps.perm.checker import holders_or_hall_less_admins
     from apps.perm.data_scope import visible_to
 
     cache = {}
-    for user in User.objects.filter(pk__in=_hall_admins(workflow.tenant_id, codename="workflow.update")):
+    for user in holders_or_hall_less_admins(workflow.tenant_id, "workflow.update"):
         if not visible_to(user, workflow, cache):  # 数据范围(B5):殿管理员的范围看不到这条流程就不收
             continue
         EventService.notify_user(user=user, title=title, message=message, notification_type="WORKFLOW_ASSIGNED",

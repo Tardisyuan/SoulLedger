@@ -10,6 +10,7 @@
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.sentence_plan.models import (
     IN_PROGRESS_PLAN_STATUSES,
     OCCUPYING_NODE_STATUSES,
@@ -24,12 +25,12 @@ from apps.sentence_plan.models import (
 from apps.sentence_plan.services import (
     SentencePlanService,
     _lock_nodes,
-    _lock_plan,
     _route_home_realm,
     _save,
     _tenant_id,
     hall_params,
     last_refusal,
+    lock_plan,
     notify_judges,
     pardon_term,
     record_event,
@@ -44,12 +45,8 @@ LIVE_NODE_STATUSES = tuple(s for s in SentenceNodeStatus if s not in (SentenceNo
                                                                          SentenceNodeStatus.CANCELLED))
 
 
-class PlanChangeRefusedError(Exception):
-    def __init__(self, message, code, status=400, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
+class PlanChangeRefusedError(Refusal):
+    pass
 
 
 # ── 改动内容的校验 ───────────────────────────────────────────────────────
@@ -182,7 +179,7 @@ def file_request(plan, tenant, *, kind, changes, reason, user):
     # home are the home hall's rows, on its master -- not X's (`shard_saga.atomic_on_master`).
     with shard_saga.atomic_on_master(plan.tenant):
         soul = Soul.lock(plan.soul_id)
-        plan = _lock_plan(plan.pk)
+        plan = lock_plan(plan.pk)
         if kind not in SentenceRequestKind.values:
             raise PlanChangeRefusedError(f"Unknown kind {kind!r}", "invalid_kind")
         if soul.tenant_id == tenant.pk:
@@ -209,7 +206,7 @@ def request_from_amendment(judgment, plan_changes, reason):
 
     soul = Soul.lock(judgment.soul_id)
     elsewhere = transfer.plan_elsewhere(judgment.amends_plan_id)
-    plan = elsewhere or _lock_plan(judgment.amends_plan_id)
+    plan = elsewhere or lock_plan(judgment.amends_plan_id)
     if not plan_changes:
         return None
     _assert_open_for(plan, SentenceRequestKind.AMEND)
@@ -218,6 +215,16 @@ def request_from_amendment(judgment, plan_changes, reason):
         return transfer.file_amendment_request(judgment, plan, normalized, reason)
     return _create_request(plan, soul, from_tenant_code=judgment.tenant.code, kind=SentenceRequestKind.AMEND,
                            changes=normalized, reason=reason, user=None, judgment_id=judgment.pk)
+
+
+def file_amend_request_from(plan, soul, payload):
+    """The plan's hall files the AMEND request a conclusion in another civilization's hall asked for
+    (`dispatch.transfer._amendment_request`, after that commit). The caller holds the soul's and the plan's locks
+    (soul → plan); the plan is checked again here. `PlanChangeRefusedError` when it will not take it now."""
+    _assert_open_for(plan, SentenceRequestKind.AMEND)
+    return _create_request(plan, soul, from_tenant_code=payload["from_tenant_code"], kind=SentenceRequestKind.AMEND,
+                           changes=payload["changes"], reason=payload["reason"], user=None,
+                           judgment_id=payload["judgment_id"])
 
 
 # ── 决定 / 撤回 ──────────────────────────────────────────────────────────
@@ -270,7 +277,7 @@ def decide(plan, request_id, *, accept, reason, user):
 
     with transaction.atomic():
         soul = Soul.lock(plan.soul_id)
-        plan = _lock_plan(plan.pk)
+        plan = lock_plan(plan.pk)
         req = _locked_pending_request(plan, request_id)
         if req.kind == SentenceRequestKind.REOPEN:
             _assert_may_decide_reopen(plan, user)
@@ -305,7 +312,7 @@ def withdraw(plan, request_id, *, tenant, exempt, user):
     # home are the home hall's rows, on its master -- not X's (`shard_saga.atomic_on_master`).
     with shard_saga.atomic_on_master(plan.tenant):
         soul = Soul.lock(plan.soul_id)
-        plan = _lock_plan(plan.pk)
+        plan = lock_plan(plan.pk)
         req = _locked_pending_request(plan, request_id)
         allowed = exempt is True or (bool(exempt) and req.from_tenant_code in exempt) or (
             tenant is not None and tenant.code == req.from_tenant_code)
@@ -391,7 +398,7 @@ def append_cross_stops(cross):
             cross.pk, judgment.pk)
         return []
     soul = Soul.lock(found.soul_id)
-    plan = _lock_plan(found.pk)
+    plan = lock_plan(found.pk)
     nodes = _lock_nodes(plan)
     if any(n.added_by_judgment_id == judgment.pk and not n.is_home for n in nodes):
         return []
@@ -509,7 +516,7 @@ def conclude_reopened(judgment):
     from apps.realms.models import realm_by_code
 
     soul = Soul.lock(judgment.soul_id)
-    plan = _lock_plan(judgment.amends_plan_id)
+    plan = lock_plan(judgment.amends_plan_id)
     nodes = _lock_nodes(plan)
     _refuse_undecided(soul, judgment.verdict)
     if acquitted_to_rebirth(soul.home_civilization, judgment.verdict):
@@ -732,7 +739,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
         reroute(own)
         return []
 
-    plan = _lock_plan(found)
+    plan = lock_plan(found)
     nodes = _lock_nodes(plan)
     dispositions = stop_dispositions(nodes)
     executed = [(n, dispositions[n.disposition_id]) for n in nodes
@@ -838,7 +845,7 @@ def cancel(plan, *, reason, user):
         raise PlanChangeRefusedError("A reason is required to cancel a sentence plan", "reason_required")
     with transaction.atomic():
         soul = Soul.lock(plan.soul_id)
-        plan = _lock_plan(plan.pk)
+        plan = lock_plan(plan.pk)
         if plan.status not in IN_PROGRESS_PLAN_STATUSES:
             raise PlanChangeRefusedError(f"This plan is {plan.status}", "plan_closed", status=409)
         retrials = Judgment.all_objects.filter(
@@ -922,7 +929,7 @@ def retry_dispatch(plan, node_id, *, user):
 
     with transaction.atomic():
         soul = Soul.lock(plan.soul_id)
-        plan = _lock_plan(plan.pk)
+        plan = lock_plan(plan.pk)
         if plan.status == SentencePlanStatus.HELD:
             raise PlanChangeRefusedError("The plan is held on an eternal stop", "plan_held", status=409)
         if plan.status not in (SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL):

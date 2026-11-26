@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import F, Q
 
 from apps.core.models import AuditUserFields
+from apps.core.private_media import PRIVATE_MEDIA_PREFIX  # noqa: F401  re-exported
 from apps.core.soft_delete import SoftDeleteMixin
 
 
@@ -104,12 +105,6 @@ class Post(_TenantFromRequest, AuditUserFields, models.Model):
 
     def __str__(self):
         return f"Post({self.pk}) by {self.author_id}"
-
-
-#: 帖子图片存在 MEDIA_ROOT 之下、这个前缀之内。**这个前缀不公开服务**:nginx 对
-#: `/media/private/` 答 404,DEBUG 下 config/urls.py 同样挡住 —— 图片只经
-#: `GET /api/v1/social-media/<id>/`(带签名、每次重查可见性)出去。见 apps/social/media.py。
-PRIVATE_MEDIA_PREFIX = "private/"
 
 
 def _post_media_path(instance, filename):

@@ -8,6 +8,7 @@ from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin, SoulFieldRulesMixin
 from apps.core.locale import locale_from_context
 from apps.core.problems import ProblemSerializer
+from apps.core.tenant import ADMIN_ROLES
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.core.viewer import sees, viewer_tenant_id
 from apps.disposition.destination import MAX_TERM_YEARS
@@ -437,7 +438,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
         # the caller's hall by the line above.
         request = self.context.get("request")
         user = getattr(request, "user", None) if request is not None else None
-        if getattr(user, "role", None) in ("ADMIN", "SYSTEM_ADMIN") and not getattr(user, "hall_view", None):
+        if getattr(user, "role", None) in ADMIN_ROLES and not getattr(user, "hall_view", None):
             return value
         if value.current_state == SoulState.SETTLED:
             raise serializers.ValidationError(

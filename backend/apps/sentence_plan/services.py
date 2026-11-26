@@ -19,6 +19,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.sentence_plan.models import (
     IN_PROGRESS_PLAN_STATUSES,
     OCCUPYING_NODE_STATUSES,
@@ -43,7 +44,7 @@ NOT_STARTED = "NOT_STARTED"
 MAX_ADVANCE_STEPS = 4
 
 
-class CrossJudgmentOpenError(Exception):
+class CrossJudgmentOpenError(Refusal):
     """原审判挂着一场未结束的联审(Q17),或那场联审的节点内容不再通过校验。结案什么都不写。"""
 
     code = "cross_judgment_open"
@@ -51,24 +52,15 @@ class CrossJudgmentOpenError(Exception):
     #: itself asked for no workflow while the bench is still open), 409 for every other refusal.
     status = 409
 
-    def __init__(self, message, code=None, status=None):
-        super().__init__(message)
-        if code:
-            self.code = code
-        if status:
-            self.status = status
-
 
 # ── 通知与事件 ───────────────────────────────────────────────────────────
 
 
 def judges_of(tenant_ids):
     """这些租户里持有 `judgment.execute` 的在职用户。ADMIN 只算**这些租户的**(同 `return_blocked_recipients`)。"""
-    from apps.authentication.models import User
-    from apps.perm.checker import check_permission
+    from apps.perm.checker import holders
 
-    candidates = User.objects.filter(tenant_id__in=set(tenant_ids), is_active=True).order_by("pk")
-    return [u for u in candidates if check_permission(u, JUDGE_PERMISSION)]
+    return holders(tenant_ids, JUDGE_PERMISSION)
 
 
 def notify_judges(tenant_ids, kind, params, related_id, related_resource="SentencePlan"):
@@ -141,7 +133,8 @@ def soul_params(soul):
     return {"soul": soul.name, "plan_civ": soul.home_civilization}
 
 
-def _node_params(soul, node):
+def node_params(soul, node):
+    """`soul_params` plus the stop's order and hall: a stop's notice (the dispatch saga's target half uses it too)."""
     return {**soul_params(soul), "order": node.order, **hall_params([node.tenant_code])}
 
 
@@ -210,7 +203,8 @@ def in_progress_plan(soul, *, lock=False):
     return qs.first()
 
 
-def _lock_plan(plan_id):
+def lock_plan(plan_id):
+    """The plan's row lock. Order: soul → plan → node (`requests.py` header); the dispatch saga's handlers too."""
     return SentencePlan.all_objects.select_for_update(of=("self",)).get(pk=plan_id)
 
 
@@ -223,6 +217,26 @@ def _lock_nodes(plan):
 
 def _save(obj, *fields):
     obj.save(update_fields=[*fields])
+
+
+def _mark_active(node, disposition_id, at):
+    node.move(SentenceNodeStatus.ACTIVE)
+    node.disposition_id = disposition_id
+    node.activated_at = at
+    _save(node, "status", "disposition_id", "activated_at")
+
+
+def activate_dispatched_node(node_id, *, disposition_id, at):
+    """The plan's half of a stop reached across masters (`dispatch.transfer._arrive_at_plan_stop` built the
+    disposition on the target's master): DISPATCHING → ACTIVE under the plan's lock, on the plan's master.
+    A node no longer DISPATCHING is left alone (None)."""
+    found = SentenceNode.all_objects.get(pk=node_id)
+    lock_plan(found.plan_id)
+    node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
+    if node.status != SentenceNodeStatus.DISPATCHING:
+        return None
+    _mark_active(node, disposition_id, at)
+    return node
 
 
 def _leave_waiting_station(soul, node):
@@ -477,7 +491,7 @@ class SentencePlanService:
         found = SentencePlanService.node_for_disposition(disposition)
         if found is None:
             return None
-        plan = _lock_plan(found.plan_id)
+        plan = lock_plan(found.plan_id)
         node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
         if node.status != SentenceNodeStatus.ACTIVE:
             return None
@@ -505,7 +519,7 @@ class SentencePlanService:
         found = SentencePlanService.node_for_disposition(disposition)
         if found is None or not disposition.is_executed or disposition.is_eternal:
             return None
-        plan = _lock_plan(found.plan_id)
+        plan = lock_plan(found.plan_id)
         node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
         if node.status != SentenceNodeStatus.ACTIVE:
             return None
@@ -527,7 +541,7 @@ class SentencePlanService:
                 "tenant_code": node.tenant_code,
             })
             notify_judges({_tenant_id(node.tenant_code), plan.tenant_id}, "sentence_node_waiting",
-                          _node_params(soul, node), plan.pk)
+                          node_params(soul, node), plan.pk)
         else:
             node.move(SentenceNodeStatus.COMPLETED)
             node.completed_at = now
@@ -543,7 +557,7 @@ class SentencePlanService:
             "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
             "tenant_code": node.tenant_code, "status": node.status,
         })
-        notify_judges({plan.tenant_id}, "sentence_node_done", _node_params(soul, node), plan.pk)
+        notify_judges({plan.tenant_id}, "sentence_node_done", node_params(soul, node), plan.pk)
 
     # ── 搬运层 ─────────────────────────────────────────────────────────
 
@@ -554,39 +568,23 @@ class SentencePlanService:
         处置**不走** `_route_to_realm`:内容在联审(或请求)时由执行地的判官定了(Q1)。
         调用方(`DispatchService.execute`)已持有灵魂行锁。
         """
-        from apps.disposition.models import Disposition, MemoryResetMechanism
+        from apps.disposition.services import DispositionService
         from apps.events.models import EventType
-        from apps.realms.models import realm_by_code
 
         found = SentenceNode.all_objects.filter(dispatch_record_id=record.pk, is_deleted=False).first()
         if found is None:
             return None
-        plan = _lock_plan(found.plan_id)
+        plan = lock_plan(found.plan_id)
         node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
         if node.status != SentenceNodeStatus.DISPATCHING:
             return None
-        realm = realm_by_code(node.realm_code, tenant_code=node.tenant_code)
-        # 参与方没写年数的站按界域的默认刑期(2026-10-29,`default_terms`)。
-        from apps.disposition.default_terms import fill
-        disposition = Disposition.objects.create(
-            soul_id=soul.pk, tenant_id=record.target_tenant_id, destination_realm=realm,
-            sentence_years=fill(node.sentence_years, node.realm_code, is_eternal=node.is_eternal),
-            is_eternal=node.is_eternal,
-            memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
-            notes=f"受刑计划 {plan.pk} 节点 {node.order}",
-        )
-        # 行程拓扑:这一站的处置建好,灵魂就在这一站的界域里(同一事务)。
-        from apps.realms.path import SoulPathService
-        SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
-        node.move(SentenceNodeStatus.ACTIVE)
-        node.disposition_id = disposition.pk
-        node.activated_at = timezone.now()
-        _save(node, "status", "disposition_id", "activated_at")
+        disposition = DispositionService.open_for_node(soul, node, tenant_id=record.target_tenant_id)
+        _mark_active(node, disposition.pk, timezone.now())
         record_event(soul, EventType.SENTENCE_NODE_ACTIVATED, {
             "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
             "tenant_code": node.tenant_code, "disposition_id": str(disposition.pk),
         }, tenant_id=record.target_tenant_id)
-        notify_judges({record.target_tenant_id}, "sentence_node_active", _node_params(soul, node), plan.pk)
+        notify_judges({record.target_tenant_id}, "sentence_node_active", node_params(soul, node), plan.pk)
         return node
 
     @staticmethod
@@ -597,7 +595,7 @@ class SentencePlanService:
         found = SentenceNode.all_objects.filter(dispatch_record_id=record.pk, is_deleted=False).first()
         if found is None:
             return None
-        plan = _lock_plan(found.plan_id)
+        plan = lock_plan(found.plan_id)
         node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
         if node.status != SentenceNodeStatus.DISPATCHING:
             return None
@@ -608,7 +606,7 @@ class SentencePlanService:
             "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
             "tenant_code": node.tenant_code, "dispatch_id": str(record.pk), "dispatch_status": record.status,
         })
-        notify_judges({plan.tenant_id}, "sentence_node_refused", _node_params(soul, node), plan.pk)
+        notify_judges({plan.tenant_id}, "sentence_node_refused", node_params(soul, node), plan.pk)
         return node
 
     @staticmethod
@@ -620,7 +618,7 @@ class SentencePlanService:
         found = SentenceNode.all_objects.filter(dispatch_record_id=record.pk, is_deleted=False).first()
         if found is None:
             return None
-        plan = _lock_plan(found.plan_id)
+        plan = lock_plan(found.plan_id)
         node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
         if node.status not in (SentenceNodeStatus.ACTIVE, SentenceNodeStatus.WAITING, SentenceNodeStatus.ETERNAL):
             return None
@@ -667,7 +665,7 @@ class SentencePlanService:
         found = in_progress_plan(locked)
         if found is None:
             return False
-        plan = _lock_plan(found.pk)
+        plan = lock_plan(found.pk)
         if plan.status not in (SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL):
             return False
         has_open = open_judgments(locked).exists()
@@ -757,7 +755,7 @@ class SentencePlanService:
         if found is None:
             return False
         soul = Soul.lock(found[1])
-        plan = _lock_plan(found[0])
+        plan = lock_plan(found[0])
         nodes = _lock_nodes(plan)
         if (plan.status != SentencePlanStatus.ACTIVE or _holds_home_stop(nodes) or soul.is_residing
                 or open_judgments(soul).exists()):
@@ -827,37 +825,23 @@ class SentencePlanService:
     @staticmethod
     def _activate_home_node(soul, plan, node):
         """原属地的 PENDING 节点(重开审判加的,N1=(a)):按节点内容建原属处置,节点 ACTIVE。"""
-        from apps.disposition.models import Disposition, MemoryResetMechanism
+        from apps.disposition.models import Disposition
+        from apps.disposition.services import DispositionService
         from apps.events.models import EventType
         from apps.judgment.models import Judgment
-        from apps.realms.models import realm_by_code
 
-        realm = realm_by_code(node.realm_code, tenant_code=node.tenant_code)
         judgment = None
         if node.added_by_judgment_id is not None:
             candidate = Judgment.all_objects.filter(pk=node.added_by_judgment_id, tenant_id=plan.tenant_id).first()
             if candidate is not None and not Disposition.all_objects.filter(judgment=candidate).exists():
                 judgment = candidate
-        from apps.disposition.default_terms import fill
-        disposition = Disposition.objects.create(
-            soul_id=soul.pk, tenant_id=plan.tenant_id, judgment=judgment, destination_realm=realm,
-            sentence_years=fill(node.sentence_years, node.realm_code, is_eternal=node.is_eternal),
-            is_eternal=node.is_eternal,
-            memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
-            notes=f"受刑计划 {plan.pk} 节点 {node.order}",
-        )
-        # 行程拓扑:这一站的处置建好,灵魂就在这一站的界域里(同一事务)。
-        from apps.realms.path import SoulPathService
-        SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
-        node.move(SentenceNodeStatus.ACTIVE)
-        node.disposition_id = disposition.pk
-        node.activated_at = timezone.now()
-        _save(node, "status", "disposition_id", "activated_at")
+        disposition = DispositionService.open_for_node(soul, node, tenant_id=plan.tenant_id, judgment=judgment)
+        _mark_active(node, disposition.pk, timezone.now())
         record_event(soul, EventType.SENTENCE_NODE_ACTIVATED, {
             "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
             "tenant_code": node.tenant_code, "disposition_id": str(disposition.pk),
         })
-        notify_judges({plan.tenant_id}, "sentence_node_active", _node_params(soul, node), plan.pk)
+        notify_judges({plan.tenant_id}, "sentence_node_active", node_params(soul, node), plan.pk)
 
     @staticmethod
     def _dispatch(soul, plan, node):
@@ -903,4 +887,4 @@ class SentencePlanService:
             "tenant_code": node.tenant_code, "dispatch_id": None, "dispatch_status": NOT_STARTED,
         })
         notify_judges({plan.tenant_id}, "sentence_node_refused",
-                      {**_node_params(soul, node), "kind": "sentence_node_not_dispatched"}, plan.pk)
+                      {**node_params(soul, node), "kind": "sentence_node_not_dispatched"}, plan.pk)

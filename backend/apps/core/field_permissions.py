@@ -15,6 +15,7 @@ Usage:
             # Optional: specify which model name to use for FieldPermission lookup
             field_permission_model = "Soul"
 """
+from apps.core.tenant import ADMIN_ROLES
 from apps.perm.models import FieldPermission
 
 
@@ -87,7 +88,7 @@ def role_rule_sets(user, model_name):
     anonymous caller and a missing model name are never narrowed.
     """
     role = getattr(user, "role", None)
-    if not model_name or not role or role in ("ADMIN", "SYSTEM_ADMIN") or not getattr(user, "is_authenticated", False):
+    if not model_name or not role or role in ADMIN_ROLES or not getattr(user, "is_authenticated", False):
         return None
 
     from apps.perm.checker import live_extra_roles

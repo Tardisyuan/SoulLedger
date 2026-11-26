@@ -10,7 +10,7 @@ import secrets
 
 from django.utils import timezone
 
-from apps.authentication.mfa import _hash_device
+from apps.authentication.mfa import hash_device
 from apps.soul_accounts.models import DeviceLoginRevokeReason, SoulDeviceLogin
 from apps.soul_accounts.services import audit
 
@@ -18,7 +18,7 @@ from apps.soul_accounts.services import audit
 def issue(account, session=None) -> str:
     """新凭据,明文只在这里出现一次。`session`:开启时这部手机的登录会话(退出它时凭据一并失效)。"""
     raw = secrets.token_urlsafe(32)
-    SoulDeviceLogin.objects.create(account=account, credential_hash=_hash_device(raw), session=session)
+    SoulDeviceLogin.objects.create(account=account, credential_hash=hash_device(raw), session=session)
     audit("UPDATE", account.soul, "开启面容/指纹登录(这部手机)", actor=account.user, resource="device_login",
           resource_id=account.pk, changes={"device_login": [False, True]})
     return raw
@@ -26,7 +26,7 @@ def issue(account, session=None) -> str:
 
 def find(soul, raw) -> SoulDeviceLogin | None:
     """编号对应灵魂(任何一世)名下、哈希匹配的那一行。哈希对任何输入都先算(不论编号是否存在)。"""
-    digest = _hash_device(raw or "")
+    digest = hash_device(raw or "")
     if soul is None:
         return None
     return SoulDeviceLogin.objects.select_related("account").filter(
@@ -38,7 +38,7 @@ def holds(account, raw) -> bool:
     凭据放在要验证生物特征才能取出的安全存储里,持有它 = 刚刚认过面容。"""
     if not raw:
         return False
-    return SoulDeviceLogin.objects.filter(account=account, credential_hash=_hash_device(raw),
+    return SoulDeviceLogin.objects.filter(account=account, credential_hash=hash_device(raw),
                                           revoked_at__isnull=True).exists()
 
 
@@ -46,7 +46,7 @@ def revoke_all(account, reason, *, keep_credential="") -> int:
     """账号名下所有尚有效的凭据标 `reason`;`keep_credential`(明文)指向的那条留着。返回吊销条数。"""
     rows = SoulDeviceLogin.objects.filter(account=account, revoked_at__isnull=True)
     if keep_credential:
-        rows = rows.exclude(credential_hash=_hash_device(keep_credential))
+        rows = rows.exclude(credential_hash=hash_device(keep_credential))
     count = rows.update(revoked_at=timezone.now(), revoked_reason=reason)
     if count:
         audit("UPDATE", account.soul, f"面容/指纹登录失效:{DeviceLoginRevokeReason(reason).label}",
@@ -78,7 +78,7 @@ def turn_off(raw) -> bool:
     # Not `account__soul`: on control that INNER JOINs control's copy of the soul, a mirror stage 5 deletes (PREP-stage5
     # M7); `account.soul` reads it where it is.
     row = SoulDeviceLogin.objects.select_related("account__user").filter(
-        credential_hash=_hash_device(raw or ""), revoked_at__isnull=True).first()
+        credential_hash=hash_device(raw or ""), revoked_at__isnull=True).first()
     if row is None:
         return False
     account = row.account

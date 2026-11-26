@@ -5,6 +5,7 @@ from celery import shared_task
 from django.core.management import call_command
 from django.utils import timezone
 
+from apps.core.tenant import ADMIN_ROLES
 from apps.scheduler.registry import time_limits
 
 
@@ -116,15 +117,10 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     if user is None:
         return 0
 
-    from apps.perm.checker import check_permission
+    from apps.perm.checker import holders
 
     active = User.objects.filter(is_active=True).exclude(pk=user.pk)
-    recipients = (
-        [u for u in active.filter(tenant=user.tenant).exclude(role="SOUL").order_by("pk")
-         if check_permission(u, PASSWORD_HELP_CODENAME)]
-        if user.tenant_id
-        else []
-    )
+    recipients = holders([user.tenant_id], PASSWORD_HELP_CODENAME, exclude=user.pk) if user.tenant_id else []
     # 数据范围(B5):持码人的范围看不到这个人就不收(ADMIN 不受范围限制)。
     from apps.perm.data_scope import visible_to
 
@@ -132,7 +128,7 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     recipients = [r for r in recipients if visible_to(r, user, cache)]
     # An ADMIN target can only be reset by a hall-less ADMIN (`_admin_target_refusal`): telling the hall's own
     # holders of user.manage sends them to a 403 (F-ADM-04). Fall through to the global-admin fallback below.
-    if user.role in ("ADMIN", "SYSTEM_ADMIN"):
+    if user.role in ADMIN_ROLES:
         recipients = []
     if not recipients:
         from apps.core.tenant import hall_less_admins_q

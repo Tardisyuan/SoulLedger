@@ -30,8 +30,8 @@ from apps.chat.serializers import (
     MessageSentSerializer,
 )
 from apps.chat.views import ChatView
+from apps.core.private_media import serve_private_file
 from apps.core.throttling import ClientIPRateThrottle
-from apps.social.media_views import serve_private_file
 
 NOT_FOUND = svc.ChatError("找不到这张图片。", "not_found", status=404)
 

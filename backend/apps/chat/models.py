@@ -268,7 +268,7 @@ def _chat_image_path(instance, filename):
 class ChatImage(models.Model):
     """书信里的一张图(2026-10-10)。**图片本身不在 Synapse**:消息事件里只有 `{id, width, height}`
     这个引用(`io.soulledger.image`,正文是「[图片]」,老客户端照常显示一行字),文件在我们自己的存储里,
-    与朋友圈帖子图片同一条校验与重编码(`apps/social/images.py`)。
+    与朋友圈帖子图片同一条校验与重编码(`apps/core/images.py`)。
 
     **谁能取到由这一行决定,不由事件里写了什么决定**:只有 `conversation` 的参与方(灵魂:这一世的账号;
     收件箱:有 `soul_inbox.read` 且在收件殿司里的官员)取得到,别的会话的 id 拿在手里也是 404。

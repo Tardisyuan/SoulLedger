@@ -36,7 +36,7 @@ TWO THINGS THAT LOOK LIKE OVERSIGHTS AND ARE NOT:
   behaviour is identical on both backends.
 """
 
-ADMIN_ROLE = "ADMIN"
+from apps.core.tenant import ADMIN_ROLE, ADMIN_ROLES  # noqa: F401  ADMIN_ROLE: re-exported
 
 
 def is_menu_admin(user) -> bool:
@@ -46,7 +46,7 @@ def is_menu_admin(user) -> bool:
     attribute, and the same mistake in ``apps/core/mixins.py`` used to raise
     ``AttributeError`` before its own guard was added.
     """
-    return getattr(user, "role", None) in (ADMIN_ROLE, "SYSTEM_ADMIN")
+    return getattr(user, "role", None) in ADMIN_ROLES
 
 
 def menu_is_visible_to(menu, user) -> bool:

@@ -128,7 +128,7 @@ def _derive_path(model):
 
 
 @cache
-def _by_label():
+def by_label():
     """label_lower -> (placement, tenant path), derived once from the CURRENT models, auto-created M2M
     through tables included. Looked up by label so a historical model (what a migration's RunPython,
     `allow_migrate` and `placed_here` receive) is placed like the live one: an identity check against
@@ -143,20 +143,20 @@ def _by_label():
 def placement_of(app_label, model_name):
     """Placement by name, the way `allow_migrate(db, app_label, model_name)` is asked. A model no
     longer in the code is CONTROL: it can only have been created and dropped on the control database."""
-    return _by_label().get(f"{app_label}.{model_name}".lower(), (CONTROL, None))[0]
+    return by_label().get(f"{app_label}.{model_name}".lower(), (CONTROL, None))[0]
 
 
 @cache
 def app_has_shard_tables(app_label):
     """Whether any current model of the app is SHARD or REFERENCE, i.e. has a table on a shard."""
     prefix = f"{app_label}.".lower()
-    return any(k.startswith(prefix) and p != CONTROL for k, (p, _) in _by_label().items())
+    return any(k.startswith(prefix) and p != CONTROL for k, (p, _) in by_label().items())
 
 
 def tenant_path(model):
     """ORM lookup from `model` to its owning Tenant ("tenant", "soul__tenant", ...), or None.
     Live and historical models alike (resolved by label)."""
-    return _by_label().get(model._meta.label_lower, (CONTROL, None))[1]
+    return by_label().get(model._meta.label_lower, (CONTROL, None))[1]
 
 
 def placement(model):
@@ -165,14 +165,14 @@ def placement(model):
 
 def alias_for_civilization(civ):
     """Database alias of a civilization's shard: CHINESE -> "civ_chinese". UNKNOWN has none (D2)."""
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return f"civ_{Civilization(civ).value.lower()}"
 
 
 def civilization_aliases():
     """Every civilization's shard alias, configured or not, sorted: derived from `Civilization`."""
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return sorted(alias_for_civilization(c) for c in Civilization.values)
 
@@ -186,7 +186,7 @@ def shard_aliases():
 def cut_civilizations():
     """The civilizations whose rows live on their own shard: every one while `settings.SHARDED`, none otherwise
     (config/settings.py: the aliases decide; the per-civilization switches of stages 3-5 are gone)."""
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return list(Civilization.values) if settings.SHARDED else []
 

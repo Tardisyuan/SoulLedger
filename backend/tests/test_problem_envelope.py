@@ -166,6 +166,26 @@ def test_a_raised_problem_keeps_its_extension_types():
     assert response.data["term_end"] == {"year": 2029}
 
 
+def test_an_uncaught_refusal_is_answered_as_its_own_problem():
+    """A service's `Refusal` reaching the handler answers exactly what the views' `except` blocks used to build:
+    `problem(exc.status, exc.code, str(exc), **exc.extra)`, with the subclass's default status."""
+    from apps.core.problems import Refusal
+    from apps.judgment.city_gods import NoCityGodError
+    from apps.judgment.claims import ClaimRefusedError
+
+    response = _handled(ClaimRefusedError("Someone else holds it.", "not_claimant", claimed_by=7))
+    assert response.status_code == 409 and response.content_type == CONTENT_TYPE
+    assert response.data == body(409, "not_claimant", "Someone else holds it.", claimed_by=7)
+
+    bare = _handled(Refusal()).data
+    assert (bare["status"], bare["code"]) == (400, "bad_request") and "detail" not in bare
+
+    # A refusal that is also an APIException keeps DRF's answer: its message, not the repr of its `detail` dict.
+    held = _handled(NoCityGodError())
+    assert (held.status_code, held.data["code"]) == (409, "no_city_god")
+    assert held.data["detail"].startswith("No city god of this hall")
+
+
 @pytest.mark.django_db
 def test_instance_is_the_request_id(api_client):
     response = api_client.get("/api/v1/souls/", HTTP_X_REQUEST_ID="abcdef0123456789")

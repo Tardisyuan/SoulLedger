@@ -181,7 +181,7 @@ def claim_open_case(soul_pk, judgment_pk, tenant_id):
     from apps.tenants.models import OpenCaseClaim
 
     claims = OpenCaseClaim.objects.using(CONTROL_ALIAS)
-    # A test case's own wrapping transaction is not the code's (`shard_reads._code_transaction_open` reads them alike).
+    # A test case's own wrapping transaction is not the code's (`shard_reads.code_transaction_open` reads them alike).
     autocommit = all(b._from_testcase for b in connections[CONTROL_ALIAS].atomic_blocks)
     case_txn = _case_txn(write_alias_of(Judgment(tenant_id=tenant_id)))
     for _ in range(2):

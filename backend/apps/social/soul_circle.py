@@ -28,6 +28,8 @@ from django.db import transaction
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
+from apps.core.problems import Refusal
+from apps.core.tenant import SOUL_ROLE
 from apps.social import interactions
 from apps.social.models import (
     Comment,
@@ -42,17 +44,11 @@ from apps.social.models import (
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
 
-SOUL_ROLE = "SOUL"
 
-
-class SocialError(Exception):
+class SocialError(Refusal):
     """业务拒绝。`code` 给 App 分支用,`status` 给视图选状态码。"""
 
-    def __init__(self, message, code, status=409, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
+    status = 409
 
 
 def _not_found():

@@ -1,8 +1,8 @@
 """案卷附件:校验、存盘、删除规则、访问判定、签名地址(2026-10-15,Design 第二十八批 W4)。
 
 **与朋友圈图片、书信图片同一条路**:同一个 `private/` 前缀(nginx 与 DEBUG 路由都不公开)、同一种签名短时
-地址、同一个文件出口写法(`apps/social/media_views.serve_private_file`)、图片同一个重编码函数
-(`apps/social/images.reencode`:魔数 + Pillow 解码 + 去 EXIF/GPS)。客户端说的文件名、Content-Type 一概不信:
+地址、同一个文件出口写法(`apps/core/private_media.serve_private_file`)、图片同一个重编码函数
+(`apps/core/images.reencode`:魔数 + Pillow 解码 + 去 EXIF/GPS)。客户端说的文件名、Content-Type 一概不信:
 只看文件头的魔数,PDF 认 `%PDF-`,图片认 PNG / JPEG。
 
 **HEIC 收,存成 JPG**(2026-10-15):`pillow-heif` 在 `SocialConfig.ready` 注册,`images.reencode` 负责转换。
@@ -20,8 +20,9 @@ from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
+from apps.core import images
+from apps.core.problems import Refusal
 from apps.judgment.models import CaseAttachment, Judgment
-from apps.social import images as social_images
 
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_TOTAL_BYTES = 100 * 1024 * 1024
@@ -36,13 +37,8 @@ MAX_EDGE = 10000
 PDF_CONTENT_TYPE = "application/pdf"
 
 
-class AttachmentError(Exception):
+class AttachmentError(Refusal):
     """`code` 给前端分支用:bad_type / too_large / case_full / too_many / concluded / not_uploader。"""
-
-    def __init__(self, message, code, status):
-        super().__init__(message)
-        self.code = code
-        self.status = status
 
 
 def live(judgment):
@@ -77,11 +73,11 @@ def _prepare(uploaded_file):
     uploaded_file.seek(0)
     if head.startswith(b"%PDF-"):
         return uploaded_file, PDF_CONTENT_TYPE, "pdf"
-    if social_images.sniff_format(head) not in ("PNG", "JPEG", "HEIF"):  # WebP、GIF……不收
+    if images.sniff_format(head) not in ("PNG", "JPEG", "HEIF"):  # WebP、GIF……不收
         raise _bad_type()
     try:
-        image = social_images.reencode(uploaded_file, max_edge=MAX_EDGE, max_bytes=MAX_FILE_BYTES)
-    except social_images.ImageRejectedError as exc:
+        image = images.reencode(uploaded_file, max_edge=MAX_EDGE, max_bytes=MAX_FILE_BYTES)
+    except images.ImageRejectedError as exc:
         raise (_bad_type() if exc.code == "not_an_image" else
                AttachmentError(str(exc), "too_large", 400)) from None
     return image.file, image.content_type, image.extension
@@ -167,9 +163,9 @@ def may_view(user, attachment, tenant_id=None):
     签发地址与文件出口用的是同一个判定。"""
     if user is None or not user.is_authenticated or not user.is_active or attachment.deleted_at is not None:
         return False
+    from apps.core.tenant import SOUL_ROLE
     from apps.perm.checker import check_permission
     from apps.social.media import as_request
-    from apps.social.soul_circle import SOUL_ROLE
 
     if getattr(user, "role", None) == SOUL_ROLE:
         return False

@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from apps.core.problems import ProblemSerializer, problem
 from apps.judgment import ai_statutes, ai_verdict, claims
 from apps.judgment.models import Verdict
-from apps.soul_assist.views import OfficerAssistThrottle
+from apps.soul_assist.throttles import OfficerAssistThrottle
 
 
 def _lang(request):

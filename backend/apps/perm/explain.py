@@ -107,7 +107,9 @@ def _denial(user, codename):
 
 def _visible(request, object_type, object_id):
     viewset, _ = _viewsets()[object_type]
-    qs = viewset(request=request, action="retrieve", kwargs={}, format_kwarg=None).get_queryset()
+    from apps.core.viewsets import scoped_queryset
+
+    qs = scoped_queryset(viewset, request, "retrieve")
     try:
         return qs.filter(pk=object_id).exists()
     except (ValueError, TypeError, DjangoValidationError):  # 形状不对的 id(uuid 列收到数字串)= 看不到

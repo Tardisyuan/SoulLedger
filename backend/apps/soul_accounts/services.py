@@ -23,6 +23,8 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.core.problems import Refusal
+from apps.core.tenant import SOUL_ROLE
 from apps.soul_accounts.delivery import pick_delivery
 from apps.soul_accounts.models import (
     SECRET_BEARING_STATUSES,
@@ -35,7 +37,6 @@ from apps.soul_accounts.models import (
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-SOUL_ROLE = "SOUL"
 INITIAL_PASSWORD_TTL = timedelta(hours=72)
 #: 去掉 0/O/1/I/L,人照着纸抄不会抄错。
 SOUL_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
@@ -80,13 +81,10 @@ def soul_code_for_email(email):
     return account.soul.soul_code
 
 
-class SoulAccountError(Exception):
+class SoulAccountError(Refusal):
     """业务拒绝。`code` 给 App 做分支用,`status` 给视图选状态码。"""
 
-    def __init__(self, message, code, status=409):
-        super().__init__(message)
-        self.code = code
-        self.status = status
+    status = 409
 
 
 # ── 审计 ─────────────────────────────────────────────────────────────────
@@ -129,7 +127,7 @@ def _ensure_soul_code(soul):
 
     编号先在控制库的登记表里占号,再写灵魂行(分库阶段 4,`apps/tenants/global_codes.py`):行在控制库时
     两步同一个事务(写失败,占号一起回滚);行在分库时占号在控制库先提交,分库写失败留下空号,不复用。"""
-    from apps.core.shard_reads import _refuse_outside
+    from apps.core.shard_reads import refuse_outside
     from apps.souls.models import Soul
     from apps.tenants import global_codes
 
@@ -138,7 +136,7 @@ def _ensure_soul_code(soul):
     # commit the code before the caller's transaction and survive its rollback (the home hall provisioning its soul
     # residing abroad: 423 `write_elsewhere`, yet the code stayed on the residence's row -- real PG only).
     if not soul.soul_code:
-        _refuse_outside(alias)
+        refuse_outside(alias)
     while not soul.soul_code:
         code = _new_soul_code()
         try:
@@ -619,13 +617,6 @@ def _void_mfa_devices(account):
     from apps.soul_accounts import mfa
 
     mfa.void_devices(account)
-
-
-def _revoke_refresh_tokens(user):
-    from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-
-    for token in OutstandingToken.objects.filter(user=user, blacklistedtoken__isnull=True):
-        BlacklistedToken.objects.get_or_create(token=token)
 
 
 # ── 转世 ─────────────────────────────────────────────────────────────────

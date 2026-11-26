@@ -16,15 +16,12 @@ from apps.events.models import EventType, SoulEvent  # SoulEvent: read only (rec
 
 
 def _holders(tenants, codename):
-    """这些殿里持 `codename` 的在职官员。调拨 / 联审通知只发给他们(RBAC 严查 2026-10-29 M1):
-    此前发给殿里全部 is_active User —— 含每个灵魂账号(`tenant=原属殿`)和不持 `dispatch.read`
-    的 JUDGE / VIEWER(调拨视图对他们 403,通知却带着灵魂名与理由)。
-    `check_permission` 对 SOUL 恒假、对 ADMIN 恒真;与 `return_blocked_recipients` 同一口径。"""
-    from apps.authentication.models import User
-    from apps.perm.checker import check_permission
+    """这些殿里持 `codename` 的在职官员(`apps.perm.checker.holders`)。调拨 / 联审通知只发给他们(RBAC 严查
+    2026-10-29 M1):此前发给殿里全部 is_active User —— 含每个灵魂账号(`tenant=原属殿`)和不持 `dispatch.read`
+    的 JUDGE / VIEWER(调拨视图对他们 403,通知却带着灵魂名与理由)。与 `return_blocked_recipients` 同一口径。"""
+    from apps.perm.checker import holders
 
-    users = User.objects.filter(tenant__in=tenants, is_active=True).exclude(role="SOUL").order_by("pk")
-    return [u for u in users if check_permission(u, codename)]
+    return holders(tenants, codename)
 
 
 def _notify_localized(users, notification_type, params, record_id):
@@ -951,17 +948,12 @@ class DispatchService:
         `judgment.execute` 的在职官员(判官)。
         ADMIN 经 `check_permission` 的旁路自然在内,但**只限这两个租户的** ADMIN。
         灵魂账号(role=SOUL)`check_permission` 恒为 False,不收 —— 用户明确不推给灵魂。"""
-        from apps.authentication.models import User
-        from apps.perm.checker import check_permission
+        from apps.perm.checker import holders
 
-        candidates = User.objects.filter(
-            tenant_id__in={soul.home_tenant_id, soul.tenant_id}, is_active=True,
-        ).order_by("pk")
-        return [
-            u for u in candidates
-            if check_permission(u, DispatchService.RETURN_BLOCKED_PERMISSION)
-            or (u.tenant_id == soul.tenant_id and check_permission(u, DispatchService.RETURN_BLOCKED_CASE_PERMISSION))
-        ]
+        readers = holders({soul.home_tenant_id, soul.tenant_id}, DispatchService.RETURN_BLOCKED_PERMISSION)
+        judges = holders([soul.tenant_id], DispatchService.RETURN_BLOCKED_CASE_PERMISSION)
+        by_pk = {u.pk: u for u in (*readers, *judges)}
+        return [by_pk[pk] for pk in sorted(by_pk)]
 
     @staticmethod
     def _notify_return_blocked(soul, dispatch_id, open_count):

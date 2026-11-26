@@ -76,10 +76,6 @@ def _refuse_outcome(outcome: dict):
     return _refuse(code, status.HTTP_400_BAD_REQUEST, **rest)
 
 
-def _error(exc: svc.SoulAccountError):
-    return problem(exc.status, exc.code, str(exc))
-
-
 def _client_ip(request):
     from apps.core.client_ip import get_client_ip
 
@@ -154,7 +150,7 @@ class SoulMfaVerifyView(APIView):
         LoginLog.objects.create(user=account.user, username=username, status="SUCCESS", ip_address=ip,
                                 user_agent=agent, method=method)
         tokens = svc.complete_login(account, request=request, method=method,
-                                    trust_hash=mfa.core._hash_device(device_token) if device_token else "",
+                                    trust_hash=mfa.core.hash_device(device_token) if device_token else "",
                                     device_login=mfa.pending_device_login_id(data["pending_token"]))
         payload = {
             **tokens,
@@ -188,10 +184,7 @@ class MeMfaSetupView(SoulAPIView):
         refusal = confirm_current_password(request, self.account, body.validated_data["password"])
         if refusal is not None:
             return refusal
-        try:
-            secret, url = mfa.begin_setup(self.account)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        secret, url = mfa.begin_setup(self.account)
         return Response({"secret": secret, "otpauth_url": url})
 
     @extend_schema(request=None, responses={204: OpenApiResponse(description="已作废")})
@@ -207,10 +200,7 @@ class MeMfaConfirmView(SoulAPIView):
     def post(self, request):
         body = SoulMfaCodeRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            outcome, codes = mfa.confirm_setup(self.account, body.validated_data["code"], request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        outcome, codes = mfa.confirm_setup(self.account, body.validated_data["code"], request=request)
         if outcome != "ok":
             return _refuse(outcome, status.HTTP_400_BAD_REQUEST)
         return Response({"recovery_codes": codes})
@@ -228,11 +218,8 @@ class MeMfaRecoveryCodesView(SoulAPIView):
         body = SoulMfaDisableRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        try:
-            outcome, codes = mfa.regenerate_recovery_codes(
-                self.account, method=data["method"], code=data.get("code", ""), request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        outcome, codes = mfa.regenerate_recovery_codes(
+            self.account, method=data["method"], code=data.get("code", ""), request=request)
         if outcome["code"] != "ok":
             return _refuse_outcome(outcome)
         return Response({"recovery_codes": codes})
@@ -246,10 +233,7 @@ class MeMfaDisableView(SoulAPIView):
         body = SoulMfaTurnOffRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        try:
-            outcome = mfa.disable(self.account, method=data["method"], code=data["code"], request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        outcome = mfa.disable(self.account, method=data["method"], code=data["code"], request=request)
         if outcome["code"] != "ok":
             return _refuse_outcome(outcome)
         return Response(mfa.status_of(self.account))

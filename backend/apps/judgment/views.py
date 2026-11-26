@@ -4,8 +4,6 @@ REST views for Judgment app.
 import uuid
 
 from django.db.models import Case, Count, IntegerField, Q, Value, When
-from django.utils import timezone
-from django_filters import rest_framework as filters
 from django_filters.utils import translate_validation
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -28,19 +26,27 @@ from apps.core.request_local import clear_current_user, set_current_request, set
 from apps.core.shard_search import ShardSearchFilter
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
+from apps.disposition.destination import destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
 from apps.judgment import attachments as _attachments  # noqa: F401  (注册 post_delete 收文件的接收器)
 from apps.judgment import claims, sources, verdict_pdf, weighing
 from apps.judgment.ai_views import JudgmentAIActionsMixin
 from apps.judgment.attachment_views import CaseAttachmentActionsMixin
-from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.confession_views import NegativeConfessionActionsMixin
-from apps.judgment.fail_reasons import FailReasonRefusedError
-from apps.judgment.models import AT_CITY_GOD, OPEN_Q, Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
+from apps.judgment.models import Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
 from apps.judgment.precedents import precedents_for
+from apps.judgment.queue import (  # noqa: F401  re-exported: dossier, officer assistant, tests
+    PENDING,
+    RETURNED,
+    JudgmentFilter,
+    citing_judgments,
+    group_q,
+    queue_counts_of,
+    source_counts_of,
+    visible_judgments,
+)
 from apps.judgment.serializers import (
     AssignableOfficerSerializer,
     EvidenceRulingResultSerializer,
@@ -72,7 +78,6 @@ from apps.judgment.serializers import (
     JudgmentReassignRequestSerializer,
     JudgmentReassignSerializer,
     JudgmentSerializer,
-    QueueGroup,
     StatuteSerializer,
 )
 from apps.judgment.services import (
@@ -93,145 +98,13 @@ from apps.ledger.services import LedgerService
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
-from apps.sentence_plan.requests import PlanChangeRefusedError
-from apps.sentence_plan.services import CrossJudgmentOpenError
 from apps.souls.serializers import SoulSerializer
-from apps.workflow.segments import SegmentRefusedError
 
 #: Upper bound on how many ids a caller may ask us to skip in one request.
 #: The skip set is session state the *client* holds (see `next_pending`), so
 #: it arrives on every poll and would otherwise grow without limit into the
 #: `NOT IN (...)` clause. 200 is well past any single sitting at a queue.
 QUEUE_SKIP_LIMIT = 200
-
-
-#: 「未结案」在队列里的定义。与 `_pending_queue` 同一组列,写一次。
-#: 还在城隍那里初审的不算 —— 解送之前十殿看不到它(apps/judgment/city_gods.py)。
-PENDING = OPEN_Q & ~Q(city_god_status__in=AT_CITY_GOD)
-
-
-#: 「退回重审」(v4 `queue.tab.returned`):判官判了 RETRY、另开的那一件(`weighing.open_retrial`)。
-#: 天平摇摆的再称、审批流驳回后的重开不算 —— 那两种不是判官退回的。
-RETURNED = Q(retrial_of__verdict="RETRY")
-
-
-def group_q(group: str, user) -> Q:
-    """一个队列组的谓词(不含 `PENDING`)。四个组互斥:暂缓优先,其余按认领人分。"""
-    not_deferred = Q(deferred_at__isnull=True)
-    if group == QueueGroup.MINE:
-        return not_deferred & Q(claimed_by=user)
-    if group == QueueGroup.UNCLAIMED:
-        return not_deferred & Q(claimed_by__isnull=True)
-    if group == QueueGroup.OTHERS:
-        return not_deferred & Q(claimed_by__isnull=False) & ~Q(claimed_by=user)
-    if group == QueueGroup.DEFERRED:
-        return Q(deferred_at__isnull=False)
-    raise ValueError(group)
-
-
-class JudgmentFilter(filters.FilterSet):
-    """Custom filter for Judgment - handles verdict=null for pending judgments."""
-    has_verdict = filters.BooleanFilter(field_name="verdict", lookup_expr="isnull", exclude=True)
-    verdict_null = filters.BooleanFilter(field_name="verdict", lookup_expr="isnull")
-    # 队列分组。**隐含「未结案」**:「待认领」问的是还有谁没人办,一件已结案、认领人
-    # 为空的旧案子不在其中。
-    group = filters.ChoiceFilter(choices=QueueGroup.CHOICES, method="filter_group")
-    # 殿。`court` 是自由文本列(「第一殿」),按原值精确匹配。
-    court = filters.CharFilter(field_name="court", lookup_expr="exact")
-    # 引用了这条律条的判决(语料页「被引用」清单)。与 `StatuteViewSet` 的
-    # `citation_count` 同一口径:存活的引用行,落在调用者看得见的判决上。
-    statute = filters.UUIDFilter(method="filter_statute")
-    # 滞留(`stale_since` 非空,定时任务盖的章)。`?stale=true` 只要滞留的,`false` 排除它们。
-    stale = filters.BooleanFilter(field_name="stale_since", lookup_expr="isnull", exclude=True)
-    # v4 队列:「已过期限」(D10,`apps/judgment/deadline.py`,待定中的不算)与「退回重审」(`RETURNED`)。
-    # 两者都隐含「未结案」。
-    overdue = filters.BooleanFilter(method="filter_overdue")
-    returned = filters.BooleanFilter(method="filter_returned")
-    # 案卷台的来源(`apps/judgment/sources.py`)。不隐含「未结案」:来源是行本身的属性;案卷台总是同时带 `group`。
-    source = filters.ChoiceFilter(choices=sources.CHOICES, method="filter_source")
-    # 有人请求改派、还没批的(`reassign_requested_at` 非空;认领人一变服务端就清掉)。隐含「未结案」。
-    # 网页待办条「改派请求」一格与它链到的队列同一个口径。
-    reassign_requested = filters.BooleanFilter(method="filter_reassign_requested")
-
-    class Meta:
-        model = Judgment
-        fields = ["soul", "civilization", "verdict", "is_final"]
-
-    def filter_group(self, queryset, name, value):
-        return queryset.filter(PENDING & group_q(value, self.request.user))
-
-    def filter_overdue(self, queryset, name, value):
-        from apps.judgment import deadline
-
-        q = deadline.overdue_q(queryset)
-        pending = deadline.with_due_base(queryset.filter(PENDING))
-        return pending.filter(q) if value else pending.exclude(q)
-
-    def filter_returned(self, queryset, name, value):
-        pending = queryset.filter(PENDING)
-        return pending.filter(RETURNED) if value else pending.exclude(RETURNED)
-
-    def filter_reassign_requested(self, queryset, name, value):
-        pending = queryset.filter(PENDING)
-        asked = Q(reassign_requested_at__isnull=False)
-        return pending.filter(asked) if value else pending.exclude(asked)
-
-    def filter_source(self, queryset, name, value):
-        return queryset.filter(sources.q(value, queryset))
-
-    def filter_statute(self, queryset, name, value):
-        return queryset.filter(pk__in=citing_judgments(value))
-
-
-def citing_judgments(statute_id):
-    """Judgment ids with a live citation of this article — the list side of the
-    corpus's 「被引用 N 件」. `StatuteViewSet.get_queryset` counts the same rows."""
-    from apps.judgment.models import JudgmentCitation
-
-    return JudgmentCitation.all_objects.filter(statute_id=statute_id, is_deleted=False).values("judgment_id")
-
-
-def queue_counts_of(queryset, user) -> dict:
-    """`total` 加四个组各几件,加案卷台的三个来源(`sources`),一条查询。`queryset` 已收窄到未结案件与调用者的范围。
-    `queue_counts` 与官员助手的 `judgment_queue_counts` 工具(apps/soul_assist/officer_tools.py)共用。"""
-    from apps.judgment import deadline
-
-    counts = sources.annotate(deadline.with_due_base(queryset)).aggregate(
-        total=Count("pk"),
-        **{group: Count("pk", filter=group_q(group, user)) for group, _label in QueueGroup.CHOICES},
-        # v4 队列的两个标签(与 `?overdue=` / `?returned=` 同一谓词;与四个组不互斥)。
-        overdue=Count("pk", filter=deadline.overdue_q(queryset)),
-        returned=Count("pk", filter=RETURNED),
-        # 第六十三批 二 f:「待认领」里此刻谁都认领不了的(`claims.held_q`,与认领的拒绝同一条规则)。
-        # 组头读 `claimable_count`,组尾「候着的 · N」读 `held_count`;两者相加等于 `unclaimed`。
-        held_count=Count("pk", filter=group_q(QueueGroup.UNCLAIMED, user) & claims.held_q(timezone.localdate(), queryset)),
-        **_source_aggregates(),
-    )
-    counts["claimable_count"] = counts[QueueGroup.UNCLAIMED] - counts["held_count"]
-    counts["sources"] = _pop_sources(counts)
-    return counts
-
-
-def source_counts_of(queryset) -> dict:
-    """案卷台三个来源各几件(`apps/judgment/sources.py`);互斥,相加等于这个查询集的件数。"""
-    return _pop_sources(sources.annotate(queryset).aggregate(**_source_aggregates()))
-
-
-def _source_aggregates() -> dict:
-    return {f"source_{value}": Count("pk", filter=Q(queue_source=value)) for value in sources.VALUES}
-
-
-def _pop_sources(counts) -> dict:
-    return {value: counts.pop(f"source_{value}") for value in sources.VALUES}
-
-
-def visible_judgments(request):
-    """The judgments this caller's judgment LIST would show — tenant scope,
-    residence reads and row-level DataScope, by running the list's own
-    `get_queryset` rather than restating it. `citation_count` counts inside
-    this set so the count and `?statute=` list cannot disagree."""
-    view = JudgmentViewSet(request=request, action="list", kwargs={}, format_kwarg=None)
-    return view.get_queryset().values("pk")
 
 
 class NotesOnOpenCaseError(APIException):
@@ -965,10 +838,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         在这里就是 404,根本到不了行锁。
         """
         judgment = self.get_object()
-        try:
-            updated = run(judgment.pk)
-        except ClaimRefusedError as exc:
-            return problem(exc.status, **exc.as_payload())
+        updated = run(judgment.pk)
         return Response(JudgmentSerializer(
             self.get_queryset().get(pk=updated.pk), context=self.get_serializer_context()
         ).data)
@@ -1186,13 +1056,10 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             return problem(status.HTTP_404_NOT_FOUND, "not_found", "Some judgments were not found.", missing=missing)
 
         target = self._assignee(data["to"]) if operation == "reassign" else None
-        try:
-            done = claims.batch(
-                ids, operation, request.user,
-                target=target, reason=data.get("reason", ""), may_override=override,
-            )
-        except ClaimRefusedError as exc:
-            return problem(exc.status, **exc.as_payload())
+        done = claims.batch(
+            ids, operation, request.user,
+            target=target, reason=data.get("reason", ""), may_override=override,
+        )
         return Response({"operation": operation, "count": len(done), "ids": [str(j.pk) for j in done]})
 
     @extend_schema(
@@ -1577,10 +1444,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         another hall's case is a 404 like any other.
         """
         judgment = self.get_object()
-        try:
-            retrial = weighing.withdraw_conclusion(judgment, request.user)
-        except WeighingRefusedError as exc:
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
+        retrial = weighing.withdraw_conclusion(judgment, request.user)
         return Response(JudgmentSerializer(retrial, context=self.get_serializer_context()).data,
                         status=status.HTTP_201_CREATED)
 
@@ -1629,6 +1493,9 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         statute_ids = serializer.validated_data.get("statute_ids") or []
         plan_changes = serializer.validated_data.get("plan_changes") or None
 
+        # The fail-reason, claim, weighing, destination, plan-change, cross-judgment and node-pick refusals are
+        # `Refusal`s raised inside the conclusion's transaction: nothing is written, and the exception handler
+        # answers each with its own status, code and facts (`apps/core/problems.py`).
         try:
             judgment.conclude(
                 verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids,
@@ -1644,36 +1511,10 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
                 greek_curability=serializer.validated_data.get("greek_curability", ""),
                 require_fail_reason=True,  # 只有结案接口要求理由(v4 D6);进程内的服务调用不要求
             )
-        except FailReasonRefusedError as exc:
-            # v4 D6 / D7 / D8:理由或希腊标记缺了或不成立(fail_reason_required / fail_reason_invalid /
-            # fail_reason_not_selectable / fail_reason_not_failed / fail_reason_note_required /
-            # fail_reason_note_too_long / fail_reason_contradicts_record / greek_account_required /
-            # curability_required / greek_mark_not_applicable)。什么都没写。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
-        except ClaimRefusedError as exc:
-            # 409 `claimed_by_other`:别人认领的案子,只有认领人或持 judgment.assign 的人(默认 ADMIN)能结。什么都没写。
-            return problem(exc.status, **exc.as_payload())
-        except WeighingRefusedError as exc:
-            # 埃及:裁决与天平不符(`verdict_contradicts_weighing`,带天平给的裁决),或天平摇摆却选了去处。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
-        except DestinationRefusedError as exc:
-            # 「戊 · 发落」选的门或刑期不成立。什么都没写(同一事务)。
-            return problem(exc.status, exc.code, str(exc))
-        except PlanChangeRefusedError as exc:
-            # 加减项 / 重开审判结案时对计划的改动被拒:什么都没写(同一事务)。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except CitationRefusedError as exc:
             if exc.code:  # `statute_retired` (F-JUDG-13): 409 with the retired articles named
                 return problem(exc.status, exc.code, str(exc), **exc.extra)
             return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
-        except CrossJudgmentOpenError as exc:
-            # Q17:挂着的联审的节点内容不再通过校验(409),或联审没结束而请求说不生成审批流程(400
-            # `workflow_required`,第四十三批)。什么都没写。
-            return problem(exc.status, exc.code, str(exc))
-        except SegmentRefusedError as exc:
-            # 选站:跳过了终审(`final_required`)、还有来源要走的驳回目标(`jump_target_required`)
-            # 或模板里没有的站(`unknown_node`)。什么都没写。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except JudgmentNotConcludableError as exc:
             # The soul cannot make the move a conclusion requires — it is not
             # under judgment. This used to be **silent**: `transition_to`'s

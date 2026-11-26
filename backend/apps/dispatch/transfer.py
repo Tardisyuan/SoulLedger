@@ -230,34 +230,23 @@ handler(EXECUTE, done=_executed, refused=_not_executed, moves=True)(_arrive)
 def _arrive_at_plan_stop(soul, record):
     """The target's half of `SentencePlanService.on_dispatch_executed`: the stop's disposition, station and event
     here; the node itself is the plan's (the home hall's) row, activated there (PLAN_NODE)."""
-    from apps.disposition.default_terms import fill
-    from apps.disposition.models import Disposition, MemoryResetMechanism
+    from apps.disposition.services import DispositionService
     from apps.events.models import EventType
-    from apps.realms.models import realm_by_code
-    from apps.realms.path import SoulPathService
     from apps.sentence_plan.models import SentenceNode, SentenceNodeStatus
-    from apps.sentence_plan.services import _node_params, notify_judges, record_event
+    from apps.sentence_plan.services import node_params, notify_judges, record_event
 
     node = SentenceNode.all_objects.filter(dispatch_record_id=record.pk, is_deleted=False).first()
     if node is None or node.status != SentenceNodeStatus.DISPATCHING:
         return
-    realm = realm_by_code(node.realm_code, tenant_code=node.tenant_code)
-    # `soul=` the arrived row itself: until step 3 the source still holds a primary-looking row, and a read of
+    # The arrived row itself: until step 3 the source still holds a primary-looking row, and a read of
     # `disposition.soul` (its save stamps the life index) would find two.
-    disposition = Disposition.objects.create(
-        soul=soul, tenant_id=record.target_tenant_id, destination_realm=realm,
-        sentence_years=fill(node.sentence_years, node.realm_code, is_eternal=node.is_eternal),
-        is_eternal=node.is_eternal,
-        memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
-        notes=f"受刑计划 {node.plan_id} 节点 {node.order}",
-    )
-    SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
+    disposition = DispositionService.open_for_node(soul, node, tenant_id=record.target_tenant_id)
     at = timezone.now()
     record_event(soul, EventType.SENTENCE_NODE_ACTIVATED, {
         "sentence_plan_id": str(node.plan_id), "node_id": str(node.pk), "order": node.order,
         "tenant_code": node.tenant_code, "disposition_id": str(disposition.pk),
     }, tenant_id=record.target_tenant_id)
-    notify_judges({record.target_tenant_id}, "sentence_node_active", _node_params(soul, node), node.plan_id)
+    notify_judges({record.target_tenant_id}, "sentence_node_active", node_params(soul, node), node.plan_id)
     values = {"node_id": str(node.pk), "disposition_id": str(disposition.pk), "at": at.isoformat()}
     plan_hall = node.plan.tenant
     if saga.crosses(record.target_tenant, plan_hall):
@@ -274,18 +263,10 @@ def _activate_node(payload):
     """The plan's half: the stop's node DISPATCHING -> ACTIVE, under the plan's lock, on the plan's master."""
     from django.utils.dateparse import parse_datetime
 
-    from apps.sentence_plan.models import SentenceNode, SentenceNodeStatus
-    from apps.sentence_plan.services import _lock_plan, _save
+    from apps.sentence_plan.services import activate_dispatched_node
 
-    found = SentenceNode.all_objects.get(pk=payload["node_id"])
-    _lock_plan(found.plan_id)
-    node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
-    if node.status != SentenceNodeStatus.DISPATCHING:
-        return
-    node.move(SentenceNodeStatus.ACTIVE)
-    node.disposition_id = payload["disposition_id"]
-    node.activated_at = parse_datetime(payload["at"])
-    _save(node, "status", "disposition_id", "activated_at")
+    activate_dispatched_node(payload["node_id"], disposition_id=payload["disposition_id"],
+                             at=parse_datetime(payload["at"]))
 
 
 # ---- the end of a residence --------------------------------------------------------------------------------------
@@ -737,16 +718,12 @@ def _amendment_request(payload):
     message DONE. It was one log line (VERIFY-stage5 3, REPORT-all-stages §3 item 4)."""
     from apps.events.models import EventType
     from apps.sentence_plan import requests
-    from apps.sentence_plan.models import SentenceRequestKind
-    from apps.sentence_plan.services import _lock_plan, hall_params, notify_judges, record_event, soul_params
+    from apps.sentence_plan.services import hall_params, lock_plan, notify_judges, record_event, soul_params
 
     soul = _soul_model().lock(payload["soul_id"])
-    plan = _lock_plan(payload["plan_id"])
+    plan = lock_plan(payload["plan_id"])
     try:
-        requests._assert_open_for(plan, SentenceRequestKind.AMEND)
-        requests._create_request(plan, soul, from_tenant_code=payload["from_tenant_code"],
-                                 kind=SentenceRequestKind.AMEND, changes=payload["changes"], reason=payload["reason"],
-                                 user=None, judgment_id=payload["judgment_id"])
+        requests.file_amend_request_from(plan, soul, payload)
     except requests.PlanChangeRefusedError as e:
         record_event(soul, EventType.STATE_CHANGED, {
             "action": "SENTENCE_REQUEST_NOT_FILED", "code": e.code, "sentence_plan_id": str(plan.pk),

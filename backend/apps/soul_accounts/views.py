@@ -82,10 +82,6 @@ def _hall_souls(request):
     return scope_to_tenant(Soul.objects.all(), request, field="home_tenant")
 
 
-def _error(exc):
-    return problem(exc.status, exc.code, str(exc))
-
-
 def _apply_contacts(soul, data):
     svc.apply_contacts(soul, data.get("contact_email", ""), data.get("contact_phone", ""))
 
@@ -131,15 +127,12 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         soul = souls.filter(pk=body.validated_data["soul_id"]).first()
         if soul is None:
             return problem(404, "not_found", "灵魂不存在。")
-        try:
-            with transaction.atomic():
-                locked = Soul.lock(soul.pk)
-                if not SoulAccount.objects.filter(soul=locked, cycle=locked.life_index).exists():
-                    _apply_contacts(soul, body.validated_data)
-                account, created = svc.provision_account(
-                    soul, AccountOrigin.OFFICER, actor=request.user, request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        with transaction.atomic():
+            locked = Soul.lock(soul.pk)
+            if not SoulAccount.objects.filter(soul=locked, cycle=locked.life_index).exists():
+                _apply_contacts(soul, body.validated_data)
+            account, created = svc.provision_account(
+                soul, AccountOrigin.OFFICER, actor=request.user, request=request)
         account = scoped_accounts(DataScopeFilter.through_soul(request, _hall_souls(request), soul_path=""),
                                   pk=account.pk).get()
         return Response(SoulAccountSerializer(account).data, status=201 if created else 200)
@@ -151,12 +144,9 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         account = self.get_object()
         body = ResetRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            with transaction.atomic():
-                _apply_contacts(account.soul, body.validated_data)
-                credential = svc.reset_credential(account, actor=request.user, request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        with transaction.atomic():
+            _apply_contacts(account.soul, body.validated_data)
+            credential = svc.reset_credential(account, actor=request.user, request=request)
         credential.refresh_from_db()
         return Response(InitialCredentialSerializer(credential).data)
 
@@ -184,10 +174,7 @@ class SoulAccountMfaResetView(APIView):
             return problem(403, "not_home_hall", "只有本殿官员能关闭灵魂的两步验证。")
         body = SoulMfaResetRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            mfa.reset_by_officer(account, actor=request.user, reason=body.validated_data["reason"], request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        mfa.reset_by_officer(account, actor=request.user, reason=body.validated_data["reason"], request=request)
         return Response(SoulAccountSerializer(accounts.get(pk=account.pk)).data)
 
 
@@ -231,10 +218,7 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
     @action(detail=True, methods=["post"])
     def reveal(self, request, pk=None):
         credential = self.get_object()
-        try:
-            credential, password = svc.reveal_credential(credential.pk, actor=request.user, request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        credential, password = svc.reveal_credential(credential.pk, actor=request.user, request=request)
         response = Response({"soul_code": credential.soul.soul_code, "password": password,
                              "expires_at": credential.expires_at})
         response["Cache-Control"] = "no-store"
@@ -246,10 +230,7 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
         """交付单要印的内容(灵魂名、编号、殿、有效期、官员、打印时间)+ 一条 `credentials.print_slip` 审计。
         **绝不含密码,不改状态**;待交付 / 已查看 / 已交付可打,过期与作废 409。"""
         credential = self.get_object()
-        try:
-            slip = svc.print_slip(credential.pk, actor=request.user, request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        slip = svc.print_slip(credential.pk, actor=request.user, request=request)
         response = Response(SoulCredentialSlipSerializer(slip).data)
         response["Cache-Control"] = "no-store"
         return response
@@ -258,20 +239,14 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
     @action(detail=True, methods=["post"], url_path="mark-delivered")
     def mark_delivered(self, request, pk=None):
         credential = self.get_object()
-        try:
-            credential = svc.mark_delivered(credential.pk, actor=request.user, request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        credential = svc.mark_delivered(credential.pk, actor=request.user, request=request)
         return Response(InitialCredentialSerializer(credential).data)
 
     @extend_schema(request=None, responses={200: InitialCredentialSerializer, 409: SoulErrorSerializer})
     @action(detail=True, methods=["post"])
     def retry(self, request, pk=None):
         credential = self.get_object()
-        try:
-            credential = svc.retry_credential(credential.pk, actor=request.user, request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        credential = svc.retry_credential(credential.pk, actor=request.user, request=request)
         return Response(InitialCredentialSerializer(credential).data)
 
 
@@ -307,12 +282,9 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
         application = self.get_object()
         body = CrossCivilizationDecisionSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            application = rebirth.decide_cross_civilization(
-                application.pk, request.user, body.validated_data["cross_civilization"],
-                body.validated_data["target_tenant"])
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        application = rebirth.decide_cross_civilization(
+            application.pk, request.user, body.validated_data["cross_civilization"],
+            body.validated_data["target_tenant"])
         return Response(OfficerRebirthApplicationSerializer(application, context={"request": request}).data,
                         status=status.HTTP_200_OK)
 
@@ -386,11 +358,8 @@ class OfficerCooldownShorteningViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
     def _decide(self, request, body, **kwargs):
         row = self.get_object()
         body.is_valid(raise_exception=True)
-        try:
-            row = rebirth.decide_cooldown_shortening(row.pk, request.user, request=request, **kwargs,
-                                                     **body.validated_data)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        row = rebirth.decide_cooldown_shortening(row.pk, request.user, request=request, **kwargs,
+                                                 **body.validated_data)
         return Response(OfficerCooldownShorteningSerializer(row).data)
 
     @extend_schema(request=CooldownShorteningApproveSerializer,

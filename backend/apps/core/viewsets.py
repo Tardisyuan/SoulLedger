@@ -15,6 +15,12 @@ ACTION_PERM_MAP = {
 }
 
 
+
+def scoped_queryset(viewset_cls, request, action="list", **kwargs):
+    """The rows `viewset_cls` would give this caller for `action`: its own `get_queryset`, not a restatement of it
+    (ADR 0001: tenant isolation is defined there). `kwargs` are the URL kwargs the viewset would see."""
+    return viewset_cls(request=request, action=action, kwargs=kwargs, format_kwarg=None).get_queryset()
+
 class CodenameViewSetMixin:
     """
     Mixin that auto-generates the codenames a request must carry.

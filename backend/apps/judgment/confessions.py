@@ -17,15 +17,13 @@ weighs again (系统自设,非出典 — docs/02 文末「系统自设」). No r
 """
 from django.db import transaction
 
+from apps.core.problems import Refusal
 from apps.judgment import weighing
 from apps.judgment.models import Judgment, NegativeConfession, Statute, StatuteCorpus, Verdict
 
 
-class ConfessionRefusedError(Exception):
-    def __init__(self, message, code, status=400):
-        super().__init__(message)
-        self.code = code
-        self.status = status
+class ConfessionRefusedError(Refusal):
+    pass
 
 
 def clauses(judgment):

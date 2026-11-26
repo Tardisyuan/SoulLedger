@@ -13,17 +13,14 @@ soul is never left SETTLED at no station (user decision 2026-10-27).
 The scale reads the case's admitted evidence — the same sums the desk shows —
 through the Egyptian reading (demerit lightened by merit — also 系统自设, same section).
 """
+from apps.core.problems import Refusal
 from apps.judgment.models import DuatStage, Judgment, JudgmentKind, JudgmentMethod, Verdict, WeighingResult
 
 WAVERING_VERDICTS = (Verdict.PURGATORY, Verdict.RETRY)
 
 
-class WeighingRefusedError(Exception):
-    def __init__(self, message, code, status=400, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
+class WeighingRefusedError(Refusal):
+    pass
 
 
 def applies(judgment) -> bool:

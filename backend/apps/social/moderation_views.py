@@ -26,9 +26,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.problems import problem
 from apps.core.query_params import parse_date_param
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import ADMIN_ROLES, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.social import moderation as mod
 from apps.social.models import (
@@ -69,7 +68,7 @@ from apps.social.moderation_serializers import (
     officer_media,
 )
 from apps.social.soul_circle import SocialError
-from apps.soul_assist.views import OfficerAssistThrottle
+from apps.soul_assist.throttles import OfficerAssistThrottle
 
 MODERATE = "social.moderate"
 ERRORS = {400: ModerationErrorSerializer, 403: ModerationErrorSerializer, 409: ModerationErrorSerializer}
@@ -136,11 +135,6 @@ class ModerationViewSet(CodenameViewSetMixin, viewsets.GenericViewSet):
                 if field not in self.request.query_params:
                     qs = qs.filter(**{field: value})
         return qs
-
-    def handle_exception(self, exc):
-        if isinstance(exc, SocialError):
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
-        return super().handle_exception(exc)
 
     @property
     def tenant(self):
@@ -387,7 +381,7 @@ class SensitiveWordViewSet(
         from apps.tenants.models import Tenant
 
         user = request.user
-        if getattr(user, "role", None) not in ("ADMIN", "SYSTEM_ADMIN") or getattr(user, "hall_view", None):
+        if getattr(user, "role", None) not in ADMIN_ROLES or getattr(user, "hall_view", None):
             raise SocialError("只有管理员可以跨文明复制词表。", "admin_only", 403)
         if not is_tenant_exempt(user):
             raise SocialError("殿管理员只能从全站共享词表复制,不能从别的殿复制。", "shared_source_only", 403)

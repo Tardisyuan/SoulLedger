@@ -7,10 +7,12 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.problems import Refusal
+from apps.core.tenant import ADMIN_ROLES
 from apps.souls.models import SoulState
 
 
-class CitationRefusedError(Exception):
+class CitationRefusedError(Refusal):
     """A statute may not be cited on this judgment, with the reason why.
 
     An exception rather than a boolean because every refusal here is something
@@ -20,12 +22,6 @@ class CitationRefusedError(Exception):
 
     `code` / `status` / `extra` are set by the refusals that carry them (`statute_retired` at conclusion).
     """
-
-    def __init__(self, message="", code="", status=400, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
 
 
 def _is_uuid(value) -> bool:
@@ -878,7 +874,7 @@ class JudgmentService:
 
                 if not reaches_hall(reach_of, soul.tenant_id):
                     raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
-            if getattr(actor, "role", None) not in ("ADMIN", "SYSTEM_ADMIN"):
+            if getattr(actor, "role", None) not in ADMIN_ROLES:
                 open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
                 if open_ids:
                     raise OpenCaseRefusedError(

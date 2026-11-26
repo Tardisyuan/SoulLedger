@@ -29,6 +29,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.core.viewer import sees
 from apps.workflow.models import (
     AUTOMATIC_KINDS,
@@ -65,14 +66,8 @@ END_REASON_CANCELLED = "CROSS_CANCELLED"
 FOREIGN_ACTIONS = ("retrieve", "approve_node", "pick", "adjust")
 
 
-class SegmentRefusedError(Exception):
+class SegmentRefusedError(Refusal):
     """一次选站 / 加减站 / 默认 / 提醒被拒;什么都没写。视图原样转成 `{code, error, **extra}` 与 `status`。"""
-
-    def __init__(self, message, code, status=400, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
 
 
 class CrossConclusionRefusedError(Exception):
@@ -395,11 +390,9 @@ def append_foreign(workflow, realm):
 
 def _holders(tenant_id, codename):
     """这个域在职、持 `codename` 的官员(含兼任角色)。"""
-    from apps.authentication.models import User
-    from apps.perm.checker import check_permission
+    from apps.perm.checker import holders
 
-    candidates = User.objects.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL").order_by("pk")
-    return [u for u in candidates if check_permission(u, codename)]
+    return holders([tenant_id], codename)
 
 
 def pickers(tenant_id):

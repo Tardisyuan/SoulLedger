@@ -3,7 +3,6 @@
 都继承 `SoulAPIView`:只认灵魂令牌、只认当前(未停用)账号、首登改密前拒绝 ——
 `tests/test_soul_auth_boundary.py::test_every_me_route_is_a_soul_api_view` 走真实 URLconf 钉住。
 """
-import re
 
 from django.db.models import F, Window
 from django.db.models.functions import RowNumber
@@ -16,12 +15,7 @@ from apps.core.pagination import TotalOrderPagination
 from apps.soul_accounts.me_views import SoulAPIView
 from apps.soul_accounts.serializers import SoulErrorSerializer
 from apps.soul_push import services
-from apps.soul_push.models import PushDelivery, PushDevice, PushPlatform, PushPreference
-
-#: Expo 的两种前缀都认:`ExponentPushToken[...]` 是当前 `getExpoPushTokenAsync` 给的,
-#: `ExpoPushToken[...]` 是 expo-server-sdk 的 `isExpoPushToken` 同样接受的写法。
-#: 括号里只放 token 实际出现的字符,拒绝空白与控制字符 —— 这个值会原样进 Expo 请求体。
-EXPO_TOKEN_RE = re.compile(r"^Expo(nent)?PushToken\[[A-Za-z0-9_-]{8,200}\]$")
+from apps.soul_push.models import EXPO_TOKEN_RE, PushDelivery, PushDevice, PushPlatform, PushPreference
 
 
 class PushTokenRegisterSerializer(serializers.Serializer):

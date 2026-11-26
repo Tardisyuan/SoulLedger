@@ -151,9 +151,9 @@ def joins(hall):
     or one is open on that master too."""
     from django.db import connections
 
-    from apps.core.shard_reads import _code_transaction_open
+    from apps.core.shard_reads import code_transaction_open
 
-    if not _code_transaction_open():
+    if not code_transaction_open():
         return True
     return any(not b._from_testcase for b in connections[master_of(hall)].atomic_blocks)
 
@@ -161,9 +161,9 @@ def joins(hall):
 def inside_another_hall(hall):
     """The code's transaction is open, and it is not `hall`'s own -- its context acts on another master (another hall,
     or MASTER: SYSTEM_ADMIN, a command). A step of `hall`'s then waits for that transaction's commit (a message)."""
-    from apps.core.shard_reads import _code_transaction_open, acting_alias
+    from apps.core.shard_reads import acting_alias, code_transaction_open
 
-    return settings.SHARDED and _code_transaction_open() and acting_alias() != master_of(hall)
+    return settings.SHARDED and code_transaction_open() and acting_alias() != master_of(hall)
 
 
 class StepOutsideTransaction(Exception):  # noqa: N818 -- a programming error, like WriteOutsideTransaction
@@ -222,9 +222,9 @@ def send(kind, source, target, payload, *, subject=""):
     alias = master_of(source)
     # The caller's business transaction must be open on the source's master: an outbox committed on its own would be
     # delivered even when the business rows roll back.
-    from apps.core.shard_reads import _refuse_outside
+    from apps.core.shard_reads import refuse_outside
 
-    _refuse_outside(alias)
+    refuse_outside(alias)
     message_id = uuid.uuid4()
     # The handlers see their own message id (`message_id`): a `done` that sends the next message names it by it.
     payload = json.loads(json.dumps({**payload, "message_id": message_id}, cls=DjangoJSONEncoder))
@@ -399,9 +399,9 @@ def _refuse(msg, target):
 # ---- writes to a row on another master (D6) -------------------------------------------------------------------
 
 def hall_of(instance):
-    from apps.core.shard_reads import _hall_of
+    from apps.core import shard_reads
 
-    return _hall_of(instance)
+    return shard_reads.hall_of(instance)
 
 
 def held(instance):
@@ -409,9 +409,9 @@ def held(instance):
     transaction is open (the write is its own), or one is open on the row's master."""
     from django.db import connections
 
-    from apps.core.shard_reads import _code_transaction_open, write_alias_of
+    from apps.core.shard_reads import code_transaction_open, write_alias_of
 
-    if not settings.SHARDED or not _code_transaction_open():
+    if not settings.SHARDED or not code_transaction_open():
         return True
     return any(not b._from_testcase for b in connections[write_alias_of(instance)].atomic_blocks)
 

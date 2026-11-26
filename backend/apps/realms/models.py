@@ -6,9 +6,9 @@ import uuid
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.core.civilization import Civilization
 from apps.core.models import AuditUserFields
 from apps.disposition.models import MemoryResetMechanism
-from apps.souls.models import Civilization
 from apps.tenants.managers import TenantManager
 
 

@@ -35,9 +35,9 @@ class SoulsConfig(AppConfig):
         # raises here, at startup, instead of on the first request or migration that asks where a model lives
         # (VERIFY-stage0 open item 4). Cached, so the router's later lookups are free.
         from apps.core import bare_ids
-        from apps.core.sharding import _by_label, check_shard_settings
+        from apps.core.sharding import by_label, check_shard_settings
 
-        _by_label()
+        by_label()
         check_shard_settings()
         # Stage 1B: the foreign keys across the control / shard boundary are bare ids; their delete rules
         # (CASCADE / SET_NULL / PROTECT as before) are applied by apps.core.bare_ids on every alias.

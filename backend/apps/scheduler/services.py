@@ -349,14 +349,12 @@ def alert_recipients(job: ScheduledJob):
     An ADMIN bound to another hall is not told about this hall's jobs (2026-10-29)."""
     from apps.authentication.models import User
     from apps.core.tenant import hall_less_admins_q
-    from apps.perm.checker import check_permission
+    from apps.perm.checker import holders
 
     # SYSTEM_ADMIN, and for a hall's job the civilization ADMINs of that hall's civilization (§7.5).
     users = list(User.objects.filter(hall_less_admins_q(job.tenant_id), is_active=True))
     if job.tenant_id is not None:
-        for user in User.objects.filter(tenant_id=job.tenant_id, is_active=True):
-            if check_permission(user, "scheduler.manage"):  # ADMIN-only code: the hall's own ADMINs
-                users.append(user)
+        users += holders([job.tenant_id], "scheduler.manage")  # ADMIN-only code: the hall's own ADMINs
     return users
 
 

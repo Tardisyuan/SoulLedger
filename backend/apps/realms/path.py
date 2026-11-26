@@ -29,8 +29,9 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from apps.core.civilization import Civilization
 from apps.realms.models import Realm, SoulPathEntry
-from apps.souls.models import Civilization, Soul
+from apps.souls.models import Soul
 
 #: 地府十殿的界域代码前缀(apps/actors/mythology/realms.py)。
 COURT_PREFIX = "DY_COURT_"

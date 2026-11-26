@@ -57,7 +57,7 @@ class RefreshToken(SimpleJWTRefreshToken):
         table with the default expiry, so the row is moved too:
         `flushexpiredtokens` deletes by that column, and a remembered token
         whose row vanished at day 7 would no longer be listed for the
-        revocation `apps/soul_accounts/services.py::_revoke_refresh_tokens`
+        revocation `revoke_refresh_tokens` below
         performs.
         """
         self._mark(REMEMBER_CLAIM)
@@ -71,3 +71,11 @@ class RefreshToken(SimpleJWTRefreshToken):
         OutstandingToken.objects.filter(jti=self.payload["jti"]).update(
             expires_at=datetime_from_epoch(self.payload["exp"]), token=str(self)
         )
+
+
+def revoke_refresh_tokens(user):
+    """Blacklist every refresh token this user still holds (officer or soul account): `passwords.end_sessions`."""
+    from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+
+    for token in OutstandingToken.objects.filter(user=user, blacklistedtoken__isnull=True):
+        BlacklistedToken.objects.get_or_create(token=token)

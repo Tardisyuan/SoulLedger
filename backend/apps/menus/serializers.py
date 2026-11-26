@@ -4,6 +4,8 @@ Menu serializers — tree structure with button resources.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.tenant import ADMIN_ROLES
+
 from .models import Menu, MenuButton
 
 
@@ -60,7 +62,7 @@ class MenuTreeSerializer(serializers.ModelSerializer):
             return MenuButtonSerializer(buttons, many=True).data
 
         # ADMIN sees all buttons
-        if getattr(user, 'role', None) in ('ADMIN', 'SYSTEM_ADMIN'):
+        if getattr(user, 'role', None) in ADMIN_ROLES:
             return MenuButtonSerializer(buttons, many=True).data
 
         # Filter buttons by user's role permissions

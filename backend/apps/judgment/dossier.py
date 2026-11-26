@@ -26,11 +26,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.tenant import scope_to_tenant
+from apps.core.viewsets import scoped_queryset
 from apps.judgment import claims, hall_stats, sources
 from apps.judgment.claims import ferry_barred
 from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED, JudgmentCitation
+from apps.judgment.queue import PENDING, JudgmentFilter, group_q, queue_counts_of
 from apps.judgment.serializers import JudgmentListSerializer, JudgmentQueueCountsSerializer, QueueGroup, _locale_from
-from apps.judgment.views import PENDING, JudgmentFilter, JudgmentViewSet, group_q, queue_counts_of
+from apps.judgment.views import JudgmentViewSet
 from apps.souls.models import Soul
 from apps.souls.serializers import SoulRecordSerializer, SoulSerializer
 
@@ -322,8 +324,7 @@ class DossierViewSet(JudgmentViewSet):
 
         if not check_permission(self.request.user, "soul.read"):
             return None
-        view = SoulViewSet(request=self.request, action="retrieve", kwargs={"pk": soul_id}, format_kwarg=None)
-        soul = view.get_queryset().filter(pk=soul_id).first()
+        soul = scoped_queryset(SoulViewSet, self.request, "retrieve", pk=soul_id).filter(pk=soul_id).first()
         if soul is not None:
             soul.dossier_records = _recent_records(soul)
         return soul

@@ -74,7 +74,8 @@ SITES = [
      "UserCreateSerializer.validate: a civilization ADMIN creates in a hall of its civilization (branch above)"),
     ("apps/authentication/civilization_move.py", 1, "SYSTEM_ONLY",
      "migrate: only SYSTEM_ADMIN moves an account to another civilization (user decision 2026-11-16)"),
-    ("apps/authentication/views.py", 2, "CIVILIZATION",
-     "_admin_target_refusal: a civilization ADMIN acts on a hall ADMIN of its civilization ‖ "
+    ("apps/authentication/views.py", 1, "CIVILIZATION",
      "LoginLogViewSet.get_queryset: its civilization's halls' users"),
+    ("apps/authentication/user_admin.py", 1, "CIVILIZATION",
+     "_admin_target_refusal: a civilization ADMIN acts on a hall ADMIN of its civilization"),
 ]

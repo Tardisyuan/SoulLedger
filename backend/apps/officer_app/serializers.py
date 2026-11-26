@@ -1,8 +1,7 @@
 from rest_framework import serializers
 
 from apps.core.problems import ProblemSerializer
-from apps.soul_push.models import PushPlatform
-from apps.soul_push.views import EXPO_TOKEN_RE
+from apps.soul_push.models import EXPO_TOKEN_RE, PushPlatform
 from apps.workflow.serializers import CosignerRowSerializer, WaitingOnCosignerSerializer
 
 

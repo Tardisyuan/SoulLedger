@@ -38,6 +38,7 @@ from apps.audit.signals import write_audit_row
 from apps.authentication.impersonation_models import Impersonation
 from apps.authentication.signin_sessions import SID_CLAIM, is_revoked
 from apps.core.client_ip import get_client_ip
+from apps.core.tenant import ADMIN_ROLES
 
 IMP_BY, IMP_ID, IMP_EXP = "imp_by", "imp_id", "imp_exp"
 # 管理员自己的会话:改密码 / 退出全部(session_version)或退出这台设备(sid)时,代看令牌一并失效。
@@ -156,7 +157,7 @@ def enforce(request, user, token):
     if timezone.now() >= record.expires_at:
         end(record, "expired")
         raise refuse("impersonation_expired", "代看已到时。")
-    if not (record.actor.is_active and record.actor.role in ("ADMIN", "SYSTEM_ADMIN")) or _actor_signed_out(record.actor, token):
+    if not (record.actor.is_active and record.actor.role in ADMIN_ROLES) or _actor_signed_out(record.actor, token):
         end(record, "manual")
         raise refuse("impersonation_ended", "代看已结束。")
 

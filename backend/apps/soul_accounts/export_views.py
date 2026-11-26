@@ -15,11 +15,10 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import status
 from rest_framework.response import Response
 
-from apps.social.media_views import serve_private_file
+from apps.core.private_media import serve_private_file
 from apps.soul_accounts import data_export
-from apps.soul_accounts import services as svc
 from apps.soul_accounts.me_views import SoulAPIView
-from apps.soul_accounts.mfa_views import _error, confirm_current_password
+from apps.soul_accounts.mfa_views import confirm_current_password
 from apps.soul_accounts.models import DataExportStatus
 from apps.soul_accounts.serializers import (
     SoulDataExportRequestSerializer,
@@ -57,10 +56,7 @@ class MeExportView(SoulAPIView):
                                            body.validated_data["credential"])
         if refusal is not None:
             return refusal
-        try:
-            export = data_export.request_export(self.account, request=request)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        export = data_export.request_export(self.account, request=request)
         return Response(SoulDataExportSerializer(_row(export)).data, status=status.HTTP_201_CREATED)
 
 

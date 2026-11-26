@@ -19,7 +19,7 @@
 ``appeal``          还没结论的申诉               `JudgmentAppealViewSet`,PENDING / IN_REVIEW    /judgment/appeals
 ``city_god_review`` 还在城隍处初审的案子          `CityGodCaseViewSet`,PENDING / RETURNED        /city-god-cases
 ``cross_judgment``  还没了结的跨殿联审            `CrossTenantJudgmentViewSet`,PROPOSED / ACTIVE /cross-judgments
-``capture_due``     阳寿已到、待发勾魂牒的灵魂     `capture_views._souls` + `capture.due_souls`    /judgment/capture-due
+``capture_due``     阳寿已到、待发勾魂牒的灵魂     `capture_views.capture_souls` + `capture.due_souls`    /judgment/capture-due
 ``rebirth_application`` 还没结论的转生申请     `OfficerRebirthApplicationViewSet`,审核中 / 申诉中 /rebirth-applications
 ==================  ========================  ==========================================  =================
 
@@ -137,8 +137,9 @@ def source_of(judgment) -> str:
 def elsewhere_counts(request) -> dict:
     """别处等着办的几样(见文件头的表)。每样都跑那个列表自己的 `get_queryset`,不另写范围。"""
     from apps.core.permissions import user_has_permission
+    from apps.core.viewsets import scoped_queryset
     from apps.dispatch import capture as capture_service
-    from apps.dispatch.capture_views import _souls
+    from apps.dispatch.capture_views import capture_souls
     from apps.dispatch.views import CrossTenantJudgmentViewSet
     from apps.judgment.appeal_views import JudgmentAppealViewSet
     from apps.judgment.city_god_views import CityGodCaseViewSet
@@ -147,7 +148,7 @@ def elsewhere_counts(request) -> dict:
     from apps.soul_accounts.views import OfficerRebirthApplicationViewSet
 
     def scoped(viewset, action="list"):
-        return viewset(request=request, action=action, kwargs={}, format_kwarg=None).get_queryset()
+        return scoped_queryset(viewset, request, action)
 
     counters = {
         "appeal": lambda: scoped(JudgmentAppealViewSet).filter(status__in=OPEN_APPEAL_STATUSES).count(),
@@ -156,7 +157,7 @@ def elsewhere_counts(request) -> dict:
             city_god_status__in=AT_CITY_GOD).count(),
         "cross_judgment": lambda: scoped(CrossTenantJudgmentViewSet).filter(
             status__in=_open_cross_statuses()).count(),
-        "capture_due": lambda: capture_service.due_souls(_souls(request)).count(),
+        "capture_due": lambda: capture_service.due_souls(capture_souls(request)).count(),
         "rebirth_application": lambda: scoped(OfficerRebirthApplicationViewSet).filter(
             status__in=OPEN_APPLICATION_STATUSES).count(),
     }

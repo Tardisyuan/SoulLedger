@@ -3,9 +3,9 @@ Realm FilterSet — filtering, search, and ordering for Realm API.
 """
 import django_filters as filters
 
+from apps.core.civilization import Civilization
 from apps.core.shard_search import SearchFieldsMixin
 from apps.realms.models import Realm, RealmType
-from apps.souls.models import Civilization
 
 
 class RealmFilter(SearchFieldsMixin, filters.FilterSet):

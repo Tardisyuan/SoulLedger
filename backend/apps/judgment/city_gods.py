@@ -217,14 +217,9 @@ def _hall_admins(tenant_id, exclude=None, codename="city_god.manage") -> list:
     同一条退路)。按码选人,不按角色名(用户 2026-11-07:此前写死 ADMIN 与殿主 MODERATOR,而巡察只管朋友圈审核、
     打不开这些通知指向的案子)。城隍收案 / 退回与枉死申诉问 `city_god.manage` / `wangsi.manage`(改交、替别人办),
     审批超时问 `workflow.update`(殿管理员,同 `workflow.segments.HALL_ADMIN_CODENAME`)。"""
-    from apps.authentication.models import User
-    from apps.perm.checker import check_permission
+    from apps.perm.checker import holders_or_hall_less_admins
 
-    people = User.objects.filter(is_active=True).exclude(pk=exclude).exclude(role="SOUL").order_by("pk")
-    mine = [u.pk for u in people.filter(tenant_id=tenant_id) if check_permission(u, codename)]
-    from apps.core.tenant import hall_less_admins_q
-
-    return mine or list(people.filter(hall_less_admins_q(tenant_id)).values_list("pk", flat=True))
+    return [u.pk for u in holders_or_hall_less_admins(tenant_id, codename, exclude=exclude)]
 
 
 def _notify_after_commit(user_ids, notification_type, judgment, **params) -> None:

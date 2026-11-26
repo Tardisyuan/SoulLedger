@@ -10,6 +10,7 @@ Design:
 - ROLE_PERMISSIONS dict fallback for unseeded codenames
 - Redis-backed caching with memory fallback
 """
+from apps.core.tenant import ADMIN_ROLES
 from apps.perm.cache import get_permission_cache
 
 _permission_cache = get_permission_cache()
@@ -84,7 +85,7 @@ def check_permission(user, codename):
 
         return is_tenant_exempt(user)
     # ADMIN (and SYSTEM_ADMIN, which passes every ADMIN gate) bypasses all permission checks
-    if role in ('ADMIN', 'SYSTEM_ADMIN'):
+    if role in ADMIN_ROLES:
         return True
     # 灵魂不持有任何官员权限,也不能经权限矩阵被授予 —— 即使有人建了一行叫
     # SOUL 的 Role 并挂上 RolePermission。
@@ -190,3 +191,33 @@ def check_permissions(user, codenames, require_all=True):
     if require_all:
         return all(check_permission(user, cod) for cod in codenames)
     return any(check_permission(user, cod) for cod in codenames)
+
+
+def holders(tenants, codename, *, exclude=None) -> list:
+    """The active officers of these halls who hold `codename` (ADMIN by the bypass above), by pk.
+
+    "Who receives a hall's notice": dispatch, the cross-realm bench, a plan's judges, password help. Soul sign-ins
+    are left out of the query (`check_permission` refuses them anyway). `tenants`: halls or their pks.
+    """
+    from apps.authentication.models import User
+    from apps.core.tenant import SOUL_ROLE
+
+    people = User.objects.filter(tenant__in=set(tenants), is_active=True).exclude(role=SOUL_ROLE).order_by("pk")
+    if exclude is not None:
+        people = people.exclude(pk=exclude)
+    return [u for u in people if check_permission(u, codename)]
+
+
+def holders_or_hall_less_admins(tenant_id, codename, *, exclude=None) -> list:
+    """`holders` of one hall; when it has none, the hall-less administrators who answer for it
+    (`apps.core.tenant.hall_less_admins_q`: SYSTEM_ADMIN, and that hall's civilization ADMINs), by pk."""
+    mine = holders([tenant_id], codename, exclude=exclude)
+    if mine:
+        return mine
+    from apps.authentication.models import User
+    from apps.core.tenant import SOUL_ROLE, hall_less_admins_q
+
+    people = User.objects.filter(hall_less_admins_q(tenant_id), is_active=True).exclude(role=SOUL_ROLE)
+    if exclude is not None:
+        people = people.exclude(pk=exclude)
+    return list(people.order_by("pk"))

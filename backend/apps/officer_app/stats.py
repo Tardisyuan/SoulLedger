@@ -5,14 +5,14 @@
 * `appeals_reviewed` —— 我复核并已有结论的申诉(维持 / 改判);`appeals_in_review` —— 我认领着还没决定的。
 """
 from apps.judgment.models import OPEN_Q, AppealStatus, Judgment, JudgmentAppeal
-from apps.reincarnation.services import _month_start
+from apps.reincarnation.services import month_start
 
 
 def of(user) -> dict:
     concluded = Judgment.objects.filter(concluded_by=user)
     appeals = JudgmentAppeal.objects.filter(reviewer=user)
     return {
-        "concluded_this_month": concluded.filter(concluded_at__gte=_month_start()).count(),
+        "concluded_this_month": concluded.filter(concluded_at__gte=month_start()).count(),
         "concluded_total": concluded.count(),
         "open_claims": Judgment.objects.filter(OPEN_Q, claimed_by=user).count(),
         "appeals_reviewed": appeals.filter(status__in=(AppealStatus.UPHELD, AppealStatus.AMENDED)).count(),
