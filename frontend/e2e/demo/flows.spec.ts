@@ -91,7 +91,10 @@ for (const reduced of [false, true]) {
   });
 }
 
-const judgedFlow = () => rows(recording("admin"), "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION")?.id;
+// Only a flow whose current stop names the account can be decided (`canDecide` in demo/flows.ts, the server's rule): the
+// Egyptian judge's heart-weighing flows wait on the judges (stops 2 and 4, a 通知 between), then on named actors.
+// No demo account fills every stop of any recorded flow, so none can walk one to its end alone, as on the server.
+const judgedFlow = () => rows(recording("judge_eg"), "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type === "HEART_WEIGHING")?.id;
 
 async function decide(page: Page, verdict: string): Promise<void> {
   const radio = page.locator(`input[type="radio"][value="${verdict}"]`).first();
@@ -100,32 +103,35 @@ async function decide(page: Page, verdict: string): Promise<void> {
   await page.getByRole("button", { name: "提交决定" }).click();
 }
 
-test("an approval flow can be walked to its end", async ({ page, context }) => {
+test("an approval flow moves on through the judge's stops, and stops offering a decision at someone else's", async ({ page, context }) => {
   test.setTimeout(60000);
   const seen = watch(context, page);
-  await enter(page, "admin");
+  await enter(page, "judge_eg");
   await page.goto(`/workflow/${judgedFlow()}`);
   const main = page.locator("main");
-  await expect(page.getByRole("button", { name: "提交决定" })).toBeVisible();
-  // Each decision moves the flow one station on; a ten-court flow has a dozen of them.
-  // `title` carries the raw status (<DomainEnum>); the words 流程完成 also appear in the page's legend.
-  const done = page.getByTitle("COMPLETED").filter({ visible: true }).first();
-  for (let step = 0; step < 30 && !(await done.isVisible()); step += 1) {
+  const submit = page.getByRole("button", { name: "提交决定" });
+  await expect(submit).toBeVisible();
+  // Stop 2, then (past the 通知) stop 4; stop 5 names an actor, so the form goes.
+  let decided = 0;
+  for (; decided < 5 && (await submit.isVisible()); decided += 1) {
     const before = await main.innerText();
     await decide(page, "PASSED");
     await expect.poll(async () => (await main.innerText()) !== before).toBe(true);
     await page.waitForTimeout(150);
   }
-  await expect(done).toBeVisible();
-  await expect(page.getByRole("button", { name: "提交决定" })).toHaveCount(0);
+  expect(decided).toBe(2);
+  await expect(submit).toHaveCount(0);
+  // `title` carries the raw status (<DomainEnum>): still open, waiting on the next approver.
+  await expect(page.getByTitle("COMPLETED").filter({ visible: true })).toHaveCount(0);
   await page.reload();
-  await expect(done).toBeVisible();
+  await expect(main).toBeVisible();
+  await expect(submit).toHaveCount(0);
   clean(seen, "workflow approve");
 });
 
 test("an approval flow can be rejected", async ({ page, context }) => {
   const seen = watch(context, page);
-  await enter(page, "admin");
+  await enter(page, "judge_eg");
   await page.goto(`/workflow/${judgedFlow()}`);
   await page.locator('input[type="radio"][value="FAILED"]').first().locator("xpath=ancestor::label").click();
   const why = page.getByLabel(/告诉灵魂|理由/).first();
