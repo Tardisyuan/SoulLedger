@@ -28,7 +28,7 @@ import { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUploads"
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
-import { FlatList, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -1032,6 +1032,8 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
           onEndReachedThreshold={0.5}
           {...pull.props}
           keyboardShouldPersistTaps="handled"
+          // Dragging the comments takes the keyboard down; iOS follows the finger.
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         />
         )}
       </Screen>
