@@ -114,7 +114,7 @@ def test_cancelling_inside_a_foreign_segment_ends_the_flow_cancelled_and_runs_no
 
 def test_an_advisor_seat_gets_no_segment_at_generation_or_when_seated_later(w):  # noqa: F811
     soul, case = sp.open_case(w.cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", w.cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", w.cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     seat = CrossTenantJudgmentService.add_participant(cj, w.eg, None, ParticipantRole.CO_JUDGE, node_order=2)

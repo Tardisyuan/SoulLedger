@@ -249,7 +249,6 @@ class TestCrossTenantJudgment:
             title="Test Joint Judgment",
             description="Testing cross-tenant judgment",
             initiating_tenant=cn_tenant,
-            creator=cn_admin_user,
         )
         assert judgment.status == "PROPOSED"
         assert judgment.title == "Test Joint Judgment"

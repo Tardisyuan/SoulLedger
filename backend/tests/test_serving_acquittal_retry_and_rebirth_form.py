@@ -198,7 +198,7 @@ def test_a_diyu_acquittal_with_a_merged_cross_judgment_gets_its_foreign_stops(cn
     _template(cn, "CHINESE")
     _template(eg, "EGYPTIAN")
     soul, case = sp.open_case(cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     seat = CrossTenantJudgmentService.add_participant(cj, eg, None, ParticipantRole.CO_JUDGE, node_order=2)

@@ -264,7 +264,7 @@ def _bench_at(eg, stage):
     """An original case at CN with a bench of one EG seat, taken to `stage`. Returns (soul, case, cj, seat)."""
     cn = plan.tenant("CN_DIYU")
     soul, case = plan.open_case(cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     seat = None

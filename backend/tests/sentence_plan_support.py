@@ -47,7 +47,7 @@ def open_case(home, *, name="客魂", state=SoulState.JUDGING):
 
 def bench(case, stops, *, conclusion="PASS"):
     """给原审判挂一场联审;`stops` = [(tenant, realm_code, years)],依次排 2、3……"""
-    cj = CrossTenantJudgmentService.create("联审", "d", case.tenant, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", case.tenant)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     for order, (at, realm_code, years) in enumerate(stops, start=2):

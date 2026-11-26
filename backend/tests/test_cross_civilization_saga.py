@@ -346,7 +346,7 @@ def test_seating_another_civilization_on_a_joint_bench_ends_at_the_start_or_the_
     w, halls = world
     src, tgt = halls[w["src"]], halls[w["tgt"]]
     with _in_hall(src):
-        bench = CrossTenantJudgmentService.create("联审", "d", src, None)
+        bench = CrossTenantJudgmentService.create("联审", "d", src)
         _every_step("joint_seat", lambda: CrossTenantJudgmentService.add_participant(
             bench, tgt, None, ParticipantRole.ADVISOR), w["seed"])
         seat = CrossTenantJudgmentService.add_participant(bench, tgt, None, ParticipantRole.ADVISOR)

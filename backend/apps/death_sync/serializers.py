@@ -10,6 +10,7 @@ from apps.death_sync.models import (
     ExternalApiKey,
     WebhookConfig,
 )
+from apps.death_sync.services import PROGRESS_STAGES
 from apps.events.models import EventType, EventWebhookDelivery
 
 
@@ -262,5 +263,4 @@ class DeathRegistrationProgressSerializer(serializers.Serializer):
     registration_status = serializers.CharField()
     soul_id = serializers.UUIDField(allow_null=True)
     soul_state = serializers.CharField(allow_null=True)
-    stage = serializers.ChoiceField(choices=["registered", "at_city_god", "judging", "sentenced", "reincarnated",
-                                             "settled"])
+    stage = serializers.ChoiceField(choices=PROGRESS_STAGES)

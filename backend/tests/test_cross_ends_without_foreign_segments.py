@@ -15,7 +15,7 @@ pytestmark = pytest.mark.django_db
 
 def _advisory(w, seats=("ADVISOR",), convene=True):  # noqa: F811
     _soul, case = plan.open_case(w.cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", w.cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", w.cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     for realm in (w.eg, w.eu)[:len(seats)]:

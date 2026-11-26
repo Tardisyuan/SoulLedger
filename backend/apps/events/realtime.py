@@ -14,9 +14,9 @@ belongs to: `RealtimeEventPublisher.publish_workflow` and
 whole time. A second, callable, equivalent way to publish is how that happens
 twice — so the facade went and `event_bus` is now the only door.
 
-Channel naming convention (unchanged):
-  rt:tenant:{code}    — tenant-wide broadcast (all users in tenant)
-  rt:user:{user_id}   — per-user targeted delivery
+Channel naming convention (unchanged; `ChannelNaming` below):
+  rt_tenant_{code}    — tenant-wide broadcast (all users in tenant)
+  rt_user_{user_id}   — per-user targeted delivery
 """
 import logging
 

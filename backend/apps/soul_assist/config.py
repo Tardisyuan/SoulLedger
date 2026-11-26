@@ -314,9 +314,6 @@ def was_tested(conn) -> bool:
 
 # ── 保存与审计 ─────────────────────────────────────────────────────────────
 
-_UNSET = object()
-
-
 def current_value(eff: Effective, key):
     """页面上显示的、某个键现在生效的值(审计里的「旧值」)。"""
     c = eff.connection

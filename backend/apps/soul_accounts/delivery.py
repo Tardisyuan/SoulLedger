@@ -5,7 +5,8 @@ password, expires_at)` 的对象。`send` 失败就抛异常 —— 调用方(se
 记成「待交付」,不吞。
 
 `settings.SOUL_CREDENTIAL_DELIVERIES` 是按优先级排列的类路径列表,默认邮件在前、
-短信在后。换服务商 = 换列表里的一项。
+短信在后。换服务商 = 换列表里的一项。现在没有任何 settings 文件(也没有测试)设它,
+所以用的永远是 `DEFAULT_DELIVERIES`。
 """
 from django.conf import settings
 from django.utils.module_loading import import_string
@@ -47,7 +48,8 @@ class EmailCredentialDelivery:
 
 class SmsCredentialDelivery:
     """实现位。`settings.SOUL_SMS_SENDER` 是一个 `(phone, text) -> None` 的类路径;
-    未配置时视为不可用,于是没有邮箱的灵魂进入待交付,而不是假装发了短信。"""
+    未配置时视为不可用,于是没有邮箱的灵魂进入待交付,而不是假装发了短信。
+    现在没有任何 settings 文件设它(只有 `tests/test_soul_accounts_lifecycle.py` 设),所以部署里短信渠道总是不可用。"""
 
     channel = "SMS"
 

@@ -465,8 +465,9 @@ class ReincarnationService:
             # 孟婆汤(2026-10-25):地府的灵魂要先饮过。拒绝时灵魂留在 REINCARNATING(与配额满同一条等候线)。
             from django.conf import settings
 
-            # MENGPO_SOUP_REQUIRED: on in every real settings file; the test suite turns it off by default (root
-            # conftest) so the many older rebirth tests need not drink first, and the soup tests turn it on.
+            # MENGPO_SOUP_REQUIRED: no settings file defines it, so outside the tests it is always on (the default
+            # below). Only the test suite turns it off (root conftest) so the many older rebirth tests need not drink
+            # first, and the soup tests turn it back on.
             if getattr(settings, "MENGPO_SOUP_REQUIRED", True) and needs_soup(soul) and soul.soup_taken_at is None:
                 raise SoupNotTaken()
 

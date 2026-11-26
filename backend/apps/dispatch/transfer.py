@@ -102,7 +102,7 @@ def _retire(alias, soul_pk, tenant_id, home_id):
 
     Soul = _soul_model()  # noqa: N806
     rows = Soul._base_manager.using(alias).filter(pk=soul_pk)
-    if alias == CONTROL_ALIAS:  # control keeps a mirror of the soul's new master (until stage 5)
+    if alias == CONTROL_ALIAS:  # single database: control is the source and the new master both, so rewrite, never delete
         with control_mirror_writes():
             rows.update(tenant_id=tenant_id, home_tenant_id=home_id)
         return

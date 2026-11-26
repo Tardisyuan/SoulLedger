@@ -3,9 +3,9 @@ docs/audit/2026-11-15-sharding/PLAN.md).
 
 A SHARD model with an auto-incrementing integer pk (Organization -- named by bare id from control: User.organization,
 the RoleDataScope.orgs through rows -- and every other one: AuditLog, TaskRun, the officer through rows...) gets ids
-from each database's own sequence once its writes split. Control stays a full mirror until stage 5, so the same id
-from two sequences would be two rows under one pk there, and a bare id could not say which. So each civilization's
-shard issues ids from its own range:
+from each database's own sequence once its writes split. Control was a full mirror until stage 5, where the same id
+from two sequences would have been two rows under one pk; and a bare id read from control (User.organization) must
+still say which civilization's row it names. So each civilization's shard issues ids from its own range:
 
     CHINESE [1e15, 2e15)   EUROPEAN [2e15, 3e15)   EGYPTIAN [3e15, 4e15)   GREEK [4e15, 5e15)
 

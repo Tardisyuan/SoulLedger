@@ -84,7 +84,7 @@ def _bench(x, tag):
 
     with _in_hall(x["home"]):
         soul, case = plan.open_case(x["home"], name=f"席魂{tag}")
-        cj = CrossTenantJudgmentService.create("联审", "d", x["home"], None)
+        cj = CrossTenantJudgmentService.create("联审", "d", x["home"])
         cj.judgment = case
         cj.save(update_fields=["judgment"])
         seat = CrossTenantJudgmentService.add_participant(cj, x["res"], None, ParticipantRole.CO_JUDGE, node_order=2)
@@ -339,7 +339,7 @@ def test_dispatch_frozen_refuses_a_seat_and_a_cross_civilization_rebirth_writing
     where = x["where"]
     with cut():
         with _in_hall(x["home"]):
-            cj = CrossTenantJudgmentService.create("联审", "d", x["home"], None)
+            cj = CrossTenantJudgmentService.create("联审", "d", x["home"])
             soul = Soul.objects.create(name="迁籍", tenant=x["home"], current_state=SoulState.REINCARNATING)
         home_admin = _client(x["home"], f"r3f_{pair[0][:2]}")
         outboxes = sum(ShardOutbox._base_manager.using(a).count() for a in settings.DATABASES)
