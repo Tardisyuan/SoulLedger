@@ -357,9 +357,8 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         return f"{self.workflow_name} - {self.soul.name} ({self.status})"
 
     def save(self, *args, **kwargs):
-        """The save and its post_save receivers are ONE transaction (`soul_accounts/signals.py` syncs the rebirth
-        application there and a failure must undo this save). `Model.save` alone is a bare autocommit UPDATE, so
-        without this a caller holding no transaction would keep the edit when the sync raised."""
+        """The save and its post_save receivers are ONE transaction. `Model.save` alone is a bare autocommit
+        UPDATE, so without this a caller holding no transaction would keep the edit when a receiver raised."""
         from django.db import transaction
 
         from apps.tenants import global_codes
@@ -826,6 +825,12 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from apps.workflow import segments
 
         segments.on_workflow_finished(self, status, end_reason)
+        if self.case_type == CaseType.REBIRTH_APPLICATION:
+            # The application's status follows its flow here, CANCELLED (`terminate`) included, in the same
+            # transaction: every end of a flow comes through `_finish`. Lock order: workflow, node, application.
+            from apps.soul_accounts.rebirth import sync_from_workflow
+
+            sync_from_workflow(self.pk)
         if status == ApprovalWorkflowStatus.CANCELLED:
             # Cancelled is neither passed nor refused (review C): no hook below runs for it.
             return
@@ -1142,9 +1147,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         CANCELLED stops holding the soul's rebirth (`origin_flow_open` only counts running flows). The disposition
         stays at `approval_cancelled`, whose way out is the hall lead's `reopen-cancelled`.
 
-        `_finish` runs no hook for CANCELLED, so the two kinds of flow something else waits on are settled here: an
-        appeal ladder closes upheld (`on_ladder_finished`: "驳回或被撤掉 = 维持原判"), and a rebirth application follows
-        through `_project` on this save. A merged cross-realm judgment stays with its convener, who concludes or cancels.
+        `_finish` runs no outcome hook for CANCELLED, so an appeal ladder is settled here: it closes upheld
+        (`on_ladder_finished`: "驳回或被撤掉 = 维持原判"). A rebirth application follows in `_finish` itself (TERMINATED,
+        `rebirth._project`), which syncs it for every end, CANCELLED included. A merged cross-realm judgment stays with its convener, who concludes or cancels.
         """
         from django.db import transaction
         from django.utils import timezone
