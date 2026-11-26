@@ -311,6 +311,7 @@ function DashboardContent() {
               {LIFECYCLE.filter((state) => !emptyWheelRow(state)).map((state) => (
                 <StatCard
                   key={state}
+                  id={state}
                   label={
                     <>
                       <span aria-hidden="true" className="font-mono">{soulStateGlyph(state)}</span>{" "}

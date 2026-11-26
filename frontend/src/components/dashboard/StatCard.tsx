@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { groupDigits } from "@/src/components/dashboard/numberFormat";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { sharePercent } from "@/src/components/dashboard/LegendLedger";
+import { useCountUpOnce } from "@/src/components/dashboard/useCountUpOnce";
 
 /**
  * 概览页的状态卡(Design A4):「字形 + 状态名」→ 标题字体 28/36 的数 → 6px 进度条
@@ -18,8 +19,12 @@ import { sharePercent } from "@/src/components/dashboard/LegendLedger";
  * 否则整条在数据到达时跳一下 —— `e2e/kpi-row-does-not-jump-when-data-lands.spec.ts`
  * 在真浏览器里量这件事。所以骨架与值共用同一个定高的盒子(`h-9` / 窄屏 `h-7`),
  * 进度条与占比在加载时也占着位置。
+ *
+ * 进度条随数字从 0 走到占比(`.kpi-fill`)只在本会话第一次看到这张卡时播(Design 第六十六批,`useCountUpOnce`);
+ * 之后直接是终值,数变了的那一格挂「行变更」提示。
  */
 function StatCardInner({
+  id,
   label,
   value,
   total,
@@ -27,6 +32,8 @@ function StatCardInner({
   isLoading,
   compactLine = false,
 }: {
+  /** Which card this is (the lifecycle state): the key its last-seen value is remembered under for the session. */
+  id: string;
   label: React.ReactNode;
   value?: number;
   /** The whole the share is of; the bar and percent are drawn against it. */
@@ -39,6 +46,7 @@ function StatCardInner({
 }) {
   const known = !isLoading && value !== undefined && value !== null;
   const share = known && total > 0 ? (value as number) / total : 0;
+  const count = useCountUpOnce(`kpi.${id}`, { value: known ? value : null });
   return (
     <div
       data-kpi-card=""
@@ -57,7 +65,7 @@ function StatCardInner({
           // not send; an em dash is a claim about this cell, not about the ledger.
           <div
             data-kpi=""
-            className={`font-title tabular-nums text-[oklch(var(--color-ink))] ${compactLine ? "md:text-xl max-md:font-sans max-md:text-xs max-md:text-[oklch(var(--color-ink-muted))]" : "text-lg md:text-xl"}`}
+            className={`font-title tabular-nums text-[oklch(var(--color-ink))] ${count.changed.has("value") ? "animate-row-changed " : ""}${compactLine ? "md:text-xl max-md:font-sans max-md:text-xs max-md:text-[oklch(var(--color-ink-muted))]" : "text-lg md:text-xl"}`}
           >
             {known ? groupDigits(value as number) : <MissingValue kind="unrecorded" />}
           </div>
@@ -65,7 +73,7 @@ function StatCardInner({
       </div>
       <div aria-hidden="true" className={`h-1 bg-[oklch(var(--color-surface-2))] md:h-1.5 ${compactLine ? "max-md:hidden" : ""}`}>
         {known && (value as number) > 0 && (
-          <div className={`kpi-fill h-full min-w-0.5 ${barClass}`} style={{ width: `${share * 100}%` }} />
+          <div className={`${count.roll ? "kpi-fill " : ""}h-full min-w-0.5 ${barClass}`} style={{ width: `${share * 100}%` }} />
         )}
       </div>
       <div className="font-mono text-xs text-[oklch(var(--color-ink-muted))] max-md:hidden">

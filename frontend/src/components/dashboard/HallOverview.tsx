@@ -25,6 +25,7 @@ import { civSkinOf } from "@/src/lib/civSkin";
 import type { SealCiv } from "@/src/components/plaque/Seal";
 import { UnderworldMap } from "@/src/components/realms/UnderworldMap";
 import { mapSkinOf } from "@/src/lib/underworldMap";
+import { useCountUpOnce } from "./useCountUpOnce";
 
 /**
  * 概览屏(规范 v4 第七批 S04,`overview.*`):左边一张大卡(今日待审、本月已结环、三个读数),右边上「近 12 周结案」、
@@ -39,7 +40,8 @@ import { mapSkinOf } from "@/src/lib/underworldMap";
  * 整个概览底下让出导览面板的高度(`--demo-tour-h`,`demo/DemoTour.tsx` 写在 :root;演示之外是 0),窄一些的宽度上滚得开。
  *
  * 大数字是 88(`text-display-xl`,v4 加的一档,只给这里与年报),墨色(第四十五批第七节:这么大的文明色会把一屏染成文明色);进页时它从 0 滚上来、「本月已结」环从 0 扫到实际值
- * (`.v4-roll` / `.v4-ring-sweep`,globals.css,减少动态效果时直接是终态)。「其中 n 件已过期限」的 n 是金属色。
+ * (`.v4-roll` / `.v4-ring-sweep`,globals.css,减少动态效果时直接是终态)。第六十六批:只在本会话第一次进概览时滚;之后再进直接是终值,
+ * 两个数里变了的那格挂「行变更」提示(`useCountUpOnce`)。「其中 n 件已过期限」的 n 是金属色。
  */
 
 const CARD =
@@ -48,11 +50,11 @@ const DAY_S = 86_400;
 
 const RING_C = 2 * Math.PI * 26;
 
-/** 「本月已结」环:直径 64,线宽 5,金属色;没有数(本月既没结也没待审)时只画底环。挂上时从 0 扫到 pct。 */
-function DoneRing({ pct }: { pct: number | null }) {
+/** 「本月已结」环:直径 64,线宽 5,金属色;没有数(本月既没结也没待审)时只画底环。`sweep` 时挂上即从 0 扫到 pct。 */
+function DoneRing({ pct, sweep, changed }: { pct: number | null; sweep: boolean; changed: boolean }) {
   const c = RING_C;
   return (
-    <svg aria-hidden="true" width="64" height="64" viewBox="0 0 64 64" className="shrink-0">
+    <svg aria-hidden="true" width="64" height="64" viewBox="0 0 64 64" className={`shrink-0 ${changed ? "animate-row-changed" : ""}`}>
       <circle cx="32" cy="32" r="26" fill="none" strokeWidth="5" className="stroke-[oklch(var(--color-line))]" />
       {pct != null && (
         <circle
@@ -66,7 +68,7 @@ function DoneRing({ pct }: { pct: number | null }) {
           strokeDasharray={c.toFixed(1)}
           strokeDashoffset={(c * (1 - pct / 100)).toFixed(1)}
           transform="rotate(-90 32 32)"
-          className="v4-ring-sweep stroke-[oklch(var(--color-metal))]"
+          className={`${sweep ? "v4-ring-sweep " : ""}stroke-[oklch(var(--color-metal))]`}
           style={{ "--ring-c": c.toFixed(1) } as React.CSSProperties}
         />
       )}
@@ -79,8 +81,9 @@ function DoneRing({ pct }: { pct: number | null }) {
   );
 }
 
-/** 大数字:看得见的那层从 0 滚到 n(`.v4-roll`,只 CSS),读屏与复制拿到的是 sr-only 里的终值。 */
-function RollingCount({ n }: { n: number }) {
+/** 大数字:`roll` 时看得见的那层从 0 滚到 n(`.v4-roll`,只 CSS),读屏与复制拿到的是 sr-only 里的终值;不滚就直接写 n。 */
+function RollingCount({ n, roll }: { n: number; roll: boolean }) {
+  if (!roll) return <>{n}</>;
   return (
     <>
       <span className="sr-only">{n}</span>
@@ -156,6 +159,9 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
   );
   useShellCommands(commands);
 
+  const count = useCountUpOnce("overview", { pending: stats?.pending, done: stats?.month_done_pct });
+  const flag = (name: string) => (count.changed.has(name) ? " animate-row-changed" : "");
+
   const value = (n: number | null | undefined, render: (n: number) => React.ReactNode = (x) => x) =>
     loading ? <Skeleton as="span" className="inline-block h-6 w-10" /> : n == null ? <MissingValue kind={failed ? "unrecorded" : "inapplicable"} /> : render(n);
 
@@ -168,15 +174,15 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
         <div className="mt-2 flex items-center gap-4">
           {/* 第三十批:今日待审是 0 时不画 88 的「0」,写一句「今天没有待审的案卷」。 */}
           {!loading && stats?.pending === 0 ? (
-            <span data-overview-pending="" data-zero="" className="font-title text-lg text-[oklch(var(--color-ink))]">
+            <span data-overview-pending="" data-zero="" className={`font-title text-lg text-[oklch(var(--color-ink))]${flag("pending")}`}>
               {t("overview.zero.pending")}
             </span>
           ) : (
-            <span data-overview-pending="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-ink))]">
-              {loading ? <Skeleton as="span" className="inline-block h-23 w-20" /> : stats ? <RollingCount n={stats.pending} /> : <MissingValue kind="unrecorded" />}
+            <span data-overview-pending="" className={`font-title text-display-xl tabular-nums text-[oklch(var(--color-ink))]${flag("pending")}`}>
+              {loading ? <Skeleton as="span" className="inline-block h-23 w-20" /> : stats ? <RollingCount n={stats.pending} roll={count.roll} /> : <MissingValue kind="unrecorded" />}
             </span>
           )}
-          {!loading && stats && <DoneRing pct={stats.month_done_pct} />}
+          {!loading && stats && <DoneRing pct={stats.month_done_pct} sweep={count.roll} changed={count.changed.has("done")} />}
         </div>
         {stats && (
           <>

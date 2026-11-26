@@ -6,6 +6,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi, officerAppApi } from "@soulledger/core/api";
 import { HallOverview } from "@/src/components/dashboard/HallOverview";
+import { StatCard } from "@/src/components/dashboard/StatCard";
 import { renderWithProviders } from "./support/render";
 import { tZh } from "./support/zhBundle";
 
@@ -70,6 +71,8 @@ function renderIt() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // 「从 0 滚上来」一个会话一次(`useCountUpOnce`):每条都从「本会话还没进过概览」开始。
+  sessionStorage.clear();
   mockPerms = ["judgment.read", "cross_judgment.read"];
   mockUser = OFFICER;
   hallStats.mockResolvedValue({ data: STATS });
@@ -179,6 +182,78 @@ describe("主卡", () => {
     fireEvent.click(screen.getByRole("button", { name: "认领下一件" }));
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("队列已清空。新的案子到了会出现在这里。", "info"));
     expect(mockPush).not.toHaveBeenCalled();
+  });
+});
+
+describe("从 0 滚上来:一个会话只滚一次(第六十六批)", () => {
+  const heroOf = async () =>
+    waitFor(() => {
+      const el = document.querySelector("[data-overview-hero]") as HTMLElement;
+      expect(el.querySelector("[data-done-ring]")).not.toBeNull();
+      return el;
+    });
+
+  it("第二次进概览:直接是终值,不滚、环不扫;数没变的格不挂变更提示", async () => {
+    const first = renderIt();
+    expect((await heroOf()).querySelector(".v4-roll")).not.toBeNull();
+    first.unmount();
+
+    renderIt();
+    const hero = await heroOf();
+    const pending = hero.querySelector("[data-overview-pending]") as HTMLElement;
+    expect(pending).toHaveTextContent(/^24$/);
+    expect(hero.querySelector(".v4-roll")).toBeNull();
+    expect(hero.querySelector("[data-done-ring]")).not.toHaveClass("v4-ring-sweep");
+    expect(hero.querySelector(".animate-row-changed")).toBeNull();
+  });
+
+  it("会话里数变了:再进时不从 0 重滚,变了的那格挂「行变更」提示,没变的不挂", async () => {
+    const first = renderIt();
+    await heroOf();
+    first.unmount();
+
+    hallStats.mockResolvedValue({ data: { ...STATS, pending: 30 } });
+    renderIt();
+    const hero = await waitFor(() => {
+      const el = document.querySelector("[data-overview-hero]") as HTMLElement;
+      expect(el.querySelector("[data-overview-pending]")).toHaveTextContent(/^30$/);
+      return el;
+    });
+    expect(hero.querySelector(".v4-roll")).toBeNull();
+    await waitFor(() => expect(hero.querySelector("[data-overview-pending]")).toHaveClass("animate-row-changed"));
+    expect(hero.querySelector("[data-done-ring]")).not.toHaveClass("animate-row-changed");
+  });
+
+  it("sessionStorage 读不到(隐私模式等):照第一次滚", async () => {
+    const getItem = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    try {
+      sessionStorage.setItem("soulledger.countup.overview", JSON.stringify({ pending: 24 }));
+      renderIt();
+      expect((await heroOf()).querySelector(".v4-roll")).not.toBeNull();
+    } finally {
+      getItem.mockRestore();
+    }
+  });
+});
+
+describe("KPI 条(StatCard)", () => {
+  const bar = () => document.querySelector("[data-kpi-card] [aria-hidden] > div") as HTMLElement;
+  const card = (value: number) => <StatCard id="ALIVE" label="在世" value={value} total={100} barClass="bg-x" isLoading={false} />;
+
+  it("本会话第一次走条,之后直接是终值;数变了那一格挂变更提示", async () => {
+    const first = renderWithProviders(card(40), { i18n: false });
+    expect(bar()).toHaveClass("kpi-fill");
+    await waitFor(() => expect(sessionStorage.getItem("soulledger.countup.kpi.ALIVE")).not.toBeNull());
+    first.unmount();
+
+    const again = renderWithProviders(card(40), { i18n: false });
+    expect(bar()).not.toHaveClass("kpi-fill");
+    expect(document.querySelector("[data-kpi]")).not.toHaveClass("animate-row-changed");
+    again.rerender(card(41));
+    await waitFor(() => expect(document.querySelector("[data-kpi]")).toHaveClass("animate-row-changed"));
+    expect(bar()).not.toHaveClass("kpi-fill");
   });
 });
 
