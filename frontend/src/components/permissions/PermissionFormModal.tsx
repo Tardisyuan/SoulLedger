@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId, useRef } from "react";
+import { useState, useId, useRef } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
@@ -8,16 +8,7 @@ import { TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import type { Permission } from "@soulledger/core/api";
 
-export function PermissionFormModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  isPending,
-  error,
-  title,
-  initialData,
-  existingCategories,
-}: {
+interface PermissionFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { codename: string; name: string; name_en: string; category: string }) => void;
@@ -36,7 +27,26 @@ export function PermissionFormModal({
    * that doesn't exist yet.
    */
   existingCategories: string[];
-}) {
+}
+
+/**
+ * Rendered only while open, keyed by the permission: the form starts from `initialData` on every open (a `key`, not
+ * an effect that copies props into state; audit 2026-11-26 §2.5).
+ */
+export function PermissionFormModal(props: PermissionFormModalProps) {
+  return props.isOpen ? <PermissionForm key={props.initialData?.id ?? "new"} {...props} /> : null;
+}
+
+function PermissionForm({
+  isOpen,
+  onClose,
+  onSubmit,
+  isPending,
+  error,
+  title,
+  initialData,
+  existingCategories,
+}: PermissionFormModalProps) {
   const { t } = useI18n();
   // Unique prefix so field/error ids never collide across multiple
   // PermissionFormModal instances mounted at once.
@@ -61,35 +71,14 @@ export function PermissionFormModal({
   const categoryId = `${formId}-category`;
   const categoryListId = `${formId}-category-list`;
   const errorId = `${formId}-error`;
-  const [codename, setCodename] = useState("");
-  const [name, setName] = useState("");
-  const [nameEn, setNameEn] = useState("");
-  const [category, setCategory] = useState(existingCategories[0] ?? "");
-
-  useEffect(() => {
-    if (isOpen) {
-      setCodename(initialData?.codename ?? "");
-      setName(initialData?.name ?? "");
-      setNameEn(initialData?.name_en ?? "");
-      setCategory(initialData?.category ?? existingCategories[0] ?? "");
-    }
-    // existingCategories intentionally excluded, and this is the deliberate
-    // kind of omission the rule allows for rather than a dep someone forgot.
-    // The caller passes `categories.map((c) => c.category)` inline
-    // (app/permissions/page.tsx), so the prop is a **new array on every render
-    // of that page** — and that page re-renders on each keystroke of its own
-    // filter box. Adding it here would re-run this effect on renders where
-    // nothing about the modal changed and reset `category` back to
-    // `existingCategories[0]` under the operator's cursor. Pinned by
-    // `src/__tests__/permissionFormCategoryStability.test.tsx`, which types a
-    // new category name, re-renders the parent, and asserts the typed value is
-    // still there.
-    //
-    // What would make this a real dependency: the caller memoising the array
-    // (or passing `categories` itself and mapping here). Then the effect could
-    // include it and would only re-run when the category set actually changed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialData]);
+  const [codename, setCodename] = useState(initialData?.codename ?? "");
+  const [name, setName] = useState(initialData?.name ?? "");
+  const [nameEn, setNameEn] = useState(initialData?.name_en ?? "");
+  // Read once, when the form mounts on open. The caller passes `categories.map((c) => c.category)` inline
+  // (app/permissions/page.tsx), a new array on every render of a page that re-renders on each keystroke of its
+  // filter box; an initial value is never re-read, so that cannot reset `category` under the operator's cursor
+  // (`permissionFormCategoryStability.test.tsx`). The effect this replaced had to leave the prop out of its deps.
+  const [category, setCategory] = useState(initialData?.category ?? existingCategories[0] ?? "");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,25 +88,17 @@ export function PermissionFormModal({
     onSubmit({ codename: codename.trim(), name: name.trim(), name_en: nameEn.trim(), category: category.trim() });
   }
 
-  function handleClose() {
-    setCodename("");
-    setName("");
-    setNameEn("");
-    setCategory(existingCategories[0] ?? "");
-    onClose();
-  }
-
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={handleClose}
+      onClose={onClose}
       title={title}
       footer={
         <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="secondary"
-            onClick={handleClose}
+            onClick={onClose}
             disabled={isPending}
           >
             {t("common.cancel")}
