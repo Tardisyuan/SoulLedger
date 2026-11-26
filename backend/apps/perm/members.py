@@ -126,7 +126,7 @@ def _change(user, name, action, kind):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def role_members(request, pk):
-    from apps.authentication.views import _admin_target_refusal, role_assignment_refusal
+    from apps.authentication.user_admin import _admin_target_refusal, role_assignment_refusal
 
     role = Role.objects.filter(pk=pk).first()
     if role is None:

@@ -23,7 +23,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
-from apps.authentication.views import (
+from apps.authentication.user_admin import (
     MAX_RESET_CODE_ATTEMPTS,
     MAX_RESET_REQUESTS_PER_ADDRESS,
     RESET_REQUEST_WINDOW_SECONDS,
