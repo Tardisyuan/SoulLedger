@@ -15,6 +15,7 @@ import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { landOn, landingOf } from "../push";
 import { formatStamp } from "../rules";
 import { Button, Empty, Notice, OneLine, Screen, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 
 /** Statuses where the lock screen never showed it; the content is still readable. */
@@ -146,7 +147,7 @@ export function NotificationHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   fill: { flex: 1 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   last: { borderBottomWidth: 0 },

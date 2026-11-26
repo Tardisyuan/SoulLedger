@@ -28,7 +28,7 @@ import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { fileField } from "@soulledger/mobile-ui/src/platform";
 import { AlertTxt, FadeModal, PhotoPager, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
-import { motion, radius } from "@soulledger/mobile-ui/src/theme";
+import { motion, radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长(`motion.fade`)。 */
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP, marginTop: 12 },
   tile: { borderWidth: 1, borderRadius: 0, overflow: "hidden", justifyContent: "center", alignItems: "center" },
   fill: { width: "100%", height: "100%" },
-  dim: { opacity: 0.45 },
+  dim: { opacity: GONE_OPACITY },
   broken: { textAlign: "center", paddingHorizontal: 8 },
   overlay: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, justifyContent: "flex-end", padding: 8, gap: 4 },
   mono: { fontSize: 12 },

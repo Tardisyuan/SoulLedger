@@ -83,6 +83,7 @@ export {
   type Biometry,
 } from "@soulledger/mobile-ui/src/deviceCredential";
 export {
+  GONE_OPACITY,
   HIGHLIGHT_ALPHA,
   civKeyOf,
   motion,

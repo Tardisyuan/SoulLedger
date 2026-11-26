@@ -40,7 +40,7 @@ import { GoneScreen, useGone } from "../gone";
 import { quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   FadeModal,
@@ -1088,7 +1088,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   center: { textAlign: "center" },
   pad: { paddingVertical: 24 },
   line: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },

@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { isDenied } from "./rules";
-import { BusyLine, Button, EASE, Emblem, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
+import { BusyLine, Button, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -287,7 +287,7 @@ export function Row({
       accessibilityState={gone ? { disabled: true } : undefined}
       disabled={!press}
       onPress={press}
-      style={({ pressed }) => [styles.row, { minHeight, borderBottomColor: t.hair, backgroundColor: pressed ? t.hair : "transparent" }, gone ? { opacity: 0.45 } : null]}
+      style={({ pressed }) => [styles.row, { minHeight, borderBottomColor: t.hair, backgroundColor: pressed ? t.hair : "transparent" }, gone ? { opacity: GONE_OPACITY } : null]}
     >
       {highlight ? <Highlight /> : null}
       {glyph ? (

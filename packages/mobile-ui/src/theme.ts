@@ -112,6 +112,8 @@ export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, tag: 28, top
  * `pill`. `none` is left for what is still square (a rule, a table cell). The focus ring follows its
  * element's shape.
  */
+/** A row that is gone (a deleted post, a withdrawn application, a closed thread) still shows, at this opacity. */
+export const GONE_OPACITY = 0.45;
 export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.sheet, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds and waits excepted, and the fades that stay at `reduced` 80:

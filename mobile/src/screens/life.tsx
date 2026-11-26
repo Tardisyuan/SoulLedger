@@ -38,7 +38,7 @@ import {
 import { useSession } from "../session";
 import { OutlineSeal } from "../seal";
 import { entranceStyle, headerSeal } from "../entrance";
-import { radius, sealedTheme, type CivKey } from "@soulledger/mobile-ui/src/theme";
+import { radius, sealedTheme, type CivKey, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import {
   Block,
   Button,
@@ -1332,7 +1332,7 @@ export function PastLivesSection({
 }
 
 const styles = StyleSheet.create({
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   link: { textDecorationLine: "underline" },

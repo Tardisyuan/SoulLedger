@@ -26,7 +26,7 @@ import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote, useOnBump } from "../readCache";
 import { goneKey, isDenied } from "../rules";
 import { useCan, useSession } from "../session";
-import { GUTTER, OneLine, Screen, Txt, family, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useTheme, useToast, Press } from "../shared";
+import { GONE_OPACITY, GUTTER, OneLine, Screen, Txt, family, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useTheme, useToast, Press } from "../shared";
 import { deadlineText, heldBeforeClaim } from "../verdict";
 
 type DeskGroup = JudgmentQueueGroup;
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   rowRight: { alignItems: "flex-end", gap: space[1], flexShrink: 1, maxWidth: "60%" },
   // Serif 16/24 (Design 第三十批 二.2). A Text, not a TextInput: the Android clipping of serif lines is TextInput's.
   name: { fontFamily: family.title, fontSize: 16, lineHeight: 24 },
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   swipeAction: { width: 96, alignItems: "center", justifyContent: "center" },
   heldHead: { paddingHorizontal: GUTTER, paddingTop: space[3], paddingBottom: space[2], borderTopWidth: 1, borderStyle: "dashed" },
 });

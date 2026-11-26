@@ -23,7 +23,7 @@ import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, stateNote, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
 import { publishVoiceNumber } from "@soulledger/mobile-ui/src/voiceCache";
-import { radius, space } from "@soulledger/mobile-ui/src/theme";
+import { radius, space, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { Block, Button, DataRow, DataRows, EnumBadge, enumText, EnumValue, FadeIn, GUTTER, Input, Interp, Notice, OneLine, PageEmptyArt, Quote, RadioMark, Screen, ScreenError, SectionLabel, Skeleton, StaleLine, Txt, useLandingFade, useLayout, useReducedMotion, useReloadOnRefocus, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { CooldownShorteningBlock } from "./cooldown";
 import { useDiscardGuard } from "./discardGuard";
@@ -631,7 +631,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   gap4: { marginTop: 4 },
   gap10: { marginTop: 12 },
   /** A11 panel: radius 6 (`radius.dialog`), 16 inside, 12 between the eligibility items. */

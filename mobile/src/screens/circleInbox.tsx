@@ -18,6 +18,7 @@ import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useGone } from "../gone";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { invalidateSocialStatus, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, usePaged } from "../paged";
@@ -189,7 +190,7 @@ export function useUnreadInteractions(): string | null {
 }
 
 const styles = StyleSheet.create({
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   fill: { flex: 1, minWidth: 0 },
   pad: { paddingVertical: 16 },
   group: { paddingTop: 12, paddingBottom: 4, fontFamily: family.ui[600] },
