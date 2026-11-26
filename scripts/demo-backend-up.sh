@@ -13,6 +13,15 @@ export DEMO_SOUL_LOGINS=/sl-tmp/demo-soul-logins.json
 export ALLOWED_HOSTS=localhost,127.0.0.1 CORS_ALLOWED_ORIGINS=http://localhost:3333
 PY=/app/backend/.venv/bin/python
 
+# The venv is copied once from an E2E tree (demo-remote.sh) and then kept: a package the lock gained later was missing
+# (sqlglot, 2026-11-27: the recording died on import). Bring it to the lock whenever the lock differs from the last sync.
+LOCK_STAMP=/app/backend/.venv/.synced-lock
+if ! cmp -s /app/backend/requirements.lock "$LOCK_STAMP"; then
+    /app/backend/.venv/bin/pip install -q --no-deps -r /app/backend/requirements.lock >/sl-tmp/pip.log 2>&1 \
+        || { tail -20 /sl-tmp/pip.log; exit 1; }
+    cp /app/backend/requirements.lock "$LOCK_STAMP"
+fi
+
 demo_pg() { # demo_pg "<sql>" — against the server's postgres database
     "$PY" - "$1" <<'PYEOF'
 import os, sys, psycopg2
