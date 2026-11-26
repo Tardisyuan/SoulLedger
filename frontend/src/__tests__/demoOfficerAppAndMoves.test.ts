@@ -85,6 +85,8 @@ describe("/officer-app/todo/", () => {
     }
     expect(decided).toBe(stops.length);
     expect(detailOf(flow!.id).status).toBe("COMPLETED");
+    // No stop is left, so nothing is decidable — not the recorded `true` from when it stood open (`get_can_approve`).
+    expect(detailOf(flow!.id).can_approve).toBe(false);
     expect(ids(todo(), "approvals")).not.toContain(flow!.id);
     expect(todo().approvals.count).toBe(before - 1);
   });

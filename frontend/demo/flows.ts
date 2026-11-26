@@ -1051,6 +1051,10 @@ export function derived(rec: Recording, path: string, query: URLSearchParams): A
     const answer = read(rec, path, query);
     const row = answer.data as Row | null;
     if (answer.status === 200 && row && row.status === "IN_PROGRESS") return ok({ ...row, can_approve: canDecide(rec, workflow[1]) });
+    // A flow the visitor decided to its end has no stop left (`approveNode` clears `current_node`), and the server's
+    // `get_can_approve` answers false before anything else then; the recorded `true` from when it stood open must not
+    // survive it. Other statuses keep the recorded answer: 异常 / 复议 flows may still be decided on the server.
+    if (answer.status === 200 && row && row.current_node == null) return ok({ ...row, can_approve: false });
     return answer;
   }
   return null;
