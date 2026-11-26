@@ -213,6 +213,8 @@ describe("the list", () => {
     wrap(chatState({ conversations: [gone] }), <LettersScreen />);
     expectTag("closed-g", "已闭", "✕");
     expect(screen.queryByTestId("awaiting-g")).toBeNull();
+    // 第六十七批 三: the 0.82 was on a closed thread (not an unread hall letter); still read, so the 0.85 tier.
+    expect(StyleSheet.flatten(screen.getByTestId("soul-row-g").props.style)).toMatchObject({ opacity: 0.85 });
   });
 
   it("an empty list still has the hall to write to, and the empty souls section offers to find someone", () => {

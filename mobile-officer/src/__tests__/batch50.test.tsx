@@ -71,7 +71,7 @@ describe("C1 · after sealing, the detail stays and says so", () => {
     expect(screen.getByTestId("detail-sealed")).toHaveTextContent(/驳回会重开一案/);
     // 第五十六批：页面里的一块，面板圆角 6(此前 10)。
     expect(StyleSheet.flatten(screen.getByTestId("detail-sealed").props.style)).toMatchObject({ borderRadius: 6 });
-    expect(screen.getByTestId("detail-dimmed")).toHaveStyle({ opacity: 0.55 });
+    expect(screen.getByTestId("detail-dimmed")).toHaveStyle({ opacity: 0.45 }); // 第六十七批 三
     expect(screen.queryByTestId("judgment-seal")).toBeNull(); // the strip carries the seal, not the header
     expect(screen.queryByTestId("judgment-actions")).toBeNull();
     expect(screen.getByTestId("detail-next-caption")).toHaveTextContent("王桂兰 · 还剩 5 件");

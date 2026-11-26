@@ -289,7 +289,7 @@ describe("the tab bar (补足 B11 / C14)", () => {
     expect([t.plaque, t.ink]).toEqual([v4.civ.cn.tL, v4.light.ink]);
     wrap(bar(["本世", "转生", "书信", "朋友圈"], 2), signedIn());
     expect(["Life", "Applications", "Letters", "Circle"].map((n) => screen.getByTestId(`tab-${n}-glyph`, H).props.children)).toEqual(["世", "生", "信", "圈"]);
-    expect(flat(screen.getByTestId("tab-Letters-glyph", H))).toMatchObject({ fontSize: 18, lineHeight: 22, fontFamily: "NotoSerifSC_600", color: t.ink });
+    expect(flat(screen.getByTestId("tab-Letters-glyph", H))).toMatchObject({ fontSize: 18, lineHeight: 24, fontFamily: "NotoSerifSC_600", color: t.ink }); // 第六十七批 二: door.glyph 18 / 24
     expect(screen.getAllByTestId("tab-current-mark", H)).toHaveLength(1);
     expect(flat(screen.getByTestId("tab-current-mark", H))).toMatchObject({ backgroundColor: t.ink, width: 14, height: 2 });
     expect(flat(screen.getByTestId("tab-current-mark", H)).backgroundColor).not.toBe(t.plaque);

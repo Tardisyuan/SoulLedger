@@ -215,6 +215,9 @@ describe("the four notices (1g)", () => {
     expect(body).toContain(hhmm(retryAt));
     expect(body).not.toMatch(/\d+\s*\/\s*\d+/);
     expect(screen.getByTestId("assist-input").props.value).toBe("我为什么不能申请？");
+    // 第六十七批 一: the field and its send key are both 48 (touch.controlMd), not 44.
+    expect(StyleSheet.flatten(screen.getByTestId("assist-input").props.style)).toMatchObject({ minHeight: 48 });
+    expect(StyleSheet.flatten(screen.getByTestId("assist-send").props.style)).toMatchObject({ width: 48, height: 48 });
     expect(screen.queryByTestId("assist-answer")).toBeNull();
   });
 
