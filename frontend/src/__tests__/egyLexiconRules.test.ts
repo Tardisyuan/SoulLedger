@@ -99,7 +99,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "III", "SENTENTIA", "SLO", "INP", "README"]); // README: 文件名原样(第四十七批 demo.build.contact);SLO / INP: 「系统状况」页的服务目标与 Web Vitals 指标名(第四十六批); // SENTENTIA: 欧洲判决文书的装饰标题与印文,拉丁文「判决」原样大写(v4 第五 / 六批,用户 2026-11-06 定); // III: 出处「Inf. III」(但丁《地狱篇》第三歌,第五十七批 c); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "III", "SENTENTIA", "SLO", "INP", "README", "HOSPITAL", "POLICE"]); // HOSPITAL / POLICE: X-Source-System 请求头里的来源代码原样(第六十六批 death_sync.api_keys.allowed_sources_hint);README: 文件名原样(第四十七批 demo.build.contact);SLO / INP: 「系统状况」页的服务目标与 Web Vitals 指标名(第四十六批); // SENTENTIA: 欧洲判决文书的装饰标题与印文,拉丁文「判决」原样大写(v4 第五 / 六批,用户 2026-11-06 定); // III: 出处「Inf. III」(但丁《地狱篇》第三歌,第五十七批 c); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -396,6 +396,9 @@ const TECHNICAL: Record<string, string[]> = {
   "ai_assist.verdict.model": ["{model}"],
   "ai_assist.screen.score": ["{score}"],
   "ai_assist.screen.model": ["{model}"],
+  // 第六十六批:请求头名、来源代码与网址协议前缀照原样(记号去掉两端标点后比对,所以 http:// 记作 http)。
+  "death_sync.api_keys.allowed_sources_hint": ["X-Source-System", "HOSPITAL", "POLICE"],
+  "death_sync.webhooks.url_invalid": ["http", "https"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */

@@ -4164,6 +4164,8 @@
       "name": "Ren",
       "name_placeholder": "Ren Menf",
       "system_type_label": "Kher-N Hemsu",
+      "allowed_sources": "Tepy Wenen",
+      "allowed_sources_hint": "Tepy Wenen Er X-Source-System, Mi: HOSPITAL, POLICE. Nen Sesh: Kher-N Hemsu Djes-Ef Wa.",
       "system_type": {
         "GOVERNMENT": "Sesh Remetj",
         "HOSPITAL": "Per Senb",
@@ -4207,6 +4209,7 @@
       "create": "Iri Webhook Mawy",
       "edit_title": "Semawy Webhook",
       "url": "Wat",
+      "url_invalid": "Wat: Tepy Em http:// Mi https://",
       "api_key": "Menf",
       "events": "Medu",
       "events_hint": "Nen Setep: Medu Neb.",
@@ -10121,6 +10124,7 @@
       "here": "Dy Min"
     },
     "close_up": "Maa Dy",
+    "pause_motion": "Smen Shem",
     "card": {
       "arrived": "Iyi-N · {{date}}",
       "today_in": "Hru Pen · Aq",
