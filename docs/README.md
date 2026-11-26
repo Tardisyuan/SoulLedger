@@ -172,9 +172,9 @@ draft was deleted on 2026-10-24.*
   四种文明现在在数据层就不同了（见 `readings.py`），因此需要四种不同的呈现，而不是一个
   带 variant 的组件——ADDENDUM §1 写的是三种，§5 补了第四种（希腊）及其第四种读数形状。
   **必须与 BRIEF 一起读。**
-- [`screens/`](design-handoff/screens/) — 29 张实际界面全页截图
+- `screens/` — 29 张实际界面全页截图(2026-11-26 移出 main,在 `archive/docs` 分支,提交 5aeba17ea)
 - [`tokens.md`](design-handoff/tokens.md) / [`tokens.html`](design-handoff/tokens.html) — 设计 token 清单
-- [`tables/`](design-handoff/tables/) — 三语（zh-Hans / en / egy）表格样本与字符串导出
+- `tables/` — 三语（zh-Hans / en / egy）表格样本与字符串导出(同上,在 `archive/docs` 分支)
 
 > 这个包已经交付并被外部引用，请视为冻结内容——不要重排、重命名或改写其中的文件。
 > *This package has been delivered and is referenced externally. Treat it as
