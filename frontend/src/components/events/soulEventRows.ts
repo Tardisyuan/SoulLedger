@@ -8,7 +8,9 @@ import { MISSING_GLYPH } from "@/src/lib/domainDisplay";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
-export type DatePreset = "" | "7d" | "30d";
+import { datePresetStart, type DatePreset } from "@soulledger/core/domain/dates";
+
+export type { DatePreset };
 
 export interface SoulEventFilters {
   search: string;
@@ -36,10 +38,7 @@ export function eventListParams(f: SoulEventFilters, now: Date = new Date()): So
 }
 
 export function startDate(preset: DatePreset, now: Date = new Date()): string | undefined {
-  if (!preset) return undefined;
-  const from = new Date(now);
-  from.setDate(from.getDate() - (preset === "7d" ? 7 : 30));
-  return from.toISOString().slice(0, 10);
+  return datePresetStart(preset, now) || undefined;
 }
 
 export interface SoulEventRow {

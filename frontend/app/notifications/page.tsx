@@ -7,6 +7,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { notificationKeys } from "@soulledger/core/query_keys";
+import { localDateString } from "@soulledger/core/domain/dates";
 import { notificationsApi, type Notification } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -45,7 +46,7 @@ function groupByDay(items: Notification[], formatDay: (_iso: string) => string) 
     const d = new Date(item.created_at);
     const key = Number.isNaN(d.getTime())
       ? "unknown"
-      : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      : localDateString(d);
     const day = days.get(key) ?? { key, label: formatDay(item.created_at), items: [] };
     day.items.push(item);
     days.set(key, day);

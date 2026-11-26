@@ -198,6 +198,32 @@ export function localDateString(d: Date = new Date()): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+/*
+ * The backend's calendar is UTC (`backend/config/settings.py` `TIME_ZONE = "UTC"`; month quotas start at
+ * `timezone.localtime()`'s month, which is UTC). A filter or a title that must agree with what the server
+ * counts uses these, never the device's local fields (audit 2026-11-26 §2.2: four copies, two of them
+ * mixing a local `setDate` with a UTC `toISOString` day in one computation).
+ */
+const DAY_MS = 86_400_000;
+
+/** `YYYY-MM` of `now` in UTC: the month the backend is counting. */
+export function utcMonth(now: Date = new Date()): string {
+  return `${now.getUTCFullYear()}-${pad2(now.getUTCMonth() + 1)}`;
+}
+
+/** `YYYY-MM-DD`: the UTC day `days` × 24 h before `now`. */
+export function utcDaysAgo(days: number, now: Date | number = new Date()): string {
+  return new Date(+now - days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** The 全部 · 7 天 · 30 天 date filter of the audit and soul-event lists. */
+export type DatePreset = "" | "7d" | "30d";
+
+/** `start_date` of a {@link DatePreset}: 7 or 30 days back from now (UTC day); "" for 全部. */
+export function datePresetStart(preset: DatePreset, now: Date = new Date()): string {
+  return preset ? utcDaysAgo(preset === "7d" ? 7 : 30, now) : "";
+}
+
 /**
  * Two-digit zero padding, and the two clock pieces both apps print (refactor audit 2026-11-08 P4: these
  * were copied into eight files). All read the device's local fields, never UTC.
