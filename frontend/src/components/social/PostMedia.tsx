@@ -19,8 +19,7 @@ import { cn } from "@/lib/utils";
  * 写「图片加载失败」而不重取,见 mobile/src/screens/circleMedia.tsx —— Web 稿要求能重取)。
  * 重拉之后地址变了,格子按 `id:url` 重新挂载,失败状态随之清掉;还取不到就再显示一次虚线格。
  *
- * 查看器用 Base UI Dialog(与 BaseModal 同一个原语),焦点进出、Esc、焦点圈都随它;
- * 面板圆角 6(`rounded-panel`,v4 起由 8 改 6),← → 切换。动效走全局 reduced-motion 规则(1ms,不是 none)。
+ * 查看器(下面的 `MediaViewer`)用 Base UI Dialog(与 BaseModal 同一个原语),焦点进出、Esc、焦点圈都随它。
  */
 
 const DESKTOP_CELLS = 4;
@@ -173,13 +172,20 @@ export function PostMediaGrid({
   );
 }
 
+/**
+ * 全屏查看器,网页唯一一个:帖子配图、审阅详情的配图格(moderation/MediaGrid)、殿司收件箱里灵魂来信的图都用它。
+ * 规范 v2 C15 + 第六十七批六:纯黑底、原图居中 —— 照片在任何主题下都放在同一种底上看,与两个 App 的看图同一种。
+ * 上面的字与框取 on-main(v4 onSolid,两主题都是白)。右上「关闭」(触屏 44),← → 切换,Esc 关闭。
+ * 不做缩放动画,直接显示 —— 所以查看器不挂任何 transition。
+ * `isBroken` / `onBroken` / `onRefetch` / `author` / `time` 只有帖子配图给;不给就不显示过期格与头部的作者、时间。
+ */
 export function MediaViewer({
   media,
   index,
   onIndex,
   onClose,
-  isBroken,
-  onBroken,
+  isBroken = () => false,
+  onBroken = () => {},
   onRefetch,
   author,
   time,
@@ -188,11 +194,11 @@ export function MediaViewer({
   index: number | null;
   onIndex: (i: number) => void;
   onClose: () => void;
-  isBroken: (m: PostMedia) => boolean;
-  onBroken: (m: PostMedia) => void;
-  onRefetch: () => void;
-  author: string;
-  time: string;
+  isBroken?: (m: PostMedia) => boolean;
+  onBroken?: (m: PostMedia) => void;
+  onRefetch?: () => void;
+  author?: string;
+  time?: string;
 }) {
   const { t } = useI18n();
   const open = index !== null;
@@ -202,82 +208,67 @@ export function MediaViewer({
     if (index === null) return;
     onIndex((index + d + media.length) % media.length);
   };
-  const arrow =
-    "absolute top-1/2 z-[1] flex size-(--control-h-lg) -translate-y-1/2 items-center justify-center rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-lg text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]";
+  const onMain = "text-[oklch(var(--color-on-main))] focus-visible:outline-[oklch(var(--color-on-main))]";
+  const arrow = `absolute top-1/2 z-[1] flex size-(--control-h-lg) -translate-y-1/2 items-center justify-center rounded-control border border-[oklch(var(--color-on-main))] text-lg ${onMain}`;
 
   return (
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <Dialog.Portal>
-        <Dialog.Backdrop
-          data-motion="fade"
-          className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:opacity-0 data-starting-style:opacity-0"
-        />
-        <Dialog.Viewport className="fixed inset-0 z-dialog flex items-center justify-center p-4 max-[768px]:p-2">
-          <Dialog.Popup
-            data-media-viewer=""
-            data-motion="fade"
-            onKeyDown={(e) => {
-              if (e.key === "ArrowRight") step(1);
-              else if (e.key === "ArrowLeft") step(-1);
-            }}
-            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[1040px] flex-col overflow-hidden rounded-panel border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] shadow-overlay transition-opacity duration-base ease-enter data-ending-style:opacity-0 data-starting-style:opacity-0"
-          >
-            {current && index !== null ? (
-              <>
-                <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[oklch(var(--color-line))] pl-6 pr-2">
-                  <Dialog.Title title={author} className="min-w-0 truncate text-sm font-medium text-[oklch(var(--color-ink))]">
-                    {author}
-                  </Dialog.Title>
-                  <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">{time}</span>
-                  <span
-                    data-testid="viewer-position"
-                    className="ml-auto font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]"
-                  >
-                    {index + 1} / {media.length}
-                  </span>
-                  <Dialog.Close
-                    aria-label={t("common.close")}
-                    className="flex size-(--control-h-sm) items-center justify-center text-lg text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
-                  >
-                    <span aria-hidden="true">✕</span>
-                  </Dialog.Close>
-                </div>
+        <Dialog.Popup
+          data-media-viewer=""
+          aria-label={current && index !== null ? caption(t, current, index) : undefined}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") step(1);
+            else if (e.key === "ArrowLeft") step(-1);
+          }}
+          className="fixed inset-0 z-dialog flex flex-col bg-black focus:outline-hidden"
+        >
+          {current && index !== null ? (
+            <>
+              <div className="flex shrink-0 items-center gap-3 p-4 font-mono text-xs tabular-nums text-[oklch(var(--color-on-main))]">
+                {author ? <span className="min-w-0 truncate font-sans text-sm font-medium">{author}</span> : null}
+                {time ? <span>{time}</span> : null}
+                <span data-testid="viewer-position" className="ml-auto">
+                  {index + 1} / {media.length}
+                </span>
+                <Dialog.Close className={`rounded-control min-h-(--control-h-sm) border border-[oklch(var(--color-on-main))] px-3 font-sans text-sm ${onMain}`}>
+                  {t("common.close")}
+                </Dialog.Close>
+              </div>
 
-                <div className="relative h-[600px] max-h-[60dvh] min-h-0 shrink bg-[oklch(var(--color-surface-2))]">
-                  {isBroken(current) ? (
-                    <div className="flex h-full items-center justify-center p-8">
-                      <div className="h-40 w-64">
-                        <Expired onRefetch={onRefetch} />
-                      </div>
+              <div className="relative min-h-0 flex-1 px-12 max-[768px]:px-2">
+                {isBroken(current) ? (
+                  <div className="flex h-full items-center justify-center p-8">
+                    <div className="h-40 w-64">
+                      <Expired onRefetch={onRefetch} />
                     </div>
-                  ) : (
-                    <Img
-                      key={`${current.id}:${current.url}`}
-                      media={current}
-                      alt={caption(t, current, index)}
-                      fit="contain"
-                      onBroken={() => onBroken(current)}
-                    />
-                  )}
-                  {many ? (
-                    <>
-                      <button type="button" onClick={() => step(-1)} aria-label={t("social.media.prev")} className={`${arrow} left-4`}>
-                        <span aria-hidden="true">←</span>
-                      </button>
-                      <button type="button" onClick={() => step(1)} aria-label={t("social.media.next")} className={`${arrow} right-4`}>
-                        <span aria-hidden="true">→</span>
-                      </button>
-                    </>
-                  ) : null}
-                  {/* 只写后端真给的:序号与像素尺寸(PostMedia 只有 id / url / width / height)。 */}
-                  <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-[oklch(var(--color-surface-1)/0.85)] px-2 font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">
-                    {caption(t, current, index)}
-                  </span>
-                </div>
-
+                  </div>
+                ) : (
+                  <Img
+                    key={`${current.id}:${current.url}`}
+                    media={current}
+                    alt={caption(t, current, index)}
+                    fit="contain"
+                    onBroken={() => onBroken(current)}
+                  />
+                )}
                 {many ? (
-                  <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-t border-[oklch(var(--color-line))] px-6 py-3">
-                    {media.map((m, i) => (
+                  <>
+                    <button type="button" onClick={() => step(-1)} aria-label={t("social.media.prev")} className={`${arrow} left-4 max-[768px]:left-2`}>
+                      <span aria-hidden="true">←</span>
+                    </button>
+                    <button type="button" onClick={() => step(1)} aria-label={t("social.media.next")} className={`${arrow} right-4 max-[768px]:right-2`}>
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2 overflow-x-auto p-4">
+                {/* 只写后端真给的:序号与像素尺寸(PostMedia 只有 id / url / width / height)。 */}
+                <span className="shrink-0 pr-3 font-mono text-2xs tabular-nums text-[oklch(var(--color-on-main))]">{caption(t, current, index)}</span>
+                {many
+                  ? media.map((m, i) => (
                       <button
                         key={`${m.id}:${m.url}`}
                         type="button"
@@ -287,27 +278,28 @@ export function MediaViewer({
                         data-thumb={i}
                         className={cn(
                           "size-14 shrink-0 overflow-hidden",
-                          i === index && "outline-2 -outline-offset-2 outline-[oklch(var(--color-ink))]",
+                          i === index && "outline-2 -outline-offset-2 outline-[oklch(var(--color-on-main))]",
                         )}
                       >
                         {isBroken(m) ? (
-                          <span data-media-expired="" className="flex h-full w-full items-center justify-center border border-dashed border-[oklch(var(--color-line-strong))] text-[oklch(var(--color-ink-muted))]">
+                          <span data-media-expired="" className="flex h-full w-full items-center justify-center border border-dashed border-[oklch(var(--color-on-main))] text-[oklch(var(--color-on-main))]">
                             <span aria-hidden="true">◌</span>
                           </span>
                         ) : (
                           <Img media={m} alt="" fit="cover" onBroken={() => onBroken(m)} />
                         )}
                       </button>
-                    ))}
-                    <span className="ml-auto shrink-0 pl-3 text-xs text-[oklch(var(--color-ink-muted))] max-[768px]:hidden">
-                      {t("social.media.viewer_hint")}
-                    </span>
-                  </div>
+                    ))
+                  : null}
+                {many ? (
+                  <span className="ml-auto shrink-0 pl-3 text-xs text-[oklch(var(--color-on-main))] max-[768px]:hidden">
+                    {t("social.media.viewer_hint")}
+                  </span>
                 ) : null}
-              </>
-            ) : null}
-          </Dialog.Popup>
-        </Dialog.Viewport>
+              </div>
+            </>
+          ) : null}
+        </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
   );
