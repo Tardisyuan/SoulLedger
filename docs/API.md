@@ -71,7 +71,10 @@ create / approve / execute, officer and soul letter replies, disposition execute
 soul's rebirth application. Keyed by (user, method, path, key) for 24 hours: a repeat with the same body
 replays the first 2xx with `Idempotent-Replayed: true`; another body is 422 `idempotency_key_reused`; a repeat
 while the first is still running is 409 `idempotency_in_progress`. Without the header nothing changes.
-(`death-sync` keeps its own `X-Idempotency-Key`.)
+(`death-sync` keeps its own `X-Idempotency-Key`, unique per (hall, source, key). `register/` also takes an optional
+`X-Source-System`: absent, the source is the key's `system_type`; present, it must be in the key's
+`allowed_sources` (empty = `system_type` only), else 403 `KEY_SOURCE_NOT_ALLOWED`; a value that is not
+`[A-Z][A-Z0-9_]{0,49}`, or the reserved `TUDI`, is 400 `INVALID_SOURCE_SYSTEM`. Docs: `docs/INTEGRATION.md`.)
 
 ## Prefix index
 

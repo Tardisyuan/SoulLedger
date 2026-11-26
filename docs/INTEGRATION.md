@@ -13,6 +13,10 @@
   - `can_query_status` —— 调 `health/` 与登记进度 `register/{id}/progress/`(默认开)
   - `can_manage_webhooks` —— 用 Key 自己管理 webhook(默认关)
 - 可设过期时间与 IP 白名单(`allowed_ips`);过期、停用、来源 IP 不在白名单都返回 401。
+- 可声明的来源(`allowed_sources`):一个 Key 替几个系统转发时(例如消息总线),登记可带请求头
+  `X-Source-System: HOSPITAL`,这条登记就记在那个来源名下(`source_system`)。只能用管理员给这个 Key 列出的来源;
+  列表为空时只能用它自己的系统类型(`system_type`)。不带这个头时来源就是 `system_type`,与以前一样。
+  来源是 1–50 个大写字母、数字或下划线，字母开头;`TUDI` 留给土地公登记，不能声明。
 - 限流按 Key 计:默认每分钟 60 次、每小时 1000 次(管理员可改)。超出返回 429。
   `GET death-sync/health/` 不计入限流,返回里有本 Key 剩余的次数。
 
@@ -36,7 +40,8 @@
 ```
 
 - `soul_lookup` 用 `soul_id`,或 `name`(可再加 `birth_date` / `civilization`)找灵魂。
-- 幂等:可带请求头 `X-Idempotency-Key`;不带时按「本 Key + 请求体」算一个。同一个键重复提交返回
+- 幂等:可带请求头 `X-Idempotency-Key`,按「殿 + 来源」各算各的(同一个键用在两个来源下是两条登记);
+  不带时按「本 Key + 请求体」算一个。同一个键重复提交返回
   **409** `{"status": "duplicate", "registration_id", "existing_status"}`,不会重复登记。
   **登记失败(`FAILED`)的那条不占键**:原样重发会在同一条登记上重新处理(`registration_id` 不变),
   例如殿里设好城隍之后重发 `NO_CITY_GOD` 的那条;成功或处理中的才答 409。批量里带了 `idempotency_key` 的项同样。
@@ -66,6 +71,8 @@
 | code | HTTP | 含义 |
 |---|---|---|
 | `KEY_NO_DEATH_PERMISSION` | 403 | 这个 Key 没开 `can_register_death` |
+| `KEY_SOURCE_NOT_ALLOWED` | 403 | `X-Source-System` 不在这个 Key 可声明的来源里(列表为空时只认 `system_type`) |
+| `INVALID_SOURCE_SYSTEM` | 400 | `X-Source-System` 格式不对(1–50 个 A–Z、0–9、_,字母开头),或是保留的 `TUDI` |
 | `BATCH_TOO_LARGE` | 400 | 批量超过 50 条 |
 | `SOUL_NOT_FOUND` | 400 / 批量项 | 按 `soul_lookup` 找不到灵魂 |
 | `SOUL_NOT_ALIVE` | 400 / 批量项 | 灵魂已不是「在世」(已登记过死亡等) |
