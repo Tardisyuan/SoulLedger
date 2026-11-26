@@ -18,7 +18,7 @@ import { mediaUrl } from "@soulledger/core/api/soul-social";
 import { letterImageBox } from "@soulledger/core/domain/letters";
 import { Image, type ImageSource } from "expo-image";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Outgoing } from "../chat";
@@ -26,7 +26,7 @@ import { bubbleStamp } from "../chatRules";
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { ON_PLAQUE } from "@soulledger/mobile-ui/src/theme";
-import { AlertTxt, FadeModal, Loader, OneLine, Txt, thumbRef, useFrontPhoto, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { AlertTxt, FadeModal, Loader, OneLine, PhotoPager, Txt, thumbRef, useFrontPhoto, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
 export const CHAT_IMAGE_MAX = 4;
@@ -296,18 +296,16 @@ function ViewerPages({
   const n = images.length;
   return (
     <View testID="chat-image-viewer" style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView
+      <PhotoPager
         testID="chat-image-viewer-pages"
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        contentOffset={{ x: start * width, y: 0 }}
-        onMomentumScrollEnd={(e) => setCurrent(Math.min(n - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))))}
-      >
-        {images.map((image) => (
-          <ViewerPage key={image.id} image={image} width={width} height={pageHeight} onClose={onClose} attach={framePhoto(String(image.id)).attach} onLoaded={framePhoto(String(image.id)).onLoad} />
-        ))}
-      </ScrollView>
+        items={images}
+        start={start}
+        keyOf={(image) => String(image.id)}
+        onIndex={setCurrent}
+        renderPage={(image) => (
+          <ViewerPage image={image} width={width} height={pageHeight} onClose={onClose} attach={framePhoto(String(image.id)).attach} onLoaded={framePhoto(String(image.id)).onLoad} />
+        )}
+      />
       {n > 1 ? (
         <View pointerEvents="none" style={[styles.counterWrap, { top: insets.top + 12 }]}>
           <Txt

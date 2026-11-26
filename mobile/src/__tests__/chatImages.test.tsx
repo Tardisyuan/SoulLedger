@@ -279,10 +279,12 @@ describe("full screen", () => {
     expect(StyleSheet.flatten(viewer.props.style).backgroundColor).toBe("#000000");
     expect(screen.getByTestId("chat-image-viewer-pages").props.horizontal).toBe(true);
     expect(screen.getByTestId("chat-image-viewer-pages").props.pagingEnabled).toBe(true);
-    // Opened on the second image (the tapped one), with the first beside it.
+    // Opened on the second image (the tapped one); the first is a page to the left, mounted with the list's layout
+    // (PhotoPager mounts the page in front first, not every image of the thread).
     expect(screen.getByTestId("chat-image-viewer-pages").props.contentOffset).toEqual({ x: 390, y: 0 });
     await waitFor(() => expect(screen.getByTestId(`chat-viewer-image-${IMG_B}`)).toBeTruthy());
-    expect(screen.getByTestId(`chat-viewer-image-${IMG_A}`).props.contentFit).toBe("contain");
+    expect(screen.getByTestId(`chat-viewer-image-${IMG_B}`).props.contentFit).toBe("contain");
+    expect(screen.queryByTestId(`chat-viewer-image-${IMG_A}`)).toBeNull();
     // No save, no share, no close button: the one control is a tap anywhere. (The "2 / 2" counter is read-only.)
     for (const word of [/保存/, /分享/, /下载/]) expect(screen.queryByText(word)).toBeNull();
     expect(screen.queryByLabelText(/保存|save/i)).toBeNull();

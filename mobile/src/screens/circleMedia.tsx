@@ -21,13 +21,13 @@ import { Image, type ImageSource } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { fileField } from "@soulledger/mobile-ui/src/platform";
-import { AlertTxt, FadeModal, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { AlertTxt, FadeModal, PhotoPager, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
@@ -151,29 +151,28 @@ function ViewerPages({ media, start, onClose, onFront, framePhoto }: { media: Po
           <Icon name="close" size={18} color={t.ink} />
         </Press>
       </View>
-      <ScrollView
+      {/* PhotoPager keeps the index inside the list; this viewer alone did not, so an offset past the last page could count 「4 / 3」. */}
+      <PhotoPager
         testID="media-viewer-pages"
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        contentOffset={{ x: start * width, y: 0 }}
-        onMomentumScrollEnd={(e) => setCurrent(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))}
-      >
-        {media.map((m, i) => (
-          <View key={m.id} ref={framePhoto(String(m.id)).attach}>
+        items={media}
+        start={start}
+        keyOf={(m) => String(m.id)}
+        onIndex={setCurrent}
+        renderPage={(m, i) => (
+          <View ref={framePhoto(String(m.id)).attach}>
             <Image
-            onLoad={framePhoto(String(m.id)).onLoad}
-            testID={`media-viewer-image-${i}`}
-            accessibilityLabel={tr("soul_app.circle.media.viewer", { i: String(i + 1), n: String(media.length) })}
-            source={postImageSource(m)}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            transition={fade}
-            style={{ width, height: height - insets.top - insets.bottom - 48 }}
-          />
+              onLoad={framePhoto(String(m.id)).onLoad}
+              testID={`media-viewer-image-${i}`}
+              accessibilityLabel={tr("soul_app.circle.media.viewer", { i: String(i + 1), n: String(media.length) })}
+              source={postImageSource(m)}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={fade}
+              style={{ width, height: height - insets.top - insets.bottom - 48 }}
+            />
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 }

@@ -5,17 +5,17 @@
  * `letterImageBox`),读屏写「一张图，没有附字」(`letters.image_alt`);点开是黑底全屏,
  * 左右滑动看线程里的每一张,点一下关闭,没有保存。官员回信暂不支持发图 —— 这里只有显示,没有选图与上传。
  *
- * 官员端没有 expo-image(不为这一处加原生模块),用 React Native 自带的 `Image`、`ScrollView`(弹层是共用的 `FadeModal`)。
+ * 官员端没有 expo-image(不为这一处加原生模块),用 React Native 自带的 `Image`(翻页是共用的 `PhotoPager`,弹层是共用的 `FadeModal`)。
  * 地址是服务器在消息里签给当前官员的短时路径(取文件时再按码名与殿司查一次),每次打开线程重新取;
  * 取不到(过期、失去权限)就写「图片加载失败」,不留空白。
  */
 import { letterImageBox } from "@soulledger/core/domain/letters";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Image, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { FadeModal, Txt, space, thumbRef, useFrontPhoto, useI18n, useOnline, useTheme, Press } from "../shared";
+import { FadeModal, PhotoPager, Txt, space, thumbRef, useFrontPhoto, useI18n, useOnline, useTheme, Press } from "../shared";
 
 export interface LetterImageRef {
   id: string;
@@ -97,17 +97,14 @@ function Pages({ images, start, onClose, onFront }: { images: LetterImageRef[]; 
   useEffect(() => onFront(frontId), [onFront, frontId]);
   return (
     <View testID="letter-image-viewer" style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView
+      <PhotoPager
         testID="letter-image-viewer-pages"
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        contentOffset={{ x: start * width, y: 0 }}
-        onMomentumScrollEnd={(e) => setCurrent(Math.min(images.length - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))))}
-      >
-        {images.map((image) => (
+        items={images}
+        start={start}
+        keyOf={(image) => String(image.id)}
+        onIndex={setCurrent}
+        renderPage={(image) => (
           <Pressable
-            key={image.id}
             accessibilityRole="button"
             accessibilityLabel={t("soul_app.circle.media.close")}
             onPress={onClose}
@@ -115,8 +112,8 @@ function Pages({ images, start, onClose, onFront }: { images: LetterImageRef[]; 
           >
             <Image testID={`letter-viewer-image-${image.id}`} source={{ uri: mediaUrl(image.url) }} style={{ width, height: pageHeight }} resizeMode="contain" />
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 }

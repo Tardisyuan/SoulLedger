@@ -19,6 +19,7 @@ export {
   Button,
   EASE,
   FadeModal,
+  PhotoPager,
   thumbRef,
   useFrontPhoto,
   Grow,

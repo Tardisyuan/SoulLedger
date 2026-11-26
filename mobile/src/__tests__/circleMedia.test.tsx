@@ -207,9 +207,25 @@ describe("feed and viewer", () => {
     fireEvent.press(screen.getByTestId("media-a-tile-1"));
     expect(await screen.findByTestId("media-viewer")).toBeTruthy();
     expect(screen.getByTestId("media-viewer-counter").props.children).toBe("图片 2 / 3");
-    expect(screen.getAllByTestId(/^media-viewer-image-\d$/)).toHaveLength(3);
+    // PhotoPager mounts the page in front first, not the whole post (its neighbours come with the list's layout).
+    expect(screen.getAllByTestId(/^media-viewer-image-\d$/).map((n) => n.props.testID)).toEqual(["media-viewer-image-1"]);
+    expect(screen.getByTestId("media-viewer-pages").props.contentOffset).toEqual({ x: Dimensions.get("window").width, y: 0 });
+    const { width: w, height: h } = Dimensions.get("window");
+    act(() => {
+      fireEvent(screen.getByTestId("media-viewer-pages"), "layout", { nativeEvent: { layout: { x: 0, y: 0, width: w, height: h } } });
+      fireEvent(screen.getByTestId("media-viewer-pages"), "contentSizeChange", 3 * w, h);
+      fireEvent(screen.getByTestId("media-viewer-pages"), "scroll", {
+        nativeEvent: { contentOffset: { x: w, y: 0 }, contentSize: { width: 3 * w, height: h }, layoutMeasurement: { width: w, height: h }, zoomScale: 1 },
+        timeStamp: 1,
+      });
+    });
+    // Laid out on the second page: the pages either side are mounted too (windowSize 3).
+    await waitFor(() => expect(screen.getAllByTestId(/^media-viewer-image-\d$/).map((n) => n.props.testID).sort()).toEqual(["media-viewer-image-0", "media-viewer-image-1", "media-viewer-image-2"]));
     // 翻到第三张:计数跟着页走。
     fireEvent(screen.getByTestId("media-viewer-pages"), "momentumScrollEnd", { nativeEvent: { contentOffset: { x: 2 * Dimensions.get("window").width, y: 0 } } });
+    expect(screen.getByTestId("media-viewer-counter").props.children).toBe("图片 3 / 3");
+    // An offset past the last page still counts the last one (this viewer once said 「图片 4 / 3」).
+    fireEvent(screen.getByTestId("media-viewer-pages"), "momentumScrollEnd", { nativeEvent: { contentOffset: { x: 3 * Dimensions.get("window").width, y: 0 } } });
     expect(screen.getByTestId("media-viewer-counter").props.children).toBe("图片 3 / 3");
     fireEvent.press(screen.getByTestId("media-viewer-close"));
     await waitFor(() => expect(screen.queryByTestId("media-viewer")).toBeNull());

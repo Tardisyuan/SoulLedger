@@ -34,6 +34,7 @@ import {
   Animated,
   Dimensions,
   Easing,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -381,6 +382,49 @@ export function useFrontPhoto(prefix: string) {
     return box && size ? containRect(box, size) : box;
   }, []);
   return { closeTo, closeFrom, setFront, framePhoto };
+}
+
+/**
+ * The pages of a full-screen photo viewer, one window wide each: the chat's, the circle's and the officer's letters'
+ * (they were three ScrollViews that mounted every picture of a thread at once). A FlatList with `getItemLayout`, so
+ * only the page in front and its neighbours are mounted; `contentOffset` still opens it on `start` (initialScrollIndex
+ * picks what is rendered first). `onIndex` hears the page in front after a swipe, kept inside the list.
+ */
+export function PhotoPager<T>({
+  testID,
+  items,
+  start,
+  keyOf,
+  onIndex,
+  renderPage,
+}: {
+  testID: string;
+  items: readonly T[];
+  start: number;
+  keyOf: (item: T) => string;
+  onIndex: (index: number) => void;
+  renderPage: (item: T, index: number) => ReactElement;
+}) {
+  const { width } = useWindowDimensions();
+  const n = items.length;
+  const first = Math.min(Math.max(0, start), Math.max(0, n - 1));
+  return (
+    <FlatList
+      testID={testID}
+      data={items}
+      horizontal
+      pagingEnabled
+      showsHorizontalScrollIndicator={false}
+      keyExtractor={keyOf}
+      getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+      initialScrollIndex={first}
+      initialNumToRender={1}
+      windowSize={3}
+      contentOffset={{ x: first * width, y: 0 }}
+      onMomentumScrollEnd={(e) => onIndex(Math.min(n - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))))}
+      renderItem={({ item, index }) => renderPage(item, index)}
+    />
+  );
 }
 
 // ponytail: one module-level map, the last thumbnail mounted under a key wins; enough while a photo has one tile on screen.

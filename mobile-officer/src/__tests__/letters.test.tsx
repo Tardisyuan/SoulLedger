@@ -435,8 +435,9 @@ describe("a soul's pictures in the thread (2026-10-10)", () => {
     const pages = screen.getByTestId("letter-image-viewer-pages");
     expect(pages.props.pagingEnabled).toBe(true);
     expect(pages.props.contentOffset).toEqual({ x: Dimensions.get("window").width, y: 0 });
-    expect(screen.getByTestId(`letter-viewer-image-${A.id}`)).toBeTruthy();
+    // PhotoPager mounts the page in front first; A, a page to the left, comes with the list's layout.
     expect(screen.getByTestId(`letter-viewer-image-${B.id}`)).toBeTruthy();
+    expect(screen.queryByTestId(`letter-viewer-image-${A.id}`)).toBeNull();
     for (const word of [/保存/, /分享/, /下载/]) expect(within(viewer).queryByText(word)).toBeNull();
     fireEvent.press(within(viewer).getAllByLabelText("关闭")[0]);
     await waitFor(() => expect(screen.queryByTestId("letter-image-viewer")).toBeNull());
