@@ -259,7 +259,7 @@ function RealmsPageContent() {
   );
 }
 
-const CARD = "bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]";
+const CARD = "v4-card rounded-panel bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]";
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const config = (civ: string) => CIVILIZATION_CONFIG[civ]?.nameKey ?? `realms.civilizations.${civ}`;
 
@@ -595,7 +595,7 @@ function CapacityEditor({
         aria-label={t("common.save")}
         disabled={value === undefined || pending}
         onClick={submit}
-        className="size-(--control-h-sm) border border-[oklch(var(--color-line-strong))] hover:bg-[oklch(var(--color-surface-2))] disabled:opacity-50"
+        className="size-(--control-h-sm) rounded-control border border-[oklch(var(--color-line-strong))] hover:bg-[oklch(var(--color-surface-2))] disabled:opacity-50"
       >
         <span aria-hidden="true">✓</span>
       </button>

@@ -29,7 +29,7 @@ export function isSearchShortcut(e: KeyboardEvent): boolean {
 
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const LINE_STRONG = "border-[oklch(var(--color-line-strong))]";
-const KEYCAP = `border ${LINE_STRONG} px-[6px] font-mono text-xs ${MUTED}`;
+const KEYCAP = `border ${LINE_STRONG} px-2 font-mono text-xs ${MUTED}`;
 
 export function GlobalSearchEntries({
   onOpen,

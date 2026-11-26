@@ -30,7 +30,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
   ];
 
   return (
-    <section className="flex items-start gap-[20px] border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-6 max-[768px]:flex-wrap max-[768px]:border-x-0 max-[768px]:p-4">
+    <section className="v4-card min-[769px]:rounded-panel flex items-start gap-6 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-6 max-[768px]:flex-wrap max-[768px]:border-x-0 max-[768px]:p-4">
       {profile.avatar ? (
         <img
           src={profile.avatar}
@@ -50,7 +50,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
         <dl className="flex flex-wrap gap-6 text-sm">
           {counts.map(([n, label]) => (
             // dt 在前(dl 的语义),画面上数字在前:flex-row-reverse。
-            <div key={label} className="flex flex-row-reverse items-baseline justify-end gap-[6px]">
+            <div key={label} className="flex flex-row-reverse items-baseline justify-end gap-2">
               <dt className="text-[oklch(var(--color-ink-muted))]">{label}</dt>
               <dd className="font-mono font-semibold tabular-nums text-[oklch(var(--color-ink))]">{n}</dd>
             </div>

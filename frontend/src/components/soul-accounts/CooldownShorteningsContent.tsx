@@ -131,7 +131,7 @@ export function CooldownShorteningsContent({ tabs }: { tabs: ReactNode }) {
           : undefined
       }
     >
-      <div className="rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
+      <div className="v4-card rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
         <div
           aria-hidden="true"
           className={`hidden px-4 md:h-10 text-xs text-[oklch(var(--color-ink-muted))] border-b border-[oklch(var(--color-block))] ${ROW_GRID}`}

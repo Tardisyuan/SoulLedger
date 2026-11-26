@@ -105,7 +105,7 @@ const isForbidden = (error: unknown) => (error as { response?: { status?: number
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const SUBTLE = "text-[oklch(var(--color-ink-subtle))]";
 const LINE_STRONG = "border-[oklch(var(--color-line-strong))]";
-const KEYCAP = `border ${LINE_STRONG} px-[6px] font-mono text-xs ${MUTED}`;
+const KEYCAP = `border ${LINE_STRONG} px-2 font-mono text-xs ${MUTED}`;
 
 export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
   const { t, locale } = useI18n();
@@ -284,7 +284,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
                 <span className={MUTED}> · <Hit text={j.soul_name ?? ""} q={term} />{j.court ? ` · ${courtLabel(t, j.court, locale)}` : ""}</span>
               </span>
               {exact(j) && (
-                <span data-testid="search-exact-case" className="shrink-0 bg-[oklch(var(--color-ink))] px-[6px] text-xs text-[oklch(var(--color-surface-1))]">
+                <span data-testid="search-exact-case" className="shrink-0 bg-[oklch(var(--color-ink))] px-2 text-xs text-[oklch(var(--color-surface-1))]">
                   {t("search.exact_case")}
                 </span>
               )}
@@ -465,7 +465,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
             <button
               type="button"
               onClick={s.retry}
-              className={`h-9 shrink-0 border ${LINE_STRONG} px-3 text-sm font-medium text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]`}
+              className={`h-9 shrink-0 rounded-control border ${LINE_STRONG} px-3 text-sm font-medium text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]`}
             >
               {t("common.retry")}
             </button>
@@ -532,7 +532,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
                 ) : null}
               </div>
               {noResults && (
-                <div data-testid="search-no-results" className="flex flex-col gap-2 px-6 pb-6 pt-[40px]">
+                <div data-testid="search-no-results" className="flex flex-col gap-2 px-6 pb-6 pt-8">
                   <p className="font-title text-lg text-[oklch(var(--color-ink))]">{t("search.no_results_title", { q: term })}</p>
                   <p className={`text-sm ${MUTED}`}>{t("search.no_results_body", { example: CASE_NUMBER_EXAMPLE })}</p>
                 </div>
@@ -541,7 +541,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
                 <p className={`px-4 py-3 text-sm ${SUBTLE}`}>{t("search.hint", { example: CASE_NUMBER_EXAMPLE })}</p>
               )}
               <p role="status" className="sr-only">{announce}</p>
-              <div className={`hidden h-9 shrink-0 items-center gap-[20px] border-t border-[oklch(var(--color-line))] px-4 font-mono text-xs ${MUTED} min-[769px]:flex`}>
+              <div className={`hidden h-9 shrink-0 items-center gap-6 border-t border-[oklch(var(--color-line))] px-4 font-mono text-xs ${MUTED} min-[769px]:flex`}>
                 <span>{t("cmdk.key.select")}</span>
                 <span>{t("cmdk.key.run")}</span>
                 <span>{t("cmdk.key.switch")}</span>

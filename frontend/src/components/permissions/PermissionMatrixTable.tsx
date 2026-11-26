@@ -328,7 +328,7 @@ export function PermissionMatrixTable({
           的角单元格压不住表头;collapse 下边框归表格,sticky 单元格滚动时边框
           留在原地。滚到第 8 个角色时,第一列必须还在说这一行是哪条权限。 */}
       {visibleCount > 0 && (
-        <div className="hidden max-h-[65vh] overflow-auto border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] md:block">
+        <div className="v4-card rounded-panel hidden max-h-[65vh] overflow-auto border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] md:block">
           {/* Design A6:表头 56、类别头 44、权限行 48(格内开关仍是 44 的点击区)。 */}
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>

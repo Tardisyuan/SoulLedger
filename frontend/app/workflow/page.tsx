@@ -246,7 +246,7 @@ function WorkflowPageContent() {
                         onClick={() => {
                           setEditingTemplateId(String(tmpl.id));
                         }}
-                        className={`w-full text-left px-3 py-2 border transition-colors ${
+                        className={`w-full text-left rounded-control px-3 py-2 border transition-colors ${
                           editingTemplateId === String(tmpl.id)
                             ? ROW_SELECTED
                             : ROW_IDLE
@@ -277,7 +277,7 @@ function WorkflowPageContent() {
                             setSelectedTemplate(tmpl.key);
                             setEditingTemplateId(null); // 预定义模板用selectedTemplate
                           }}
-                          className={`w-full text-left px-3 py-2 border transition-colors text-sm ${
+                          className={`w-full text-left rounded-control px-3 py-2 border transition-colors text-sm ${
                             selectedTemplate === tmpl.key && !editingTemplateId
                               ? ROW_SELECTED
                               : ROW_IDLE
@@ -295,7 +295,7 @@ function WorkflowPageContent() {
               <div className="flex-1 min-w-0">
                 {/* 预览内容 */}
                 {(editingTemplateId || selectedTemplate) && (
-                  <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4">
+                  <div className="v4-card rounded-panel bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4">
                     {/* 后端模板预览。标记在 `TemplatePreview`，两种来源共用一份；
                         差在字段名的部分收在 `backendPreviewModel` 这个适配器里。
                         按钮不进组件——这里有三颗且「查看」要发一次请求，预设那份
@@ -442,7 +442,7 @@ function WorkflowPageContent() {
 
                 {/* 未选中状态 */}
                 {!editingTemplateId && !selectedTemplate && (
-                  <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] px-4">
+                  <div className="v4-card rounded-panel bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] px-4">
                     <EmptyState title={t("workflow.select_from_left")} />
                   </div>
                 )}

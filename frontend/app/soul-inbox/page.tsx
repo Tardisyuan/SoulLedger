@@ -58,6 +58,8 @@ import { TemplateManager } from "./TemplateManager";
 import { AssignDialog } from "./AssignDialog";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
+import { fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 /** 灵魂 App「帮助与反馈」来的信带的类别(backend `FEEDBACK_TAGS`)。列表上显示「反馈 · 类别」,直到有人回复;不认识的码不显示。 */
 const FEEDBACK_TAGS = ["account", "record", "app", "other"] as const;
@@ -858,7 +860,7 @@ function SoulInboxContent() {
                 <select
                   value={folder}
                   onChange={(e) => choose(e.target.value as FolderKey)}
-                  className={`h-11 px-2 border ${LINE} bg-[oklch(var(--color-canvas))] text-sm text-[oklch(var(--color-ink))]`}
+                  className={cn(fieldControl({ size: "lg" }), "w-auto")}
                 >
                   {every.map((f) => (
                     <option key={f.key} value={f.key}>

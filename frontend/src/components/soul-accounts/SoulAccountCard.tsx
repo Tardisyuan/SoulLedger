@@ -176,7 +176,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
   }
 
   return (
-    <section id="soul-account" className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]">
+    <section id="soul-account" className="v4-card rounded-panel bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]">
       <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("soul_accounts.account.title")}</h2>
       {body}
       {modal === "provision" && (

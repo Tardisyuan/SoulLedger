@@ -9,6 +9,8 @@ import { Button } from "@/src/components/ui/Button";
 import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { AssistAdminTabs, MONO, MUTED, SUBTLE, Section, count, money, pct } from "./parts";
+import { fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 /** `ALERT_SHARE` in backend/apps/soul_assist/usage.py. */
 const ALERT_SHARE = 0.8;
@@ -36,7 +38,7 @@ export function AssistAdminUsagePage() {
             type="month"
             value={month || usage.data?.month || ""}
             onChange={(e) => setMonth(e.target.value)}
-            className={`border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 py-1 ${MONO}`}
+            className={cn(fieldControl({ size: "sm" }), "w-auto", MONO)}
           />
         </label>
       }

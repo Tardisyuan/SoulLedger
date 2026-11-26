@@ -194,7 +194,7 @@ export function RebirthFormSelect({ value, onChange, disabled, quota }: RebirthF
                   onKeyDown={(event) => onKeyDown(event, index)}
                   onClick={() => onChange(form)}
                   data-quota-full={full ? "true" : undefined}
-                  className={`px-2 py-2 border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`rounded-control px-2 py-2 border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selected ? GROUP_TONE[group.key].selected : UNSELECTED
                   } ${full && !selected ? "text-[oklch(var(--color-ink-subtle))]" : ""}`}
                 >

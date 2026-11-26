@@ -37,6 +37,8 @@ import {
   SoulIdentityPanel,
 } from "./JudgmentQueueContext";
 import { useKeyLabel } from "@/src/lib/platformKeys";
+import { fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 /**
  * The judgment triage queue (BRIEF §4.2, the one item in the brief marked
@@ -526,7 +528,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
             <section
               aria-labelledby="queue-verdict-heading"
-              className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4"
+              className="v4-card rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4"
             >
               <h2 id="queue-verdict-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
                 {t("judgment.queue.render_verdict")}
@@ -540,7 +542,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 onChange={(event) => setNotes(event.target.value)}
                 rows={2}
                 placeholder={t("judgment.queue.notes_placeholder")}
-                className="w-full border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] mb-3"
+                className={cn(fieldControl({ size: "lg" }), "mb-3")}
               />
               <label className="flex min-h-(--control-h-sm) items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3">
                 <input
@@ -664,7 +666,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 function CaseFactsPanel({ court, confession, stale }: { court: string; confession: string; stale: boolean }) {
   const { t } = useI18n();
   return (
-    <section aria-labelledby="queue-case-heading" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-case-heading" className="v4-card rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <h3 id="queue-case-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.case")}
       </h3>
@@ -710,7 +712,7 @@ function CaseFactsPanel({ court, confession, stale }: { court: string; confessio
 
 function ConsoleNotice({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
   return (
-    <div className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-6 py-12 text-center">
+    <div className="v4-card rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-6 py-12 text-center">
       <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{title}</p>
       {body && <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{body}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}

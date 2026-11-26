@@ -173,7 +173,7 @@ export function EvalPanel({
                 type="button"
                 aria-pressed={selected === run.id}
                 onClick={() => setSelected(run.id)}
-                className={`w-full text-left text-xs px-2 py-1 border ${selected === run.id ? "border-[oklch(var(--color-accent))]" : "border-[oklch(var(--color-line))]"}`}
+                className={`w-full text-left text-xs rounded-control px-2 py-1 border ${selected === run.id ? "border-[oklch(var(--color-accent))]" : "border-[oklch(var(--color-line))]"}`}
               >
                 <span className={MONO}>{formatDateTime(run.created_at)}</span> · {t(`assist_admin.eval.status.${run.status ?? "queued"}`)} ·{" "}
                 <span className={MONO}>

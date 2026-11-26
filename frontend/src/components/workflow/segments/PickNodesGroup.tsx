@@ -37,7 +37,7 @@ export function PickNodesGroup() {
   if (!group || items.length === 0) return null;
 
   return (
-    <section data-testid="pick-nodes-group" className="mb-6 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
+    <section data-testid="pick-nodes-group" className="v4-card rounded-panel mb-6 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[oklch(var(--color-line))] px-4 py-3">
         <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">
           {t("workflow.pick_group.title")} <span className="font-mono text-sm">{group.count}</span>

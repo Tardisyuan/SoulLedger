@@ -65,7 +65,7 @@ export function DevicesSection({ onChangePassword }: { onChangePassword: () => v
   return (
     <div
       data-testid="devices-section"
-      className="mt-3 flex max-w-[720px] flex-col gap-4 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4"
+      className="v4-card rounded-panel mt-3 flex max-w-[720px] flex-col gap-4 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4"
     >
       {sessions.isLoading ? (
         <Skeleton className="h-16 w-full" />

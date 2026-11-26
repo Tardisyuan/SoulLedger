@@ -531,7 +531,7 @@ function NavSquare({ article, label, glyph, onChoose }: { article: Article | nul
       aria-label={article ? `${label} · ${article.sigil ?? article.statute.code}` : label}
       onClick={() => article && onChoose(article.statute.id)}
       title={article ? article.sigil ?? article.statute.code : undefined}
-      className="size-(--control-h-lg) truncate px-1 border border-[oklch(var(--color-line-strong))] font-mono text-xs disabled:opacity-40"
+      className="size-(--control-h-lg) truncate rounded-control px-1 border border-[oklch(var(--color-line-strong))] font-mono text-xs disabled:opacity-40"
     >
       {article ? article.sigil ?? article.statute.code : <span aria-hidden="true">{glyph}</span>}
     </button>

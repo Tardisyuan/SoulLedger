@@ -303,7 +303,7 @@ function Chat({ assist }: { assist: OfficerAssist }) {
               setFollow(true);
               toBottom();
             }}
-            className="sticky bottom-0 ml-auto block border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 py-0.5 font-mono text-2xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+            className="sticky bottom-0 ml-auto block rounded-control border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 py-0.5 font-mono text-2xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
           >
             {t("officer_assist.jump_latest")}
           </button>

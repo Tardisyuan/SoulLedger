@@ -149,7 +149,7 @@ export default function SocialFeedPage() {
           {tabs}
 
           {/* 393 下发帖框不在页面里 —— 由右下的「＋ 发帖」打开。 */}
-          <div className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4 max-[768px]:hidden">
+          <div className="v4-card rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4 max-[768px]:hidden">
             <PostComposer />
           </div>
 
@@ -188,7 +188,7 @@ export default function SocialFeedPage() {
         variant="primary"
         size="lg"
         onClick={() => setComposing(true)}
-        className="fixed right-4 bottom-[calc(var(--bottom-bar)+16px)] z-filters px-[22px] shadow-raised min-[769px]:hidden"
+        className="fixed right-4 bottom-[calc(var(--bottom-bar)+16px)] z-filters px-6 shadow-raised min-[769px]:hidden"
       >
         <span aria-hidden="true">＋ </span>
         {t("social.compose")}

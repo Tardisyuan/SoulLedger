@@ -91,7 +91,7 @@ import { cn } from "@/lib/utils";
  */
 export const fieldControl = cva(
   [
-    "block w-full bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
+    "block w-full rounded-control bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
     "placeholder:text-[oklch(var(--color-ink-subtle))]",
     "transition-[border-color] duration-fast ease-standard",
     "disabled:cursor-not-allowed disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-[oklch(var(--color-line))]",
@@ -108,7 +108,7 @@ export const fieldControl = cva(
       },
       invalid: {
         false:
-          "rounded-control border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
+          "border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
         // 2 px neg border that stays through focus — the field must not stop
         // looking wrong as the user fixes it.
         true: "border-2 border-[oklch(var(--color-danger))] focus-visible:border-[oklch(var(--color-danger))]",

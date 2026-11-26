@@ -1538,7 +1538,7 @@ export default function WorkflowEditor({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors duration-state"
+            className="rounded-control px-4 py-2 border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors duration-state"
           >
             {t("common.cancel")}
           </button>
