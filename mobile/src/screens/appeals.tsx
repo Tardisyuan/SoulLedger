@@ -515,7 +515,7 @@ export function JudgmentAppealScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   note: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
-  line: { marginTop: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, gap: 4 },
+  line: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, gap: 4 },
   entry: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12 },
   round: { paddingVertical: 8, gap: 4 },
   compensation: { gap: 2, marginTop: 4 },

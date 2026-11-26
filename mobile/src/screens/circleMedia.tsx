@@ -359,7 +359,7 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
 
 const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP, marginTop: 12 },
-  tile: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 0, overflow: "hidden", justifyContent: "center", alignItems: "center" },
+  tile: { borderWidth: 1, borderRadius: 0, overflow: "hidden", justifyContent: "center", alignItems: "center" },
   fill: { width: "100%", height: "100%" },
   dim: { opacity: 0.45 },
   broken: { textAlign: "center", paddingHorizontal: 8 },
@@ -373,5 +373,5 @@ const styles = StyleSheet.create({
   add: { borderStyle: "dashed", borderWidth: 1, gap: 4 },
   count: { marginTop: 8, fontSize: 12 },
   viewer: { flex: 1 },
-  viewerBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, height: 48, borderBottomWidth: StyleSheet.hairlineWidth },
+  viewerBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, height: 48, borderBottomWidth: 1 },
 });

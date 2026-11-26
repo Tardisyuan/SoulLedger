@@ -428,7 +428,7 @@ function KarmaTab({ soul }: { soul: Soul }) {
             return (
               <View key={r.id} testID={`soul-karma-row-${r.id}`} style={{ flexDirection: "row", alignItems: "flex-start", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
                 {/* 第三十批 八.4:记号只答功还是过(形状),颜色只上数字;认不出文明的写字。 */}
-                <View style={{ paddingTop: 3 }}>
+                <View style={{ paddingTop: space[1] }}>
                   {civOf(soul.civilization) ? (
                     <DeedMark testID={`soul-karma-mark-${r.id}`} civilization={soul.civilization} demerit={r.record_type === "DEMERIT"} label={kind} />
                   ) : (

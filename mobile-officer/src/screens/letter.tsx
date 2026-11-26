@@ -59,6 +59,7 @@ import {
   Sheet,
   SmallButton,
   Txt,
+  radius,
   space,
   useI18n,
   useOnline,
@@ -650,7 +651,7 @@ const LetterGroupView = memo(function LetterGroupView({
   return (
     <View
       testID={`letter-group-${group.side}${group.open ? "-open" : ""}`}
-      style={[styles.group, own && { backgroundColor: theme.s2, borderRadius: 6, padding: 12 }, group.open && { borderLeftWidth: 2, borderLeftColor: theme.ink, paddingLeft: 12 }]}
+      style={[styles.group, own && { backgroundColor: theme.s2, borderRadius: radius.dialog, padding: 12 }, group.open && { borderLeftWidth: 2, borderLeftColor: theme.ink, paddingLeft: 12 }]}
     >
       <GroupHead name={name} side={group.side} ts={group.ts} />
       {group.letters.map(({ item: m, stamp }) => (
@@ -685,7 +686,7 @@ function OutboxLetter({ entry, name, offline, onRetry }: { entry: OutboxEntry; n
   const failed = entry.state === "failed";
   const retryable = (entry.reason ?? "retry") === "retry";
   return (
-    <View testID={`letter-outbox-${entry.state}`} style={[styles.group, { borderWidth: 1, borderStyle: "dashed", borderColor: theme.inkSubtle, borderRadius: 6, padding: 12 }]}>
+    <View testID={`letter-outbox-${entry.state}`} style={[styles.group, { borderWidth: 1, borderStyle: "dashed", borderColor: theme.inkSubtle, borderRadius: radius.dialog, padding: 12 }]}>
       <GroupHead name={name} side="hall" ts={null} />
       <Txt variant="body" style={styles.body}>
         {entry.text}
@@ -723,7 +724,7 @@ const styles = StyleSheet.create({
   body: { fontSize: 16, lineHeight: 24 },
   dayRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   day: { fontSize: 11, lineHeight: 16 },
-  dayRule: { flex: 1, borderTopWidth: StyleSheet.hairlineWidth },
+  dayRule: { flex: 1, borderTopWidth: 1 },
   status: { fontSize: 13, lineHeight: 20 },
   outboxLine: { flexDirection: "row", alignItems: "center" },
   link: { textDecorationLine: "underline" },

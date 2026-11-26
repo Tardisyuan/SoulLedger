@@ -915,7 +915,7 @@ const HallLetterGroup = memo(function HallLetterGroup({ group, onOpenImage }: { 
   const t = useTheme();
   const own = group.side === "soul";
   return (
-    <View testID={`hall-group-${own ? "me" : "hall"}`} style={[styles.hallGroup, own && { backgroundColor: t.s2, borderRadius: 6, padding: 12 }]}>
+    <View testID={`hall-group-${own ? "me" : "hall"}`} style={[styles.hallGroup, own && { backgroundColor: t.s2, borderRadius: radius.dialog, padding: 12 }]}>
       <HallHead own={own} ts={group.ts} />
       {group.letters.map(({ item: m, stamp }) => (
         <View key={m.eventId} testID={`hall-letter-${m.eventId}`} style={styles.hallLetter}>
@@ -942,7 +942,7 @@ function HallPendingLetter({ o, onResend, onDismiss, now }: { o: Outgoing; onRes
   const failed = o.state === "failed";
   const resendable = failed && (!o.refused || (o.refused.code === "request_throttled" && !!o.refused.retryAt && Date.parse(o.refused.retryAt) <= now));
   return (
-    <View testID={`pending-${o.state}`} style={[styles.hallGroup, { borderWidth: 1, borderStyle: "dashed", borderColor: t.inkSubtle, borderRadius: 6, padding: 12 }]}>
+    <View testID={`pending-${o.state}`} style={[styles.hallGroup, { borderWidth: 1, borderStyle: "dashed", borderColor: t.inkSubtle, borderRadius: radius.dialog, padding: 12 }]}>
       <HallHead own ts={null} />
       <Body text={o.body} />
       {failed ? (
@@ -1130,7 +1130,7 @@ const styles = StyleSheet.create({
   hallStamp: { textAlign: "right" },
   hallDay: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 20 },
   hallDayText: { fontSize: 11, lineHeight: 16 },
-  hallDayRule: { borderTopWidth: StyleSheet.hairlineWidth },
+  hallDayRule: { borderTopWidth: 1 },
   hallState: { paddingHorizontal: 20, paddingBottom: 8 },
   hallStateText: { fontSize: 13, lineHeight: 20 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },

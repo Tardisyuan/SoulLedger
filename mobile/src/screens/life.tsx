@@ -1390,7 +1390,7 @@ const styles = StyleSheet.create({
   routeRail: { width: 28, alignItems: "center" },
   routeLine: { position: "absolute", top: 18, bottom: -4, left: 12.75, width: 2.5, borderRadius: 2 },
   // 8 + 7 = 15, the middle of the words' first line (4 + 22 / 2).
-  routeDot: { marginTop: 8, width: 14, height: 14, borderRadius: 999, borderWidth: 2 },
+  routeDot: { marginTop: 8, width: 14, height: 14, borderRadius: radius.pill, borderWidth: 2 },
   routeDotHere: { marginTop: 2, width: 24, height: 24, borderWidth: 4 },
   routeText: { flex: 1, minWidth: 0, paddingTop: 4 },
   stations: { paddingTop: 16, paddingBottom: 16, gap: 12, borderBottomWidth: 1 },
@@ -1401,8 +1401,8 @@ const styles = StyleSheet.create({
   /** The line behind the circles, centre to centre: walked in ink, ahead in the hairline. */
   segment: { position: "absolute", top: 14, height: 2 },
   stage: { flex: 1, alignItems: "center", gap: 8 },
-  stageRing: { width: 30, height: 30, borderRadius: 999, borderWidth: 1, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
-  stageDot: { width: 30, height: 30, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  stageRing: { width: 30, height: 30, borderRadius: radius.pill, borderWidth: 1, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
+  stageDot: { width: 30, height: 30, borderRadius: radius.pill, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   stageHere: { width: 28, height: 28, borderWidth: 4 },
   stageMark: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 14 },
   /** ✓ from the status-glyph face: the mono face (Plex then, Geist Mono now) has none, so the OS fell back to a √-like mark. */
@@ -1414,7 +1414,7 @@ const styles = StyleSheet.create({
   side: { alignItems: "flex-start", gap: 4 },
   balanceValue: { marginTop: 4, fontFamily: family.title, fontSize: 32, lineHeight: 40 },
   ledgerHead: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1 },
-  ask: { position: "absolute", right: 16, bottom: 16, width: 48, height: 48, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  ask: { position: "absolute", right: 16, bottom: 16, width: 48, height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   residenceWrap: { paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   residenceBox: { alignSelf: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 8, paddingVertical: 4 },
   residenceNote: { marginTop: 8 },

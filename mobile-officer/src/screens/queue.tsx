@@ -412,7 +412,7 @@ function DeskRow({
 
 const styles = StyleSheet.create({
   overview: { paddingHorizontal: GUTTER, paddingTop: space[3], paddingBottom: space[2] },
-  groupHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: GUTTER, paddingTop: space[4], paddingBottom: space[2], borderBottomWidth: StyleSheet.hairlineWidth },
+  groupHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: GUTTER, paddingTop: space[4], paddingBottom: space[2], borderBottomWidth: 1 },
   groupRight: { flexDirection: "row", alignItems: "center", gap: space[4] },
   row: { minHeight: touch.row, flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[2], borderBottomWidth: 1 },
   rowText: { flex: 1, minWidth: 0, gap: space[1] },

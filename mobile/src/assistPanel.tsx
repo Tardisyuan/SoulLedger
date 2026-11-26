@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
   sheetRound: { borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   /** The pull zone around the 36 × 4 handle (a drag, not a tap target: closing has its button). */
   handleZone: { height: 24, alignItems: "center", justifyContent: "center" },
-  handle: { width: 36, height: 4, borderRadius: 999 },
+  handle: { width: 36, height: 4, borderRadius: radius.pill },
   head: { minHeight: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 4, borderBottomWidth: 1 },
   seal: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   headText: { flex: 1, paddingHorizontal: 4 },

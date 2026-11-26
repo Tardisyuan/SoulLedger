@@ -389,10 +389,10 @@ export function SealReadbackSheet({
 export const READBACK_SEAL_FLEX = 1.4;
 export const READBACK_BUTTON_H = 52;
 const readback = StyleSheet.create({
-  line: { flexDirection: "row", alignItems: "baseline", gap: space[3], paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  line: { flexDirection: "row", alignItems: "baseline", gap: space[3], paddingVertical: space[3], borderTopWidth: 1 },
   label: { minWidth: 56 },
   value: { flexShrink: 1 },
-  buttons: { flexDirection: "row", gap: 10 },
+  buttons: { flexDirection: "row", gap: space[2] },
   back: { flex: 1, minHeight: READBACK_BUTTON_H },
   seal: { flex: READBACK_SEAL_FLEX, minHeight: READBACK_BUTTON_H },
 });

@@ -523,7 +523,7 @@ export function IdentityBand({ hall, name }: { hall: string; name: string }) {
     <View
       testID="identity-band"
       onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
-      style={{ backgroundColor: t.s0, paddingTop: top, overflow: "hidden", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.hair }}
+      style={{ backgroundColor: t.s0, paddingTop: top, overflow: "hidden", borderBottomWidth: 1, borderBottomColor: t.hair }}
     >
       {height ? <GlowTop testID="identity-band-glow" color={t.glow} scheme={t.scheme} width={width} height={height} /> : null}
       {/* 第三十批 一.1: the civilization's line at the top of every page — four shapes since 第四十六批 (civHead.tsx). */}
