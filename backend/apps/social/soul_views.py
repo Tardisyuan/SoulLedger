@@ -16,7 +16,6 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from apps.core.pagination import TotalOrderPagination
-from apps.core.problems import problem
 from apps.social import interactions
 from apps.social import media as post_media
 from apps.social import moderation as mod
@@ -85,21 +84,9 @@ ERRORS = {403: SoulSocialErrorSerializer, 404: SoulSocialErrorSerializer, 409: S
 BAD_REQUEST = {400: SoulSocialErrorSerializer}
 
 
-def _error(exc: circle.SocialError):
-    return problem(exc.status, exc.code, str(exc), **exc.extra)
-
-
 class SoulSocialView(SoulAPIView):
-    """本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
-
-    DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
-    聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
-    """
-
-    def handle_exception(self, exc):
-        if isinstance(exc, circle.SocialError):
-            return _error(exc)
-        return super().handle_exception(exc)
+    """本模块的公共外壳。`SocialError` 是 `apps.core.problems.Refusal`(服务层不 import DRF,聊天代理也要
+    import `soul_circle`),由全局异常处理答成 `{detail, code}` + 它自己的状态码。"""
 
     def paginate(self, queryset, serializer_class):
         paginator = TotalOrderPagination()

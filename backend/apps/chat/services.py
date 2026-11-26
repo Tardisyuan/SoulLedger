@@ -52,6 +52,7 @@ from apps.chat.grant import sign as sign_grant
 from apps.chat.identity import deactivate_identity, display_name, ensure_identity
 from apps.chat.matrix import ROOM_EVENT_LEVELS, MatrixError, get_client, login_jwt
 from apps.chat.models import ChatBlock, ChatIdentity, Conversation, ConversationKind
+from apps.core.problems import Refusal
 from apps.core.shard_reads import with_fanout
 from apps.social import soul_circle as circle
 from apps.social.models import Follow
@@ -64,13 +65,10 @@ SPEAK = 50
 SILENT = 0
 
 
-class ChatError(Exception):
+class ChatError(Refusal):
     """业务拒绝。与 `SoulAccountError` 同一形状:`code` 给 App 分支,`status` 给视图。"""
 
-    def __init__(self, message, code, status=409):
-        super().__init__(message)
-        self.code = code
-        self.status = status
+    status = 409
 
 
 def _power_levels(service_user, members):

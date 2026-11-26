@@ -77,10 +77,6 @@ def _ordered_children():
     )
 
 
-def _refused(exc):
-    return problem(exc.status, exc.code, str(exc), **exc.extra)
-
-
 class SentencePlanFilter(filters.FilterSet):
     """`pending_request=true`:有一条待原审判官决定的请求 —— Web「受刑请求」收件箱的列表。
 
@@ -174,13 +170,10 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
         tenant = request_tenant(request)
         if tenant is None:
             return problem(status.HTTP_400_BAD_REQUEST, "no_tenant", "No tenant context")
-        try:
-            req = plan_requests.file_request(
-                plan, tenant, kind=body.validated_data["kind"], changes=body.validated_data.get("changes"),
-                reason=body.validated_data.get("reason", ""), user=request.user,
-            )
-        except plan_requests.PlanChangeRefusedError as exc:
-            return _refused(exc)
+        req = plan_requests.file_request(
+            plan, tenant, kind=body.validated_data["kind"], changes=body.validated_data.get("changes"),
+            reason=body.validated_data.get("reason", ""), user=request.user,
+        )
         return Response(SentencePlanRequestSerializer(req).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(parameters=[REQUEST_ID], request=SentencePlanRequestDecideSerializer,
@@ -194,11 +187,8 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
             return refused
         body = SentencePlanRequestDecideSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            plan_requests.decide(plan, request_id, accept=body.validated_data["decision"] == "ACCEPT",
-                                 reason=body.validated_data.get("reason", ""), user=request.user)
-        except plan_requests.PlanChangeRefusedError as exc:
-            return _refused(exc)
+        plan_requests.decide(plan, request_id, accept=body.validated_data["decision"] == "ACCEPT",
+                             reason=body.validated_data.get("reason", ""), user=request.user)
         return self._plan_response(plan)
 
     @extend_schema(parameters=[REQUEST_ID], request=None, responses=SentencePlanSerializer)
@@ -206,14 +196,11 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
     def withdraw(self, request, pk=None, request_id=None):
         """提出方撤回(§4.2)。"""
         plan = self.get_object()
-        try:
-            plan_requests.withdraw(plan, request_id, tenant=getattr(request, "tenant", None),
-                                   exempt=is_tenant_exempt(request.user) or (
-                                       is_civilization_admin(request.user)
-                                       and frozenset(_civ_codes(request).values_list("code", flat=True))),
-                                   user=request.user)
-        except plan_requests.PlanChangeRefusedError as exc:
-            return _refused(exc)
+        plan_requests.withdraw(plan, request_id, tenant=getattr(request, "tenant", None),
+                               exempt=is_tenant_exempt(request.user) or (
+                                   is_civilization_admin(request.user)
+                                   and frozenset(_civ_codes(request).values_list("code", flat=True))),
+                               user=request.user)
         return self._plan_response(plan)
 
     @extend_schema(request=SentencePlanCancelSerializer, responses=SentencePlanSerializer)
@@ -226,10 +213,7 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
             return refused
         body = SentencePlanCancelSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            plan_requests.cancel(plan, reason=body.validated_data["reason"], user=request.user)
-        except plan_requests.PlanChangeRefusedError as exc:
-            return _refused(exc)
+        plan_requests.cancel(plan, reason=body.validated_data["reason"], user=request.user)
         return self._plan_response(plan)
 
     @extend_schema(
@@ -244,8 +228,5 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
         refused = self._home_or_403(plan)
         if refused is not None:
             return refused
-        try:
-            plan_requests.retry_dispatch(plan, node_id, user=request.user)
-        except plan_requests.PlanChangeRefusedError as exc:
-            return _refused(exc)
+        plan_requests.retry_dispatch(plan, node_id, user=request.user)
         return self._plan_response(plan)

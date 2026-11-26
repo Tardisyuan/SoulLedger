@@ -29,6 +29,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.core.viewer import sees
 from apps.workflow.models import (
     AUTOMATIC_KINDS,
@@ -65,14 +66,8 @@ END_REASON_CANCELLED = "CROSS_CANCELLED"
 FOREIGN_ACTIONS = ("retrieve", "approve_node", "pick", "adjust")
 
 
-class SegmentRefusedError(Exception):
+class SegmentRefusedError(Refusal):
     """一次选站 / 加减站 / 默认 / 提醒被拒;什么都没写。视图原样转成 `{code, error, **extra}` 与 `status`。"""
-
-    def __init__(self, message, code, status=400, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
 
 
 class CrossConclusionRefusedError(Exception):

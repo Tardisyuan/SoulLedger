@@ -224,10 +224,6 @@ class WorkflowPartyPermission(TenantPermission):
 _SEGMENT_ORDER = OpenApiParameter("order", int, OpenApiParameter.PATH, description="段序号(1 = 本域)")
 
 
-def _refused(exc):
-    return problem(exc.status, exc.code, str(exc), **exc.extra)
-
-
 def _hook_refusals() -> tuple:
     """The business refusals a decision's end-of-flow hooks raise (`ApprovalWorkflow._finish`: the cross-realm
     bench, the appeal, the withdrawn conclusion, the sentence plan). Each carries a stable `code`; the decision
@@ -527,8 +523,6 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     ip_address=get_client_ip(request),
                     user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
                 )
-        except segments.SegmentRefusedError as refused:
-            return _refused(refused)
         except WorkflowInProgressError as busy:
             return problem(
                 status.HTTP_409_CONFLICT, "workflow_in_progress",
@@ -876,12 +870,9 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         workflow = self.get_object()
         body = WorkflowPickSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            segments.pick(workflow.pk, int(order), request.user, skip_node_ids=body.validated_data["skip_node_ids"],
-                          version=body.validated_data["version"], reason=body.validated_data["reason"],
-                          request=request)
-        except segments.SegmentRefusedError as refused:
-            return _refused(refused)
+        segments.pick(workflow.pk, int(order), request.user, skip_node_ids=body.validated_data["skip_node_ids"],
+                      version=body.validated_data["version"], reason=body.validated_data["reason"],
+                      request=request)
         return self._segment_response(request, workflow.pk)
 
     @extend_schema(request=WorkflowAdjustSerializer,
@@ -895,12 +886,9 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         body = WorkflowAdjustSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        try:
-            segments.adjust(workflow.pk, request.user, restore_node_ids=data["restore_node_ids"],
-                            skip_node_ids=data["skip_node_ids"], reason=data["reason"], version=data["version"],
-                            request=request)
-        except segments.SegmentRefusedError as refused:
-            return _refused(refused)
+        segments.adjust(workflow.pk, request.user, restore_node_ids=data["restore_node_ids"],
+                        skip_node_ids=data["skip_node_ids"], reason=data["reason"], version=data["version"],
+                        request=request)
         return self._segment_response(request, workflow.pk)
 
     @extend_schema(parameters=[_SEGMENT_ORDER], request=WorkflowReasonSerializer,
@@ -916,8 +904,6 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         try:
             segments.use_default(workflow.pk, int(order), request.user, body.validated_data["reason"],
                                  request=request)
-        except segments.SegmentRefusedError as refused:
-            return _refused(refused)
         except segments.CrossConclusionRefusedError as exc:
             return problem(status.HTTP_409_CONFLICT, exc.code, str(exc))
         return self._segment_response(request, workflow.pk)
@@ -930,10 +916,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         """再提醒一次: the convening hall reminds a realm that has not picked. Once an hour per segment
         (429 `remind_too_soon` with `retry_after` seconds)."""
         workflow = self.get_object()
-        try:
-            segment = segments.remind(workflow.pk, int(order), request.user, request=request)
-        except segments.SegmentRefusedError as refused:
-            return _refused(refused)
+        segment = segments.remind(workflow.pk, int(order), request.user, request=request)
         return Response(WorkflowRemindSerializer({"order": segment.order, "reminded_at": segment.last_reminded_at}).data)
 
     @action(detail=False, methods=["post"])

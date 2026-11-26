@@ -23,6 +23,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.soul_accounts.delivery import pick_delivery
 from apps.soul_accounts.models import (
     SECRET_BEARING_STATUSES,
@@ -80,13 +81,10 @@ def soul_code_for_email(email):
     return account.soul.soul_code
 
 
-class SoulAccountError(Exception):
+class SoulAccountError(Refusal):
     """业务拒绝。`code` 给 App 做分支用,`status` 给视图选状态码。"""
 
-    def __init__(self, message, code, status=409):
-        super().__init__(message)
-        self.code = code
-        self.status = status
+    status = 409
 
 
 # ── 审计 ─────────────────────────────────────────────────────────────────

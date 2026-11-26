@@ -19,6 +19,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.sentence_plan.models import (
     IN_PROGRESS_PLAN_STATUSES,
     OCCUPYING_NODE_STATUSES,
@@ -43,20 +44,13 @@ NOT_STARTED = "NOT_STARTED"
 MAX_ADVANCE_STEPS = 4
 
 
-class CrossJudgmentOpenError(Exception):
+class CrossJudgmentOpenError(Refusal):
     """原审判挂着一场未结束的联审(Q17),或那场联审的节点内容不再通过校验。结案什么都不写。"""
 
     code = "cross_judgment_open"
     #: HTTP status the conclusion endpoint answers with. 400 for `workflow_required` (第四十三批: the request
     #: itself asked for no workflow while the bench is still open), 409 for every other refusal.
     status = 409
-
-    def __init__(self, message, code=None, status=None):
-        super().__init__(message)
-        if code:
-            self.code = code
-        if status:
-            self.status = status
 
 
 # ── 通知与事件 ───────────────────────────────────────────────────────────

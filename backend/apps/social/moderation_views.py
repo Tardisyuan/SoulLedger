@@ -28,7 +28,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.problems import problem
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.social import moderation as mod
@@ -137,11 +136,6 @@ class ModerationViewSet(CodenameViewSetMixin, viewsets.GenericViewSet):
                 if field not in self.request.query_params:
                     qs = qs.filter(**{field: value})
         return qs
-
-    def handle_exception(self, exc):
-        if isinstance(exc, SocialError):
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
-        return super().handle_exception(exc)
 
     @property
     def tenant(self):

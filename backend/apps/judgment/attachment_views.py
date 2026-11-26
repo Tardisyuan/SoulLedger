@@ -69,10 +69,6 @@ class CaseAttachmentLinkSerializer(serializers.Serializer):
 _UPLOAD_BODY = inline_serializer("CaseAttachmentUpload", {"file": serializers.FileField()})
 
 
-def _refused(exc):
-    return problem(exc.status, exc.code, str(exc))
-
-
 class CaseAttachmentActionsMixin:
     """混进 `JudgmentViewSet`。码名在它的 `extra_permissions` 里。"""
 
@@ -110,10 +106,7 @@ class CaseAttachmentActionsMixin:
         uploaded = request.FILES.get("file")
         if uploaded is None:
             return problem(status.HTTP_400_BAD_REQUEST, "bad_type", "file is required.")
-        try:
-            row = svc.upload(request.user, judgment, uploaded)
-        except svc.AttachmentError as exc:
-            return _refused(exc)
+        row = svc.upload(request.user, judgment, uploaded)
         write_audit_row(
             tenant=judgment.tenant, user=request.user, action=AuditAction.CREATE,
             resource="judgment.attachment", resource_id=str(judgment.id),
@@ -135,10 +128,7 @@ class CaseAttachmentActionsMixin:
 
         judgment = self.get_object()
         row = self._attachment(judgment, attachment_id)
-        try:
-            svc.delete(request.user, row)
-        except svc.AttachmentError as exc:
-            return _refused(exc)
+        svc.delete(request.user, row)
         write_audit_row(
             tenant=judgment.tenant, user=request.user, action=AuditAction.DELETE,
             resource="judgment.attachment", resource_id=str(judgment.id),

@@ -19,6 +19,8 @@ from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from django.utils.http import base36_to_int
 
+from apps.core.problems import Refusal
+
 from .models import User, UserRole, is_assignable_role
 from .officer_reset import ResetRefusedError, _audit, _link, _send, user_from_uid
 from .passwords import set_officer_password, weak_password_reasons
@@ -58,13 +60,12 @@ invite_tokens = InviteTokenGenerator()
 setup_tokens = SetupLinkTokenGenerator()
 
 
-class InviteRefusedError(Exception):
-    def __init__(self, code, message, field=None):
-        super().__init__(message)
-        self.code, self.message, self.field = code, message, field
+class InviteRefusedError(Refusal):
+    """Code first (`InviteRefusedError("email_taken", "…", field="email")`); always 400, `field` rides as an extra."""
 
-    def as_payload(self):
-        return {"code": self.code, "detail": self.message, **({"field": self.field} if self.field else {})}
+    def __init__(self, code, message, field=None):
+        super().__init__(message, code, 400, **({"field": field} if field else {}))
+        self.message, self.field = message, field
 
 
 def is_pending(user) -> bool:

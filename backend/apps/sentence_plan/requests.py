@@ -10,6 +10,7 @@
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.sentence_plan.models import (
     IN_PROGRESS_PLAN_STATUSES,
     OCCUPYING_NODE_STATUSES,
@@ -44,12 +45,8 @@ LIVE_NODE_STATUSES = tuple(s for s in SentenceNodeStatus if s not in (SentenceNo
                                                                          SentenceNodeStatus.CANCELLED))
 
 
-class PlanChangeRefusedError(Exception):
-    def __init__(self, message, code, status=400, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
+class PlanChangeRefusedError(Refusal):
+    pass
 
 
 # ── 改动内容的校验 ───────────────────────────────────────────────────────

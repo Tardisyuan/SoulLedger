@@ -716,12 +716,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 tenant = None
         if tenant is None:
             return problem(status.HTTP_400_BAD_REQUEST, 'no_tenant', 'No tenant found')
-        try:
-            user, created = officer_invite.invite(
-                data['email'], data['role'], tenant, actor=request.user, username=data.get('username', ''),
-                display_name=data.get('display_name', ''), request=request)
-        except officer_invite.InviteRefusedError as exc:
-            return problem(status.HTTP_400_BAD_REQUEST, **exc.as_payload())
+        user, created = officer_invite.invite(
+            data['email'], data['role'], tenant, actor=request.user, username=data.get('username', ''),
+            display_name=data.get('display_name', ''), request=request)
         return Response(UserManagementSerializer(user).data,
                         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 

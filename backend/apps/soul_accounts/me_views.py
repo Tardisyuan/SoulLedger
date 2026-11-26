@@ -438,10 +438,7 @@ class MeRebirthApplicationsView(SoulAPIView):
     def post(self, request):
         body = RebirthApplicationCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            application = rebirth.submit(self.account, **body.validated_data)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        application = rebirth.submit(self.account, **body.validated_data)
         return Response(MeRebirthApplicationSerializer(application, context={"account": self.account}).data,
                         status=status.HTTP_201_CREATED)
 
@@ -464,10 +461,7 @@ class MeCooldownShorteningView(SoulAPIView):
     def post(self, request):
         body = CooldownShorteningCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            row = rebirth.request_cooldown_shortening(self.account, **body.validated_data)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        row = rebirth.request_cooldown_shortening(self.account, **body.validated_data)
         return Response(MeCooldownShorteningSerializer(row).data, status=status.HTTP_201_CREATED)
 
 
@@ -478,8 +472,5 @@ class MeRebirthAppealView(SoulAPIView):
     def post(self, request, application_id):
         body = RebirthAppealSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        try:
-            application = rebirth.appeal(self.account, application_id, **body.validated_data)
-        except svc.SoulAccountError as exc:
-            return _error(exc)
+        application = rebirth.appeal(self.account, application_id, **body.validated_data)
         return Response(MeRebirthApplicationSerializer(application, context={"account": self.account}).data)

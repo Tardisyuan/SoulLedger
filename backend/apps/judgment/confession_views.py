@@ -11,7 +11,7 @@ from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.problems import ProblemSerializer, problem
+from apps.core.problems import ProblemSerializer
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.judgment import claims, confessions, weighing
 
@@ -99,8 +99,6 @@ class NegativeConfessionActionsMixin:
         try:
             confessions.record(judgment, int(ordinal), serializer.validated_data["truthful"],
                                serializer.validated_data.get("note", ""))
-        except confessions.ConfessionRefusedError as exc:
-            return problem(exc.status, exc.code, str(exc))
         finally:
             clear_current_user()
         judgment.refresh_from_db()

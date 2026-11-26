@@ -28,6 +28,7 @@
 千年那一路),文书按它渲染(`verdict_doc.gr.*` / `verdict_doc.gr_er.*`)。两篇不合并(Design 第五批)。经接口结
 希腊的 PASSED / FAILED 必选;它只决定文书,不改路由。
 """
+from apps.core.problems import Refusal
 from apps.judgment.models import ChineseOffence, GreekAccount, GreekCurability, Verdict
 from apps.souls.models import Civilization
 
@@ -47,14 +48,8 @@ DEADLY_SIN_BY_STATUTE = {
 }
 
 
-class FailReasonRefusedError(Exception):
+class FailReasonRefusedError(Refusal):
     """理由或希腊标记不成立。什么都没写(结案事务里、写入之前抛)。"""
-
-    def __init__(self, message, code, status=400, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
 
 
 def allowed(civilization, account="") -> tuple:

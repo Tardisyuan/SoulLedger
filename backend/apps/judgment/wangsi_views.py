@@ -15,10 +15,8 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import wangsi
-from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import Judgment
 from apps.judgment.serializers import JudgmentClaimRefusalSerializer, JudgmentSerializer
-from apps.sentence_plan.requests import PlanChangeRefusedError
 from apps.soul_accounts.me_views import SoulAPIView
 from apps.soul_accounts.serializers import SoulErrorSerializer
 
@@ -55,12 +53,7 @@ class WangsiViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSe
 
     def _answer(self, run):
         judgment = self.get_object()
-        try:
-            run(judgment.pk)
-        except ClaimRefusedError as exc:  # 超度会结案:结案那一侧的拒绝(同一形状)也原样答复
-            return problem(exc.status, **exc.as_payload())
-        except PlanChangeRefusedError as exc:  # 结案的规则拒绝(五逆不能判 PASSED → 超度 400),整笔已回滚
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
+        run(judgment.pk)
         return Response(JudgmentSerializer(Judgment.objects.get(pk=judgment.pk),
                                            context=self.get_serializer_context()).data)
 

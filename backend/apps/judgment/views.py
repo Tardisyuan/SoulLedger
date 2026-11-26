@@ -28,15 +28,13 @@ from apps.core.request_local import clear_current_user, set_current_request, set
 from apps.core.shard_search import ShardSearchFilter
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
+from apps.disposition.destination import destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
 from apps.judgment import attachments as _attachments  # noqa: F401  (注册 post_delete 收文件的接收器)
 from apps.judgment import claims, sources, verdict_pdf, weighing
 from apps.judgment.ai_views import JudgmentAIActionsMixin
 from apps.judgment.attachment_views import CaseAttachmentActionsMixin
-from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.confession_views import NegativeConfessionActionsMixin
-from apps.judgment.fail_reasons import FailReasonRefusedError
 from apps.judgment.models import AT_CITY_GOD, OPEN_Q, Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
@@ -93,10 +91,7 @@ from apps.ledger.services import LedgerService
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
-from apps.sentence_plan.requests import PlanChangeRefusedError
-from apps.sentence_plan.services import CrossJudgmentOpenError
 from apps.souls.serializers import SoulSerializer
-from apps.workflow.segments import SegmentRefusedError
 
 #: Upper bound on how many ids a caller may ask us to skip in one request.
 #: The skip set is session state the *client* holds (see `next_pending`), so
@@ -965,10 +960,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         在这里就是 404,根本到不了行锁。
         """
         judgment = self.get_object()
-        try:
-            updated = run(judgment.pk)
-        except ClaimRefusedError as exc:
-            return problem(exc.status, **exc.as_payload())
+        updated = run(judgment.pk)
         return Response(JudgmentSerializer(
             self.get_queryset().get(pk=updated.pk), context=self.get_serializer_context()
         ).data)
@@ -1186,13 +1178,10 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             return problem(status.HTTP_404_NOT_FOUND, "not_found", "Some judgments were not found.", missing=missing)
 
         target = self._assignee(data["to"]) if operation == "reassign" else None
-        try:
-            done = claims.batch(
-                ids, operation, request.user,
-                target=target, reason=data.get("reason", ""), may_override=override,
-            )
-        except ClaimRefusedError as exc:
-            return problem(exc.status, **exc.as_payload())
+        done = claims.batch(
+            ids, operation, request.user,
+            target=target, reason=data.get("reason", ""), may_override=override,
+        )
         return Response({"operation": operation, "count": len(done), "ids": [str(j.pk) for j in done]})
 
     @extend_schema(
@@ -1577,10 +1566,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         another hall's case is a 404 like any other.
         """
         judgment = self.get_object()
-        try:
-            retrial = weighing.withdraw_conclusion(judgment, request.user)
-        except WeighingRefusedError as exc:
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
+        retrial = weighing.withdraw_conclusion(judgment, request.user)
         return Response(JudgmentSerializer(retrial, context=self.get_serializer_context()).data,
                         status=status.HTTP_201_CREATED)
 
@@ -1629,6 +1615,9 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         statute_ids = serializer.validated_data.get("statute_ids") or []
         plan_changes = serializer.validated_data.get("plan_changes") or None
 
+        # The fail-reason, claim, weighing, destination, plan-change, cross-judgment and node-pick refusals are
+        # `Refusal`s raised inside the conclusion's transaction: nothing is written, and the exception handler
+        # answers each with its own status, code and facts (`apps/core/problems.py`).
         try:
             judgment.conclude(
                 verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids,
@@ -1644,36 +1633,10 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
                 greek_curability=serializer.validated_data.get("greek_curability", ""),
                 require_fail_reason=True,  # 只有结案接口要求理由(v4 D6);进程内的服务调用不要求
             )
-        except FailReasonRefusedError as exc:
-            # v4 D6 / D7 / D8:理由或希腊标记缺了或不成立(fail_reason_required / fail_reason_invalid /
-            # fail_reason_not_selectable / fail_reason_not_failed / fail_reason_note_required /
-            # fail_reason_note_too_long / fail_reason_contradicts_record / greek_account_required /
-            # curability_required / greek_mark_not_applicable)。什么都没写。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
-        except ClaimRefusedError as exc:
-            # 409 `claimed_by_other`:别人认领的案子,只有认领人或持 judgment.assign 的人(默认 ADMIN)能结。什么都没写。
-            return problem(exc.status, **exc.as_payload())
-        except WeighingRefusedError as exc:
-            # 埃及:裁决与天平不符(`verdict_contradicts_weighing`,带天平给的裁决),或天平摇摆却选了去处。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
-        except DestinationRefusedError as exc:
-            # 「戊 · 发落」选的门或刑期不成立。什么都没写(同一事务)。
-            return problem(exc.status, exc.code, str(exc))
-        except PlanChangeRefusedError as exc:
-            # 加减项 / 重开审判结案时对计划的改动被拒:什么都没写(同一事务)。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except CitationRefusedError as exc:
             if exc.code:  # `statute_retired` (F-JUDG-13): 409 with the retired articles named
                 return problem(exc.status, exc.code, str(exc), **exc.extra)
             return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
-        except CrossJudgmentOpenError as exc:
-            # Q17:挂着的联审的节点内容不再通过校验(409),或联审没结束而请求说不生成审批流程(400
-            # `workflow_required`,第四十三批)。什么都没写。
-            return problem(exc.status, exc.code, str(exc))
-        except SegmentRefusedError as exc:
-            # 选站:跳过了终审(`final_required`)、还有来源要走的驳回目标(`jump_target_required`)
-            # 或模板里没有的站(`unknown_node`)。什么都没写。
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except JudgmentNotConcludableError as exc:
             # The soul cannot make the move a conclusion requires — it is not
             # under judgment. This used to be **silent**: `transition_to`'s

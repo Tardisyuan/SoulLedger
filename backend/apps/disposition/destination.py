@@ -14,6 +14,7 @@ from functools import cache
 
 from django.db.models import Count, Q
 
+from apps.core.problems import Refusal
 from apps.judgment.models import JudgmentMethod, Verdict, case_civilization
 from apps.realms.models import RETIRED_REALM_CODES, Realm, SoulPathEntry
 from apps.souls.models import Civilization
@@ -29,13 +30,8 @@ MAX_TERM_YEARS = 2**31 - 1
 _SEVERITY_SWEEP = range(-1000, 1001)
 
 
-class DestinationRefusedError(Exception):
+class DestinationRefusedError(Refusal):
     """结案时选的发落不成立。在结案事务里抛出,裁决与处置随之回滚,什么都没写。"""
-
-    def __init__(self, message, code, status=400):
-        super().__init__(message)
-        self.code = code
-        self.status = status
 
 
 @cache

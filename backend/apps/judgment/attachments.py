@@ -20,6 +20,7 @@ from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
+from apps.core.problems import Refusal
 from apps.judgment.models import CaseAttachment, Judgment
 from apps.social import images as social_images
 
@@ -36,13 +37,8 @@ MAX_EDGE = 10000
 PDF_CONTENT_TYPE = "application/pdf"
 
 
-class AttachmentError(Exception):
+class AttachmentError(Refusal):
     """`code` 给前端分支用:bad_type / too_large / case_full / too_many / concluded / not_uploader。"""
-
-    def __init__(self, message, code, status):
-        super().__init__(message)
-        self.code = code
-        self.status = status
 
 
 def live(judgment):

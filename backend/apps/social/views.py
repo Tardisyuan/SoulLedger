@@ -248,11 +248,6 @@ class OfficerMediaView(APIView):
 
     permission_classes = [TenantPermission]
 
-    def handle_exception(self, exc):
-        if isinstance(exc, SocialError):
-            return problem(exc.status, exc.code, str(exc), **exc.extra)
-        return super().handle_exception(exc)
-
 
 class PostMediaUploadView(OfficerMediaView):
     parser_classes = [MultiPartParser]

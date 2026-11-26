@@ -12,7 +12,7 @@ Every 4xx/5xx body the API sends is::
 Two ways in, both end in `body()`:
 
 * a view returns `problem(status, code, detail, **extra)`;
-* anything raises — DRF's own exceptions, `ValidationError`, `Problem(...)` — and
+* anything raises — DRF's own exceptions, `ValidationError`, `Problem(...)`, a service's `Refusal` — and
   `exception_handler` (settings `REST_FRAMEWORK["EXCEPTION_HANDLER"]`) converts it.
 
 Before this there were three shapes (`{"error": …}`, `{"detail": …}`, DRF's field dict)
@@ -75,10 +75,36 @@ class Problem(exceptions.APIException):
         super().__init__(detail=detail or _title(status), code=self.problem_code)
 
 
+class Refusal(Exception):  # noqa: N818  a base, named for what it is; subclasses keep their Error names
+    """A service's business refusal, free of DRF: `raise SomeRefusedError("…", "code", status=409, **facts)`.
+
+    Not an `APIException` on purpose, so services stay importable without a request. Uncaught in a view, the
+    handler below answers it as `problem(status, code, str(exc), **extra)`; a view catches it only to answer
+    differently. A subclass may set `code` / `status` as class defaults (a falsy `code`, a `None` status keep them).
+    """
+
+    code = ""
+    status = 400
+
+    def __init__(self, message="", code="", status=None, **extra):
+        super().__init__(message)
+        if code:
+            self.code = code
+        if status is not None:
+            self.status = status
+        self.extra = extra
+
+    def as_payload(self) -> dict:
+        return {"code": self.code, "detail": str(self), **self.extra}
+
+
 def exception_handler(exc, context):
     from apps.core.sharding import CrossCivilizationKeyError
 
-    if isinstance(exc, CrossCivilizationKeyError):
+    if isinstance(exc, Refusal) and not isinstance(exc, exceptions.APIException):
+        # (a refusal that is also an APIException, `NoCityGodError`, already says how DRF answers it)
+        exc = Problem(exc.status, exc.code, str(exc), **exc.extra)
+    elif isinstance(exc, CrossCivilizationKeyError):
         # A save the pre_save guard refused (a key naming another civilization's row): the request named it, so
         # 400 with the field, not a 500. Other Django ValidationErrors keep their current handling.
         exc = exceptions.ValidationError(exc.message_dict, code="cross_civilization")

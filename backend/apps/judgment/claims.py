@@ -26,6 +26,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
+from apps.core.problems import Refusal
 from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED, DuatStage, Judgment, JudgmentKind
 from apps.souls import acheron
 
@@ -33,17 +34,10 @@ from apps.souls import acheron
 BATCH_LIMIT = 100
 
 
-class ClaimRefusedError(Exception):
+class ClaimRefusedError(Refusal):
     """案子此刻不接受这个动作。`code` 是给客户端分支用的稳定键。"""
 
-    def __init__(self, message: str, code: str, status: int = 409, **extra):
-        super().__init__(message)
-        self.code = code
-        self.status = status
-        self.extra = extra
-
-    def as_payload(self) -> dict:
-        return {"code": self.code, "detail": str(self), **self.extra}
+    status = 409
 
 
 def _lock(pk) -> Judgment:
