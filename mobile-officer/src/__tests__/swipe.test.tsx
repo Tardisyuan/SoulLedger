@@ -11,6 +11,13 @@ import { READBACK_BUTTON_H, READBACK_SEAL_FLEX } from "../screens/rejectSheet";
 import { EASE, ToastProvider, themeFor } from "../shared";
 import { renderOfficer } from "./harness";
 
+import * as Haptics from "expo-haptics";
+
+jest.mock("expo-haptics", () => ({
+  ...jest.requireActual("expo-haptics"),
+  notificationAsync: jest.fn(async () => {}),
+}));
+
 const mockList = jest.fn();
 const mockCounts = jest.fn();
 const mockGet = jest.fn();
@@ -189,6 +196,9 @@ it("左边圆钮:先选理由;没选时「不过 · 落印」是灰的,选了才
     expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "FAILED", fail_reasons: ["TRADE_FRAUD"], fail_reason_note: "" })
   );
   await settled();
+  // The seal sheet's success buzz for the same verdict (ux-motion-mobile S3); no error buzz beside it.
+  expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
+  expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
 });
 
 it("埃及:天平判了通过,左边圆钮不可点", async () => {
@@ -253,6 +263,9 @@ describe("落印失败时卡片回原位", () => {
     await act(async () => void (await new Promise((r) => setTimeout(r, 400))));
     expect(screen.getByTestId("swipe-card-j-1")).toBeTruthy();
     expect(spring).not.toHaveBeenCalled();
+    // The seal sheet's error buzz when the server refuses (ux-motion-mobile S3), and no success buzz.
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
+    expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
     return timing.mock.calls.map((c) => c[1]).filter((c) => c.toValue === 0 && c.easing === EASE.exit && c.duration === 160);
   };
   it("平常:160 出曲线回位,不弹", async () => {
