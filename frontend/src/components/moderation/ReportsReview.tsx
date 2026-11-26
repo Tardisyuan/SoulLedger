@@ -518,7 +518,7 @@ export function ReportsReview() {
 
           {selected.report && (
             <>
-              <h3 className="mt-6 border-b border-[oklch(var(--color-block))] pb-1 text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+              <h3 className="mt-6 border-b border-[oklch(var(--color-block))] pb-1 text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">
                 {t("social_moderation.review.report_n", { n: String(selected.report.report_count) })}
               </h3>
               <ul>

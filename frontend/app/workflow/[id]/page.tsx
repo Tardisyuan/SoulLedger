@@ -944,7 +944,7 @@ export default function WorkflowDetailPage() {
           {workflow.status === "COMPLETED" && (
             <section className="v4-card rounded-panel px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
               <h2
-                className={`text-2xs uppercase tracking-widest ${
+                className={`text-2xs uppercase tracking-label ${
                   hasRejection ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-status-success))]"
                 }`}
               >

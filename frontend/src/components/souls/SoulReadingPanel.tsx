@@ -247,7 +247,7 @@ function ThresholdReading({
             和判决徽标同一条规则 —— 冷玫红只留给操作失败与系统失败。 */}
         <span
           data-testid="reading-threshold"
-          className="px-2 py-0.5 text-xs font-bold border border-[oklch(var(--color-line-strong))] text-[oklch(var(--color-ink))]"
+          className="rounded-control px-2 py-0.5 text-xs font-semibold border border-[oklch(var(--color-line-strong))] text-[oklch(var(--color-ink))]"
         >
           {failed ? <span aria-hidden="true">✕ </span> : null}
           {failed ? t("souls.detail.reading.threshold_fail") : t("souls.detail.reading.threshold_pass")}

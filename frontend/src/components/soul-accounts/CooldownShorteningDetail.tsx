@@ -116,7 +116,7 @@ export function CooldownShorteningDetail({
 
   const field = (label: string, value: ReactNode) => (
     <div className="min-w-0">
-      <dt className="text-2xs tracking-widest text-[oklch(var(--color-ink-subtle))]">{label}</dt>
+      <dt className="text-2xs tracking-label text-[oklch(var(--color-ink-subtle))]">{label}</dt>
       <dd className="mt-1 break-words text-sm text-[oklch(var(--color-ink))]">{value}</dd>
     </div>
   );
@@ -215,12 +215,12 @@ export function CooldownShorteningDetail({
         </dl>
 
         <section>
-          <h3 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.cooldown.fields.reason")}</h3>
+          <h3 className="text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.cooldown.fields.reason")}</h3>
           <p className="text-md whitespace-pre-wrap break-words">{r.reason}</p>
         </section>
         {r.decision_note && (
           <section>
-            <h3 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.cooldown.fields.note")}</h3>
+            <h3 className="text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.cooldown.fields.note")}</h3>
             <p className="text-md whitespace-pre-wrap break-words">{r.decision_note}</p>
           </section>
         )}

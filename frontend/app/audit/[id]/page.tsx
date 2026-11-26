@@ -139,7 +139,7 @@ function AuditDetailContent() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+                <tr className="text-left text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">
                   <th scope="col" className="py-2 pr-3 font-normal">{t("audit.detail.field")}</th>
                   <th scope="col" className="py-2 pr-3 font-normal">{t("audit.detail.before")}</th>
                   <th scope="col" className="py-2 font-normal">{t("audit.detail.after")}</th>

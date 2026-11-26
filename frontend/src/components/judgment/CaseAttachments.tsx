@@ -237,7 +237,7 @@ export function CaseAttachments({ judgmentId, canWrite }: { judgmentId: string; 
 
 function Tile({ children, danger }: { children: string; danger?: boolean }) {
   return (
-    <span aria-hidden className={`flex size-12 shrink-0 items-center justify-center border font-mono text-2xs ${danger ? "border-[oklch(var(--color-danger))] font-bold" : "border-[oklch(var(--color-line))]"}`}>
+    <span aria-hidden className={`flex size-12 shrink-0 items-center justify-center border font-mono text-2xs ${danger ? "border-[oklch(var(--color-danger))] font-semibold" : "border-[oklch(var(--color-line))]"}`}>
       {children}
     </span>
   );

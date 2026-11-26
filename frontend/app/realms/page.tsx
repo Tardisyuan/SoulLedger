@@ -350,7 +350,7 @@ function RealmTree({
     />
   );
   const sheetRealm = editing?.via === "sheet" ? rows.find((r) => r.realm.id === editing.id)?.realm : undefined;
-  const th = "text-2xs font-normal uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] text-left";
+  const th = "text-2xs font-normal uppercase tracking-label text-[oklch(var(--color-ink-subtle))] text-left";
 
   /** 在押 / 容量 —— 容量可改时容量数字本身是按钮(1px 点线)。 */
   const heldCap = (realm: Realm, interactive: boolean) => {

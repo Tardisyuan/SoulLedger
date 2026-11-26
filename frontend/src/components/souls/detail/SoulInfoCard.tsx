@@ -37,7 +37,7 @@ export function SoulInfoCard({
 
   return (
     <section aria-labelledby="soul-identity-title" data-testid="soul-identity" className="min-w-0 bg-[oklch(var(--color-surface-1))] p-6">
-      <h2 id="soul-identity-title" className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+      <h2 id="soul-identity-title" className="text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">
         {t("souls.detail.ledger.identity")}
       </h2>
       {loading ? (

@@ -71,7 +71,7 @@ export function FollowPanel() {
       </section>
 
       <section aria-labelledby="reaction-legend" className="flex flex-col gap-1">
-        <h2 id="reaction-legend" className="text-2xs uppercase tracking-[0.1em] text-[oklch(var(--color-ink-subtle))]">
+        <h2 id="reaction-legend" className="text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">
           {t("social.reactions")}
         </h2>
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">

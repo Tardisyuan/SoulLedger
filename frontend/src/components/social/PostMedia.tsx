@@ -203,7 +203,7 @@ export function MediaViewer({
     onIndex((index + d + media.length) % media.length);
   };
   const arrow =
-    "absolute top-1/2 z-[1] flex size-(--control-h-lg) -translate-y-1/2 items-center justify-center border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-lg text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]";
+    "absolute top-1/2 z-[1] flex size-(--control-h-lg) -translate-y-1/2 items-center justify-center rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-lg text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]";
 
   return (
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>

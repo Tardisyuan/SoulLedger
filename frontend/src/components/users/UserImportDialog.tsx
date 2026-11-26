@@ -259,13 +259,13 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
             )}
             <div className="max-h-[50dvh] overflow-auto border border-[oklch(var(--color-line))]">
               <table className="w-full border-collapse text-left text-xs">
-                <thead className="sticky top-0 bg-[oklch(var(--color-surface-1))]">
+                <thead className="sticky top-0 bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink-muted))]">
                   <tr>
-                    <th scope="col" className="px-2 py-1 font-semibold">{t("souls.import.col_row")}</th>
-                    <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.col_username")}</th>
-                    <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.col_name")}</th>
-                    <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.delivery_col")}</th>
-                    <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.col_issue")}</th>
+                    <th scope="col" className="px-2 py-1 font-normal">{t("souls.import.col_row")}</th>
+                    <th scope="col" className="px-2 py-1 font-normal">{t("users.import.col_username")}</th>
+                    <th scope="col" className="px-2 py-1 font-normal">{t("users.import.col_name")}</th>
+                    <th scope="col" className="px-2 py-1 font-normal">{t("users.import.delivery_col")}</th>
+                    <th scope="col" className="px-2 py-1 font-normal">{t("users.import.col_issue")}</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -53,7 +53,7 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
         {t("judgment.queue.identity")}
       </h3>
       <div className="flex items-center gap-2 flex-wrap mb-3">
-        <span className="text-md font-bold text-[oklch(var(--color-ink))]">{soul.name}</span>
+        <span className="text-md font-semibold text-[oklch(var(--color-ink))]">{soul.name}</span>
         {/* The state badge carries the translated label alone. §4.6: the raw
             enum and its translation side by side ("ALIVE — 存活") is the leak
             this codebase is trying to stop, so the machine value stays in the
