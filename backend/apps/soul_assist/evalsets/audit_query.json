@@ -1,5 +1,5 @@
 {
-  "about": "审计日志自然语言查询的评测(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 7):一句话 → 筛选参数,精确比较。读者:apps/audit/nl_query.py::evaluate 与 backend/tests/test_ai_audit_query.py。today 与 ctx 固定,结果才可比。global_admin 为真时模型能看到殿码;为假时 tenant 必须被丢掉。naive 是「照字面听话的模型」会多给的键 —— 只给离线的桩供应商用,用来证明校验把它们丢掉;真模型评测时不读它。",
+  "about": "审计日志自然语言查询的评测(业务 AI 设计稿(不在仓库里) 第二部分接入点 7):一句话 → 筛选参数,精确比较。读者:apps/audit/nl_query.py::evaluate 与 backend/tests/test_ai_audit_query.py。today 与 ctx 固定,结果才可比。global_admin 为真时模型能看到殿码;为假时 tenant 必须被丢掉。naive 是「照字面听话的模型」会多给的键 —— 只给离线的桩供应商用,用来证明校验把它们丢掉;真模型评测时不读它。",
   "today": "2026-11-13",
   "ctx": {
     "resources": ["ai_draft", "assistant", "assistant_config", "disposition", "judgment", "loginlog", "menu", "role", "rolepermission", "soul", "tenant", "user", "workflow"],

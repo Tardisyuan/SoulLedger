@@ -1,5 +1,5 @@
 """Where each model lives once the database is split by civilization (plan D1, D2, D4, D5, D7, D8 in
-docs/audit/2026-11-15-sharding/PLAN.md; docs/ARCHITECTURE-tenant-sharding.md section 7).
+the sharding plan (not in this repo); docs/ARCHITECTURE-tenant-sharding.md section 7).
 
 Nothing here routes a query yet: `config.sharding.ShardRouter` sends everything to "default" in
 stage 0. These functions are the vocabulary later stages route with, and

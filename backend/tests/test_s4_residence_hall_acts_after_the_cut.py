@@ -1,4 +1,4 @@
-"""Stage 4, third review (docs/audit/2026-11-15-sharding/VERIFY-stage4-r3.md): the residence's / seat's hall acts on a
+"""Stage 4, third review (the third stage-4 review (not in this repo)): the residence's / seat's hall acts on a
 world built AFTER both civilizations are write-cut. The D6 tests build theirs before the cut and act from the home
 hall; these act from the other side, where one business flow's rows are on two masters.
 

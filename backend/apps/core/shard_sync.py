@@ -1,4 +1,4 @@
-"""Control-to-shard sync (docs/audit/2026-11-15-sharding/PLAN.md, D2 / D4 / D6). Sync and reconcile are one
+"""Control-to-shard sync (the sharding plan (not in this repo), D2 / D4 / D6). Sync and reconcile are one
 operation: `reconcile(..., fix=True)` is the sync.
 
 Sharded (settings.SHARDED), control is the master of the REFERENCE rows (Tenant) and of the control-mastered SHARD

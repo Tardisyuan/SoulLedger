@@ -538,7 +538,7 @@ class FieldPermission(models.Model):
 
 
 class RoleDataScope(AuditUserFields):
-    """角色的数据范围(数据范围设计 B1,local-gates/rbac-2026-10-29/datascope-design.md)。
+    """角色的数据范围(数据范围设计 B1,数据范围设计稿(不在仓库里))。
 
     `resource=""` 是角色的默认范围,其余按业务覆盖(注册表 `apps/perm/data_scope.py`,B2)。
     DEFINE 求解时包含所列机构的下级。没有配置行 = 全部:本批只建表、不播种,行为不变。

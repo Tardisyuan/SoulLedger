@@ -1,5 +1,5 @@
 """A write refused because its row is on another master answers 423 `write_elsewhere`, not 500
-(docs/audit/error-triage-2026-11-20.md #2; VERIFY-stage4-r3 N-6; apps/core/problems.py `exception_handler`).
+(the 2026-11-20 error triage (not in this repo) #2; VERIFY-stage4-r3 N-6; apps/core/problems.py `exception_handler`).
 
 `WriteOutsideTransaction` (a write to a shard the request's transaction does not hold) and `StepOutsideTransaction`
 (a saga step on such a master) are raised before anything is written and roll the whole transaction back -- safe,

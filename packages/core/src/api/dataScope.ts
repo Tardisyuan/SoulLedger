@@ -1,7 +1,7 @@
 import { api } from "./client";
 
 /**
- * 数据范围(Snowy 式五种,设计 local-gates/rbac-2026-10-29/datascope-design.md「接口(B4)」)。
+ * 数据范围(Snowy 式五种,设计 数据范围设计稿(不在仓库里)「接口(B4)」)。
  * 本人创建或被指派的数据在任何范围下都可见 —— 范围只收窄「别人的」那部分。
  */
 export const DATA_SCOPES = ["ALL", "ORG_CHILD", "ORG", "SELF", "DEFINE"] as const;

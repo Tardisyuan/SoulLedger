@@ -6,7 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 
 /**
- * 朋友圈审核的 AI 预筛(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 4):**只排序,不动手**。
+ * 朋友圈审核的 AI 预筛(业务 AI 设计稿(不在仓库里) 第二部分接入点 4):**只排序,不动手**。
  *
  * `useAiScreen(rows)`:先认列表行上已存的分(`ai_screen`),点「AI 预筛」再给待审的帖子与评论打分
  * (`POST /social-moderation/{posts,comments}/ai-screen/`);返回 id → 分。内容的状态一个都不改 ——

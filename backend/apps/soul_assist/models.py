@@ -25,7 +25,7 @@ OFFICER_SCREENS = (
     "sentence-plans", "sentence-requests", "social", "soul-credentials", "soul-inbox", "souls", "tenants", "users",
     "welcome", "workflow", "other",
 )
-#: 哪一个功能花的钱(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分 0 号「按功能计量」)。`assist` 是问一问;
+#: 哪一个功能花的钱(业务 AI 设计稿(不在仓库里) 第二部分 0 号「按功能计量」)。`assist` 是问一问;
 #: 其余是业务模块的接入点(`apps/soul_assist/features.py`)。还没做的几个先占名,接入时不必再迁移选项。
 FEATURES = ("assist", "perm_explain", "audit_query", "statute_suggest", "verdict_draft", "moderation", "letter_draft",
             "ask_data")

@@ -1,4 +1,4 @@
-"""律条引用建议(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 1)。
+"""律条引用建议(业务 AI 设计稿(不在仓库里) 第二部分接入点 1)。
 
 `POST /api/v1/judgment/{id}/statute-suggestions/` → `{"suggestions": […], "dropped": […], "draft_id", "model", "fallback"}`
 

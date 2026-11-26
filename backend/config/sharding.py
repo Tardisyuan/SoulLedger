@@ -1,5 +1,5 @@
 """Production database router for per-civilization sharding (docs/ARCHITECTURE-tenant-sharding.md 4.2;
-plan docs/audit/2026-11-15-sharding/PLAN.md).
+the sharding plan (not in this repo)).
 
 NOT SHARDED (settings.SHARDED False: no SHARD_DATABASE_URL_<CIV>). Reads and writes go where they go with no
 router at all: "default", or an instance hint's own database. `tests/test_shard_router_is_neutral.py` holds it to

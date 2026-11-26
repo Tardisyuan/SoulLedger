@@ -1,4 +1,4 @@
-"""Sharded writes: each civilization's rows go to its shard (docs/audit/2026-11-15-sharding/PLAN.md 阶段 4;
+"""Sharded writes: each civilization's rows go to its shard (the sharding plan (not in this repo) 阶段 4;
 apps/core/shard_reads.py `write_route`, apps/core/shard_ids.py).
 
   routing        sharded, a row of a hall is written on its civilization's shard, a row with no hall (D2) on control; a

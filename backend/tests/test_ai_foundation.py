@@ -1,4 +1,4 @@
-"""业务模块接入 AI 的公共底座(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分 0 号):
+"""业务模块接入 AI 的公共底座(业务 AI 设计稿(不在仓库里) 第二部分 0 号):
 `features.complete` 的计量与退路、`redact` / `data_block`、用量页按功能拆开。各接入点自己的测试在
 `test_ai_perm_explain.py`、`test_ai_audit_query.py`。"""
 from types import SimpleNamespace

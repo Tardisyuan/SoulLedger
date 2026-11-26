@@ -1,5 +1,5 @@
 /**
- * The two business AI entries (docs/audit/2026-11-12-portfolio-ai-ideas.md part two, points 6 and 7):
+ * The two business AI entries (the business-AI design notes (not in this repo) part two, points 6 and 7):
  * - `PermissionWhy` on the 403 card: always the lexicon sentence for the computed reason (the model-free fallback),
  *   the model's wording only beside it and labelled; the codename never reaches the page;
  * - `AuditAskBox`: the model's filters are a proposal; nothing is applied until the person confirms, a removed chip

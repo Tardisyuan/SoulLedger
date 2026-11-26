@@ -6,7 +6,7 @@
  *
  * WHY. The list is the E2E mock's "these may fall through to an empty page" exception. Until 2026-11-13 it was four
  * whole prefixes (`/notifications/`, `/menus/`, `/social/`, `/audit-logs/`), so a new endpoint under any of them was
- * answered `200 {results: []}` and no spec noticed (docs/audit/2026-11-13-test-review.md §3.3). It is exact paths now,
+ * answered `200 {results: []}` and no spec noticed (the 2026-11-13 test review (not in this repo) §3.3). It is exact paths now,
  * written from a reading of `packages/core/src/api`. This test is that reading, repeated on every run: each path the
  * API modules call under those four prefixes is either in the list or has a default handler. A new endpoint there
  * turns this red before Playwright ever runs, and the fix is one line in fixtures.ts — a handler, or the list.

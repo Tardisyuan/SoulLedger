@@ -1,5 +1,5 @@
 """Core guard: the sharded form (every civilization's reads on its shard) changes no answer
-(docs/audit/2026-11-15-sharding/PLAN.md 阶段 3). The single database is the baseline.
+(the sharding plan (not in this repo) 阶段 3). The single database is the baseline.
 
 One random world per module (seed printed, `SHARDED_READS_SEED=<n>` replays it): rows in halls of all four
 civilizations, a hall of UNKNOWN civilization and no hall; every key that may cross civilizations pointed

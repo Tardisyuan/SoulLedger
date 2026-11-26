@@ -101,7 +101,7 @@ export async function enter(page: Page, role: Role): Promise<void> {
 
 /**
  * The roles whose sign-in is done once per worker and then put back for each test, instead of once per test (a
- * trial on the role with the most routes: docs/audit/2026-11-13-test-review.md §2 #7, Q5). `DEMO_LOGIN_REUSE=0`
+ * trial on the role with the most routes: the 2026-11-13 test review (not in this repo) §2 #7, Q5). `DEMO_LOGIN_REUSE=0`
  * turns it off, to time one against the other.
  */
 const REUSED: ReadonlySet<Role> = new Set<Role>(process.env.DEMO_LOGIN_REUSE === "0" ? [] : ["admin"]);

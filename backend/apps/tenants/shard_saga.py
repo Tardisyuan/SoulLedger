@@ -1,4 +1,4 @@
-"""Cross-civilization saga (sharding stage 4 part C; docs/audit/2026-11-15-sharding/PLAN.md 阶段 4, D6).
+"""Cross-civilization saga (sharding stage 4 part C; the sharding plan (not in this repo) 阶段 4, D6).
 
 A business transaction holds on ONE database. Sharded (settings.SHARDED), a flow
 whose rows belong to halls of two civilizations with different masters cannot commit in one transaction, and 4A

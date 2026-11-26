@@ -4,7 +4,7 @@ Until 2026-11-21 it did not: `shard_reads` patches QuerySet for every model, a m
 included, and disposition/0009's `.update()` on control went through `_refuse_on_control` -> `_halls`, which
 queries the *current* Tenant for `declared_civilization` -- a column the half-migrated database did not have
 yet. So a sharded deployment could only be built by migrating with the (since retired) switches empty first
-(docs/audit/sharded-only-analysis-2026-11-21.md, conclusion 3). `apps/core/shard_reads.py` `_hook` now hands
+(the sharded-only analysis of 2026-11-21 (not in this repo), conclusion 3). `apps/core/shard_reads.py` `_hook` now hands
 a historical model Django's own method.
 
 A fresh process with the four shard aliases (config/settings_sharded.py, SQLite files here), migrated sharded. The

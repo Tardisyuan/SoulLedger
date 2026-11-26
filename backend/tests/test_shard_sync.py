@@ -1,5 +1,5 @@
 """`reconcile_shards` copies control's rows to the civilization shards (the one-database form: how the test group
-builds a world) and finds every row where the two disagree (docs/audit/2026-11-15-sharding/PLAN.md, D2 / D4 / D6).
+builds a world) and finds every row where the two disagree (the sharding plan (not in this repo), D2 / D4 / D6).
 
 A random world -- every SHARD and REFERENCE model gets rows, in halls of all four civilizations, in a
 hall of UNKNOWN civilization and with no hall -- is synced, then checked from the outside: each shard

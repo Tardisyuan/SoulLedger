@@ -1,4 +1,4 @@
-"""AI 产出的出处(`AIDraft`,docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分 0 号)。
+"""AI 产出的出处(`AIDraft`,业务 AI 设计稿(不在仓库里) 第二部分 0 号)。
 
 `record` 在模型产出之后、交给人之前写一行;`decide` 在人采纳 / 改后采纳 / 丢弃时写处置。
 两者各写一行审计,**只有** 功能、状态、改动比例与这一行的 id,不记原文(原文只在 `AIDraft.output`)。

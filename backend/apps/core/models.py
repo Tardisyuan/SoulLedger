@@ -25,7 +25,7 @@ class AuditUserFields(SoftDeleteMixin, models.Model):
     the real URLconf to prevent.
 
     create_user / update_user (and SoftDeleteMixin.deleted_by) are bare ids (stage 1B, D3 in
-    docs/audit/2026-11-15-sharding/PLAN.md): the user lives in the control database, most of these
+    the sharding plan (not in this repo)): the user lives in the control database, most of these
     rows in a civilization shard. No database constraint, no ORM on_delete; a hard-deleted user's ids
     are cleared by `apps.core.bare_ids`. One place for every model, control ones included.
     """

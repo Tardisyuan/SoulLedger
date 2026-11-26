@@ -1,5 +1,5 @@
 """Every soul has exactly one primary row, and copies only where they are allowed (sharding stage 4, D6;
-docs/audit/2026-11-15-sharding/PLAN.md 阶段 4).
+the sharding plan (not in this repo) 阶段 4).
 
     manage.py check_soul_ownership --all
 

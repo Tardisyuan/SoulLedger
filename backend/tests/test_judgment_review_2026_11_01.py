@@ -1,4 +1,4 @@
-"""审查 2026-11-01(local-gates/review-2026-11-01.md)judgment 一组:P0 #1、P2 #9 / #10 / #12、P3。
+"""审查 2026-11-01(2026-11-01 审查记录(不在仓库里))judgment 一组:P0 #1、P2 #9 / #10 / #12、P3。
 
 #1 的并发版本(两条真连接)在 `tests/test_concurrency.py::TestConcludeRechecksUnderTheLock`,只在 PostgreSQL 上跑;
 这里是每个引擎都跑的顺序版本:拿着结案前读到的旧对象再结一次。

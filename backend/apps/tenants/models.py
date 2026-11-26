@@ -174,7 +174,7 @@ models.signals.post_delete.connect(_drop_cached_halls, sender=Tenant, dispatch_u
 
 class GlobalCode(models.Model):
     """The control database's registry of codes that must stay unique once their rows are written to four
-    civilization databases (sharding stage 4, docs/audit/2026-11-15-sharding/PLAN.md "全局唯一";
+    civilization databases (sharding stage 4, the sharding plan (not in this repo) "全局唯一";
     tests/tenancy_global_uniqueness.py STRATEGY = REGISTRY). Claimed by `apps/tenants/global_codes.py` before
     the row is written; `manage.py check_global_codes` compares it with the rows on every alias.
 

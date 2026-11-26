@@ -1,4 +1,4 @@
-"""审计日志的自然语言查询(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 7)。
+"""审计日志的自然语言查询(业务 AI 设计稿(不在仓库里) 第二部分接入点 7)。
 
 `POST /api/v1/audit-logs/nl-filter/ {"question": "…"}` → `{"filters": {…}, "dropped": […], "draft_id": …}`
 

@@ -1,4 +1,4 @@
-"""判词草稿(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 2)。
+"""判词草稿(业务 AI 设计稿(不在仓库里) 第二部分接入点 2)。
 
 `POST /api/v1/judgment/{id}/verdict-draft/ {"verdict": "FAILED"}` → `{"text", "draft_id", "model", "checks", "fallback"}`
 

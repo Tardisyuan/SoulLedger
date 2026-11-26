@@ -657,7 +657,7 @@ DELETED_BY_OFFICER = Q(deleted_by__isnull=False) & ~Q(deleted_by=F("author"))
 
 
 class ModerationScore(models.Model):
-    """AI 预筛的风险分(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 4;`apps/social/ai_screen.py`)。
+    """AI 预筛的风险分(业务 AI 设计稿(不在仓库里) 第二部分接入点 4;`apps/social/ai_screen.py`)。
 
     **只用于排序。** 不改内容的状态、不隐藏、不删除;审核员的决定照旧走 `moderation.moderate_content`。
     只在审核后台(`social.moderate`)可见,作者与别的灵魂看不到。`content_hash` 是打分时正文的指纹:

@@ -565,7 +565,7 @@ fi
 # green side is recorded in its own ledger whatever the other side did. --full covers `*` (any push of the
 # tree); a selective run, the files the side covered (COVERED_BE / COVERED_JS).
 # A green --real-pg run records its backend side in its own ledger, `$STAMP-realpg` (2026-11-20, user: before a
-# whole real-PG run, a hook asks whether it is needed — local-gates/test-scope-guard.py reads this ledger), and
+# whole real-PG run, a hook asks whether it is needed — an untracked local script reads this ledger), and
 # since 2026-11-21 in `$STAMP-backend` as well, so it vouches for a push: it runs the backend side's ruff and
 # makemigrations (static_backend) and the same pytest selection (plus the PostgreSQL-only tests, which a
 # delegated SQLite-side run adds as well), on PostgreSQL. `-realpg` lines written before that day ran no ruff

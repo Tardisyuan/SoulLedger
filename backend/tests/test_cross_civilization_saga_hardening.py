@@ -1,4 +1,4 @@
-"""The saga findings of the independent stage-4 review, closed (docs/audit/2026-11-15-sharding/VERIFY-stage4.md;
+"""The saga findings of the independent stage-4 review, closed (the stage-4 review (not in this repo);
 apps/tenants/shard_saga.py, apps/dispatch/transfer.py, apps/tenants/global_codes.py):
 
   in transit    a write to a soul while its move is open -- a dispatch, a return home, a rebirth; after step 1 or

@@ -45,7 +45,7 @@ def test_triggers_stay_on_the_budget(name):
 
 
 def test_a_manual_run_does_not_cancel_the_daily_one():
-    """The CI timing audit (docs/audit/ci-timing-2026-11-20.md §5.3): `ci-${{ github.ref }}` alone put a manual
+    """The CI timing audit of 2026-11-20 (not in this repo, §5.3): `ci-${{ github.ref }}` alone put a manual
     run on main in the daily run's group, and `cancel-in-progress` threw away two ~2-hour daily runs (11-15, 11-16)."""
     data, _ = _load("ci.yml")
     assert "github.event_name" in data["concurrency"]["group"], data["concurrency"]
@@ -131,7 +131,7 @@ def test_the_sharded_group_runs_in_its_own_job_on_postgresql():
     """Sharding stage 2: a `sharded` test skips unless the four civilization shards exist, and they exist only
     under config.settings_sharded. The command runs the whole group, not a file list that a new test misses.
     It replaced the multi-database guard (review C21, 2026-10-31), whose settings are gone. Its own job beside
-    the suite since 2026-11-21 (it ran after it, docs/audit/ci-timing-2026-11-20.md §5.2), on the same
+    the suite since 2026-11-21 (it ran after it, the CI timing audit of 2026-11-20 (not in this repo) §5.2), on the same
     PostgreSQL image, and a green run still needs it (`stats`)."""
     data, _ = _load("ci.yml")
     job = data["jobs"]["backend-sharded"]
@@ -230,7 +230,7 @@ def test_a_green_main_run_uploads_its_suite_counts_and_only_the_stats_job_may_wr
 
 
 def test_the_e2e_jobs_run_in_playwrights_image_at_the_locked_version():
-    """User decision 2026-11-21 (docs/audit/ci-timing-2026-11-20.md §5.4): the E2E jobs run in Playwright's own
+    """User decision 2026-11-21 (the CI timing audit of 2026-11-20 (not in this repo) §5.4): the E2E jobs run in Playwright's own
     image instead of `playwright install --with-deps` (its apt step once took 773 s). The image carries one
     Playwright's browsers; a different @playwright/test looks for other builds and fails to launch, so the tag
     has to follow package-lock.json."""

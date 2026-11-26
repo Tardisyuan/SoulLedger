@@ -1,4 +1,4 @@
-"""数据范围 B5:实时推送、按码群发通知、用户列表按范围过滤(local-gates/rbac-2026-10-29/datascope-design.md「执行点」)。
+"""数据范围 B5:实时推送、按码群发通知、用户列表按范围过滤(数据范围设计稿(不在仓库里)「执行点」)。
 
 殿组(`rt_tenant_*`)的业务帧带 `_scope` 标签(`apps/events/realtime.py::scope_tag`);consumer 连接时与每次权限刷新时
 按 `data_scope.org_ids` 算好每项业务的机构集合,帧来时只查这张表。每条断言两边:范围内照收,范围外不收。

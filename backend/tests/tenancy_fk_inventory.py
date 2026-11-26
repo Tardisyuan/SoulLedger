@@ -6,7 +6,7 @@ Django's model metadata and fails on any difference.
 Key:   "app.Model.field->app.Target"  (a ManyToMany is listed the same way)
 Value: (category, constraint, one-line reason)
 
-Constraint (stage 1B, D3 in docs/audit/2026-11-15-sharding/PLAN.md), checked against the field's
+Constraint (stage 1B, D3 in the sharding plan (not in this repo)), checked against the field's
 `db_constraint`:
 
   DB          a real foreign-key constraint.

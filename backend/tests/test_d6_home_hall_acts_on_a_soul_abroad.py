@@ -1,5 +1,5 @@
 """D6 over HTTP: the home hall acts on its soul while the soul resides in another civilization (sharding stage 4;
-docs/audit/2026-11-15-sharding/VERIFY-stage4-r2.md H-A; apps/dispatch/transfer.py, apps/sentence_plan/requests.py).
+the second stage-4 review (not in this repo) H-A; apps/dispatch/transfer.py, apps/sentence_plan/requests.py).
 
 The home hall's transaction holds the home's master (and control); the soul's row is the residence's, on another
 master once that civilization writes to its shard. Every action that ends the residence from there -- cancelling the

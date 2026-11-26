@@ -1,5 +1,5 @@
 {
-  "about": "权限解释器的评测(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 6):角色 × 动作 × 对象 → 代码算出的原因码。模型只措辞,不进这份评测。读者:backend/tests/test_ai_perm_explain.py。user.hall 为 null = 无殿(SYSTEM_ADMIN 全局;无殿 ADMIN 是 user.civilization 那个文明的管理员,2026-11-15 §7.5);object 是相对调用者的位置(own 本殿本机构、other_hall 别殿、other_org 本殿别的机构、missing 不存在);grants 是在默认授予之外补的 [角色, 码];scope 是 [角色, 范围, 业务]。",
+  "about": "权限解释器的评测(业务 AI 设计稿(不在仓库里) 第二部分接入点 6):角色 × 动作 × 对象 → 代码算出的原因码。模型只措辞,不进这份评测。读者:backend/tests/test_ai_perm_explain.py。user.hall 为 null = 无殿(SYSTEM_ADMIN 全局;无殿 ADMIN 是 user.civilization 那个文明的管理员,2026-11-15 §7.5);object 是相对调用者的位置(own 本殿本机构、other_hall 别殿、other_org 本殿别的机构、missing 不存在);grants 是在默认授予之外补的 [角色, 码];scope 是 [角色, 范围, 业务]。",
   "cases": [
     {"id": "judge-cannot-reassign", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "judgment.assign", "expect_reason": "missing_permission"},
     {"id": "judge-rules", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "judgment.execute", "expect_reason": "allowed"},

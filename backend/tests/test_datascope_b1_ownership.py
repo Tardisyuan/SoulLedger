@@ -1,4 +1,4 @@
-"""数据范围 B1(local-gates/rbac-2026-10-29/datascope-design.md):根机构、用户机构、owner_org 取值、调拨还原、机构删除。
+"""数据范围 B1(数据范围设计稿(不在仓库里)):根机构、用户机构、owner_org 取值、调拨还原、机构删除。
 
 迁移的回填在 `test_datascope_b1_migrations.py`。本批没有任何读取侧改动:没配 RoleDataScope 时行为不变。
 """

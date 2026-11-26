@@ -1,4 +1,4 @@
-"""Guard G4 across databases (sharding stage 4 part C; docs/audit/2026-11-15-sharding/PLAN.md 阶段 4 测试;
+"""Guard G4 across databases (sharding stage 4 part C; the sharding plan (not in this repo) 阶段 4 测试;
 apps/tenants/shard_saga.py, apps/dispatch/transfer.py). The single-database G4 is
 tests/test_cross_tenant_writes_are_all_or_nothing.py; this is its rewrite for a flow whose halls are written on two
 databases, where one transaction cannot hold it and a saga does:

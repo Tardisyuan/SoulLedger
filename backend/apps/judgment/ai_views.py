@@ -1,4 +1,4 @@
-"""审判台上的两个 AI 接入点(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分 1、2)。
+"""审判台上的两个 AI 接入点(业务 AI 设计稿(不在仓库里) 第二部分 1、2)。
 
     POST /api/v1/judgment/<id>/statute-suggestions/   建议援引(ai_statutes.py)
     POST /api/v1/judgment/<id>/verdict-draft/          判词草稿(ai_verdict.py),{"verdict": "FAILED"}

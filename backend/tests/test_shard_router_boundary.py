@@ -1,5 +1,5 @@
 """Stage 1B rules of `config.sharding.ShardRouter`, asked through Django's public `django.db.router`
-(plan docs/audit/2026-11-15-sharding/PLAN.md, 阶段 1B). Everything here is about a civilization alias
+(the sharding plan (not in this repo), 阶段 1B). Everything here is about a civilization alias
 (`civ_*`); production has none until stage 2, so `tests/test_shard_router_is_neutral.py` still holds.
 
   allow_migrate   on a shard: every SHARD and REFERENCE table, no CONTROL table -- for the live models,

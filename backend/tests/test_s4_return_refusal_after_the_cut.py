@@ -1,4 +1,4 @@
-"""Stage 4, after the third review (docs/audit/2026-11-15-sharding/VERIFY-stage4-r3.md N-2, N-4; REPORT-all-stages.md
+"""Stage 4, after the third review (the third stage-4 review (not in this repo) N-2, N-4; REPORT-all-stages.md
 §3 items 1 and 4): a residence that will not let the soul go, a residence without a plan, and the residence concluding
 an amendment case -- on a world built AFTER both civilizations are write-cut, over HTTP, two civilization pairs.
 
