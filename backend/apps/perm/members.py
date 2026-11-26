@@ -22,6 +22,7 @@ from apps.authentication.serializers import UserManagementSerializer
 from apps.core.pagination import TotalOrderPagination
 from apps.core.permissions import IsAdminPermission
 from apps.core.problems import ProblemSerializer, problem
+from apps.core.tenant import ADMIN_ROLES
 from apps.events.realtime import push_permission_refresh
 
 from .models import Role
@@ -144,7 +145,7 @@ def role_members(request, pk):
 
     # Another ADMIN in the batch: the rule every other way of changing an ADMIN applies (P-01). Checked once,
     # outside the transaction, so one code covers the batch and a wrong code's counter is not rolled back.
-    admin_target = _users(request).filter(pk__in=ids, role__in=("ADMIN", "SYSTEM_ADMIN")).exclude(pk=request.user.pk).first()
+    admin_target = _users(request).filter(pk__in=ids, role__in=ADMIN_ROLES).exclude(pk=request.user.pk).first()
     if admin_target is not None:
         refused = _admin_target_refusal(request, admin_target)
         if refused:

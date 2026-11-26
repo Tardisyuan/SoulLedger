@@ -390,11 +390,9 @@ def append_foreign(workflow, realm):
 
 def _holders(tenant_id, codename):
     """这个域在职、持 `codename` 的官员(含兼任角色)。"""
-    from apps.authentication.models import User
-    from apps.perm.checker import check_permission
+    from apps.perm.checker import holders
 
-    candidates = User.objects.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL").order_by("pk")
-    return [u for u in candidates if check_permission(u, codename)]
+    return holders([tenant_id], codename)
 
 
 def pickers(tenant_id):

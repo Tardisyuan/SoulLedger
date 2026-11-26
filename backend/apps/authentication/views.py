@@ -41,6 +41,7 @@ from apps.core.permissions import CodenamePermission, IsAdminPermission, IsGloba
 from apps.core.problems import ProblemSerializer, problem
 from apps.core.schema import DetailResponseSerializer
 from apps.core.tenant import (
+    ADMIN_ROLES,
     is_admin,
     is_civilization_admin,
     is_hall_less_admin,
@@ -355,7 +356,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # A non-ADMIN holder of `user.manage` never sees — so never edits, resets, deactivates or deletes — an
         # ADMIN account (2026-10-29: the codename is grantable now; ADMIN-on-ADMIN rules live with ADMIN).
         if not is_admin(self.request.user):
-            qs = qs.exclude(role__in=('ADMIN', 'SYSTEM_ADMIN'))
+            qs = qs.exclude(role__in=ADMIN_ROLES)
         # 数据范围(B5):按人的机构收窄,本人恒可见;范围外的人列表里没有,按 id 访问 404。
         qs = DataScopeFilter.filter_queryset(self.request, qs, User)
 
@@ -397,7 +398,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             from apps.authentication.mfa import MFA_REQUIRED_ROLES_SETTING
             from apps.tenants.models import Tenant
 
-            required = Q(role__in=('ADMIN', 'SYSTEM_ADMIN'))
+            required = Q(role__in=ADMIN_ROLES)
             for tenant in Tenant.objects.exclude(settings={}):
                 roles = (tenant.settings or {}).get(MFA_REQUIRED_ROLES_SETTING) or []
                 if roles:
@@ -610,7 +611,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         """
         qs = (
             User.objects.filter(pk__in=self.get_queryset().filter(id__in=user_ids).values('pk'))
-            .exclude(role__in=('ADMIN', 'SYSTEM_ADMIN'))
+            .exclude(role__in=ADMIN_ROLES)
             .exclude(pk=self.request.user.pk)
         )
         # Nor anyone holding a codename the caller lacks (P-05); ADMIN holds everything, so only non-ADMIN

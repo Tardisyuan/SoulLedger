@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import ADMIN_ROLES, is_tenant_exempt
 from apps.core.versioned import VersionedMemo
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
@@ -103,7 +103,7 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # ever sees is_active menus regardless, so there's nothing for the
         # toggle to reveal there and Menu.all_objects is not exposed to it.
         show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
-        if getattr(user, 'role', None) in ('ADMIN', 'SYSTEM_ADMIN'):
+        if getattr(user, 'role', None) in ADMIN_ROLES:
             base = Menu.all_objects if show_deleted else Menu.objects
             return base.all().prefetch_related(*_MENU_PREFETCH)
         # `roles` was consulted by `tree` and ignored here — and here is what the
@@ -182,7 +182,7 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user_role = getattr(user, 'role', None)
 
         # ADMIN sees everything
-        if user_role in ('ADMIN', 'SYSTEM_ADMIN'):
+        if user_role in ADMIN_ROLES:
             top_menus = Menu.objects.filter(
                 parent__isnull=True, is_active=True
             ).order_by("order").prefetch_related("buttons")

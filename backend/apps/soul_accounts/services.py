@@ -24,6 +24,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.problems import Refusal
+from apps.core.tenant import SOUL_ROLE
 from apps.soul_accounts.delivery import pick_delivery
 from apps.soul_accounts.models import (
     SECRET_BEARING_STATUSES,
@@ -36,7 +37,6 @@ from apps.soul_accounts.models import (
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-SOUL_ROLE = "SOUL"
 INITIAL_PASSWORD_TTL = timedelta(hours=72)
 #: 去掉 0/O/1/I/L,人照着纸抄不会抄错。
 SOUL_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"

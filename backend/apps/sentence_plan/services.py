@@ -58,11 +58,9 @@ class CrossJudgmentOpenError(Refusal):
 
 def judges_of(tenant_ids):
     """这些租户里持有 `judgment.execute` 的在职用户。ADMIN 只算**这些租户的**(同 `return_blocked_recipients`)。"""
-    from apps.authentication.models import User
-    from apps.perm.checker import check_permission
+    from apps.perm.checker import holders
 
-    candidates = User.objects.filter(tenant_id__in=set(tenant_ids), is_active=True).order_by("pk")
-    return [u for u in candidates if check_permission(u, JUDGE_PERMISSION)]
+    return holders(tenant_ids, JUDGE_PERMISSION)
 
 
 def notify_judges(tenant_ids, kind, params, related_id, related_resource="SentencePlan"):

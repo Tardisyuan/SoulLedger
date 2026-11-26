@@ -160,7 +160,7 @@ def test_cross_judgment_notices_go_to_cross_judgment_readers_only(
     db, django_user_model, target_tenant, target_operator,
 ):
     """联审通知(入席 / 结案 / 取消)的收件人:持 `cross_judgment.read` 的在职官员,不含灵魂。"""
-    from apps.dispatch.services import _holders
+    from apps.perm.checker import holders as _holders
 
     def make(name, role):
         return django_user_model.objects.create_user(

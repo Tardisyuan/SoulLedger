@@ -20,6 +20,7 @@ from typing import NamedTuple
 
 from django.db.models import Q
 
+from apps.core.tenant import ADMIN_ROLES
 from apps.core.versioned import VersionedMemo
 
 ALL, ORG_CHILD, ORG, SELF, DEFINE = "ALL", "ORG_CHILD", "ORG", "SELF", "DEFINE"
@@ -232,7 +233,7 @@ def _rows(user, cache) -> dict:
 def org_ids(user, resource, cache=None):
     """这个人对 `resource` 能看的机构 id 集合;None = 不限。"""
     cache = {} if cache is None else cache
-    if getattr(user, "role", None) in ("ADMIN", "SYSTEM_ADMIN"):
+    if getattr(user, "role", None) in ADMIN_ROLES:
         return None
     by_role = _rows(user, cache)
     if not by_role:

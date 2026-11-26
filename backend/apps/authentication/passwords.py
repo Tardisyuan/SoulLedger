@@ -19,6 +19,8 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from apps.core.tenant import ADMIN_ROLES
+
 #: 官员不能重复使用的最近几个密码(含当前这个):库里留 `PASSWORD_HISTORY_KEEP - 1` 条旧哈希 + 当前。
 PASSWORD_HISTORY_KEEP = 5
 #: 管理员(ADMIN)密码的最短长度;其余官员与灵魂是 Django 默认的 8。
@@ -37,7 +39,7 @@ class RoleMinimumLengthValidator:
     """管理员的最短长度比普通官员长(12 对 8)。用户还没建出来(管理员开通)时按 `user` 的 role 判。"""
 
     def validate(self, password, user=None):
-        if getattr(user, "role", None) in ("ADMIN", "SYSTEM_ADMIN") and len(password) < ADMIN_MIN_PASSWORD_LENGTH:
+        if getattr(user, "role", None) in ADMIN_ROLES and len(password) < ADMIN_MIN_PASSWORD_LENGTH:
             raise DjangoValidationError(
                 f"This password is too short. It must contain at least {ADMIN_MIN_PASSWORD_LENGTH} characters.",
                 code="password_too_short",

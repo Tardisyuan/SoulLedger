@@ -46,6 +46,8 @@ SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN"
 #: Every role that passes an "is this an administrator" gate (``IsAdminPermission``, the checker's bypass,
 #: ``ROLE_HIERARCHY`` rank 0). SYSTEM_ADMIN passes every gate ADMIN passes.
 ADMIN_ROLES = frozenset({ADMIN_ROLE, SYSTEM_ADMIN_ROLE})
+#: A soul's own sign-in (``UserRole.SOUL``): never an officer, never a notice's recipient.
+SOUL_ROLE = "SOUL"
 
 SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
 

@@ -29,6 +29,7 @@ from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
 from apps.core.problems import Refusal
+from apps.core.tenant import SOUL_ROLE
 from apps.social import interactions
 from apps.social.models import (
     Comment,
@@ -42,8 +43,6 @@ from apps.social.models import (
     Visibility,
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
-
-SOUL_ROLE = "SOUL"
 
 
 class SocialError(Refusal):

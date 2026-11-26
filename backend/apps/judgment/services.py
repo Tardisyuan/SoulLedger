@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.problems import Refusal
+from apps.core.tenant import ADMIN_ROLES
 from apps.souls.models import SoulState
 
 
@@ -873,7 +874,7 @@ class JudgmentService:
 
                 if not reaches_hall(reach_of, soul.tenant_id):
                     raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
-            if getattr(actor, "role", None) not in ("ADMIN", "SYSTEM_ADMIN"):
+            if getattr(actor, "role", None) not in ADMIN_ROLES:
                 open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
                 if open_ids:
                     raise OpenCaseRefusedError(
