@@ -781,39 +781,11 @@ class WorkflowService:
                 if live is not None:
                     raise WorkflowInProgressError(live)
 
-            workflow = ApprovalWorkflow.objects.create(
-                judgment=judgment,
-                soul=soul,
-                workflow_name=template["name"],
-                workflow_name_en=template.get("name_en") or "",
-                case_type=case_type,
-                priority=priority,
-                status=ApprovalWorkflowStatus.PENDING,
-                is_appeal=is_appeal,
-                notes=notes,
-                tenant=tenant,
-                template_version_id=template.get("version_id"),
-                manually_started=manually_started,
+            workflow, cross = cls._build(
+                soul, template, civilization, case_type=case_type, tenant=tenant, judgment=judgment,
+                is_appeal=is_appeal, priority=priority, notes=notes, skip_node_orders=skip_node_orders,
+                picked_by=picked_by, ruled_skips=ruled_skips, manually_started=manually_started,
             )
-
-            # Create nodes, and refuse a template that has none — see
-            # `_create_nodes`. Inside the transaction, so a refusal leaves no
-            # half-built workflow behind.
-            from django.utils import timezone
-
-            from apps.workflow import segments
-
-            first = segments.build_local(workflow, template, civilization, skip_node_orders, user=picked_by,
-                                         ruled=ruled_skips)
-            cross = segments.open_cross_for(judgment)
-            if cross is not None:
-                segments.add_foreign(workflow, cross)
-            first.refresh_from_db()
-            entry = first if first.status == NodeStatus.PENDING else workflow.get_next_node()
-            workflow._enter(entry, timezone.now())
-            workflow.save()
-            # The WORKFLOW_CREATED row is part of the workflow's record: same transaction.
-            cls.record_events(workflow, created=True)
 
         # The notification half, after commit, not "outside the atomic block above": `conclude_judgment(create_workflow=True)` calls
         # this from inside the judgment's own transaction. A notification INSERT that fails there is swallowed
@@ -822,8 +794,57 @@ class WorkflowService:
         # transaction `on_commit` runs at once.
         transaction.on_commit(lambda: cls.announce(workflow, created=True))
         if cross is not None:
+            from apps.workflow import segments
+
             transaction.on_commit(lambda: segments.notify_pick_tasks(workflow.pk))
         return workflow
+
+    @classmethod
+    def _build(cls, soul, template: dict, civilization: str, *, case_type: str, tenant, judgment=None,
+               is_appeal: bool = False, priority: int = 0, notes: str = "", skip_node_orders=(), picked_by=None,
+               ruled_skips=None, manually_started: bool = False, segmented: bool = True):
+        """The workflow row, its nodes, entering the first one, and the WORKFLOW_CREATED event: ``(workflow, cross)``.
+
+        CALL INSIDE THE CALLER'S TRANSACTION; the after-commit notification is the caller's (``announce``). Shared by
+        ``start_workflow`` (validated, template resolved, ``exclusive`` checked) and the rebirth application
+        (``apps/soul_accounts/rebirth.py``, ``segmented=False``: its flow has no realm segment, as before 2026-11-26).
+        ``cross`` is the open cross-realm judgment whose segments were added, or None.
+        """
+        from django.utils import timezone
+
+        from apps.workflow import segments
+
+        workflow = ApprovalWorkflow.objects.create(
+            judgment=judgment,
+            soul=soul,
+            workflow_name=template["name"],
+            workflow_name_en=template.get("name_en") or "",
+            case_type=case_type,
+            priority=priority,
+            status=ApprovalWorkflowStatus.PENDING,
+            is_appeal=is_appeal,
+            notes=notes,
+            tenant=tenant,
+            template_version_id=template.get("version_id"),
+            manually_started=manually_started,
+        )
+        # Create nodes, and refuse a template that has none — see `_create_nodes`. Inside the transaction, so a
+        # refusal leaves no half-built workflow behind.
+        if segmented:
+            first = segments.build_local(workflow, template, civilization, skip_node_orders, user=picked_by,
+                                         ruled=ruled_skips)
+        else:
+            first = cls._create_nodes(workflow, template, civilization, enter=False)
+        cross = segments.open_cross_for(judgment)
+        if cross is not None:
+            segments.add_foreign(workflow, cross)
+        first.refresh_from_db()
+        entry = first if first.status == NodeStatus.PENDING else workflow.get_next_node()
+        workflow._enter(entry, timezone.now())
+        workflow.save()
+        # The WORKFLOW_CREATED row is part of the workflow's record: same transaction.
+        cls.record_events(workflow, created=True)
+        return workflow, cross
 
     @staticmethod
     def push_target(workflow) -> dict:
