@@ -483,6 +483,8 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         style={[styles.fill, sealed && styles.sealed]}
         contentContainerStyle={styles.thread}
         keyboardShouldPersistTaps="handled"
+        // Dragging the thread takes the keyboard down, as the system's messages do; iOS follows the finger.
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         onEndReached={prevBatch ? older : undefined}
         onEndReachedThreshold={0.5}
         renderItem={renderLine}

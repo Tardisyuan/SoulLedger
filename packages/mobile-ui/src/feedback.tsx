@@ -18,7 +18,7 @@ import {
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { Animated, BackHandler, Dimensions, Keyboard, Pressable, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
-import Reanimated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Reanimated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
@@ -242,7 +242,9 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       up.current = true;
       if (reduced) {
         fade.set(0);
-        fade.set(withTiming(1, { duration: motion.reduced, easing: EASE_ENTER }));
+        // `Never`: Reanimated's default (System) jumps straight to the end under reduce motion, and this fade is the
+        // reduced-motion version itself — an opacity change, which reduce motion allows.
+        fade.set(withTiming(1, { duration: motion.reduced, easing: EASE_ENTER, reduceMotion: ReduceMotion.Never }));
       }
       ref.current?.present();
     } else if (!open && up.current) {
@@ -252,7 +254,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
         return;
       }
       // Fade where it stands, then take it down without a slide.
-      fade.set(withTiming(0, { duration: motion.reduced, easing: EASE_EXIT }));
+      fade.set(withTiming(0, { duration: motion.reduced, easing: EASE_EXIT, reduceMotion: ReduceMotion.Never }));
       const gone = setTimeout(() => ref.current?.dismiss({ duration: 0 }), motion.reduced);
       return () => clearTimeout(gone);
     }

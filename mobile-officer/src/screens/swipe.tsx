@@ -18,6 +18,7 @@ import { problemDetail } from "@soulledger/core/api/client";
 import { concludeRefusalOf, judgmentApi, type ConcludeJudgmentPayload, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { AccessibilityInfo, Animated, AppState, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
+import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Circle } from "react-native-svg";
 
@@ -29,6 +30,10 @@ import { BLOCKED_DRAG, SWIPE_FRACTION, blockedSide, deadlineText, passPayload, w
 import { ReasonSheet } from "./judgmentActions";
 import { AccountSheet, RejectSheet, SealReadbackSheet } from "./rejectSheet";
 import { sealReadbackWished } from "../prefs";
+
+/** A verdict's haptic, the seal sheet's and the swipe's alike. The system's haptics setting turns it off; a phone without
+ *  a motor does nothing, and a rejected promise must not surface as an unhandled one. */
+export const buzz = (p: Promise<void>) => void p.catch(() => {});
 
 type T = (key: string, vars?: Record<string, string>) => string;
 type Overlay = "reject" | "pass" | "defer" | "readback" | null;
@@ -216,6 +221,8 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
       .then(() => {
         // A swipe that lands says nothing itself; the failure an earlier try left up must not outlive it.
         dismissToast(DECISION_TOAST);
+        // The same buzz as the seal sheet's for the same verdict (sealSheet.tsx).
+        buzz(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
         finish(id);
         ok = true;
       })
@@ -224,7 +231,10 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
         if (e instanceof Skipped) return;
         // 撤回:什么都没发,不出提示,卡片从右边回来。
         // 面容没过、服务端拒绝、网络失败:都回到原位,写出原因。卡若已经飞走,从飞出去的那一侧回来。
-        if (!(e instanceof Undone)) toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST);
+        if (!(e instanceof Undone)) {
+          if (decisionFailureKind(e) === "failure") buzz(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
+          toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST);
+        }
         setAway(null);
         if (notConfirmedKey(e)) snapBack();
         else setBack({ id, x });

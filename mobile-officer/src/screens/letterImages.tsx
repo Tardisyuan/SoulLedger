@@ -12,7 +12,7 @@
 import { letterImageBox } from "@soulledger/core/domain/letters";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Image, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FadeModal, PhotoPager, Txt, space, thumbRef, useFrontPhoto, useI18n, useOnline, useTheme, Press } from "../shared";
@@ -103,15 +103,11 @@ function Pages({ images, start, onClose, onFront }: { images: LetterImageRef[]; 
         start={start}
         keyOf={(image) => String(image.id)}
         onIndex={setCurrent}
+        onClose={onClose}
+        // The tap that closes is PhotoPager's: it waits out a double tap, which zooms.
+        tapLabel={t("soul_app.circle.media.close")}
         renderPage={(image) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t("soul_app.circle.media.close")}
-            onPress={onClose}
-            style={{ width, height: pageHeight, justifyContent: "center" }}
-          >
-            <Image testID={`letter-viewer-image-${image.id}`} source={{ uri: mediaUrl(image.url) }} style={{ width, height: pageHeight }} resizeMode="contain" />
-          </Pressable>
+          <Image testID={`letter-viewer-image-${image.id}`} source={{ uri: mediaUrl(image.url) }} style={{ width, height: pageHeight }} resizeMode="contain" />
         )}
       />
     </View>

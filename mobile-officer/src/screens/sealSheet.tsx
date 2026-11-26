@@ -21,15 +21,13 @@ import { DossierSeal, sealEasing } from "../dossierSeal";
 import { Input, Sheet, Txt, family, radius, space, useI18n, useOnline, useReducedMotion, useTheme, useToast, Press } from "../shared";
 import { GR_ACCOUNTS, NO_SEAL, SEAL_VERDICTS, blockedSide, passBarredBy, sealPayload, sealReady, type SealChoice, type SealVerdict } from "../verdict";
 import { Choice, RejectFields } from "./rejectSheet";
-import { verdictFailure } from "./swipe";
+import { buzz, verdictFailure } from "./swipe";
 
 /** 按住多久落印(十二.6)。 */
 export const HOLD_TO_SEAL_MS = 1000;
 
-/** The seal's feel (官员端真机 2026-11-14: it had none): a tick as the hold starts, a firm knock as the seal lands, the
- *  system's success / error buzz on the server's answer. The system's own haptics setting turns them off; a phone
- *  without a motor just does nothing. */
-const buzz = (p: Promise<void>) => void p.catch(() => {});
+/* The seal's feel (官员端真机 2026-11-14: it had none): a tick as the hold starts, a firm knock as the seal lands, the
+ * system's success / error buzz on the server's answer (`buzz`, shared with the swipe). */
 const NOTES_MAX = 2000;
 
 export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean; judgment: JudgmentDetail; onClose: () => void; onSealed: () => void }) {

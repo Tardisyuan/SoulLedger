@@ -826,12 +826,17 @@ describe("the 案卷台", () => {
     renderOfficer(<Shell />);
     fireEvent.press(await screen.findByTestId("tab-queue"));
     expect(await screen.findByTestId("tab-queue-screen")).toBeTruthy();
-    fireEvent.press(await screen.findByTestId("queue-row-j9"));
+    const rowBefore = await screen.findByTestId("queue-row-j9");
+    fireEvent.press(rowBefore);
     expect(screen.getByTestId("detail-back").props.accessibilityLabel).toBe("案卷台");
     expect(screen.getByTestId("detail-position")).toHaveTextContent("第 1 / 1 件");
+    // Hidden from a screen reader (and from these queries) under the detail, but still mounted: ux-motion-mobile S1.
     expect(screen.queryByTestId("tab-queue-screen")).toBeNull();
+    expect(screen.getByTestId("tab-queue-screen", { includeHiddenElements: true })).toBeTruthy();
     fireEvent.press(screen.getByTestId("detail-back"));
-    expect(await screen.findByTestId("queue-row-j9")).toBeTruthy();
+    // The very row it left, not a remounted list: the desk keeps its scroll and the iOS edge swipe shows it behind the case.
+    expect(await screen.findByTestId("queue-row-j9")).toBe(rowBefore);
+    await act(async () => {});
   });
 
   it("no search box on the desk; the magnifier in the top bar opens 查询", async () => {
