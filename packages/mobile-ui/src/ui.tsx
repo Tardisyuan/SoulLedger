@@ -2341,8 +2341,8 @@ export const styles = StyleSheet.create({
   inlineRow: { flexDirection: "row", alignItems: "center", gap: space[2] },
   // The ring sits 4pt outside the field, so its corner is the field's plus 4.
   ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.control + 4 },
-  inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48, borderRadius: radius.control, overflow: "hidden" },
-  input: { flex: 1, minHeight: 46, paddingHorizontal: space[3], fontSize: 16 },
+  inputBox: { flexDirection: "row", borderWidth: 1, minHeight: touch.controlMd, borderRadius: radius.control, overflow: "hidden" },
+  input: { flex: 1, minHeight: touch.controlMd - 2, paddingHorizontal: space[3], fontSize: 16 },
   monoInput: { fontSize: 16, letterSpacing: 2.2 },
   // Android clips the first line's top of a Noto Serif SC multiline field under about 1.8 x the size
   // (Huawei 10-31: 15/24 and 15/26 clip, 15/27 whole). Design batch 54 H3: 2 x the size (16/32, 14/28), off the

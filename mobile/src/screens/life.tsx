@@ -38,7 +38,7 @@ import {
 import { useSession } from "../session";
 import { OutlineSeal } from "../seal";
 import { entranceStyle, headerSeal } from "../entrance";
-import { radius, sealedTheme, type CivKey, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
+import { radius, sealedTheme, type CivKey, GONE_OPACITY, withAlpha } from "@soulledger/mobile-ui/src/theme";
 import {
   Block,
   Button,
@@ -531,7 +531,7 @@ function LifeBand({ me, place, compact, onAccount }: { me: MeProfile; place?: st
             accessibilityRole="button"
             accessibilityLabel={tr("soul_app.settings.title")}
             onPress={onAccount}
-            style={({ pressed }) => [styles.account, pressed && { backgroundColor: `${on}22` }]}
+            style={({ pressed }) => [styles.account, pressed && { backgroundColor: withAlpha(on, 0.13) }]}
           >
             <Icon name="person" size={18} color={on} strokeWidth={1.2} />
           </Pressable>

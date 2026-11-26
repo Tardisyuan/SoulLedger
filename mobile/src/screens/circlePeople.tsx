@@ -30,8 +30,8 @@ import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { family, quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { SessionContext } from "../session";
-import { radius } from "@soulledger/mobile-ui/src/theme";
-import { Button, Empty, FadeModal, Notice, Press, RadioMark, Screen, SectionLabel, shade, Skeleton, SmallButton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { radius, touch } from "@soulledger/mobile-ui/src/theme";
+import { Button, Empty, FadeModal, Input, Notice, Press, RadioMark, Screen, SectionLabel, shade, Skeleton, SmallButton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
 import { fetchSocialStatus, invalidateSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PostList } from "./circle";
@@ -43,7 +43,12 @@ type Nav = NativeStackNavigationProp<AppStackParams>;
 /** The server's report reasons; their copy is the moderation section's (egy settled there). */
 const REASONS: SoulReportReason[] = ["SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "OTHER"];
 
-/** The display-name field's face: Han in the bundled Noto Serif SC, a Latin name in the interface face. */
+/**
+ * The display-name field's face. A name is not something said: the interface face, not the serif (v3) — but Archivo has no Han, so a Han
+ * name fell back to the phone's own face (a script face on the test Huawei, 10-31). `nameFace` gives Han
+ * the bundled Noto Serif SC and keeps a Latin name in the interface face. Since v4 (2026-11-06) the
+ * interface face carries Han itself (SoulLedger Sans), so the reason is gone; the choice is not yet revisited.
+ */
 export const nameFace = (name: string) => (quoteFamily(name) === family.serifHan ? family.serifHan : family.ui[500]);
 
 /** The civilization the soul is in now, by name, with its mark — the only "where" a card carries. */
@@ -283,7 +288,6 @@ const RENAME_REFUSALS: Record<string, string> = {
 
 /** Editing my circle name in place. The rules are the server's; a refusal is said under the field. */
 function RenameField({ value, onChange, onDone, onCancel }: { value: string; onChange: (v: string) => void; onDone: () => void; onCancel: () => void }) {
-  const t = useTheme();
   const { t: tr } = useI18n();
   const fail = useFailure();
   const toast = useToast();
@@ -308,10 +312,12 @@ function RenameField({ value, onChange, onDone, onCancel }: { value: string; onC
   const { press, onEndEditing } = useCommittedSend(input, value, (text) => void save(text));
   return (
     <View testID="rename" style={styles.rename}>
-      <TextInput
-        ref={input}
+      <Input
+        inputRef={input}
         testID="name-input"
-        accessibilityLabel={tr("soul_app.circle.me.display_name")}
+        label={tr("soul_app.circle.me.display_name")}
+        labelHidden
+        invalid={!!refusal}
         value={value}
         onChangeText={(v) => {
           onChange(v);
@@ -320,7 +326,8 @@ function RenameField({ value, onChange, onDone, onCancel }: { value: string; onC
         onEndEditing={onEndEditing}
         autoFocus
         maxLength={20}
-        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.inkSubtle, backgroundColor: t.s1, color: t.ink, fontFamily: nameFace(value) }]}
+        // nameFace, not Input's quote face: see the note on nameFace.
+        style={{ fontFamily: nameFace(value) }}
       />
       {refusal ? (
         <Txt testID="name-refusal" variant="caption" tone="negInk" accessibilityRole="alert">
@@ -754,8 +761,8 @@ const styles = StyleSheet.create({
   menuNote: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   searchBar: { paddingVertical: 12, borderBottomWidth: 1 },
-  searchBox: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
-  searchInput: { flex: 1, minHeight: 42, fontSize: 16 },
+  searchBox: { minHeight: touch.controlMd, borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
+  searchInput: { flex: 1, minHeight: touch.controlMd - 2, fontSize: 16 },
   resultsHead: { paddingTop: 12, paddingBottom: 8 },
   done: { flex: 1, alignItems: "center", gap: 12, paddingTop: 32 },
   form: { paddingVertical: 16 },
@@ -766,11 +773,4 @@ const styles = StyleSheet.create({
   detail: { minHeight: 86, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 14, lineHeight: 28, textAlignVertical: "top" },
   submit: { marginTop: 16 },
   rename: { gap: 8 },
-  /**
-   * A name is not something said: the interface face, not the serif (v3) — but Archivo has no Han, so a Han
-   * name fell back to the phone's own face (a script face on the test Huawei, 10-31). `nameFace` gives Han
-   * the bundled Noto Serif SC and keeps a Latin name in the interface face. Since v4 (2026-11-06) the
-   * interface face carries Han itself (SoulLedger Sans), so the reason is gone; the choice is not yet revisited.
-   */
-  nameInput: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, fontSize: 16 },
 });
