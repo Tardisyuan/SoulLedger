@@ -27,7 +27,7 @@ describe("/officer-app/todo/", () => {
 
   // The server lists a flow only when its current stop names this account (todo.py `_waiting_workflows`); the
   // recording holds what it answered, so the demo's computed lists must be those, for a judge and for the admin.
-  it.each(["judge", "judge_eg", "admin"] as const)("%s: approvals and rebirths are the server's, not every open flow", async (role) => {
+  it.each(["judge", "judge_eg", "judge_eu", "admin"] as const)("%s: approvals and rebirths are the server's, not every open flow", async (role) => {
     const r = await recording(role, "zh");
     const recorded = read(r, "/officer-app/todo/", new URLSearchParams()).data as Todo;
     const todo = derived(r, "/officer-app/todo/", new URLSearchParams())!.data as Todo;
@@ -67,16 +67,26 @@ describe("/officer-app/todo/", () => {
     expect(get(`/officer-app/items/rebirth/${app!.id}/`).workflow_id).toBe(app!.appeal_workflow ?? app!.workflow);
   });
 
-  it("an approval decided to its end leaves the group", async () => {
-    const eg = await recording("judge_eg", "zh");
-    const count = () => (derived(eg, "/officer-app/todo/", new URLSearchParams({ kind: "approval" }))!.data as { count: number }).count;
-    const flow = rowsNow(eg, "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION")!;
-    const before = count();
-    expect(before).toBeGreaterThan(0);
-    for (let i = 0; i < 20 && rowsNow(eg, "/workflows/").find((w) => w.id === flow.id)?.status === "IN_PROGRESS"; i++) {
-      write(eg, "POST", `/workflows/${flow.id}/approve_node/`, new URLSearchParams(), { verdict: "PASSED" });
+  // The one flow a demo account may decide from first stop to last (scripts/demo-seed.py `seed_walkable_flow`): the
+  // European judge's 炼狱复核, every stop the role JUDGE's. Decided only while `can_approve` says so, as the screen does.
+  it("judge_eu's 炼狱复核 is its approval at every stop, and deciding each one completes it and drops it from the list", async () => {
+    const eu = await recording("judge_eu", "zh");
+    const todo = () => derived(eu, "/officer-app/todo/", new URLSearchParams())!.data as Todo;
+    const detailOf = (id: unknown) => derived(eu, `/workflows/${id}/`, new URLSearchParams())!.data as Row;
+    const flow = rowsNow(eu, "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type === "PURGATORY_REVIEW");
+    expect(flow).toBeDefined();
+    const stops = (detailOf(flow!.id).nodes as Row[]).filter((n) => n.status === "PENDING" && n.kind !== "NOTIFY" && n.kind !== "END");
+    expect(stops.length).toBeGreaterThan(1);
+    const before = todo().approvals.count;
+    let decided = 0;
+    for (; decided < 10 && detailOf(flow!.id).can_approve === true; decided++) {
+      expect(ids(todo(), "approvals")).toContain(flow!.id);
+      write(eu, "POST", `/workflows/${flow!.id}/approve_node/`, new URLSearchParams(), { verdict: "PASSED" });
     }
-    expect(count()).toBe(before - 1);
+    expect(decided).toBe(stops.length);
+    expect(detailOf(flow!.id).status).toBe("COMPLETED");
+    expect(ids(todo(), "approvals")).not.toContain(flow!.id);
+    expect(todo().approvals.count).toBe(before - 1);
   });
 
   it("a decision moves the flow past a 通知 stop; it stays this judge's while the next stop is the judges', then leaves", async () => {
