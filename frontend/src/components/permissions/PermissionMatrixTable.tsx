@@ -326,7 +326,9 @@ export function PermissionMatrixTable({
           `border-separate border-spacing-0`(不是 border-collapse)。挂在 <tr>
           上时表头行、分类行、正文行是三个互不比较 z-index 的层叠上下文,冻结列
           的角单元格压不住表头;collapse 下边框归表格,sticky 单元格滚动时边框
-          留在原地。滚到第 8 个角色时,第一列必须还在说这一行是哪条权限。 */}
+          留在原地。滚到第 8 个角色时,第一列必须还在说这一行是哪条权限。
+          冻结列右侧那道 6% 黑的投影是「后面还有内容在滚」的提示,没有对应的阴影令牌(raised / overlay / card
+          都是浮起,不是边缘);深色底上几乎看不见,只在浅色起作用,两主题都不会画错。 */}
       {visibleCount > 0 && (
         <div className="v4-card rounded-panel hidden max-h-[65vh] overflow-auto border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] md:block">
           {/* Design A6:表头 56、类别头 44、权限行 48(格内开关仍是 44 的点击区)。 */}

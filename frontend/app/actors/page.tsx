@@ -239,7 +239,7 @@ function ActorsPageContent() {
                       此前是 <button> 里包 <h2> —— 标题进按钮是无效 HTML(按钮只收短语内容),
                       读屏也只念出一个按钮。现在反过来:<h2> 里放折叠钮(披露模式)。 */}
                   {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
-                  <div className="sticky top-(--below-band) z-1 pt-3 mb-3 flex items-center gap-3 bg-[oklch(var(--color-surface-1))]">
+                  <div className="sticky top-(--below-band) z-sticky pt-3 mb-3 flex items-center gap-3 bg-[oklch(var(--color-surface-1))]">
                     <h2 className="text-sm font-medium text-[oklch(var(--color-ink))]">
                       <button
                         type="button"

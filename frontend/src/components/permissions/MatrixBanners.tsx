@@ -181,10 +181,12 @@ export function UnsavedBar({
 
   if (count === 0) return null;
   return (
+    // z-40, not the batch bars' z-10: the matrix's frozen header and first column are sticky cells at z-30/40 in
+    // the same stacking context, and this bar has to stay above them while the table scrolls under it.
     <div
       role="region"
       aria-label={t("permissions.matrix.unsaved_region")}
-      className={`sticky bottom-(--bottom-bar) z-40 mt-3 flex min-h-16 flex-wrap items-center gap-3 py-2 pr-2 pl-4 shadow-[0_4px_16px_oklch(0_0_0/0.22)] md:min-h-18 md:pr-3 md:pl-4 ${BATCH_BAR}`}
+      className={`sticky bottom-(--bottom-bar) z-40 mt-3 flex min-h-16 flex-wrap items-center gap-3 py-2 pr-2 pl-4 shadow-raised md:min-h-18 md:pr-3 md:pl-4 ${BATCH_BAR}`}
     >
       <span className="text-sm font-medium" aria-live="polite">
         {t("permissions.matrix.pending_cells", { n: String(count) })}
