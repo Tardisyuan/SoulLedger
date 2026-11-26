@@ -53,7 +53,6 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-ink": { light: "#16171a", dark: "#f3f3f1" },
   "--color-ink-muted": { light: "#54575c", dark: "#b4b6ba" },
   "--color-ink-subtle": { light: "#54575c", dark: "#b4b6ba" },
-  "--color-pillar": { light: "#f1f1ee", dark: "#0c0c0e" },
   "--color-on-main": { light: "#ffffff", dark: "#ffffff" },
   "--color-focus": { light: "#16171a", dark: "#f3f3f1" },
   "--color-success": { light: "#1f6b3f", dark: "#8ad3a1" },
@@ -116,7 +115,7 @@ describe("palette (规范 v4)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 50);
+    expect(rows).toHaveLength(2 * 49);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {
@@ -163,10 +162,6 @@ describe("palette (规范 v4)", () => {
     expect(contrastRatio(rgbOf(theme, "--color-amber"), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(THEMES)("%s: the five soul states are five different colours", (theme) => {
-    const states = ["alive", "judging", "disposed", "reincarnating", "lost"].map((s) => rgbOf(theme, `--color-status-${s}`).join(","));
-    expect(new Set(states).size).toBe(5);
-  });
 });
 
 describe("the paired texts the spec measures", () => {

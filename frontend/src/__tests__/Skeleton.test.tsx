@@ -2,7 +2,7 @@
  * Tests for Skeleton components
  */
 import { act, render, renderHook } from "@testing-library/react";
-import { Skeleton, TableSkeleton, CardSkeleton, ListSkeleton, LoadMoreSkeleton, SKELETON_DELAY_MS, SKELETON_MIN_SHOWN_MS, useSkeletonHold } from "@/components/ui/skeleton";
+import { Skeleton, TableSkeleton, ListSkeleton, LoadMoreSkeleton, SKELETON_DELAY_MS, SKELETON_MIN_SHOWN_MS, useSkeletonHold } from "@/components/ui/skeleton";
 
 describe("Skeleton 400 ms delay (规范 v1 §1.7:骨架屏不闪烁)", () => {
   beforeEach(() => jest.useFakeTimers());
@@ -91,11 +91,6 @@ describe("Skeleton components", () => {
     for (const row of rows) {
       expect(row.querySelectorAll("td")).toHaveLength(5);
     }
-  });
-
-  it("renders CardSkeleton with its three placeholder bars", () => {
-    const { container } = render(<CardSkeleton />);
-    expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(3);
   });
 
   it("renders ListSkeleton with the default 3 cards (9 bars: 3 per card)", () => {

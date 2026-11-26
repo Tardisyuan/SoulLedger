@@ -17,7 +17,7 @@ import { useWebSocket } from "@/src/contexts/WebSocketContext";
  *
  * Two other things went with it, both of the kind this repo keeps finding:
  * every label was hardcoded English on a UI that ships three bundles, and the
- * dots were raw `bg-emerald-500` / `bg-yellow-500` / `bg-red-500` rather than
+ * dots were raw `emerald-500 fill` / `yellow-500 fill` / `red-500 fill` rather than
  * the status tokens — which is why they were the same colour in both themes
  * while everything around them changed.
  */

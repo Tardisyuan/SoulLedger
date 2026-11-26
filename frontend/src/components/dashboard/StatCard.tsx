@@ -44,8 +44,8 @@ function StatCardInner({
       data-kpi-card=""
       className={
         compactLine
-          ? "flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 py-4 max-md:col-span-2 max-md:flex-row max-md:items-center max-md:gap-2 max-md:border-0 max-md:bg-transparent max-md:p-0 max-md:text-xs max-md:text-[oklch(var(--color-ink-muted))]"
-          : "kpi-fx flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-3 md:px-4 md:py-4"
+          ? "v4-card rounded-panel flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 py-4 max-md:col-span-2 max-md:flex-row max-md:items-center max-md:gap-2 max-md:border-0 max-md:bg-transparent max-md:shadow-none max-md:p-0 max-md:text-xs max-md:text-[oklch(var(--color-ink-muted))]"
+          : "v4-card rounded-panel kpi-fx flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-3 md:px-4 md:py-4"
       }
     >
       <div className="text-xs text-[oklch(var(--color-ink-muted))] md:text-sm">{label}</div>

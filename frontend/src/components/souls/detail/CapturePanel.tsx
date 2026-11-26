@@ -188,7 +188,7 @@ export function CapturePanel({ soul, canIssue, canExecute }: { soul: Soul; canIs
   return (
     <section data-testid="soul-capture" className="min-w-0 bg-[oklch(var(--color-surface-1))] p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">{t("souls.capture.title")}</h2>
+        <h2 className="text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">{t("souls.capture.title")}</h2>
         <span className="text-xs text-[oklch(var(--color-ink-muted))]" data-testid="soul-capture-status">{status}</span>
       </div>
       {open ? (

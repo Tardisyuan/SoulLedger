@@ -107,7 +107,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
   }
 
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]">
+    <div className="v4-card rounded-panel bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]">
       <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">
         {t("souls.detail.date_problems.title")}
       </h2>
@@ -172,7 +172,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                                   type="button"
                                   onClick={() => runAckAction(occ.recordId!, "unacknowledge")}
                                   disabled={busyRecordId === occ.recordId}
-                                  className="px-2 py-0.5 border border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
+                                  className="rounded-control px-2 py-0.5 border border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
                                 >
                                   {t("souls.detail.date_problems.revoke")}
                                 </button>
@@ -184,7 +184,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                                 type="button"
                                 onClick={() => runAckAction(occ.recordId!, "acknowledge")}
                                 disabled={busyRecordId === occ.recordId}
-                                className="px-2 py-0.5 border border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
+                                className="rounded-control px-2 py-0.5 border border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
                               >
                                 {t("souls.detail.date_problems.acknowledge")}
                               </button>

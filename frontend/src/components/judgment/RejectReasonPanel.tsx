@@ -173,7 +173,7 @@ export function RejectReasonPanel({
             <button
               type="button"
               onClick={() => setMore(true)}
-              className="flex min-h-(--control-h-sm) items-center justify-between border border-dashed border-[oklch(var(--color-line))] px-3 text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+              className="flex min-h-(--control-h-sm) items-center justify-between rounded-control border border-dashed border-[oklch(var(--color-line))] px-3 text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
             >
               {t("nav.more")}
               <span className="font-mono text-2xs">{t("reject.sheet.cn_more_sub", { n: String(CN_ALL.length) })}</span>

@@ -35,7 +35,7 @@ export function occupancyBar(held: number, capacity: number | null | undefined):
   const ratio = capacity > 0 ? held / capacity : held > 0 ? 1 : 0;
   return { ratio, hot: ratio >= OCC_HOT, danger: ratio >= OCC_DANGER };
 }
-const LABEL = "text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]";
+const LABEL = "text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]";
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const SUMMIT = "EU_EARTHLY_PARADISE";
 const SPINE = "absolute left-[5.5px] top-3 bottom-3 w-px bg-[oklch(var(--color-line-strong))]";

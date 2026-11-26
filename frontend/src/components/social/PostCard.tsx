@@ -46,7 +46,7 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article
       data-post-card=""
-      className="flex flex-col gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-[20px] max-[768px]:gap-[10px] max-[768px]:border-x-0 max-[768px]:p-4"
+      className="v4-card min-[769px]:rounded-panel flex flex-col gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-6 max-[768px]:gap-2 max-[768px]:border-x-0 max-[768px]:p-4"
     >
       <div className="flex items-center gap-3">
         <Avatar name={name} size={40} />

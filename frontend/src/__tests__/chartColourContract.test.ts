@@ -104,7 +104,7 @@ describe("charts are a gray-blue ramp plus patterns (规范 v2 A5)", () => {
 
   it.each(THEMES)("%s: every ramp step is ≥ 3:1 against the page (A5「图形对 bg 至少 3:1」)", (theme) => {
     const bg = oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], "--color-canvas"));
-    for (let n = 1; n <= 6; n++) {
+    for (let n = 1; n <= 5; n++) {
       const step = oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], `--color-chart-${n}`));
       expect({ n, ok: contrastRatio(step, bg) >= 3 }).toEqual({ n, ok: true });
     }

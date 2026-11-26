@@ -198,7 +198,7 @@ function MenusPageContent() {
   };
 
   return (
-    /* `page` (1200px), up from `max-w-5xl` (1024). Seven columns, one of them a
+    /* `page` (1200px), up from `5xl max width` (1024). Seven columns, one of them a
        wrapping list of role chips. */
     <PageShell
       variant="page"

@@ -244,7 +244,7 @@ export function WelcomeSetup({
     <section
       aria-labelledby="welcome-setup-title"
       data-testid="welcome-setup"
-      className="mx-auto grid w-full max-w-[960px] grid-cols-1 overflow-hidden rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] md:grid-cols-[280px_minmax(0,1fr)]"
+      className="v4-card mx-auto grid w-full max-w-[960px] grid-cols-1 overflow-hidden rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] md:grid-cols-[280px_minmax(0,1fr)]"
     >
       <aside className="hidden flex-col border-r border-[oklch(var(--color-line))] p-6 md:flex">
         <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{progress}</p>

@@ -142,7 +142,7 @@ function SoulEditForm({ isOpen, onClose, soul, onUpdated }: SoulEditModalProps) 
   }
 
   /**
-   * SAVE WAS PAINTED `bg-amber-500`, AND THAT LOOKED FINE, WHICH IS THE POINT.
+   * SAVE WAS PAINTED `amber-500 fill`, AND THAT LOOKED FINE, WHICH IS THE POINT.
    *
    * Tailwind's `amber-500` is `#f59e0b` = `hsl(38 92% 50%)`, and
    * `app/globals.css:322` declares `--color-accent: 38 92% 50%` — byte for
@@ -194,7 +194,7 @@ function SoulEditForm({ isOpen, onClose, soul, onUpdated }: SoulEditModalProps) 
       footer={footer}
     >
       {/* Four hand-wired label+control triples became `Field`. The name field
-          carried the same `border-red-500 focus:border-red-500` / `text-red-500`
+          carried the same `red-500 border red-500 focus border` / `red-500 text`
           that `Field.tsx:22-28` was written to remove: `red-500` is a palette
           literal and follows neither theme, so light mode was served the
           dark-mode error tone. `--color-status-error` is measured twice

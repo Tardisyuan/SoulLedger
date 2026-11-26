@@ -36,7 +36,7 @@ export function WorkflowInfoCard({
     workflow.priority === 0 ? t("workflow.detail.normal") : workflow.priority === 1 ? t("workflow.detail.urgent") : t("workflow.detail.critical");
 
   return (
-    <section className="px-6 py-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
+    <section className="v4-card rounded-panel px-6 py-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
       <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("workflow.detail.info")}</h2>
       <dl className="mt-2 grid grid-cols-[72px_minmax(0,1fr)] gap-x-3">
         <dt className={DT}>{t("workflow.detail.soul")}</dt>

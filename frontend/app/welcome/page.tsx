@@ -40,7 +40,7 @@ import { isAdminRole } from "@soulledger/core/api/perm";
  * effect), so a guard on `!user` bounced signed-in visitors to /login. Every
  * read of `user` below is optional.
  */
-const PANEL = "rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]";
+const PANEL = "v4-card rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]";
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const ACTIVITY_MAX = 6;
 

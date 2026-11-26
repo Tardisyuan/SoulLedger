@@ -263,7 +263,7 @@ export function MenuFormModal({
             {roleOptions.map(({ role, label }) => (
               /* A pressed toggle is the accent fill, which is exactly
                  `Button`'s primary — including the `text-black` its contrast
-                 note derives (9.82:1; `text-white` here would have been
+                 note derives (9.82:1; `white text` here would have been
                  2.14:1). Unpressed is the default secondary. */
               <Button
                 key={role}

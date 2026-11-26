@@ -10,6 +10,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
+import { Avatar } from "@/src/components/social/Avatar";
 
 const TAB_KEYS = ["following", "followers"] as const;
 
@@ -118,14 +119,7 @@ export default function FollowsPage() {
               <>
                 <td className="px-3 py-2">
                   <span className="flex items-center gap-3">
-                    {/* rounded-full stays: an avatar is an identity mark, one of
-                        the two shapes the radius scale still has a value for. */}
-                    <span
-                      aria-hidden="true"
-                      className="w-7 h-7 rounded-full border border-[oklch(var(--color-line))] flex items-center justify-center text-xs font-medium text-[oklch(var(--color-ink-muted))] shrink-0"
-                    >
-                      {userName?.charAt(0)?.toUpperCase() || "?"}
-                    </span>
+                    <Avatar name={userName} size={28} />
                     <Link
                       href={`/social/profile/${userId}`}
                       className={`font-medium text-[oklch(var(--color-ink))] ${ROW_LINK}`}

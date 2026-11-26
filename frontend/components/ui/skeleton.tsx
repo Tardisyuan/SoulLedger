@@ -133,8 +133,8 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
   )
 }
 
-// 卡片骨架屏
-export function CardSkeleton() {
+// 卡片骨架屏(只给 ListSkeleton 用)
+function CardSkeleton() {
   return (
     <div className="border p-4 space-y-3">
       <Skeleton className="h-4 w-1/3" />

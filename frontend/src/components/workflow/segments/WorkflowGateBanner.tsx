@@ -68,7 +68,7 @@ export function WorkflowGateBanner({ workflow, segment, myTenant }: { workflow: 
   return (
     <section
       data-testid="gate-banner"
-      className="flex flex-col gap-3 px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]"
+      className="v4-card rounded-panel flex flex-col gap-3 px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]"
     >
       {mine ? (
         <>

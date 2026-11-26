@@ -96,7 +96,7 @@ export function ReactionBar({ postId, commentId, totals, counts, mine, disabled 
           </button>
         );
       })}
-      <span aria-hidden="true" className="mx-[6px] h-6 w-px bg-[oklch(var(--color-line))]" />
+      <span aria-hidden="true" className="mx-2 h-6 w-px bg-[oklch(var(--color-line))]" />
       <button
         type="button"
         onClick={() => handleToggle("ETERNAL_LIGHT")}
@@ -104,7 +104,7 @@ export function ReactionBar({ postId, commentId, totals, counts, mine, disabled 
         aria-busy={toggleReaction.isPending || undefined}
         aria-pressed={lit}
         data-reaction="ETERNAL_LIGHT"
-        className={`${base} border border-[oklch(var(--color-ink))] px-[14px] font-title font-semibold ${
+        className={`${base} rounded-control border border-[oklch(var(--color-ink))] px-3 font-title font-semibold ${
           lit
             ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))]"
             : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"

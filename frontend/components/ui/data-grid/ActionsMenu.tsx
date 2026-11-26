@@ -156,7 +156,7 @@ export function ActionsMenu({ primary, items, menuLabel, trigger }: ActionsMenuP
                 role="menu"
                 aria-label={menuLabel}
                 style={{ position: 'fixed', top: pos.top, right: pos.right }}
-                // `z-sidebar`, not a bare `z-50`. This node is portalled to
+                // `z-sidebar`, not a bare `z-index 50`. This node is portalled to
                 // `document.body` and `position: fixed`, so it has left the
                 // row's stacking context entirely and its number is only ever
                 // compared with the numbers in AppLayout.tsx — which is exactly

@@ -6,6 +6,7 @@ import { joinCron, presetFromCron } from "@soulledger/core/domain/cron";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { Switch } from "@/src/components/ui/Switch";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { durationParts, jobCron, runStatusBadgeClass, runStatusGlyph } from "./schedulerView";
 import { pad2 } from "@soulledger/core/domain/dates";
@@ -147,32 +148,12 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
 
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         {canManage && (
-          <button
-            type="button"
-            role="switch"
-            aria-checked={job.enabled}
-            aria-label={t("scheduler.actions.toggle", { job: job.task_name })}
+          <Switch
+            checked={job.enabled}
+            label={t("scheduler.actions.toggle", { job: job.task_name })}
             disabled={togglePending}
-            onClick={() => onToggle(job)}
-            // 点击区 `--control-h-sm`(触屏 44,精确指针 32)。开关的样子仍是规范 v2 A1 的 32 × 18
-            // 轨道(1.5px 框;开 = ink 实底、纸色滑块在右;关 = 空底、ink3 框与滑块在左;
-            // 禁用 = s2 底、line 框,不调透明度;选中不用匾色),现在画在这个见方的按钮里 ——
-            // 此前按钮本身就是那条 18 高的轨道,手机上点不准。
-            className="group inline-flex size-(--control-h-sm) shrink-0 items-center justify-center disabled:cursor-not-allowed"
-          >
-            <span
-              aria-hidden="true"
-              className={`relative inline-flex h-[18px] w-8 items-center border-[1.5px] p-0.5 transition-colors duration-instant group-disabled:border-[oklch(var(--color-line))] group-disabled:bg-[oklch(var(--color-disabled-surface))] ${
-                job.enabled
-                  ? "justify-end bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
-                  : "justify-start bg-transparent border-[oklch(var(--color-line-strong))]"
-              }`}
-            >
-              <span
-                className={`block size-[11px] ${job.enabled ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`}
-              />
-            </span>
-          </button>
+            onChange={() => onToggle(job)}
+          />
         )}
         {canManage && (
           <Button type="button" size="sm" variant="secondary" onClick={() => onRun(job)}>

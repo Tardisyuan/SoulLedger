@@ -519,7 +519,7 @@ function groupBy(list: Article[]): [string, Article[]][] {
 }
 
 function RailLabel({ children }: { children: ReactNode }) {
-  return <h2 className="pb-2 text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">{children}</h2>;
+  return <h2 className="pb-2 text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">{children}</h2>;
 }
 
 /** 手机底条两端的 56 方格:等宽编号。没有上 / 下一条时禁用。 */
@@ -531,7 +531,7 @@ function NavSquare({ article, label, glyph, onChoose }: { article: Article | nul
       aria-label={article ? `${label} · ${article.sigil ?? article.statute.code}` : label}
       onClick={() => article && onChoose(article.statute.id)}
       title={article ? article.sigil ?? article.statute.code : undefined}
-      className="size-(--control-h-lg) truncate px-1 border border-[oklch(var(--color-line-strong))] font-mono text-xs disabled:opacity-40"
+      className="size-(--control-h-lg) truncate rounded-control px-1 border border-[oklch(var(--color-line-strong))] font-mono text-xs disabled:opacity-40"
     >
       {article ? article.sigil ?? article.statute.code : <span aria-hidden="true">{glyph}</span>}
     </button>
@@ -662,7 +662,7 @@ function Reading({
           <p data-testid="corpus-sigil" className="font-title text-xl font-semibold lg:text-display">
             {article.sigil ?? <MissingValue kind="unrecorded" reason={t("judgment.corpus.sigil_absent")} />}
           </p>
-          <span className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">{sigilSystemName(s.civilization)}</span>
+          <span className="text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">{sigilSystemName(s.civilization)}</span>
         </div>
         {/* 二级标题:一页只有一个一级标题,是页头(PageHead)的;条文标题是面板标题那一档。 */}
         <h2 className="font-title text-lg mt-2">
@@ -709,7 +709,7 @@ function Reading({
             {notes}
           </section>
           <details className="lg:hidden">
-            <summary className="min-h-(--control-h-sm) flex items-center text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+            <summary className="min-h-(--control-h-sm) flex items-center text-2xs uppercase tracking-label text-[oklch(var(--color-ink-subtle))]">
               {t("judgment.corpus.notes")}
             </summary>
             {notes}

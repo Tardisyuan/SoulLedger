@@ -38,7 +38,7 @@ import { SentenceRequestForm } from "./SentenceRequestForm";
  * 节点的理由(`reason`)与请求在这里对官员可见;灵魂端(App)不看这些(Q10)。
  */
 
-const PANEL = "bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]";
+const PANEL = "v4-card rounded-panel bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]";
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function NodeRow({ plan, node, current }: { plan: SentencePlan; node: SentenceNode; current: boolean }) {

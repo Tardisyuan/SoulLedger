@@ -112,7 +112,7 @@ export function PostMediaGrid({
         className={cn(
           single
             ? "max-w-[480px]"
-            : "grid max-w-[400px] grid-cols-2 gap-1 max-[768px]:max-w-none max-[768px]:grid-cols-3 max-[768px]:gap-[3px]",
+            : "grid max-w-[400px] grid-cols-2 gap-1 max-[768px]:max-w-none max-[768px]:grid-cols-3 max-[768px]:gap-0.5",
         )}
       >
         {media.map((m, i) => {
@@ -203,7 +203,7 @@ export function MediaViewer({
     onIndex((index + d + media.length) % media.length);
   };
   const arrow =
-    "absolute top-1/2 z-[1] flex size-(--control-h-lg) -translate-y-1/2 items-center justify-center border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-lg text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]";
+    "absolute top-1/2 z-[1] flex size-(--control-h-lg) -translate-y-1/2 items-center justify-center rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-lg text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]";
 
   return (
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -224,7 +224,7 @@ export function MediaViewer({
           >
             {current && index !== null ? (
               <>
-                <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[oklch(var(--color-line))] pl-[20px] pr-2">
+                <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[oklch(var(--color-line))] pl-6 pr-2">
                   <Dialog.Title title={author} className="min-w-0 truncate text-sm font-medium text-[oklch(var(--color-ink))]">
                     {author}
                   </Dialog.Title>
@@ -276,7 +276,7 @@ export function MediaViewer({
                 </div>
 
                 {many ? (
-                  <div className="flex shrink-0 items-center gap-[6px] overflow-x-auto border-t border-[oklch(var(--color-line))] px-[20px] py-3">
+                  <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-t border-[oklch(var(--color-line))] px-6 py-3">
                     {media.map((m, i) => (
                       <button
                         key={`${m.id}:${m.url}`}

@@ -426,7 +426,7 @@ function PasswordLogin() {
             // web's scales: the panel radius (6) for the apps' 12, the name at text-md (15) for 16, the account at text-sm (13).
             <div
               data-testid="login-remembered"
-              className="flex min-h-16 items-center gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] py-2 pr-1 pl-4"
+              className="v4-card flex min-h-16 items-center gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] py-2 pr-1 pl-4"
             >
               {/* No visible username box here, so password managers get a hidden one to pair the password with (as /login/verify). */}
               <input

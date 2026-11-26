@@ -259,7 +259,7 @@ function RealmsPageContent() {
   );
 }
 
-const CARD = "bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]";
+const CARD = "v4-card rounded-panel bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]";
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const config = (civ: string) => CIVILIZATION_CONFIG[civ]?.nameKey ?? `realms.civilizations.${civ}`;
 
@@ -350,7 +350,7 @@ function RealmTree({
     />
   );
   const sheetRealm = editing?.via === "sheet" ? rows.find((r) => r.realm.id === editing.id)?.realm : undefined;
-  const th = "text-2xs font-normal uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] text-left";
+  const th = "text-2xs font-normal uppercase tracking-label text-[oklch(var(--color-ink-subtle))] text-left";
 
   /** 在押 / 容量 —— 容量可改时容量数字本身是按钮(1px 点线)。 */
   const heldCap = (realm: Realm, interactive: boolean) => {
@@ -595,7 +595,7 @@ function CapacityEditor({
         aria-label={t("common.save")}
         disabled={value === undefined || pending}
         onClick={submit}
-        className="size-(--control-h-sm) border border-[oklch(var(--color-line-strong))] hover:bg-[oklch(var(--color-surface-2))] disabled:opacity-50"
+        className="size-(--control-h-sm) rounded-control border border-[oklch(var(--color-line-strong))] hover:bg-[oklch(var(--color-surface-2))] disabled:opacity-50"
       >
         <span aria-hidden="true">✓</span>
       </button>

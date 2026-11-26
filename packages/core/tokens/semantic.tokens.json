@@ -174,24 +174,6 @@
         }
       }
     },
-    "pillar": {
-      "$value": {
-        "colorSpace": "oklch",
-        "components": [0.15527, 0.004214, 285.8987],
-        "hex": "#0C0C0E"
-      },
-      "$extensions": {
-        "org.soulledger": {
-          "modes": {
-            ".light": {
-              "colorSpace": "oklch",
-              "components": [0.95731, 0.003982, 106.4744],
-              "hex": "#F1F1EE"
-            }
-          }
-        }
-      }
-    },
     "on-main": {
       "$value": {
         "colorSpace": "oklch",
@@ -242,22 +224,6 @@
             ".light": {
               "colorSpace": "oklch",
               "components": [0.204832, 0.006141, 271.1072]
-            }
-          }
-        }
-      }
-    },
-    "accent-hover": {
-      "$value": {
-        "colorSpace": "oklch",
-        "components": [0.775874, 0.006082, 264.5259]
-      },
-      "$extensions": {
-        "org.soulledger": {
-          "modes": {
-            ".light": {
-              "colorSpace": "oklch",
-              "components": [0.455822, 0.008971, 260.7269]
             }
           }
         }
@@ -656,18 +622,6 @@
       }
     },
     "status": {
-      "alive": {
-        "$value": "{color.success}"
-      },
-      "judging": {
-        "$value": "{color.warning}"
-      },
-      "disposed": {
-        "$value": "{color.ink}"
-      },
-      "reincarnating": {
-        "$value": "{color.chart.4}"
-      },
       "lost": {
         "$value": "{color.ink-subtle}"
       },
@@ -688,15 +642,6 @@
       }
     },
     "verdict": {
-      "passed": {
-        "$value": "{color.success}"
-      },
-      "failed": {
-        "$value": "{color.danger}"
-      },
-      "purgatory": {
-        "$value": "{color.warning}"
-      },
       "retry": {
         "$value": "{color.accent}"
       }

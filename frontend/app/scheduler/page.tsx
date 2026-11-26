@@ -247,7 +247,7 @@ function SchedulerPageContent() {
                 data-group={group.key}
               >
                 {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
-                <h2 className="sticky top-(--below-band) z-1 bg-[oklch(var(--color-canvas))] text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+                <h2 className="sticky top-(--below-band) z-sticky bg-[oklch(var(--color-canvas))] text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
                   <button
                     type="button"
                     aria-expanded={open}

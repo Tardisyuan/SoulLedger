@@ -499,7 +499,7 @@ export function UnderworldMap({
             type="button"
             data-testid="underworld-map-replay"
             onClick={() => setReplayAt(replayAt === null ? 0 : null)}
-            className="inline-flex h-9 items-center border border-[oklch(var(--color-line-strong))] px-3 text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+            className="inline-flex h-9 items-center rounded-control border border-[oklch(var(--color-line-strong))] px-3 text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
           >
             <span aria-hidden="true" className="mr-1">{replayAt === null ? "▸" : "■"}</span>
             {t(replayAt === null ? "map.replay.start" : "map.replay.stop")}
@@ -623,7 +623,7 @@ export function UnderworldMap({
             type="button"
             data-testid="underworld-map-replay-card"
             onClick={() => setReplayAt(null)}
-            className="absolute bottom-3 left-3 right-3 max-w-xs border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-left shadow-overlay"
+            className="absolute bottom-3 left-3 right-3 max-w-xs rounded-panel border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-left shadow-overlay"
           >
             <span aria-live="polite" className="block font-title text-md text-[oklch(var(--color-ink))]">
               {step.at ? t("soulmap.replay_line", { date: formatDate(step.at), station: stepStation }) : stepStation}
@@ -659,7 +659,7 @@ export function UnderworldMap({
                 aria-current={s.state === "current" ? "step" : undefined}
                 onClick={() => focusStation(s.key)}
                 className={cn(
-                  "inline-flex h-8 items-center border border-[oklch(var(--color-line))] px-2 text-xs",
+                  "inline-flex h-8 items-center rounded-control border border-[oklch(var(--color-line))] px-2 text-xs",
                   s.state === "current" ? "font-semibold text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-muted))]",
                 )}
               >

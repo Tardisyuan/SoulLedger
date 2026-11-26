@@ -96,7 +96,7 @@ function RoleForm({ isOpen, onClose, onSubmit, isPending, error, title, initialD
         {/* 这条**表单级**消息仍然手写,不走 `Field` 的 `error` —— 理由在上面
             `useSubmitErrorFocus` 那段:它不属于任何一个字段,交给 `Field` 就等于
             把 `aria-invalid` 重新挂回每个 input 上,正是先前撤掉的那件事。
-            换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色模式下拿到
+            换掉的只有颜色:`red-400 text` 是 Tailwind 原生调色板,浅色模式下拿到
             的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
         {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-danger))] text-sm"><span aria-hidden="true">! </span>{error}</p>}
         {/* A built-in role's name is fixed: the backend compares ADMIN /

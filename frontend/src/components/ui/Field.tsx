@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
  *    *something* failed.
  *
  * 2. THE TWO THAT DO USE THE PALETTE, NOT THE TOKEN. Modal writes
- *    `border-red-500` and `text-red-500`. `--color-status-error` exists, it is
+ *    `red-500 border` and `red-500 text`. `--color-status-error` exists, it is
  *    re-measured per theme (`0 84% 62%` dark, `0 78% 44%` light — the light
  *    value is darker specifically so error text clears AA on a light canvas),
  *    and `red-500` follows neither theme. This component uses the token:
@@ -91,7 +91,7 @@ import { cn } from "@/lib/utils";
  */
 export const fieldControl = cva(
   [
-    "block w-full bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
+    "block w-full rounded-control bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
     "placeholder:text-[oklch(var(--color-ink-subtle))]",
     "transition-[border-color] duration-fast ease-standard",
     "disabled:cursor-not-allowed disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-[oklch(var(--color-line))]",
@@ -108,7 +108,7 @@ export const fieldControl = cva(
       },
       invalid: {
         false:
-          "rounded-control border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
+          "border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
         // 2 px neg border that stays through focus — the field must not stop
         // looking wrong as the user fixes it.
         true: "border-2 border-[oklch(var(--color-danger))] focus-visible:border-[oklch(var(--color-danger))]",

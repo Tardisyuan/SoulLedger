@@ -22,7 +22,8 @@ import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { SelectField, TextField } from "@/src/components/ui/Field";
-import { MONO, SUBTLE, Section, Switch, count } from "./parts";
+import { MONO, SUBTLE, Section, count } from "./parts";
+import { Switch } from "@/src/components/ui/Switch";
 import { connectionDraft, fingerprint, hostOf, keySlot, slotKey, type Draft, type DraftKey, type SavedConnection } from "./draft";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 

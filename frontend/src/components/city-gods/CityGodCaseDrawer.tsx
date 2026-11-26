@@ -12,6 +12,8 @@ import { TextAreaField } from "@/src/components/ui/Field";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { showToast } from "@/src/components/ui/Toast";
 import { CITY_GOD_STATUS_TONES, MatchedOrigin, cityGodCaseRefusalCode, cityGodCaseRefusalMessage } from "./cityGodDisplay";
+import { fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 /*
  * 初审的案子抽屉(第五十三批 Q-1 / Q-2):没有单独的初审页,点一行右侧打开,队列不动。
@@ -123,7 +125,7 @@ export function CityGodCaseDrawer({ caseId, gods, canTransfer, onClose }: Props)
                     value=""
                     disabled={act.isPending}
                     onChange={(e) => e.target.value && transfer(e.target.value)}
-                    className="ml-auto border border-[oklch(var(--color-line))] bg-transparent px-2 py-1 text-sm"
+                    className={cn(fieldControl({ size: "sm" }), "ml-auto w-auto")}
                   >
                     <option value="">{t("cityGodCases.transfer")} ▾</option>
                     {gods.filter((g) => g.id !== c.city_god).map((g) => (

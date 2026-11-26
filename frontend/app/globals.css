@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 /* The demo's recordings are 8 MB of prose, and Tailwind generates CSS from words it finds in files. The normal build stays as if the demo were not there. */
 @source not "../demo/data";
+/* Tests spell out the class names they forbid; scanning them would ship those very rules. */
+@source not "../src/__tests__";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -257,11 +259,10 @@
   /* 规范 v4(用户 2026-11-06):拉丁 Geist / Geist Mono,引文与文书拉丁 EB Garamond、希腊 GFS Didot
      (希腊那一支只含 greek / greek-ext 子集,拉丁字仍由 EB Garamond 出)。见 app/fonts.ts。 */
   /* 「卷」体一套栈(fe-visual §3.1,2026-11-14):拉丁先走 'Juan Latin'(EB Garamond 的别名,只圈拉丁,
-     带 size-adjust),标题与引文同一支;--font-title / --font-juan 是它的别名,调用点不用动。 */
+     带 size-adjust),标题与引文同一支;--font-title 是它的别名,调用点不用动。 */
   --font-serif:
     'SoulLedger Glyphs', 'Juan Latin', var(--font-serif-latin), var(--font-serif-greek),
     'SoulLedger Title Serif', 'Noto Serif SC Variable', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-  --font-juan: var(--font-serif);
   /* 标题与展示数字用 600(v4 沿用 v3,用户 2026-11-06 把衬线标题放开到分节与卡片标题)。2026-11-14 起与
      --font-serif 同一套栈:汉字先取外壳标题子集('SoulLedger Title Serif',可变,所以 400 的「卷」正文也能用),
      其余落到 Noto Serif SC 分片;拉丁由 'Juan Latin' 出(此前标题的拉丁也是 Noto Serif SC)。 */
@@ -332,8 +333,6 @@
 
   --tracking-label: 0.1em;
   --tracking-meta: 0.04em;
-  --tracking-tight: -0.015em;
-  --tracking-display: -0.03em;
 
   --radius-none: 0;
   --radius: 0;
@@ -564,14 +563,12 @@
     --color-ink: 0.963595 0.002651 106.4490; /* #F3F3F1 */
     --color-ink-muted: 0.775874 0.006082 264.5259; /* #B4B6BA */
     --color-ink-subtle: 0.775874 0.006082 264.5259; /* #B4B6BA */
-    /* 立柱底 = 中性侧栏底;有文明时侧栏读 --color-side。匾上题字色两个主题同值(v4 onSolid)。 */
-    --color-pillar: 0.155270 0.004214 285.8987; /* #0C0C0E */
+    /* 匾上题字色两个主题同值(v4 onSolid)。 */
     --color-on-main: 1 0 0; /* #FFFFFF */
     /* 强调 · 任何殿下都是墨(用户 2026-11-14,文明色不进强调与链接)。accent-contrast 是强调底上的字 = 纸。 */
     --color-accent: 0.963595 0.002651 106.4490;
     --color-accent-contrast: 0.178529 0.004066 285.9807;
     --color-accent-ink: 0.963595 0.002651 106.4490;
-    --color-accent-hover: 0.775874 0.006082 264.5259;
     /* 焦点环 · 2px,外扩 2。这里写字面三元组(与 ink 同值);有文明时 [data-civ] 指到 --color-main-ink(v4 `.btn:focus-visible`)。 */
     --color-focus: 0.963595 0.002651 106.4490;
     /* 状态色:danger = v4 neg、success = v4 pos;其余沿用 v3(v4 没定义)。
@@ -665,20 +662,12 @@
     --color-chart-3: 0.800399 0.044801 248.3861;
     --color-chart-4: 0.740999 0.045000 249.5047;
     --color-chart-5: 0.690172 0.045147 250.6443;
-    --color-chart-6: 0.650533 0.044564 249.6206;
-    /* 领域状态 = 颜色 + 字形。「轮回中」· Design D1:图表里取梯度第 4 档(浅 #53687F / 深 #96AEC7);
-       图表以外不给颜色 —— 徽章是「↻ 轮回中」、ink 字、1px ink3 框,逐页改版时换过去。 */
-    --color-status-alive: var(--color-success);
-    --color-status-judging: var(--color-warning);
-    --color-status-disposed: var(--color-ink);
-    --color-status-reincarnating: var(--color-chart-4);
+    /* 领域状态 = 颜色 + 字形。生命周期状态在图表以外不给颜色(徽章靠字形、ink 字、1px ink3 框),
+       所以这一层只剩下面两个别名。 */
     --color-status-lost: var(--color-ink-subtle);
     --color-status-settled: var(--color-ink-muted);
     /* 功 / 过不给颜色(Design E 组):灵魂详情的功过数字与总账一样是 ink,靠列头与 +/− 区分。
        --color-karma-* 两个令牌因此删掉 —— 冷玫红只表「失败」。 */
-    --color-verdict-passed: var(--color-success);
-    --color-verdict-failed: var(--color-danger);
-    --color-verdict-purgatory: var(--color-warning);
     --color-verdict-retry: var(--color-accent);
     --color-status-success: var(--color-success);
     --color-status-error: var(--color-danger);
@@ -699,11 +688,9 @@
     --color-ink: 0.204832 0.006141 271.1072; /* #16171A */
     --color-ink-muted: 0.455822 0.008971 260.7269; /* #54575C */
     --color-ink-subtle: 0.455822 0.008971 260.7269; /* #54575C */
-    --color-pillar: 0.957310 0.003982 106.4744; /* #F1F1EE */
     --color-accent: 0.204832 0.006141 271.1072;
     --color-accent-contrast: 0.978573 0.002641 106.4481;
     --color-accent-ink: 0.204832 0.006141 271.1072;
-    --color-accent-hover: 0.455822 0.008971 260.7269;
     --color-focus: 0.204832 0.006141 271.1072;
     --color-danger: 0.479318 0.171592 15.4317; /* #A81E3C */
     --color-danger-strong: 0.479318 0.171592 15.4317; /* #A81E3C */
@@ -757,7 +744,6 @@
     --color-chart-3: 0.440635 0.045391 248.8937;
     --color-chart-4: 0.509215 0.044595 251.0144;
     --color-chart-5: 0.570530 0.044052 249.7496;
-    --color-chart-6: 0.620712 0.045066 249.6583;
   }
 
   /* 文明皮(规范 v4):五个值一起换,外加强调与焦点指到文明的字色。选择器挂在 <html> 上
@@ -821,7 +807,6 @@
        --glowA       页头光晕强度(深 .30 / 浅 .22)。--glow-alpha(深 .30 / 浅 .24)仍给侧栏与工具条,值不动
        --field       输入框底
      第 3 步(第十节):
-       --seal-size   96 卷宗页 / 72 灵魂端 / 40 列表(这里是 96;小印由组件的 size 给)
        --mark        功过记号 16px,墨色(`MeritMark`)
        --stamp / --stamp-ease / --stamp-scale   落印(第五十三批 G1,四处同一下):200ms,从 1.18 倍落到 1,透明度 0 → 1,
                      只播一次,没有光晕;--stamp-reduced 是减少动态效果时的 120ms 淡入(不缩放)。类名 `.stamp-in`
@@ -829,7 +814,6 @@
        --judge-w     卷宗页右栏(台)宽
        --opt-h       去处 1–4 的行高:桌面 44、触屏 56 */
   :root {
-    --seal-size: 96px;
     --mark: 16px;
     --stamp: 200ms;
     --stamp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -849,7 +833,7 @@
     /* 语域令牌(fe-tokens §3.1 L1′,2026-11-14):type.juan.* 是「卷」(记录),type.tai.* 是「台」(控件),
        另有门栏与功过记号两个部件字面。值起初照三个 .module.css 原来写死的字号 / 行高;第五十三批 G3 收进十档:13 → 14、15 → 16(触屏),卷 16/24、台 14/20;
        `--x-size` / `--x-leading` 是同一令牌的字号与行高,给只设字号(或字号 + 行高)的地方用 ——
-       换成 font 简写会连字族、字重一起重置。整行的用法见下面的 `@utility juan` / `@utility tai`。 */
+       换成 font 简写会连字族、字重一起重置;整行照某个令牌时直接 `font: var(--x)`。 */
     --juan-key: 400 14px/20px var(--font-sans);
     --juan-key-size: 14px;
     --juan-key-leading: 20px;
@@ -1519,50 +1503,6 @@ html.theme-switching *::after {
   }
 }
 
-/* 语域 utility(fe-tokens §3.1 L1′,2026-11-14):「卷」(记录,衬线)与「台」(控件,无衬线)各一组,值是 @tokens 块里的
-   font 简写令牌(type.juan.* / type.tai.*)。一个元素的字族、字重、字号、行高都照某个令牌时写 `className="juan-key"`,
-   不再逐处手拼 `font-title text-md font-normal`;只换字号的地方读 `--x-size` / `--x-leading`(三个 .module.css 就是这样)。
-   font 简写会把 font-variant-numeric 等一并重置,所以等宽数字之类的修饰写在 utility 之后。 */
-@utility juan {
-  font: var(--juan);
-}
-@utility juan-strong {
-  font: var(--juan-strong);
-}
-@utility juan-key {
-  font: var(--juan-key);
-}
-@utility juan-head {
-  font: var(--juan-head);
-}
-@utility juan-num {
-  font: var(--juan-num);
-}
-@utility juan-title {
-  font: var(--juan-title);
-}
-@utility juan-name {
-  font: var(--juan-name);
-}
-@utility tai {
-  font: var(--tai);
-}
-@utility tai-touch {
-  font: var(--tai-touch);
-}
-@utility tai-label {
-  font: var(--tai-label);
-}
-@utility tai-caption {
-  font: var(--tai-caption);
-}
-@utility tai-micro {
-  font: var(--tai-micro);
-}
-@utility tai-head {
-  font: var(--tai-head);
-}
-
 /* overflow 只在动画期间是 hidden(离散属性,fill 是 backwards,结束后回到 visible),
    于是展开完的内容里焦点环与浮层不会被裁。 */
 @keyframes row-expand {
@@ -1884,53 +1824,6 @@ html.theme-switching *::after {
     transform: none !important;
     translate: none !important;
   }
-}
-
-/* React Flow Controls Dark Mode Override */
-.react-flow__controls {
-  background: oklch(var(--color-surface-1)) !important;
-  border: 1px solid oklch(var(--color-line)) !important;
-/* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
-     system, and then handed it the one radius the system forbids
-     (tailwind.config.js zeroes every step except `full` and `focus`). */
-  border-radius: 0 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-}
-
-.react-flow__controls-button {
-  background: oklch(var(--color-surface-1)) !important;
-  border-bottom: 1px solid oklch(var(--color-line)) !important;
-  fill: oklch(var(--color-ink-muted)) !important;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .react-flow__controls-button:hover {
-    background: oklch(var(--color-surface-2)) !important;
-  }
-}
-
-.react-flow__controls-button:last-child {
-  border-bottom: none !important;
-}
-
-.react-flow__controls-button svg {
-  fill: oklch(var(--color-ink-muted)) !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
-}
-
-/* React Flow minimap dark mode */
-.react-flow__minimap {
-  background: oklch(var(--color-surface-1)) !important;
-  border: 1px solid oklch(var(--color-line)) !important;
-/* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
-     system, and then handed it the one radius the system forbids
-     (tailwind.config.js zeroes every step except `full` and `focus`). */
-  border-radius: 0 !important;
-}
-
-.react-flow__minimap-mask {
-  fill: oklch(var(--color-surface-3) / 0.8) !important;
 }
 
 /* React Flow background dots */

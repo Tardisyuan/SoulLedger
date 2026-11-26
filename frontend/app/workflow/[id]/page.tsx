@@ -488,7 +488,7 @@ export default function WorkflowDetailPage() {
     >
       <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_320px] gap-6">
         {/* ── 1 · 节点 / 历史 ── */}
-        <section className="min-w-0 self-start bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] max-lg:order-2">
+        <section className="v4-card rounded-panel min-w-0 self-start bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] max-lg:order-2">
           {/* Tabs — and these deliberately do NOT go into PageShell's `tabs`
               slot: they partition this column, not the page. The decision form
               beside them belongs to the workflow as a whole and is identical
@@ -614,7 +614,7 @@ export default function WorkflowDetailPage() {
           )}
 
           {currentNode && workflow.status !== "COMPLETED" && (
-            <section className="flex flex-col gap-4 px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
+            <section className="v4-card rounded-panel flex flex-col gap-4 px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
@@ -931,7 +931,7 @@ export default function WorkflowDetailPage() {
           {/* 案卷附件(W4):与案卷页同一个组件、同一个案子,放在判决备注 / 理由之下。
               没有关联案子的流程(没有 judgment)没有附件区;权限与案卷页一样看 judgment.*。 */}
           {workflow.judgment && hasPermission("judgment.read") && (
-            <section className="px-6 py-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
+            <section className="v4-card rounded-panel px-6 py-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
               <CaseAttachments judgmentId={workflow.judgment} canWrite={hasPermission("judgment.execute")} />
             </section>
           )}
@@ -942,9 +942,9 @@ export default function WorkflowDetailPage() {
               same status as one approved everywhere; the nodes can tell them
               apart, the status field cannot. */}
           {workflow.status === "COMPLETED" && (
-            <section className="px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
+            <section className="v4-card rounded-panel px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
               <h2
-                className={`text-2xs uppercase tracking-widest ${
+                className={`text-2xs uppercase tracking-label ${
                   hasRejection ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-status-success))]"
                 }`}
               >
