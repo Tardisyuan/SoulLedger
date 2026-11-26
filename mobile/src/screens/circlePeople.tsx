@@ -75,7 +75,7 @@ function Count({ n, label, onPress, testID }: { n: number; label: string; onPres
     </>
   );
   return onPress ? (
-    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.countCell, { borderColor: t.hair }, pressed && { backgroundColor: t.s1 }]}>
+    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.countCell, { borderColor: t.hair }, pressed && { backgroundColor: t.hair }]}>
       {body}
     </Pressable>
   ) : (
@@ -447,7 +447,7 @@ export function FollowListScreen({ relation }: { relation: "following" | "follow
                 testID={`soul-${r.user_id}`}
                 accessibilityRole="button"
                 onPress={() => navigation.navigate("SoulProfile", { userId: r.user_id })}
-                style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.s1 }]}
+                style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.hair }]}
               >
                 <Glyph text={r.display_name} tone={r.is_active ? "muted" : "subtle"} dotted={!r.is_active} size={36} />
                 <View style={styles.fill}>
@@ -596,7 +596,7 @@ export function CircleSearchScreen() {
               testID={`result-${r.user_id}`}
               accessibilityRole="button"
               onPress={() => navigation.navigate("SoulProfile", { userId: r.user_id })}
-              style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.s1 }]}
+              style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.hair }]}
             >
               <Glyph text={r.display_name} tone="muted" size={36} />
               <View style={styles.fill}>

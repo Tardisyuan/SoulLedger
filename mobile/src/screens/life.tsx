@@ -383,15 +383,15 @@ export function LifeSections({
               );
               const box = [styles.appCard, { backgroundColor: t.s1, borderColor: t.hair }, dead && styles.gone];
               return opens ? (
-                <Pressable
+                <Press
                   key={a.id}
                   testID={`life-open-${a.id}`}
                   accessibilityRole="button"
                   onPress={() => onOpenApplication?.(a.id)}
-                  style={({ pressed }) => [...box, pressed && styles.pressed]}
+                  style={[...box]}
                 >
                   {summary}
-                </Pressable>
+                </Press>
               ) : (
                 <View key={a.id} style={box}>
                   {summary}
@@ -1220,12 +1220,12 @@ function PastLife({ life, open, onToggle, lex }: { life: MeLife; open: boolean; 
   const unrecorded = tr("common.value.unrecorded");
   return (
     <View testID={`past-life-${life.cycle}`} style={[styles.pastLife, { borderBottomColor: t.hair }]}>
-      <Pressable
+      <Press
         testID={`past-life-${life.cycle}-toggle`}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         onPress={onToggle}
-        style={({ pressed }) => [styles.pastHead, pressed && styles.pressed]}
+        style={[styles.pastHead]}
       >
         <Txt variant="label" tone="subtle" style={styles.pastNo}>
           {tr("soul_app.life.cycle", { cycle: String(life.cycle + 1) })}
@@ -1241,7 +1241,7 @@ function PastLife({ life, open, onToggle, lex }: { life: MeLife; open: boolean; 
         <View style={{ transform: [{ rotate: open ? "0deg" : "-90deg" }], marginTop: 4 }}>
           <Icon name="chevronDown" size={13} color={t.inkSubtle} />
         </View>
-      </Pressable>
+      </Press>
       {open ? (
         <ThemeContext.Provider value={sealed}>
           <View testID={`sealed-${life.cycle}`} style={[styles.sealed, { borderColor: t.hair, backgroundColor: t.s1 }]}>
@@ -1335,7 +1335,6 @@ const styles = StyleSheet.create({
   gone: { opacity: 0.45 },
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
-  pressed: { opacity: 0.8 },
   link: { textDecorationLine: "underline" },
   noSpacing: { letterSpacing: 0 },
   rule: { marginVertical: 16 },

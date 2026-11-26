@@ -97,7 +97,7 @@ function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderA
             accessibilityRole="button"
             accessibilityLabel={a.label}
             onPress={a.onPress}
-            style={({ pressed }) => [styles.icon, a.text ? styles.textAction : null, a.framed && { borderWidth: 1, borderColor: t.ink }, pressed && { backgroundColor: t.s2 }]}
+            style={({ pressed }) => [styles.icon, a.text ? styles.textAction : null, a.framed && { borderWidth: 1, borderColor: t.ink }, pressed && { backgroundColor: t.hair }]}
           >
             {a.text ? (
               <Txt variant="label" tone="ink">
@@ -126,7 +126,7 @@ function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderA
           accessibilityRole="button"
           accessibilityLabel={tr("soul_app.settings.title")}
           onPress={onAccount}
-          style={({ pressed }) => [styles.icon, pressed && { backgroundColor: t.s2 }]}
+          style={({ pressed }) => [styles.icon, pressed && { backgroundColor: t.hair }]}
         >
           <Icon name="person" size={18} color={t.ink} strokeWidth={1.2} />
         </Pressable>
@@ -307,7 +307,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               }}
               style={({ pressed }) => [
                 stack ? [styles.tabRow, { borderBottomColor: t.hair }] : [styles.tab, wide && styles.tabWide],
-                !selected && pressed && { backgroundColor: t.s2 },
+                !selected && pressed && { backgroundColor: t.hair },
               ]}
             >
               <View style={styles.tabGlyphBox} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

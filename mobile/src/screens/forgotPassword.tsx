@@ -133,14 +133,14 @@ export function ErrorBanner({ banner, testID }: { banner: Banner; testID?: strin
         </Txt>
       ) : null}
       {banner.action ? (
-        <Pressable
+        <Press
           testID={banner.action.testID}
           accessibilityRole="button"
           onPress={banner.action.onPress}
-          style={({ pressed }) => [styles.action, { borderColor: theme.ink }, pressed && styles.pressed]}
+          style={[styles.action, { borderColor: theme.ink }]}
         >
           <Txt style={styles.actionText}>{banner.action.label}</Txt>
-        </Pressable>
+        </Press>
       ) : null}
     </View>
   );
@@ -590,7 +590,6 @@ const styles = StyleSheet.create({
   banner: { gap: 8, borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
   action: { alignSelf: "flex-start", minHeight: 44, borderWidth: 1, borderRadius: radius.control, justifyContent: "center", paddingHorizontal: 16, marginTop: 4 },
   actionText: { fontFamily: family.ui[500], fontSize: 16, lineHeight: 24 },
-  pressed: { opacity: 0.8 },
   fieldProblem: { marginLeft: 2, gap: 2 },
   status: { gap: 4, borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
   field: { gap: 8 },

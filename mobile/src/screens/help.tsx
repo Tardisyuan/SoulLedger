@@ -8,7 +8,7 @@
  */
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 
@@ -17,7 +17,7 @@ import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useSession } from "../session";
-import { Button, Screen, SectionLabel, Txt, useLayout, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { Button, Screen, SectionLabel, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { radius } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
@@ -63,18 +63,18 @@ function Question({ item }: { item: Faq }) {
   const home = state.status === "signedIn" ? state.profile.home_civilization : undefined;
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: theme.hair }}>
-      <Pressable
+      <Press
         testID={`help-q-${id}`}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((v) => !v)}
-        style={({ pressed }) => [styles.row, { paddingHorizontal: gutter }, pressed && styles.pressed]}
+        style={[styles.row, { paddingHorizontal: gutter }]}
       >
         <Txt variant="bodyLg" style={styles.fill}>
           {t(civKey(t, q, home))}
         </Txt>
         <Icon name={open ? "chevronDown" : "chevron"} size={14} color={theme.inkSubtle} />
-      </Pressable>
+      </Press>
       {open ? (
         <Txt testID={`help-a-${id}`} variant="bodyLg" tone="muted" style={[styles.answer, { paddingHorizontal: gutter }]}>
           {t(civKey(t, a, home))}
@@ -158,7 +158,6 @@ export function HelpScreen({ only }: { only?: "login" }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  pressed: { opacity: 0.8 },
   groupLabel: { paddingTop: 24, paddingBottom: 8 },
   row: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
   answer: { paddingTop: 0, paddingBottom: 16 },

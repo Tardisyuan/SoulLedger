@@ -14,7 +14,7 @@ import { realmLabel } from "@soulledger/core/config/civilizations";
 import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
@@ -24,36 +24,7 @@ import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, stateNote, wasApp
 import { SessionContext } from "../session";
 import { publishVoiceNumber } from "@soulledger/mobile-ui/src/voiceCache";
 import { radius, space } from "@soulledger/mobile-ui/src/theme";
-import {
-  Block,
-  Button,
-  DataRow,
-  DataRows,
-  EnumBadge,
-  enumText,
-  EnumValue,
-  FadeIn,
-  GUTTER,
-  Input,
-  Interp,
-  Notice,
-  OneLine,
-  PageEmptyArt,
-  Quote,
-  RadioMark,
-  Screen,
-  ScreenError,
-  SectionLabel,
-  Skeleton,
-  StaleLine,
-  Txt,
-  useLandingFade,
-  useLayout,
-  useReducedMotion,
-  useReloadOnRefocus,
-  useRemote,
-  useTheme,
-} from "@soulledger/mobile-ui/src/ui";
+import { Block, Button, DataRow, DataRows, EnumBadge, enumText, EnumValue, FadeIn, GUTTER, Input, Interp, Notice, OneLine, PageEmptyArt, Quote, RadioMark, Screen, ScreenError, SectionLabel, Skeleton, StaleLine, Txt, useLandingFade, useLayout, useReducedMotion, useReloadOnRefocus, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { CooldownShorteningBlock } from "./cooldown";
 import { useDiscardGuard } from "./discardGuard";
 import { useResidenceNames } from "../residence";
@@ -149,13 +120,13 @@ function ApplicationRow({ a, onOpen, gone }: { a: MeRebirthApplication; onOpen: 
   const { gutter } = useLayout();
   const press = gone ? undefined : onOpen;
   return (
-    <Pressable
+    <Press
       testID={`open-${a.id}`}
       accessibilityRole={press ? "button" : undefined}
       accessibilityState={gone ? { disabled: true } : undefined}
       disabled={!press}
       onPress={press}
-      style={({ pressed }) => [styles.appRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed, gone && styles.gone]}
+      style={[styles.appRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, gone && styles.gone]}
     >
       <View style={styles.fill}>
         <EnumBadge namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
@@ -167,7 +138,7 @@ function ApplicationRow({ a, onOpen, gone }: { a: MeRebirthApplication; onOpen: 
         </OneLine>
       </View>
       <Icon name="chevron" size={15} color={theme.inkSubtle} />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -245,15 +216,14 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
   const { t } = useI18n();
   const { compact } = useLayout();
   return (
-    <Pressable
+    <Press
       testID={`form-${form}`}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       onPress={onPick}
-      style={({ pressed }) => [
+      style={[
         styles.formCard,
         { backgroundColor: theme.s0, borderLeftColor: selected ? theme.ink : "transparent" },
-        pressed && styles.pressed,
       ]}
     >
       <View style={styles.dot}>
@@ -271,7 +241,7 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
           {t(`soul_app.form_notes.${form}`)}
         </Txt>
       </View>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -661,7 +631,6 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  pressed: { opacity: 0.8 },
   gone: { opacity: 0.45 },
   gap4: { marginTop: 4 },
   gap10: { marginTop: 12 },

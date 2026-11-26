@@ -377,7 +377,7 @@ export function ActionButton({
       ? { bg: t.ink, border: t.ink, ink: t.s0 }
         : { bg: "transparent", border: kind === "ink-outline" ? t.ink : t.inkSubtle, ink: t.ink };
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={title}
@@ -385,13 +385,13 @@ export function ActionButton({
       accessibilityState={{ busy: !!busy, disabled: !!inert }}
       disabled={inert}
       onPress={onPress}
-      style={({ pressed }) => [styles.action, { backgroundColor: look.bg, borderColor: look.border, opacity: pressed ? 0.7 : 1 }, style]}
+      style={[styles.action, { backgroundColor: look.bg, borderColor: look.border }, style]}
     >
       <Txt variant="nav" style={{ color: look.ink }}>
         {title}
       </Txt>
       {busy && !disabled ? <BusyLine color={look.ink} testID={testID ? `${testID}-busy` : "action-busy"} /> : null}
-    </Pressable>
+    </Press>
   );
 }
 

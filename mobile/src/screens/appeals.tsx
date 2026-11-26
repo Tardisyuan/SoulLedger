@@ -285,7 +285,7 @@ export function AppealDeadlineNote({ list, onOpen }: { list: MeJudgmentAppealLis
       testID="appeal-deadline-note"
       accessibilityRole="button"
       onPress={onOpen}
-      style={({ pressed }) => [styles.note, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && { backgroundColor: theme.s2 }]}
+      style={({ pressed }) => [styles.note, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && { backgroundColor: theme.hair }]}
     >
       <Txt variant="body" style={styles.fill}>
         {t("appeals.open_note", { n: String(open.length), date: day(open[0]) })}

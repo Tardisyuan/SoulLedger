@@ -249,7 +249,7 @@ function Head({ view, setView, assist }: { view: "chat" | "history"; setView: (v
 function HeadButton({ label, onPress, testID }: { label: string; onPress: () => void; testID: string }) {
   const t = useTheme();
   return (
-    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.headButton, pressed && { backgroundColor: t.s2 }]}>
+    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.headButton, pressed && { backgroundColor: t.hair }]}>
       <Txt variant="label" tone="muted" numberOfLines={1}>
         {label}
       </Txt>
@@ -297,7 +297,7 @@ function Conversation({ assist }: { assist: Assist }) {
                 testID="assist-suggestion"
                 accessibilityRole="button"
                 onPress={() => assist.ask(q)}
-                style={({ pressed }) => [styles.suggestion, { borderColor: t.hair2 }, pressed && { backgroundColor: t.s2 }]}
+                style={({ pressed }) => [styles.suggestion, { borderColor: t.hair2 }, pressed && { backgroundColor: t.hair }]}
               >
                 <Txt style={{ fontFamily: quoteFamily(q) }}>{q}</Txt>
               </Pressable>
@@ -634,7 +634,7 @@ function Composer({ assist }: { assist: Assist }) {
             accessibilityRole="button"
             accessibilityLabel={tr("soul_app.assist.stop_aria")}
             onPress={assist.stop}
-            style={({ pressed }) => [styles.stop, { borderColor: t.ink }, pressed && { backgroundColor: t.s2 }]}
+            style={({ pressed }) => [styles.stop, { borderColor: t.ink }, pressed && { backgroundColor: t.hair }]}
           >
             <Txt variant="label">{`■ ${tr("soul_app.assist.stop")}`}</Txt>
           </Pressable>

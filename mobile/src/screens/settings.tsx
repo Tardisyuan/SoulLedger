@@ -19,7 +19,7 @@ import { platform } from "@soulledger/core/platform";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Linking, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Linking, StyleSheet, View } from "react-native";
 
 import { useAssist } from "../assist";
 import { Emblem, Icon, type IconName } from "@soulledger/mobile-ui/src/emblems";
@@ -88,17 +88,16 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       </View>
     ) : null;
   return (
-    <Pressable
+    <Press
       testID={`language-${l}`}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       // The row reads the language's own name and note, so it is read in that language (iOS; Android has no such prop).
       accessibilityLanguage={BCP47_FOR_LOCALE[l]}
       onPress={onPick}
-      style={({ pressed }) => [
+      style={[
         styles.row,
         { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: selected ? theme.ink : "transparent" },
-        pressed && styles.pressed,
       ]}
     >
       {/* 单选:墨色,不是强调色(第三类 F 组);v2 起是圆的(补足 A2),不再和复选框同形。 */}
@@ -112,7 +111,7 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       </View>
       {busy ? <Loader testID="language-saving" size={20} /> : null}
       {stack ? null : current}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -209,16 +208,15 @@ function Toggle({
   const theme = useTheme();
   const { gutter, stack } = useLayout();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="switch"
       accessibilityLabel={title}
       accessibilityState={{ checked: value }}
       onPress={() => onChange(!value)}
-      style={({ pressed }) => [
+      style={[
         stack ? styles.toggleStacked : styles.row,
         { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: "transparent" },
-        pressed && styles.pressed,
       ]}
     >
       <View style={stack ? undefined : styles.fill}>
@@ -231,7 +229,7 @@ function Toggle({
       </View>
       {/* Handoff 3c: square, like everything else — the knob's side and the ink fill (补足 A1) say "on". */}
       <SwitchMark on={value} large={stack} />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -357,14 +355,13 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
       <Txt variant="caption" tone="subtle" style={[styles.foot, { paddingHorizontal: gutter }]}>
         {t("soul_app.settings.lock_screen")}
       </Txt>
-      <Pressable
+      <Press
         testID="open-history"
         accessibilityRole="button"
         onPress={() => navigation.navigate("NotificationHistory")}
-        style={({ pressed }) => [
+        style={[
           styles.row,
           { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: "transparent" },
-          pressed && styles.pressed,
         ]}
       >
         <View style={styles.fill}>
@@ -374,7 +371,7 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
           </Txt>
         </View>
         <Icon name="chevron" size={14} color={theme.inkSubtle} />
-      </Pressable>
+      </Press>
     </>
   );
 }
@@ -387,11 +384,11 @@ function NavRow({ testID, label, state, bold, onPress }: { testID: string; label
   const theme = useTheme();
   const { gutter } = useLayout();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.navRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+      style={[styles.navRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}
     >
       <Txt variant="bodyLg" style={styles.fill}>
         {label}
@@ -402,7 +399,7 @@ function NavRow({ testID, label, state, bold, onPress }: { testID: string; label
         </Txt>
       ) : null}
       <Icon name="chevron" size={14} color={theme.inkSubtle} />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -421,11 +418,11 @@ function EmailRow() {
   // A failed fetch must not make the account-recovery row look like it does not exist.
   if (!d && email.error)
     return (
-      <Pressable
+      <Press
         testID="email-load-failed"
         accessibilityRole="button"
         onPress={() => void email.reload()}
-        style={({ pressed }) => [styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+        style={[styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}
       >
         <View style={styles.fill}>
           <Txt variant="bodyLg">{t("soul_app.settings.email")}</Txt>
@@ -434,7 +431,7 @@ function EmailRow() {
           </Txt>
         </View>
         <Txt variant="body">{`${t("soul_app.common.retry")} ›`}</Txt>
-      </Pressable>
+      </Press>
     );
   if (!d) return null;
   const action = d.can_change ? t(d.email_masked ? "soul_app.settings.email_change" : "soul_app.settings.email_add") : null;
@@ -456,14 +453,14 @@ function EmailRow() {
   return (
     <>
       {action ? (
-        <Pressable
+        <Press
           testID="open-contact-email"
           accessibilityRole="button"
           onPress={() => navigation.navigate("ContactEmail")}
-          style={({ pressed }) => [styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+          style={[styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}
         >
           {body}
-        </Pressable>
+        </Press>
       ) : (
         <View testID="open-contact-email" style={[styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
           {body}
@@ -700,7 +697,6 @@ export function NotificationPrimerScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1, minWidth: 0 },
   center: { textAlign: "center" },
-  pressed: { opacity: 0.8 },
   heading: { paddingTop: 24, paddingBottom: 12 },
   identity: { paddingVertical: GUTTER, borderBottomWidth: 1, gap: 8 },
   civRow: { flexDirection: "row", alignItems: "center", gap: 8 },

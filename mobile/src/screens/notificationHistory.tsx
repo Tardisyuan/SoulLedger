@@ -7,14 +7,14 @@
 import { soulApi, soulErrorMessage, type PushHistoryItem } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { landingGoneKey, useGone } from "../gone";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { landOn, landingOf } from "../push";
 import { formatStamp } from "../rules";
-import { Button, Empty, Notice, OneLine, Screen, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { Button, Empty, Notice, OneLine, Screen, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 
 /** Statuses where the lock screen never showed it; the content is still readable. */
@@ -54,14 +54,14 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
   );
   const style = [styles.row, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, last && styles.last, gone && styles.gone];
   return open ? (
-    <Pressable
+    <Press
       testID={`notification-${item.id}`}
       accessibilityRole="button"
       onPress={open}
-      style={({ pressed }) => [...style, pressed && styles.pressed]}
+      style={[...style]}
     >
       {body}
-    </Pressable>
+    </Press>
   ) : (
     <View testID={`notification-${item.id}`} style={style}>
       {body}
@@ -148,7 +148,6 @@ export function NotificationHistoryScreen() {
 const styles = StyleSheet.create({
   gone: { opacity: 0.45 },
   fill: { flex: 1 },
-  pressed: { opacity: 0.8 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   last: { borderBottomWidth: 0 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },

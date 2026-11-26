@@ -275,7 +275,7 @@ export function PostCard({
   );
   const style = [styles.card, { paddingHorizontal: gutter, borderBottomColor: t.hair }, gone && styles.gone];
   return onPress ? (
-    <Pressable testID={`post-${post.id}`} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: t.s1 }]}>
+    <Pressable testID={`post-${post.id}`} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: t.hair }]}>
       {body}
     </Pressable>
   ) : (
@@ -704,17 +704,17 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
           <Txt variant="caption" tone="muted">
             {tr("soul_app.circle.react.lamp_confirm_body")}
           </Txt>
-          <Pressable
+          <Press
             testID="lamp-confirm"
             accessibilityRole="button"
             onPress={() => {
               setAsking(false);
               onReact("ETERNAL_LIGHT");
             }}
-            style={({ pressed }) => [styles.lampButton, { backgroundColor: t.lamp, opacity: pressed ? 0.85 : 1 }]}
+            style={[styles.lampButton, { backgroundColor: t.lamp }]}
           >
             <Txt style={[styles.lampButtonText, { color: t.lampBg }]}>{tr("soul_app.circle.react.lamp_confirm")}</Txt>
-          </Pressable>
+          </Press>
           <Button testID="lamp-cancel" kind="secondary" title={tr("soul_app.circle.react.lamp_cancel")} onPress={() => setAsking(false)} />
         </View>
       </Sheet>

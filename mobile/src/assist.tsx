@@ -390,7 +390,7 @@ export function AssistEntry({ screen }: { screen: AssistScreen }) {
       accessibilityRole="button"
       accessibilityLabel={tr("soul_app.assist.entry_label")}
       onPress={() => assist.open(screen)}
-      style={({ pressed }) => [styles.entry, pressed && { backgroundColor: t.s2 }]}
+      style={({ pressed }) => [styles.entry, pressed && { backgroundColor: t.hair }]}
     >
       <AskGlyph color={t.inkSubtle} />
     </Pressable>

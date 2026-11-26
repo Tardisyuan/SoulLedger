@@ -28,7 +28,7 @@ import { TAG_GLYPH } from "../rules";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
 import { radius, touch, type Theme } from "@soulledger/mobile-ui/src/theme";
-import { Button, Empty, FadeIn, LATIN_KEYBOARD, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { Button, Empty, FadeIn, LATIN_KEYBOARD, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, pressedFace, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 
 export const ANDROID = Platform.OS === "android";
@@ -153,7 +153,8 @@ function Row({
         { paddingHorizontal: gutter, borderBottomColor: hall ? t.hair2 : t.hair },
         hall && { backgroundColor: t.s1, borderLeftWidth: 3, borderLeftColor: t.ink, paddingLeft: gutter - 3 },
         dim && { opacity: 0.82 },
-        pressed && { backgroundColor: t.s2 },
+        // A1: no ground takes `hair`; the hall row's s1 darkens (`pressedFace`).
+        pressed && pressedFace(t, hall ? t.s1 : undefined),
       ]}
     >
       {glyph}

@@ -14,7 +14,7 @@ import { officerAppApi, type TodoFacts, type TodoItemDetail, type TodoKind } fro
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BackHandler, Pressable, type ScrollView, Share, View } from "react-native";
+import { BackHandler, type ScrollView, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { useKeptText } from "../keptText";
@@ -222,12 +222,12 @@ function BarButton({ testID, ink, grow, title, caption, label, onPress }: { test
   const theme = useTheme();
   const fg = ink ? theme.s0 : theme.ink;
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label ?? (caption ? `${title}, ${caption}` : title)}
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={{
         flex: grow,
         minHeight: 56,
         borderWidth: 1,
@@ -237,8 +237,7 @@ function BarButton({ testID, ink, grow, title, caption, label, onPress }: { test
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: space[3],
-        opacity: pressed ? 0.7 : 1,
-      })}
+      }}
     >
       <Txt variant="nav" style={{ color: fg }}>
         {title}
@@ -248,7 +247,7 @@ function BarButton({ testID, ink, grow, title, caption, label, onPress }: { test
           {caption}
         </OneLine>
       ) : null}
-    </Pressable>
+    </Press>
   );
 }
 
