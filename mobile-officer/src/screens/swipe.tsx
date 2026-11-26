@@ -561,7 +561,7 @@ function UndoBar({ testID, text, onUndo }: { testID: string; text: string; onUnd
   const theme = useTheme();
   return (
     <View testID={testID} style={[styles.undo, { backgroundColor: theme.ink }]}>
-      <Txt variant="caption" style={{ color: theme.s0, flex: 1 }}>
+      <Txt variant="body" style={{ color: theme.s0, flex: 1 }}>
         {text}
       </Txt>
       <Press testID={`${testID}-button`} accessibilityRole="button" accessibilityLabel={t("action.undo")} onPress={onUndo} style={styles.undoButton}>

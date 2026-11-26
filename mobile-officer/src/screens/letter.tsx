@@ -428,7 +428,7 @@ export function LetterThread({
               </View>
             ) : null}
             {ordered.length === 0 ? (
-              <Txt variant="caption" tone="muted">
+              <Txt variant="body" tone="muted">
                 {t("soul_inbox.no_messages")}
               </Txt>
             ) : null}
@@ -568,7 +568,7 @@ export function LetterThread({
             </View>
             {(templates.data ?? []).length === 0 ? (
               <Txt
-                variant="caption"
+                variant="body"
                 tone="muted"
                 style={{ paddingHorizontal: space[5] }}
               >

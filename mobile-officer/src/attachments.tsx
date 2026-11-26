@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Linking, View } from "react-native";
 
 import { LetterImageViewer } from "./screens/letterImages";
-import { OneLine, Txt, space, useI18n, useOnline, useTheme, useToast, Press } from "./shared";
+import { OneLine, Txt, space, useI18n, useOnline, useTheme, useToast, Press, GONE_OPACITY } from "./shared";
 import { isPdf, sizeText } from "./todoFacts";
 
 export type AttachmentItem = {
@@ -68,7 +68,7 @@ export function AttachmentList({ items, resolve }: { items: readonly AttachmentI
             accessibilityState={{ disabled: blocked, busy: opening === a.id }}
             disabled={blocked}
             onPress={() => open(a)}
-            style={{ minHeight: 56, flexDirection: "row", alignItems: "center", gap: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair, opacity: blocked ? 0.5 : 1 }}
+            style={{ minHeight: 56, flexDirection: "row", alignItems: "center", gap: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair, opacity: blocked ? GONE_OPACITY : 1 }}
           >
             <View style={{ flex: 1, gap: space[1] }}>
               <Txt variant="body" numberOfLines={1}>{a.name}</Txt>

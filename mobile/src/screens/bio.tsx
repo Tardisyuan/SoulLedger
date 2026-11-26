@@ -17,7 +17,7 @@ import { stateOfFailure, type StepState } from "../mfa";
 import { useSession } from "../session";
 import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
 import { Button, Input, SwitchMark, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
 export function SheetTitle({ children }: { children: string }) {
@@ -278,6 +278,6 @@ const styles = StyleSheet.create({
   forget: { minHeight: 48, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center", marginTop: 8 },
   forgetCancel: { minHeight: 48, alignItems: "center", justifyContent: "center" },
   row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderBottomWidth: 1 },
-  dim: { opacity: 0.6 },
+  dim: { opacity: GONE_OPACITY },
   on: { fontFamily: family.ui[600] },
 });

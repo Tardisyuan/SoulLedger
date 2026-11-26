@@ -105,7 +105,7 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
   return (
     <View testID="mfa-recovery-codes" style={{ gap: space[3] }}>
       <Notice tone="neutral">
-        <Txt variant="caption">{`◐ ${t("mfa.setup.step4_warning")}`}</Txt>
+        <Txt variant="body">{`◐ ${t("mfa.setup.step4_warning")}`}</Txt>
       </Notice>
       <View testID="mfa-codes-text" style={{ flexDirection: "row", gap: space[5] }}>
         {[codes.slice(0, Math.ceil(codes.length / 2)), codes.slice(Math.ceil(codes.length / 2))].map((col, i) => (

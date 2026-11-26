@@ -11,6 +11,7 @@ import { useChat } from "../chat";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { Empty, Press, Screen, SectionError, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { PENDING_OPACITY } from "@soulledger/mobile-ui/src/theme";
 
 function BlockRow({ block, busy, onUnblock }: { block: SoulChatBlock; busy: boolean; onUnblock: () => void }) {
   const theme = useTheme();
@@ -89,5 +90,5 @@ const styles = StyleSheet.create({
   row: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
   action: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center", paddingHorizontal: 8 },
   underline: { textDecorationLine: "underline" },
-  dim: { opacity: 0.5 },
+  dim: { opacity: PENDING_OPACITY },
 });

@@ -18,7 +18,7 @@ import { LAPSE_KEYS, canSubmitLogin, isFinalLapse, lapseOfReason, shouldAutoProm
 import { forgetDevice } from "../mfa";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "@soulledger/mobile-ui/src/passwordRulesView";
 import { RememberedCard } from "@soulledger/mobile-ui/src/rememberedCard";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, PENDING_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { SoulCodeField } from "../soulCodeView";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
@@ -78,7 +78,7 @@ function NetworkNotice({ onRetry }: { onRetry: () => void }) {
         <Txt testID="login-network-title" variant="section" style={{ color: theme.negInk }}>
           {t("soul_app.mfa.login.network")}
         </Txt>
-        <Txt testID="login-network-body" variant="caption" tone="muted">
+        <Txt testID="login-network-body" variant="body" tone="muted">
           {t("soul_app.login.network_body")}
         </Txt>
       </View>
@@ -120,7 +120,7 @@ function LapsedNotice({ lapse, bio }: { lapse: Lapse; bio: string }) {
         <Txt testID="login-lapsed-title" variant="section">
           {t(keys.title, { bio })}
         </Txt>
-        <Txt testID="login-lapsed-body" variant="caption" tone="muted">
+        <Txt testID="login-lapsed-body" variant="body" tone="muted">
           {t(keys.body, { bio })}
         </Txt>
       </View>
@@ -388,7 +388,7 @@ export function LoginScreen() {
             <Txt testID="login-reset-title" variant="section">
               {t("soul_app.forgot_password.success_title")}
             </Txt>
-            <Txt testID="login-reset-body" variant="caption" tone="muted">
+            <Txt testID="login-reset-body" variant="body" tone="muted">
               {t("soul_app.forgot_password.success_body")}
             </Txt>
           </View>
@@ -731,12 +731,12 @@ const styles = StyleSheet.create({
   // start's mark lands on this one: its size and top come from `LOGIN_MARK` (brandMark.ts), which the cold start reads.
   brand: { alignItems: "center", paddingTop: LOGIN_MARK.top, paddingBottom: 20 },
   appName: { marginTop: 24, letterSpacing: 1.6 },
-  wordmark: { marginTop: 8, fontSize: 12, letterSpacing: 2.2 },
+  wordmark: { marginTop: 8, fontSize: 12 },
   login: { borderTopWidth: 1, marginHorizontal: 24, paddingTop: 24 },
   lead: { marginTop: 8 },
   gapTop: { marginTop: 16 },
   fields: { marginTop: 20, gap: 24 },
-  dimmed: { opacity: 0.6 },
+  dimmed: { opacity: PENDING_OPACITY },
   submit: { marginTop: 24 },
   forgot: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "flex-end" },
   // Beside the 密码 label the link keeps its 44 pt target but takes no height: the row is the label's, so 密码 sits

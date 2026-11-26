@@ -118,7 +118,7 @@ export function ScanScreen() {
     invalid === "invalid" ? (
       <View testID="scan-invalid" accessibilityRole="alert" accessibilityLiveRegion="assertive" style={[styles.invalid, { top, backgroundColor: theme.s1, borderColor: theme.neg }]}>
         <Txt variant="section" style={{ color: theme.negInk }}>{t("soul_app.scan.invalid")}</Txt>
-        <Txt variant="caption" tone="muted">
+        <Txt variant="body" tone="muted">
           {t("soul_app.scan.invalid_body")}
         </Txt>
       </View>
@@ -127,7 +127,7 @@ export function ScanScreen() {
   const photoNone = (
     <View testID="scan-photo-none" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.notice}>
       <Txt variant="section" style={{ color: NOTICE.ink }}>{t("soul_app.scan.photo_none")}</Txt>
-      <Txt variant="caption" style={{ color: NOTICE.sub }}>
+      <Txt variant="body" style={{ color: NOTICE.sub }}>
         {t("soul_app.scan.photo_none_body")}
       </Txt>
     </View>
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   bar: { position: "absolute", left: 0, right: 0, height: 56, flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 4, paddingRight: 16 },
   barFlow: { height: 56, flexDirection: "row", alignItems: "center", paddingLeft: 4 },
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  closeGlyph: { fontSize: 28, lineHeight: 32 },
+  closeGlyph: { fontSize: 24, lineHeight: 32 },
   title: { color: WHITE },
   invalid: { position: "absolute", left: 16, right: 16, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
   aim: { position: "absolute", left: 24, right: 24, top: "28%", alignItems: "center", gap: 24 },

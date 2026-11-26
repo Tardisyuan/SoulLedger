@@ -40,7 +40,7 @@ import { GoneScreen, useGone } from "../gone";
 import { quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
-import { radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
+import { radius, touch, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   FadeModal,
@@ -167,7 +167,7 @@ export function MutedLock({ until, reason, testID = "muted-lock" }: { until: str
         <Icon name="lock" size={14} color={t.inkSubtle} strokeWidth={1.2} />
       </View>
       <View style={styles.fill}>
-        <Txt variant="caption" tone="muted">
+        <Txt variant="body" tone="muted">
           {tr("soul_app.circle.muted.body")}
         </Txt>
         {until ? (
@@ -410,7 +410,7 @@ export function CircleScreen() {
       {justPending ? (
         <View testID="pending-banner" style={[styles.banner, { paddingHorizontal: gutter, borderBottomColor: t.hair, borderLeftColor: t.ink, backgroundColor: t.s1 }]}>
           <Txt variant="bodyLg">{tr("soul_app.circle.compose.pending_title")}</Txt>
-          <Txt variant="caption" tone="muted">
+          <Txt variant="body" tone="muted">
             {tr("soul_app.circle.compose.pending_body")}
           </Txt>
         </View>
@@ -435,7 +435,7 @@ export function CircleScreen() {
         <Txt variant="bodyLg" tone="muted" style={styles.center}>
           {tr("soul_app.circle.feed.empty_title")}
         </Txt>
-        <Txt variant="caption" tone="subtle" style={styles.center}>
+        <Txt variant="body" tone="subtle" style={styles.center}>
           {tr("soul_app.circle.feed.empty_body")}
         </Txt>
         <Button testID="circle-write" title={tr("soul_app.circle.feed.write")} onPress={write} />
@@ -672,7 +672,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
                 styles.reaction,
                 on
                   ? { borderColor: lamp ? t.lamp : t.ink, borderStyle: "solid", backgroundColor: lamp ? t.lampBg : "transparent" }
-                  : { borderColor: t.hair2, borderStyle: lit ? "dotted" : "solid", opacity: lit ? 0.5 : 1 },
+                  : { borderColor: t.hair2, borderStyle: lit ? "dotted" : "solid", opacity: lit ? GONE_OPACITY : 1 },
                 // 补足 C17: the lamp is last and the one pill — 2px in its gold, lit or not.
                 lamp && [styles.lampPill, { borderColor: t.lamp }],
               ]}
@@ -701,7 +701,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
               {tr("soul_app.circle.react.lamp_confirm_title", { name: post.author.display_name })}
             </Txt>
           </View>
-          <Txt variant="caption" tone="muted">
+          <Txt variant="body" tone="muted">
             {tr("soul_app.circle.react.lamp_confirm_body")}
           </Txt>
           <Press
@@ -822,7 +822,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
             <Txt variant="title" style={styles.sheetTitle}>
               {tr(target?.kind === "post" ? "soul_app.circle.delete.post_title" : "soul_app.circle.delete.comment_title")}
             </Txt>
-            <Txt variant="caption" tone="muted">
+            <Txt variant="body" tone="muted">
               {tr("soul_app.circle.delete.body")}
             </Txt>
             <Button testID="delete-confirm" kind="danger" title={tr("soul_app.circle.delete.confirm")} busy={busy} onPress={() => void remove()} />
@@ -1074,7 +1074,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
                   accessibilityState={{ disabled: !draft.trim() || sending || !status.data }}
                   disabled={!draft.trim() || sending || !status.data}
                   onPress={press}
-                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.ink) : t.ink, opacity: draft.trim() ? 1 : 0.6 }]}
+                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.ink) : t.ink, opacity: draft.trim() ? 1 : GONE_OPACITY }]}
                 >
                   <Txt style={[styles.sendText, { color: t.s0 }]}>{tr("soul_app.circle.comment.send")}</Txt>
                 </Pressable>
@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
   summary: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: radius.control },
   tagNeg: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
-  tagNegText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.8 },
+  tagNegText: { fontSize: 12, lineHeight: 16 },
   subTabs: { flexDirection: "row", borderBottomWidth: 1 },
   subTab: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderBottomWidth: 2 },
   subTabText: { fontSize: 14, letterSpacing: 0.4 },
@@ -1149,7 +1149,7 @@ const styles = StyleSheet.create({
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   dock: { borderTopWidth: 1, paddingTop: 12 },
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
-  commentInput: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16 },
-  send: { minHeight: 44, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
+  commentInput: { flex: 1, minHeight: touch.controlMd, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16 },
+  send: { minHeight: touch.controlMd, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontSize: 14, letterSpacing: 0.6 },
 });

@@ -79,7 +79,7 @@ export function OfflineBanner() {
         accessibilityLiveRegion="polite"
         style={{ paddingHorizontal: space[5], paddingVertical: space[2], backgroundColor: dark ? theme.ink : theme.s2 }}
       >
-        <Txt variant="caption" style={{ color: dark ? theme.s0 : theme.ink }}>
+        <Txt variant="body" style={{ color: dark ? theme.s0 : theme.ink }}>
           {text}
         </Txt>
       </View>

@@ -125,7 +125,7 @@ export function PeoplePickerSheet({
           {failed ? <FieldError text={t("officer_app.state.error_title")} /> : null}
         </View>
         {people.length === 0 && !loading && !failed ? (
-          <Txt variant="caption" tone="muted" style={{ paddingHorizontal: space[5] }}>
+          <Txt variant="body" tone="muted" style={{ paddingHorizontal: space[5] }}>
             {t("officer_app.cosign.empty")}
           </Txt>
         ) : null}

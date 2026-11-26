@@ -353,7 +353,7 @@ export function CosignSheet({
           {load.error ? <FieldError text={t("officer_app.state.error_title")} /> : null}
         </View>
         {people.length === 0 && !load.loading && !load.error ? (
-          <Txt variant="caption" tone="muted" style={{ paddingHorizontal: space[5] }}>
+          <Txt variant="body" tone="muted" style={{ paddingHorizontal: space[5] }}>
             {t("officer_app.cosign.empty")}
           </Txt>
         ) : null}

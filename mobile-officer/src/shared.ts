@@ -84,6 +84,7 @@ export {
 } from "@soulledger/mobile-ui/src/deviceCredential";
 export {
   GONE_OPACITY,
+  PENDING_OPACITY,
   HIGHLIGHT_ALPHA,
   civKeyOf,
   motion,

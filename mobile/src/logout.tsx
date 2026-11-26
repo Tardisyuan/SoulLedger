@@ -45,7 +45,7 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
             <Txt variant="title">
               {tr("soul_app.logout.title")}
             </Txt>
-            <Txt testID="logout-body" variant="caption" tone="muted">
+            <Txt testID="logout-body" variant="body" tone="muted">
               {body.bioKey ? tr(body.key, { bio: tr(body.bioKey) }) : tr(body.key)}
             </Txt>
             <Txt testID="logout-forget-hint" variant="caption" tone="muted">

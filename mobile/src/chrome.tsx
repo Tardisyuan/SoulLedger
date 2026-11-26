@@ -241,7 +241,7 @@ export function PlaqueHeader({
             <Txt testID="plaque-title" accessibilityRole="header" variant="display" numberOfLines={2} style={{ fontFamily: titleFamily(title) }}>
               {title}
             </Txt>
-            <Txt testID="plaque-meta" variant="caption" tone="muted" numberOfLines={1}>
+            <Txt testID="plaque-meta" variant="body" tone="muted" numberOfLines={1}>
               {meta}
             </Txt>
           </View>
@@ -356,8 +356,8 @@ const styles = StyleSheet.create({
   tabsStacked: { flexDirection: "column", borderWidth: 1, borderRadius: radius.dialog, overflow: "hidden" },
   tabRow: { minHeight: 48, paddingVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
   tabGlyphBox: { alignItems: "center" },
-  /** v4's title serif: 18 / 22. */
-  tabGlyph: { fontSize: 18, lineHeight: 22 },
+  /** v4's title serif at the token `door.glyph`, 18 / 24 (Design batch 67 二). */
+  tabGlyph: { fontSize: 18, lineHeight: 24 },
   /** The current item's 14 × 2 rule, 3 under its character. */
   tabCurrent: { position: "absolute", bottom: -3, width: 14, height: 2, borderRadius: 1 },
   tabBadge: { position: "absolute", top: -2, right: -8, width: 8, height: 8, borderRadius: radius.pill },

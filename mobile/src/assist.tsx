@@ -36,7 +36,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
-import { useTheme } from "@soulledger/mobile-ui/src/ui";
+import { TYPE, useTheme } from "@soulledger/mobile-ui/src/ui";
 
 /**
  * Decision A4: the same page within 30 minutes continues the last conversation — the one this
@@ -413,5 +413,5 @@ export function AskGlyph({ color, glyph = "问" }: { color: string; glyph?: stri
 const styles = StyleSheet.create({
   entry: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   glyph: { width: 20, height: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  glyphText: { fontSize: 12, lineHeight: 14 },
+  glyphText: TYPE.meta,
 });

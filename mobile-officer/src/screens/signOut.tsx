@@ -40,7 +40,7 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
     <View testID={`${testID}-asking`} style={{ gap: space[3] }} onLayout={onAsk}>
       {/* Signing out is not a warning (Design batch 67 §三.4): the sentence says what is at stake. */}
       <Notice tone="neutral" testID={pending ? `${testID}-pending` : undefined}>
-        <Txt variant="caption">
+        <Txt variant="body">
           {pending ? t(unsent && drafts ? "officer_app.me.logout_pending" : unsent ? "officer_app.me.logout_pending_unsent" : "officer_app.me.logout_pending_drafts", { unsent: String(unsent), drafts: String(drafts) }) : t("officer_app.me.logout_title")}
         </Txt>
       </Notice>
@@ -59,7 +59,7 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
         <>
           <ActionButton testID={`${testID}-cancel`} kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
           <Press testID={`${testID}-confirm`} accessibilityRole="button" onPress={() => signOut()} hitSlop={8} style={{ alignSelf: "center", paddingVertical: space[2] }}>
-            <Txt variant="caption" style={{ textDecorationLine: "underline" }}>
+            <Txt variant="body" style={{ textDecorationLine: "underline" }}>
               {t("officer_app.me.logout_anyway")}
             </Txt>
           </Press>

@@ -23,7 +23,7 @@ import { noteOpened } from "../recentOpened";
 import { ActionButton, EdgeBack, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
-import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, Press } from "../shared";
+import { GONE_OPACITY, Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, Press } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
 import { SealSheet } from "./sealSheet";
@@ -180,8 +180,8 @@ export function Detail({
   );
 }
 
-/** 第五十批 C1: a decided item stays on screen at this strength, for looking back at only. */
-const DONE_OPACITY = 0.55;
+/** 第五十批 C1: a decided item stays on screen at this strength, for looking back at only (Design batch 67 三: the 0.45 tier). */
+const DONE_OPACITY = GONE_OPACITY;
 
 /** The row after this one in the list it was opened from: who it is and how many rows are left after this one. */
 export type NextItem = { name: string; left: number; onNext: () => void };
@@ -631,7 +631,7 @@ function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concluded
     <View testID="judgment-comments" style={{ gap: space[3] }}>
       <SectionLabel>{t("officer_app.comment.title")}</SectionLabel>
       {data && data.length === 0 ? (
-        <Txt variant="caption" tone="muted">{t("officer_app.comment.empty")}</Txt>
+        <Txt variant="body" tone="muted">{t("officer_app.comment.empty")}</Txt>
       ) : null}
       {data === null && error ? (
         <Notice tone="neg" onRetry={() => void reload()} testID="comments-failed">

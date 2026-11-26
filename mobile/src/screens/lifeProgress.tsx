@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { Animated, StyleSheet, View, useWindowDimensions } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
+import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp } from "../rules";
 import { motion } from "@soulledger/mobile-ui/src/theme";
@@ -281,7 +282,7 @@ export function ConfessionCard({ tally }: { tally: Confession | null | undefined
   const params = { truthful: String(tally.truthful), untruthful: String(tally.untruthful), unheard: String(tally.unheard), total: String(tally.total) };
   return (
     <Card testID="life-confession" title={tr("soul_app.life.confession.title")} right={tr("soul_app.life.confession.count", { recorded: String(recorded), total: String(tally.total) })}>
-      <Txt variant="caption" tone="subtle" style={styles.subtitle}>
+      <Txt variant="body" tone="subtle" style={styles.subtitle}>
         {tr("soul_app.life.confession.subtitle")}
       </Txt>
       <View testID="life-confession-strip" accessible accessibilityLabel={tr("soul_app.life.confession.strip_aria", params)}>
@@ -331,7 +332,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 2 },
   cell: { flex: 1, height: 20, borderWidth: 1, borderRadius: 2, overflow: "hidden" },
   ticks: { flexDirection: "row", justifyContent: "space-between", marginTop: 4, marginBottom: 4 },
-  tick: { fontSize: 10, lineHeight: 14 },
+  /** Design batch 67 二: a tick is a mark like an upper-case label, so 11 / 16, in tabular mono digits. */
+  tick: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, fontVariant: ["tabular-nums"] },
   swatch: { width: 8, height: 12, borderWidth: 1, borderRadius: 1, overflow: "hidden" },
   tally: { flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 4 },
   tallyItem: { flexDirection: "row", alignItems: "center", gap: 4 },

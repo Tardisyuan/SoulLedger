@@ -34,7 +34,7 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
     <>
       <View style={styles.fill}>
         <Txt variant="bodyLg">{item.title}</Txt>
-        <Txt variant="caption" tone="muted">
+        <Txt variant="body" tone="muted">
           {item.body}
         </Txt>
         <View style={styles.meta}>
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   last: { borderBottomWidth: 0 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  stamp: { fontSize: 12, letterSpacing: 0.6 },
+  stamp: { fontSize: 12 },
   flag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   more: { paddingVertical: 16 },
   reason: { marginTop: 8 },

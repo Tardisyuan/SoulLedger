@@ -48,7 +48,7 @@ import { family, quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, PENDING_OPACITY, RECEDE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press, useLayout } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
@@ -452,7 +452,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       {unavailable ? (
         <View testID="chat-unavailable" style={[styles.unavailable, { backgroundColor: t.s1, borderBottomColor: t.hair }]}>
           <View style={[styles.square, { backgroundColor: t.neg }]} />
-          <Txt variant="caption" tone="muted" style={styles.fill}>
+          <Txt variant="body" tone="muted" style={styles.fill}>
             {tr("soul_app.chat.unavailable.banner")}
           </Txt>
           <Press testID="chat-reconnect" accessibilityRole="button" onPress={chat.reconnect} style={[styles.smallButton, { borderColor: t.hair2 }]}>
@@ -502,7 +502,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             {mode.kind === "outgoing_locked" && mode.rejected ? (
               <View style={styles.rejected}>
                 <Notice tone="neg" testID="request-throttled">
-                  <Interp text={tr("soul_app.chat.request.throttled")} parts={{ time: <Mono tone="negInk">{formatStamp(mode.nextAt) ?? ""}</Mono> }} variant="caption" tone="negInk" />
+                  <Interp text={tr("soul_app.chat.request.throttled")} parts={{ time: <Mono tone="negInk">{formatStamp(mode.nextAt) ?? ""}</Mono> }} variant="body" tone="negInk" />
                 </Notice>
               </View>
             ) : null}
@@ -650,7 +650,7 @@ function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; op
         <Pressable style={styles.fill} accessibilityRole="button" onPress={onClose} accessibilityLabel={tr("soul_app.common.cancel")} />
         <View testID="block-sheet" accessibilityViewIsModal style={[styles.sheet, styles.confirmSheet, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
           <Txt variant="bodyLg">{tr("soul_app.chat.block.confirm_title", { name })}</Txt>
-          <Txt variant="caption" tone="muted">
+          <Txt variant="body" tone="muted">
             {tr("soul_app.chat.block.confirm_body")}
           </Txt>
           <Button testID="block-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={onClose} />
@@ -850,7 +850,7 @@ function PendingBubble({ o, onResend, onDismiss, now }: { o: Outgoing; onResend:
           failed
             ? { borderColor: t.negStrong, backgroundColor: t.negBg }
             : queued
-              ? { borderColor: t.hair2, backgroundColor: t.s1, opacity: 0.7 }
+              ? { borderColor: t.hair2, backgroundColor: t.s1, opacity: PENDING_OPACITY }
               : { borderColor: t.inkSubtle, backgroundColor: wash(t) },
         ]}
       >
@@ -1109,7 +1109,7 @@ const styles = StyleSheet.create({
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   hallHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 16 },
-  hallSub: { fontSize: 12, lineHeight: 16, marginTop: 2 },
+  hallSub: { marginTop: 2 },
   unavailable: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
   square: { width: 9, height: 9 },
   smallButton: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 4, minHeight: ANDROID ? 48 : 32, justifyContent: "center" },
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
   nudge: { marginTop: 2 },
   // flex-end in the inverted list is the visual top: a short thread starts under the band, as before.
   thread: { paddingHorizontal: 20, paddingVertical: 16, flexGrow: 1, justifyContent: "flex-end" },
-  sealed: { opacity: 0.88 },
+  sealed: { opacity: RECEDE_OPACITY },
   older: { alignItems: "center", paddingBottom: 16 },
   day: { textAlign: "center", fontSize: 12, marginBottom: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 16 },
@@ -1143,7 +1143,7 @@ const styles = StyleSheet.create({
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   metaMine: { justifyContent: "flex-end" },
   newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
-  newTagText: { fontFamily: family.ui[500], fontSize: 12, lineHeight: 16, letterSpacing: 1.1 },
+  newTagText: { fontFamily: family.ui[500], fontSize: 12, lineHeight: 16 },
   rejected: { marginTop: 2 },
   dock: { paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1 },
   composer: { flexDirection: "row", gap: 12, alignItems: "flex-end" },
