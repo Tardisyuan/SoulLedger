@@ -458,6 +458,9 @@ export const ZOOM_TAP = 2.5;
 export const CLOSE_DRAG_PT = 120;
 const CLOSE_FLING = 800;
 
+/** How far a finger may move and still tap (pt): past it, the touch is a drag (Huawei phone, 2026-11-26). */
+const TAP_SLOP = 10;
+
 function ZoomPage({ width, onZoomed, onClose, tapLabel, children }: { width: number; onZoomed: (on: boolean) => void; onClose: () => void; tapLabel?: string; children: ReactNode }) {
   const [zoomed, setZoomed] = useState(false);
   const zoom = useCallback(
@@ -533,6 +536,7 @@ function ZoomPage({ width, onZoomed, onClose, tapLabel, children }: { width: num
   const doubleTap = Gesture.Tap()
     .withTestId("photo-double-tap")
     .numberOfTaps(2)
+    .maxDistance(TAP_SLOP)
     .onEnd((e) => {
       if (scale.value > 1) return reset();
       const fx = e.x - box.value.w / 2;
@@ -545,6 +549,8 @@ function ZoomPage({ width, onZoomed, onClose, tapLabel, children }: { width: num
   const tap = Gesture.Tap()
     .withTestId("photo-tap")
     .enabled(!!tapLabel)
+    // A Tap with no distance limit still ends after a swipe: a page turn (or a drag while zoomed) closed the viewer.
+    .maxDistance(TAP_SLOP)
     .onEnd(() => {
       runOnJS(onClose)();
     });

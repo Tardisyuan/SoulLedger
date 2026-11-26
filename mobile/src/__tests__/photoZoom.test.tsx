@@ -99,3 +99,11 @@ it("with `tapLabel` a single tap closes, and a screen reader's activate does too
   pager();
   expect(screen.queryByLabelText("关闭")).toBeNull();
 });
+
+it("a tap gives up once the finger travels: a swipe (a page turn, a drag while zoomed) is not a tap that closes", () => {
+  pager("关闭");
+  for (const id of ["photo-tap", "photo-double-tap"]) {
+    const config = (getByGestureTestId(id) as unknown as { config: { maxDist?: number } }).config;
+    expect([id, config.maxDist]).toEqual([id, 10]);
+  }
+});
