@@ -139,6 +139,9 @@ describe("P4: a bottom sheet under reduce motion fades in place, its scrim with 
       [1, 80],
       [0, 80],
     ]);
+    // Reanimated's default (`System`) jumps a timing to its end under reduce motion: the 80 fade would be a cut.
+    // It is an opacity fade, allowed under reduce motion, so both opt out (ux-motion-mobile S2).
+    expect(timing.mock.calls.map((c) => c[1]?.reduceMotion)).toEqual([Reanimated.ReduceMotion.Never, Reanimated.ReduceMotion.Never]);
     // Still up through the 80 fade, then down.
     expect(screen.getByTestId("sheet-body")).toBeTruthy();
     await wait(motion.reduced + 20);
