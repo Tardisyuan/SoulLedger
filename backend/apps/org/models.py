@@ -141,15 +141,6 @@ class Organization(AuditUserFields):
             if old is not None:
                 global_codes.release(global_codes.ORG_CODE, old, using=alias)
 
-    def get_ancestors(self):
-        """获取所有祖先组织"""
-        ancestors = []
-        current = self.parent
-        while current:
-            ancestors.append(current)
-            current = current.parent
-        return ancestors
-
     def get_children_recursive(self):
         """获取所有后代组织（包括自己）"""
         result = [self]

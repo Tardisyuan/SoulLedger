@@ -152,25 +152,6 @@ class ReactionService:
             PostService.increment_reaction_count(post_id, tenant=effective_tenant)
         return reaction, True
 
-    @staticmethod
-    def remove_reaction(user, post=None, comment=None, tenant=None):
-        """Remove a user's reaction from a post or comment."""
-        kwargs = {"user": user}
-        if post:
-            kwargs["post"] = post
-        else:
-            kwargs["comment"] = comment
-
-        reaction = Reaction.objects.filter(**kwargs).first()
-        if reaction:
-            post_id = reaction.post_id
-            reaction_tenant = tenant or reaction.tenant
-            reaction.delete()
-            if post_id:
-                PostService.decrement_reaction_count(post_id, tenant=reaction_tenant)
-            return True
-        return False
-
 
 class FollowService:
     """Service for follow/unfollow business logic."""

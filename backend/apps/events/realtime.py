@@ -12,7 +12,8 @@ belongs to: `RealtimeEventPublisher.publish_workflow` and
 `event_bus.publish_workflow` both had no callers, workflow events never reached
 `SoulEvent`, and six tests calling those functions directly stayed green the
 whole time. A second, callable, equivalent way to publish is how that happens
-twice — so the facade went and `event_bus` is now the only door.
+twice — so the facade went and `event_bus` is now the only door. (`event_bus.publish_workflow`
+and `publish_dispatch`, still uncalled, went too on 2026-11-26.)
 
 Channel naming convention (unchanged; `ChannelNaming` below):
   rt_tenant_{code}    — tenant-wide broadcast (all users in tenant)

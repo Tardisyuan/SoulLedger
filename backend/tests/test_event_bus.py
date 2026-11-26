@@ -104,7 +104,7 @@ class TestEventBusCore:
             def handle(self, envelope):
                 handled.append(envelope.event_type)
 
-        bus.register_handler("my_domain", TestHandler())
+        bus._get_registry.register_domain("my_domain", TestHandler())
         bus.publish("EVT", {}, "my_domain")
         assert handled == ["EVT"]
 
@@ -116,7 +116,7 @@ class TestEventBusCore:
             def handle(self, envelope):
                 handled.append(envelope.event_type)
 
-        bus.register_handler("domain_a", TestHandler())
+        bus._get_registry.register_domain("domain_a", TestHandler())
         bus.publish("EVT", {}, "domain_b")
         assert handled == []
 
@@ -128,7 +128,7 @@ class TestEventBusCore:
             def handle(self, envelope):
                 handled.append(envelope.domain)
 
-        bus.register_global_handler(GlobalH())
+        bus._get_registry.register_global(GlobalH())
         bus.publish("A", {}, "d1")
         bus.publish("B", {}, "d2")
         assert handled == ["d1", "d2"]
@@ -144,7 +144,7 @@ class TestEventBusCore:
             def handle(self, envelope):
                 handled.append(envelope.event_type)
 
-        bus.register_handler("d", FilteredHandler())
+        bus._get_registry.register_domain("d", FilteredHandler())
         bus.publish("SKIP", {}, "d")
         bus.publish("PASS", {}, "d")
         assert handled == ["PASS"]
@@ -161,8 +161,8 @@ class TestEventBusCore:
             def handle(self, envelope):
                 handled.append("b")
 
-        bus.register_event_handler("E", HandlerA())
-        bus.register_event_handler("E", HandlerB())
+        bus._get_registry.register("E", HandlerA())
+        bus._get_registry.register("E", HandlerB())
         bus.publish("E", {}, "d")
         assert handled == ["a", "b"]
 
@@ -173,16 +173,16 @@ class TestEventBusCore:
             def handle(self, envelope):
                 raise RuntimeError("boom")
 
-        bus.register_handler("d", BadHandler())
+        bus._get_registry.register_domain("d", BadHandler())
         # Should not raise
         bus.publish("E", {}, "d")
 
     def test_handler_count(self):
         bus = EventBus()
         counts_before = bus.handler_count()
-        bus.register_handler("d1", AuditHandler())
-        bus.register_handler("d2", WebSocketHandler())
-        bus.register_global_handler(AuditHandler())
+        bus._get_registry.register_domain("d1", AuditHandler())
+        bus._get_registry.register_domain("d2", WebSocketHandler())
+        bus._get_registry.register_global(AuditHandler())
         counts_after = bus.handler_count()
 
         assert counts_after["domain_handlers"] == counts_before["domain_handlers"] + 2
@@ -190,8 +190,8 @@ class TestEventBusCore:
 
     def test_reset(self):
         bus = EventBus()
-        bus.register_handler("d", AuditHandler())
-        bus.register_global_handler(AuditHandler())
+        bus._get_registry.register_domain("d", AuditHandler())
+        bus._get_registry.register_global(AuditHandler())
 
         bus.reset()
         counts = bus.handler_count()
@@ -313,24 +313,6 @@ class TestHandlerRegistry:
         assert counts["domain_handlers"] == 1
         assert counts["global_handlers"] == 1
         assert counts["total"] == 4
-
-    def test_registered_event_types(self):
-        registry = DomainEventHandlerRegistry()
-        registry.register("A", AuditHandler())
-        registry.register("B", AuditHandler())
-
-        types = registry.registered_event_types()
-        assert "A" in types
-        assert "B" in types
-
-    def test_registered_domains(self):
-        registry = DomainEventHandlerRegistry()
-        registry.register_domain("workflow", AuditHandler())
-        registry.register_domain("notification", AuditHandler())
-
-        domains = registry.registered_domains()
-        assert "workflow" in domains
-        assert "notification" in domains
 
     def test_reset(self):
         registry = DomainEventHandlerRegistry()

@@ -1,7 +1,8 @@
 """没有哪个组织的 parent 属于另一个租户。
 
-`Organization.get_ancestors()` 沿 `parent` 一路往上走,**不过滤租户** —— 所以一条
-跨租户的 parent FK 意味着从某个节点往上爬会走进别人的树里。
+`Organization.get_children_recursive()` 沿 `parent` 一路往下走,**不过滤租户** —— 所以一条
+跨租户的 parent FK 意味着从某个节点往下走会走进别人的树里(往上爬也一样;当年的
+`get_ancestors()` 就是往上爬,没有调用方,2026-11-26 删了)。
 
 115 上实测恰好一条:`HADES_NORSE`(EU_HEAVEN_HELL)的 parent 是 `HADES`,而后者被
 `org/0007` 移到了 GR_HADES。**那次迁移的 docstring 写着「任何时刻都没有节点跨文明
@@ -26,7 +27,7 @@ def test_no_parent_belongs_to_another_tenant():
     ]
     assert crossing == [], (
         f"这些组织的 parent 在别的租户里:{crossing}。"
-        f"`get_ancestors()` 沿 parent 走且不过滤租户,所以从它们往上爬会走进"
+        f"`get_children_recursive()` 沿 parent 走且不过滤租户,所以从这些 parent 往下走会走进"
         f"另一个租户的树。"
     )
 

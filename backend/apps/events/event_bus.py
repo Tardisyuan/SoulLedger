@@ -148,34 +148,6 @@ class EventBus:
         return self._registry
 
     # ------------------------------------------------------------------
-    # Registration (delegates to registry)
-    # ------------------------------------------------------------------
-
-    def register_handler(self, domain: str, handler: DomainEventHandler) -> None:
-        """
-        Register a DomainEventHandler for a specific domain.
-
-        The handler will receive all events where envelope.domain == domain.
-        Delegates to handler_registry.register_domain().
-        """
-        self._get_registry.register_domain(domain, handler)
-
-    def register_event_handler(self, event_type: str, handler: DomainEventHandler) -> None:
-        """
-        Register a handler for a specific event type.
-
-        Delegates to handler_registry.register().
-        """
-        self._get_registry.register(event_type, handler)
-
-    def register_global_handler(self, handler: DomainEventHandler) -> None:
-        """
-        Register a DomainEventHandler that receives ALL events.
-        Used for cross-cutting concerns (e.g., metrics, logging).
-        """
-        self._get_registry.register_global(handler)
-
-    # ------------------------------------------------------------------
     # Publishing
     # ------------------------------------------------------------------
 
@@ -255,42 +227,6 @@ class EventBus:
             domain="notification",
             tenant_code=tenant_code,
             user_ids=[user_id],
-            permission=permission,
-        )
-
-    def publish_workflow(
-        self,
-        event_type: str,
-        payload: dict,
-        tenant_code: str | None = None,
-        user_ids: list[int] | None = None,
-        permission: str | None = "workflow.read",
-    ) -> None:
-        """Publish a workflow event."""
-        self.publish(
-            event_type=event_type,
-            payload=payload,
-            domain="workflow",
-            tenant_code=tenant_code,
-            user_ids=user_ids,
-            permission=permission,
-        )
-
-    def publish_dispatch(
-        self,
-        event_type: str,
-        payload: dict,
-        tenant_code: str | None = None,
-        user_ids: list[int] | None = None,
-        permission: str | None = "dispatch.read",
-    ) -> None:
-        """Publish a dispatch event."""
-        self.publish(
-            event_type=event_type,
-            payload=payload,
-            domain="dispatch",
-            tenant_code=tenant_code,
-            user_ids=user_ids,
             permission=permission,
         )
 
