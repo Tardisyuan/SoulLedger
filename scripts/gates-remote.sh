@@ -9,8 +9,8 @@
 #     synced trees nobody uses (remote_prune), dependency hashes (deps_hash_js, REMOTE_DEPS)
 #   - the containers: remote_gate_run (delegated gates and --tests), remote_e2e_run (--e2e)
 # Split out of run-gates.sh on 2026-11-21 (the 2026-11-20 rebuild audit (not in this repo) §5, step 6): the same code in the
-# same order. A change here forces a full run and the gate tests, as a change to run-gates.sh does (FULL_RULES
-# there, GATE_SCRIPTS in select-backend-tests.py). install-hooks.sh copies it beside the hook's run-gates.sh.
+# same order. A change here forces a full run and the gate tests, as a change to run-gates.sh does (GATE_SCRIPTS
+# in scripts/gates_classify.py). install-hooks.sh copies it beside the hook's run-gates.sh.
 
 # ── THE REMOTE MACHINE (GATES_REMOTE): shared by the delegated gates and --e2e ─────────────────
 RDIR="${GATES_REMOTE_DIR:-/srv/appdata/sl-gates}"

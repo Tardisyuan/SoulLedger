@@ -99,6 +99,8 @@ RUNNER = REPO_ROOT / "scripts" / "run-gates.sh"
 # The remote executor run-gates.sh sources (2026-11-21): routing, the Windows PC, locks, sync, containers.
 REMOTE = REPO_ROOT / "scripts" / "gates-remote.sh"
 COMMON = REPO_ROOT / "scripts" / "remote-common.sh"
+# The decision rules run-gates.sh asks (2026-11-26): unit tests in test_gates_classify.py.
+CLASSIFIER = REPO_ROOT / "scripts" / "gates_classify.py"
 READERS = REPO_ROOT / "backend" / "tests" / "reads-outside-backend.txt"
 
 
@@ -266,7 +268,7 @@ def checkouts(tmp_path):
     (main / "backend").mkdir(parents=True)
     (main / "backend" / "manage.py").write_text("")
     (main / "scripts").mkdir()
-    for name in ("install-hooks.sh", "run-gates.sh", "gates-remote.sh", "remote-common.sh", "gate-lock.sh"):
+    for name in ("install-hooks.sh", "run-gates.sh", "gates-remote.sh", "remote-common.sh", "gates_classify.py", "gate-lock.sh"):
         (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
     (main / "backend" / "tests").mkdir()
     (main / "backend" / "tests" / READERS.name).write_text(READERS.read_text(encoding="utf-8"))
@@ -387,6 +389,7 @@ class TestFromAWorktree:
         # ... and the remote executor that copy sources from beside itself.
         assert (copy.parent / REMOTE.name).read_text(encoding="utf-8") == REMOTE.read_text(encoding="utf-8")
         assert (copy.parent / COMMON.name).read_text(encoding="utf-8") == COMMON.read_text(encoding="utf-8")
+        assert (copy.parent / CLASSIFIER.name).read_text(encoding="utf-8") == CLASSIFIER.read_text(encoding="utf-8")
 
 
 def _fake_venv(checkout: Path, python_body: str) -> Path:
@@ -663,18 +666,18 @@ class TestSuiteAboutTheSuiteRunsOnlyWhenRelevant:
         assert self._scope(hook, ["backend/apps/souls/views.py"], GATES_FULL="1") == (1, 1)
 
     def test_the_test_the_rule_names_is_one_of_the_two(self):
-        body = RUNNER.read_text(encoding="utf-8")
-        scope = re.search(r"^SCOPE_TEST='([^']*)'$", body, re.M).group(1)
-        assert scope in re.search(r"META_TESTS='([^']*)'", body).group(1).split()
+        body = CLASSIFIER.read_text(encoding="utf-8")
+        scope = re.search(r'^SCOPE_TEST = "([^"]*)"$', body, re.M).group(1)
+        assert scope in re.findall(r'"([^"]+)"', re.search(r"^META_TESTS = \[(.*)\]$", body, re.M).group(1))
         assert scope == "backend/tests/test_collection_scope.py" and (REPO_ROOT / scope).is_file()
 
     def test_the_names_the_rule_skips_are_real_files(self):
         """A renamed test would be silently 'ignored' by a path that no longer exists,
         and run on every push again — or worse, the rule would name nothing."""
-        body = RUNNER.read_text(encoding="utf-8")
-        block = re.search(r"META_TESTS='([^']*)'", body)
-        assert block, "META_TESTS not found in run-gates.sh"
-        names = block.group(1).split()
+        body = CLASSIFIER.read_text(encoding="utf-8")
+        block = re.search(r"^META_TESTS = \[(.*)\]$", body, re.M)
+        assert block, "META_TESTS not found in gates_classify.py"
+        names = re.findall(r'"([^"]+)"', block.group(1))
         assert len(names) == 2
         for name in names:
             assert (REPO_ROOT / name).is_file(), name
@@ -2322,8 +2325,9 @@ class TestRemoteLocksSayWhenTheyWait:
 
     @pytest.mark.parametrize("script", ["run-gates.sh", "demo-remote.sh", "mobile-remote.sh"])
     def test_each_remote_script_sources_the_common_file(self, script):
-        """remote_flock, remote_limit, remote_verdict, ledger_append, prepush_env and the two E2E regexes live in
-        scripts/remote-common.sh (2026-11-26); until then demo-remote.sh and mobile-remote.sh carried copies.
+        """remote_flock, remote_limit, remote_verdict, ledger_append and prepush_env live in
+        scripts/remote-common.sh (2026-11-26); until then demo-remote.sh and mobile-remote.sh carried copies. (The two
+        E2E regexes are Python now, in scripts/gates_classify.py, which no shell script can copy.)
         gates-remote.sh is sourced by run-gates.sh after it, so run-gates.sh stands for both. A script that
         defines one of them again has a copy that can drift."""
         text = (GENERATOR.parent / script).read_text(encoding="utf-8")
@@ -2332,8 +2336,6 @@ class TestRemoteLocksSayWhenTheyWait:
             body = (GENERATOR.parent / sh).read_text(encoding="utf-8")
             for name in ("remote_flock", "remote_limit", "remote_verdict", "ledger_append", "prepush_env"):
                 assert not re.search(rf"^{name}\(\)", body, re.M), f"{sh} defines {name} again"
-            for var in ("INERT_ROOT_RE", "E2E_BLIND_COMMON_RE"):
-                assert not re.search(rf"^\s*{var}=", body, re.M), f"{sh} defines {var} again"
 
     def _take(self, tmp_path, free: bool, waits: bool = True):
         """Run the words the remote shell would get, with a flock that finds the lock free or taken."""
