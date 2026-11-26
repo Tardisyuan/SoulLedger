@@ -24,7 +24,16 @@ interface UserModalProps {
   user?: User | null;
 }
 
-export function UserModal({ isOpen, onClose, user }: UserModalProps) {
+/**
+ * Rendered only while open, keyed by the user: the form starts from `user` (or empty for a new account) on every open
+ * (a `key`, not an effect that copies props into state; audit 2026-11-26 §2.5). The two effects left below fill
+ * defaults that arrive later, from queries (the only tenant, the hall's root organization).
+ */
+export function UserModal(props: UserModalProps) {
+  return props.isOpen ? <UserForm key={props.user?.id ?? "new"} {...props} /> : null;
+}
+
+function UserForm({ isOpen, onClose, user }: UserModalProps) {
   const { t, locale } = useI18n();
   const queryClient = useQueryClient();
   const isEditing = !!user;
@@ -41,20 +50,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const positionId = `${formId}-position`;
   const tenantId = `${formId}-tenant`;
 
-  const [formData, setFormData] = useState<CreateUserInput>({
-    username: "",
-    email: "",
-    password: "",
-    role: "VIEWER",
-    first_name: "",
-    last_name: "",
-    tenant: undefined,
-  });
-
-  useEffect(() => {
-    if (isOpen) {
-      if (user) {
-        setFormData({
+  const [formData, setFormData] = useState<CreateUserInput>(() =>
+    user
+      ? {
           username: user.username,
           email: user.email,
           password: "",
@@ -64,9 +62,8 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           tenant: user.tenant?.id,
           organization: user.organization?.id,
           position: user.position || "",
-        });
-      } else {
-        setFormData({
+        }
+      : {
           username: "",
           email: "",
           password: "",
@@ -74,10 +71,8 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           first_name: "",
           last_name: "",
           tenant: undefined,
-        });
-      }
-    }
-  }, [isOpen, user]);
+        }
+  );
 
   const createMutation = useMutation({
     mutationFn: (data: CreateUserInput) => usersApi.create(data),
