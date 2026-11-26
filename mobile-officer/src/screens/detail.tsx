@@ -240,7 +240,7 @@ function BarButton({ testID, ink, grow, title, caption, label, onPress }: { test
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Txt variant="nav" style={{ color: fg, letterSpacing: 0 }}>
+      <Txt variant="nav" style={{ color: fg }}>
         {title}
       </Txt>
       {caption ? (

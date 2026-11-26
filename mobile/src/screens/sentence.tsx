@@ -125,7 +125,7 @@ function NewTag({ testID }: { testID?: string }) {
   const { t } = useI18n();
   return (
     <View testID={testID} style={[styles.newTag, { borderColor: theme.ink }]}>
-      <Txt variant="label" tone="ink" style={styles.newTagText}>
+      <Txt variant="label" tone="ink">
         {t("soul_app.sentence.amended_tag")}
       </Txt>
     </View>
@@ -606,7 +606,6 @@ const styles = StyleSheet.create({
   servedBar: { height: 6 },
   sectionBody: { gap: 12 },
   newTag: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
-  newTagText: { fontSize: 12, lineHeight: 16 },
   axis: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
   axisStep: { flex: 1, flexDirection: "row", alignItems: "center" },
   linkH: { flex: 1, height: 2, marginHorizontal: 8 },

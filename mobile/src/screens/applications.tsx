@@ -124,7 +124,7 @@ export function EligibilityCard({
             {/* An approved shortening moved the date: say so beside it; the original date lives in the officer's detail only. */}
             {cooling && list.cooldown_shortening?.status === "APPROVED" ? (
               <View testID="cooldown-brought-forward" style={[styles.forwardTag, { borderColor: theme.ink }]}>
-                <Txt variant="label" style={styles.forwardText}>
+                <Txt variant="meta" style={styles.forwardText}>
                   ↑ {t("soul_app.cooldown.brought_forward")}
                 </Txt>
               </View>
@@ -447,7 +447,7 @@ function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }
       <View testID="landing-rule" pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.ink }]} />
       {reduced ? null : (
         <Animated.View pointerEvents="none" style={[styles.landingTag, { borderColor: theme.ink, opacity }]}>
-          <Txt testID="landing-tag" variant="label" tone="ink" style={styles.landingTagText}>
+          <Txt testID="landing-tag" variant="label" tone="ink">
             {t("soul_app.detail.new_result")}
           </Txt>
         </Animated.View>
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginVertical: space[1] },
   /** 24 high, 1px ink outline, 12 / 16 600 (the `label` variant is 12 / 18: the nearest on the type scale). */
   forwardTag: { height: 24, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: space[2], justifyContent: "center" },
-  forwardText: { letterSpacing: 0, fontWeight: "600" },
+  forwardText: { fontWeight: "600" },
   appRow: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1 },
   stack: { gap: 24 },
   note: { borderLeftWidth: 2, paddingLeft: 12 },
@@ -691,7 +691,6 @@ const styles = StyleSheet.create({
   stateNote: { marginTop: 8 },
   landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  landingTagText: { fontSize: 12, letterSpacing: 0.4 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   badgeItem: { flexShrink: 0, maxWidth: "100%" },
   handler: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4 },

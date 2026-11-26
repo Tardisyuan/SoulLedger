@@ -29,7 +29,7 @@ function DeviceRow({ session, busy, onSignOut }: { session: SoulSignInSession; b
           <Txt variant="bodyLg">{session.current ? t("soul_app.security.this_phone") : session.label}</Txt>
           {session.current ? (
             <View testID="device-this" style={[styles.tag, { borderColor: theme.ink }]}>
-              <Txt variant="label" style={styles.tagText}>
+              <Txt variant="label">
                 {t("profile.devices.this")}
               </Txt>
             </View>
@@ -213,7 +213,6 @@ const styles = StyleSheet.create({
   row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
   titleLine: { flexDirection: "row", alignItems: "center", gap: 8 },
   tag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  tagText: { fontSize: 12, letterSpacing: 0.4 },
   signOut: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center", paddingHorizontal: 8 },
   underline: { textDecorationLine: "underline" },
   dim: { opacity: 0.5 },

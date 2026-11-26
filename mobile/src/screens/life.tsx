@@ -157,7 +157,7 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
   const statute = ref ? `${ref.code} ${ref.title[locale === "zh-Hans" ? "zh" : locale === "egy" ? "egy" : "en"] ?? ""}`.trim() : "";
   const milestone = (
     <View testID={`milestone-${record.id}`} style={[styles.milestone, { borderColor: t.ink }]}>
-      <Txt variant="label" tone="ink" style={styles.milestoneText}>
+      <Txt variant="label" tone="ink">
         {tr("soul_app.life.milestone")}
       </Txt>
     </View>
@@ -175,7 +175,7 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
         {/* 第五十二批 A-5:改判补偿用自己的类别名,后面一枚小方标「↺ 改判」(同网页超度回向的「⇠ 阳间」形制)。 */}
         {record.category === "COMPENSATION" ? (
           <View testID={`compensation-tag-${record.id}`} style={[styles.milestone, { borderColor: t.inkSubtle }]}>
-            <Txt variant="label" tone="muted" style={styles.milestoneText}>
+            <Txt variant="label" tone="muted">
               {tr("souls.compensation.tag")}
             </Txt>
           </View>
@@ -554,7 +554,7 @@ function ResidenceNote({ me, landed }: { me: MeProfile; landed: boolean }) {
     <LandingWash on={landed} testID="residence-block">
       <View style={[styles.residenceWrap, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
         <View style={[styles.residenceBox, { borderColor: t.inkMuted }]}>
-          <Txt testID="residence" variant="label" tone="muted" style={styles.residence}>
+          <Txt testID="residence" variant="label" tone="muted">
             {tr("soul_app.life.residing", { current: civName(me.civilization), home: civName(me.home_civilization) })}
           </Txt>
         </View>
@@ -601,7 +601,7 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
       </View>
       {at === null ? null : (
         <>
-          <Txt testID="life-stage" variant="value" tone="muted" style={styles.small}>
+          <Txt testID="life-stage" variant="valueSm" tone="muted">
             {tr("soul_app.life.stage", { at: pad2(at + 1), total: pad2(total) })}
           </Txt>
           <LifePath at={at} lex={lex} />
@@ -636,7 +636,7 @@ function HereRoute({ route }: { route: SoulRoute }) {
   const here = route.steps[route.at];
   return (
     <View testID="life-now" style={[styles.here, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Txt variant="label" style={[styles.hereEyebrow, { color: t.ink }]}>
+      <Txt variant="meta" style={[styles.hereEyebrow, { color: t.ink }]}>
         {tr("soul_app.life.here")}
       </Txt>
       <Txt testID="life-here-place" accessibilityRole="header" variant="display" style={{ fontFamily: titleFamily(route.place) }}>
@@ -715,7 +715,7 @@ function RouteRow({
       <View style={styles.routeText}>
         {kind === "here" ? (
           <>
-            <Txt variant="label" style={[styles.hereEyebrow, { color: end ? t.neg : t.ink }]}>
+            <Txt variant="meta" style={[styles.hereEyebrow, { color: end ? t.neg : t.ink }]}>
               {tr("map.soul.here")}
             </Txt>
             <Txt variant="title" style={{ fontFamily: titleFamily(step?.label ?? "") }}>
@@ -752,7 +752,7 @@ function StationsCard({ station }: { station: string }) {
     <View testID="life-stations" style={[styles.stations, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
       <View style={styles.stationsHead}>
         <SectionLabel style={styles.fill}>{tr("soul_app.life.stations_card")}</SectionLabel>
-        <Txt testID="life-stations-at" variant="value" tone="muted" style={styles.small}>
+        <Txt testID="life-stations-at" variant="valueSm" tone="muted">
           {`${at} / ${DIYU_STATIONS.length}`}
         </Txt>
       </View>
@@ -1344,7 +1344,6 @@ const styles = StyleSheet.create({
   recordHead: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   kind: { width: 20, height: 18, alignItems: "flex-start", justifyContent: "center" },
   milestone: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
-  milestoneText: { fontSize: 12, lineHeight: 16 },
   milestoneLine: { flexDirection: "row" },
   recordDate: { fontSize: 12, opacity: 0.8 },
   basisLine: { flexDirection: "row", flexWrap: "wrap", columnGap: 12 },
@@ -1379,10 +1378,9 @@ const styles = StyleSheet.create({
   nowState: { alignSelf: "stretch", alignItems: "center", marginTop: 8 },
   nowGlyph: { fontSize: 56, lineHeight: 64 },
   nowWord: { fontFamily: family.title, fontSize: 56, lineHeight: 64, textAlign: "center" },
-  small: { fontSize: 12, lineHeight: 16 },
   /** v4 「你现在在哪」: 12 / 600 in ink (第四十九批 B3; the metal is the dot's alone), the place at 30/38, its sentence 15/24, then the road. */
   here: { paddingTop: 24, paddingBottom: 24, borderBottomWidth: 1 },
-  hereEyebrow: { fontFamily: family.ui[600], letterSpacing: 0 },
+  hereEyebrow: { fontFamily: family.ui[600] },
   // v4 draws 6 and 22; the App's spacing scale (补足 A2) has 8 and 24.
   hereLine: { marginTop: 8, fontFamily: family.ui[400] },
   route: { marginTop: 24 },
@@ -1419,7 +1417,6 @@ const styles = StyleSheet.create({
   ask: { position: "absolute", right: 16, bottom: 16, width: 48, height: 48, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   residenceWrap: { paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   residenceBox: { alignSelf: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 8, paddingVertical: 4 },
-  residence: { fontSize: 12, lineHeight: 16, letterSpacing: 0.4 },
   residenceNote: { marginTop: 8 },
   homecomingWrap: { paddingTop: GUTTER, paddingBottom: GUTTER, borderBottomWidth: 1 },
   homecoming: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },

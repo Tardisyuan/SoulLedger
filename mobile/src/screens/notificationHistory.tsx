@@ -42,7 +42,7 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
           </OneLine>
           {NOT_DELIVERED.has(item.status) ? (
             <View style={[styles.flag, { borderColor: theme.hair2 }]}>
-              <Txt testID={`not-delivered-${item.id}`} variant="label" tone="subtle" style={styles.flagText}>
+              <Txt testID={`not-delivered-${item.id}`} variant="label" tone="subtle">
                 {t("soul_app.history.not_delivered")}
               </Txt>
             </View>
@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   stamp: { fontSize: 12, letterSpacing: 0.6 },
   flag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  flagText: { fontSize: 12, letterSpacing: 0.4 },
   more: { paddingVertical: 16 },
   reason: { marginTop: 8 },
 });

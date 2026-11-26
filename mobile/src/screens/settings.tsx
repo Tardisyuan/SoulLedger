@@ -81,7 +81,7 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
   const current =
     selected && !busy ? (
       <View testID={`language-${l}-current`} style={[styles.current, stack && styles.currentStacked, { borderColor: theme.ink }]}>
-        <Txt variant="label" style={styles.currentText}>
+        <Txt variant="label">
           {t("soul_app.settings.current")}
         </Txt>
       </View>
@@ -674,7 +674,7 @@ export function NotificationPrimerScreen() {
         <Hairline style={styles.primerRule} />
         <View style={styles.primerItem}>
           <View style={[styles.glyph, { borderColor: theme.hair2 }]}>
-            <Txt variant="label" tone="subtle" style={styles.never}>
+            <Txt variant="meta" tone="subtle">
               ×
             </Txt>
           </View>
@@ -708,7 +708,6 @@ const styles = StyleSheet.create({
   toggleStacked: { gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   current: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 },
   currentStacked: { alignSelf: "flex-start", marginTop: 4 },
-  currentText: { fontSize: 12, letterSpacing: 0.4 },
   saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 12 },
   saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
   saveRow: { flexDirection: "row", gap: 8 },
@@ -730,6 +729,5 @@ const styles = StyleSheet.create({
   primerItem: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   primerRule: { marginVertical: 2 },
   glyph: { width: 18, height: 18, marginTop: 4, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  never: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   primerButtons: { gap: 12 },
 });

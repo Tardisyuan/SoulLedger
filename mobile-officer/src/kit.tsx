@@ -387,7 +387,7 @@ export function ActionButton({
       onPress={onPress}
       style={({ pressed }) => [styles.action, { backgroundColor: look.bg, borderColor: look.border, opacity: pressed ? 0.7 : 1 }, style]}
     >
-      <Txt variant="nav" style={[styles.actionText, { color: look.ink }]}>
+      <Txt variant="nav" style={{ color: look.ink }}>
         {title}
       </Txt>
       {busy && !disabled ? <BusyLine color={look.ink} testID={testID ? `${testID}-busy` : "action-busy"} /> : null}
@@ -432,7 +432,7 @@ export function Segmented<K extends string>({
             {/* One line, always: four segments on a 360dp phone left 「他人手上 · 0」 its count on a second
                 line (华为真机 10-29 第二轮). Four or more take 13pt, so the label fits, not cut; a label still too wide for
                 its third (「Medu Kemet」, 华为真机 11-14) shrinks to fit rather than end in …. */}
-            <Txt variant="nav" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[{ color: on ? t.s0 : t.ink, letterSpacing: 0 }, options.length > 3 && styles.segmentTight]}>
+            <Txt variant="nav" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[{ color: on ? t.s0 : t.ink }, options.length > 3 && styles.segmentTight]}>
               {label}
             </Txt>
           </Press>
@@ -811,7 +811,6 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: space[1] },
   rowValue: { flexShrink: 1, maxWidth: "60%" },
   action: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center", paddingHorizontal: space[3] },
-  actionText: { letterSpacing: 0 },
   segmented: { flexDirection: "row", borderWidth: 1, borderRadius: radius.control, overflow: "hidden", marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
   // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.

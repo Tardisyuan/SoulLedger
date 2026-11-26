@@ -118,7 +118,7 @@ export function tellScreening(
 
 function Mono({ children, tone = "subtle" }: { children: string; tone?: "subtle" | "muted" }) {
   return (
-    <Txt variant="value" tone={tone} style={styles.mono}>
+    <Txt variant="valueSm" tone={tone}>
       {children}
     </Txt>
   );
@@ -147,7 +147,7 @@ function ReactionSummary({ post }: { post: SoulPost }) {
             style={[styles.chip, { borderColor: lamp ? t.lamp : post.my_reaction === r.type ? t.ink : t.hair2, backgroundColor: lamp ? t.lampBg : "transparent" }]}
           >
             <ReactionMark type={r.type} size={12} color={color} />
-            <Txt variant="value" style={[styles.chipCount, { color }]}>
+            <Txt variant="valueSm" style={{ color }}>
               {String(post.reaction_counts[r.type])}
             </Txt>
           </View>
@@ -226,7 +226,7 @@ export function PostCard({
             {reborn ? <Tag testID={`reborn-${post.id}`} text={tr("soul_app.circle.post.reborn")} tone="quiet" /> : null}
           </View>
           <View style={[styles.line, styles.meta]}>
-            <OneLine variant="value" tone="subtle" style={styles.mono} onPress={onPress}>
+            <OneLine variant="valueSm" tone="subtle" onPress={onPress}>
               {formatStamp(post.create_time) ?? ""}
             </OneLine>
             <Tag text={tr(visLabel(post.visibility))} tone="quiet" />
@@ -678,7 +678,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
               ]}
             >
               {lamp ? <Icon name={on ? "lampLit" : "lamp"} size={13} color={color} strokeWidth={1.2} /> : <ReactionMark type={r.type} size={13} color={color} />}
-              <Txt variant="label" style={[styles.noSpacing, { color }]}>
+              <Txt variant="meta" style={{ color }}>
                 {tr(r.key)}
               </Txt>
             </Press>
@@ -751,7 +751,7 @@ function CommentRow({
           <OneLine style={styles.commentName} onPress={onAuthor}>
             {c.author.display_name}
           </OneLine>
-          <OneLine variant="value" tone="subtle" style={styles.mono}>
+          <OneLine variant="valueSm" tone="subtle">
             {formatStamp(c.create_time) ?? ""}
           </OneLine>
           {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
@@ -1089,9 +1089,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   gone: { opacity: 0.45 },
   center: { textAlign: "center" },
-  noSpacing: { letterSpacing: 0 },
   pad: { paddingVertical: 24 },
-  mono: { fontSize: 12, lineHeight: 16 },
   line: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   meta: { marginTop: 4 },
   name: { fontSize: 16, lineHeight: 24, flexShrink: 1 },
@@ -1102,7 +1100,6 @@ const styles = StyleSheet.create({
   cardFoot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" },
   summary: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1 },
-  chipCount: { fontSize: 12, lineHeight: 16 },
   tagNeg: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   tagNegText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.8 },
   subTabs: { flexDirection: "row", borderBottomWidth: 1 },

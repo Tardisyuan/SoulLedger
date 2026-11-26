@@ -47,7 +47,7 @@ export function LanguageSwitch() {
             onPress={() => setLocale(l)}
             style={[styles.language, { borderColor: on ? t.ink : "transparent" }]}
           >
-            <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.languageText}>
+            <Txt variant="meta" tone={on ? "ink" : "subtle"}>
               {LOCALE_LABELS[l]}
             </Txt>
           </Press>
@@ -354,7 +354,7 @@ export function LoginScreen() {
   const canSubmit = canSubmitLogin(code, password, busy);
   const forgot = (
     <Press testID="login-forgot" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgot}>
-      <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+      <Txt variant="meta" tone="muted" style={styles.underline}>
         {t("soul_app.forgot_password.link")}
       </Txt>
     </Press>
@@ -540,7 +540,7 @@ export function LoginScreen() {
         {/* 第二十八批 S5: the sign-in group of the help page, reachable signed out. */}
         {final ? <View /> : (
           <Press testID="login-trouble" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("Help", { only: "login" })} style={styles.trouble}>
-            <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+            <Txt variant="meta" tone="muted" style={styles.underline}>
               {t("soul_app.help.login_trouble")}
             </Txt>
           </Press>
@@ -599,9 +599,8 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
       </Txt>
       <Interp
         testID="expiry-remaining"
-        variant="label"
+        variant="meta"
         tone={warn ? "warn" : "subtle"}
-        style={styles.noSpacing}
         text={t(
           expiry.expired
             ? "soul_app.change_password.expired_consequence"
@@ -750,12 +749,10 @@ const styles = StyleSheet.create({
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
   language: { minWidth: 56, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
-  languageText: { fontSize: 12, letterSpacing: 0 },
   stack: { gap: 16, paddingHorizontal: GUTTER + 8 },
   expiry: { borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
   expiryValue: { fontSize: 16, lineHeight: 24, fontFamily: family.mono[500] },
   inlineMono: { fontSize: 12 },
-  noSpacing: { letterSpacing: 0 },
   noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   network: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   lapsed: { flexDirection: "row", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },

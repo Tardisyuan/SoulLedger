@@ -138,7 +138,7 @@ function Row({
   const { gutter, twoLine } = useLayout();
   // S4: the name and the time keep to one line each; above 1.5× text the time moves under the name.
   const time = stamp ? (
-    <OneLine testID={`${testID}-stamp`} variant="value" tone="subtle" style={styles.stamp} onPress={onPress}>
+    <OneLine testID={`${testID}-stamp`} variant="valueSm" tone="subtle" onPress={onPress}>
       {stamp}
     </OneLine>
   ) : null;
@@ -452,7 +452,7 @@ export function FindSoulScreen() {
             style={[styles.codeInput, { color: t.ink }]}
           />
         </View>
-        <Txt variant="label" tone="subtle" style={styles.noSpacing}>
+        <Txt variant="meta" tone="subtle">
           {tr("soul_app.chat.find.code_hint")}
         </Txt>
         <Button testID="find-submit" kind="secondary" title={tr("soul_app.chat.find.title")} busy={lookup.state === "busy"} onPress={() => void find()} />
@@ -480,7 +480,7 @@ export function FindSoulScreen() {
       </View>
       <View style={styles.findBlock}>
         <SectionLabel>{tr("soul_app.chat.find.from_circle")}</SectionLabel>
-        <Txt variant="label" tone="subtle" style={styles.noSpacing}>
+        <Txt variant="meta" tone="subtle">
           {tr("soul_app.chat.find.circle_hint")}
         </Txt>
         {circle === null ? (
@@ -524,21 +524,19 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   center: { textAlign: "center" },
-  noSpacing: { letterSpacing: 0 },
   pad: { padding: 20 },
   sectionLabel: { paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1 },
   row: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 16, borderBottomWidth: 1, minHeight: 64 },
   rowHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   rowTitle: { fontSize: 16, lineHeight: 24, flexShrink: 1 },
-  stamp: { fontSize: 12, lineHeight: 16 },
   preview: { fontSize: 16, lineHeight: 24, marginTop: 4 },
   hint: { marginTop: 4 },
   dot: { width: 8, height: 8, marginTop: 8 },
   glyph: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   glyphText: { fontFamily: family.ui[500] },
   tag: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: touch.tag, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 4 },
-  tagText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, letterSpacing: 0 },
-  tagGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
+  tagText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20 },
+  tagGlyph: { fontFamily: family.glyph },
   empty: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48 },
   emptyButton: { alignSelf: "stretch", marginTop: 4 },
   fab: { position: "absolute", right: 16, bottom: 16, width: 56, height: 56, alignItems: "center", justifyContent: "center" },

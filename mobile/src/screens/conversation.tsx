@@ -69,7 +69,7 @@ const lineKey = (line: Line) => line.key;
 const NO_MESSAGES: ChatMessage[] = [];
 
 const Mono = ({ children, tone = "muted" }: { children: string; tone?: "muted" | "negInk" }) => (
-  <Txt variant="value" tone={tone} style={styles.inlineMono}>
+  <Txt variant="valueSm" tone={tone}>
     {children}
   </Txt>
 );
@@ -455,7 +455,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             {tr("soul_app.chat.unavailable.banner")}
           </Txt>
           <Press testID="chat-reconnect" accessibilityRole="button" onPress={chat.reconnect} style={[styles.smallButton, { borderColor: t.hair2 }]}>
-            <Txt variant="label" style={styles.noSpacing}>
+            <Txt variant="meta">
               {tr("soul_app.chat.unavailable.retry")}
             </Txt>
           </Press>
@@ -566,7 +566,7 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
           {title}
         </Txt>
         {subtitle ? (
-          <Txt testID="relation" variant="value" tone="subtle" style={styles.subtitle}>
+          <Txt testID="relation" variant="valueSm" tone="subtle">
             {subtitle}
           </Txt>
         ) : null}
@@ -808,11 +808,11 @@ const Bubble = memo(function Bubble({ m, mine, read, landed, now }: { m: ChatMes
         ) : null}
         <Body text={m.body} />
         <View style={[styles.meta, mine && styles.metaMine]}>
-          <OneLine variant="value" tone="subtle" style={styles.metaTime}>
+          <OneLine variant="valueSm" tone="subtle">
             {bubbleStamp(m.ts, now)}
           </OneLine>
           {mine ? (
-            <Txt testID={read ? "receipt-read" : "receipt-sent"} variant="label" tone="subtle" style={styles.metaText}>
+            <Txt testID={read ? "receipt-read" : "receipt-sent"} variant="meta" tone="subtle">
               {tr(read ? "soul_app.chat.receipt.read" : "soul_app.chat.receipt.sent")}
             </Txt>
           ) : null}
@@ -851,19 +851,19 @@ function PendingBubble({ o, onResend, onDismiss, now }: { o: Outgoing; onResend:
         <Body text={o.body} dim={failed || queued} />
         <View style={[styles.meta, styles.metaMine]}>
           {queued || o.state === "sending" ? <Loader size={14} /> : null}
-          <Txt variant="label" tone={failed ? "negInk" : "subtle"} style={styles.metaText}>
+          <Txt variant="meta" tone={failed ? "negInk" : "subtle"}>
             {tr(receipt)}
           </Txt>
           {resendable ? (
             <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {tr("soul_app.chat.receipt.retry")}
               </Txt>
             </Press>
           ) : null}
           {failed ? (
             <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {tr("soul_app.chat.receipt.delete")}
               </Txt>
             </Press>
@@ -886,7 +886,7 @@ function HallDay({ day }: { day: string }) {
   const t = useTheme();
   return (
     <View testID={`hall-day-${day}`} style={styles.hallDay}>
-      <Txt variant="label" tone="subtle" style={styles.hallDayText}>
+      <Txt variant="meta" tone="subtle" style={styles.hallDayText}>
         {day}
       </Txt>
       <View style={[styles.fill, styles.hallDayRule, { borderTopColor: t.hair }]} />
@@ -898,11 +898,11 @@ function HallHead({ own, ts }: { own: boolean; ts: number | null }) {
   const { t: tr } = useI18n();
   return (
     <View style={styles.hallHead}>
-      <Txt variant="label" style={[styles.hallName, styles.fill]}>
+      <Txt variant="meta" style={[styles.hallName, styles.fill]}>
         {tr(own ? "soul_app.chat.side.me" : "soul_app.chat.side.hall")}
       </Txt>
       {ts !== null ? (
-        <Txt variant="label" tone="subtle" style={styles.hallTime}>
+        <Txt variant="meta" tone="subtle" style={styles.hallTime}>
           {hhmm(new Date(ts))}
         </Txt>
       ) : null}
@@ -920,7 +920,7 @@ const HallLetterGroup = memo(function HallLetterGroup({ group, onOpenImage }: { 
       {group.letters.map(({ item: m, stamp }) => (
         <View key={m.eventId} testID={`hall-letter-${m.eventId}`} style={styles.hallLetter}>
           {stamp ? (
-            <Txt variant="label" tone="subtle" style={[styles.hallTime, styles.hallStamp]}>
+            <Txt variant="meta" tone="subtle" style={[styles.hallTime, styles.hallStamp]}>
               {hhmm(new Date(m.ts))}
             </Txt>
           ) : null}
@@ -947,24 +947,24 @@ function HallPendingLetter({ o, onResend, onDismiss, now }: { o: Outgoing; onRes
       <Body text={o.body} />
       {failed ? (
         <View testID="pending-not-sent" style={styles.meta}>
-          <Txt variant="label" tone="neg" style={styles.metaText}>
+          <Txt variant="meta" tone="neg">
             {`${tr("letters.not_sent")} ·`}
           </Txt>
           {resendable ? (
             <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {tr("common.retry")}
               </Txt>
             </Press>
           ) : null}
           <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
-            <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+            <Txt variant="meta" tone="ink" style={styles.underline}>
               {tr("soul_app.chat.receipt.delete")}
             </Txt>
           </Press>
         </View>
       ) : (
-        <Txt testID="pending-queued-line" variant="label" tone="muted" style={styles.metaText}>
+        <Txt testID="pending-queued-line" variant="meta" tone="muted">
           {`◌ ${tr("letters.queued")}`}
         </Txt>
       )}
@@ -1094,12 +1094,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   centered: { alignItems: "center" },
   pad: { padding: 20 },
-  noSpacing: { letterSpacing: 0 },
   underline: { textDecorationLine: "underline" },
-  inlineMono: { fontSize: 12, lineHeight: 16 },
   header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8 },
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
-  subtitle: { fontSize: 12, lineHeight: 16 },
   rightSlot: { flexDirection: "row", alignItems: "center" },
   sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
@@ -1128,18 +1125,16 @@ const styles = StyleSheet.create({
   hallGroup: { gap: 16, alignSelf: "stretch", marginBottom: 20 },
   hallLetter: { gap: 8 },
   hallHead: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-  hallName: { fontSize: 13, lineHeight: 20, letterSpacing: 0 },
-  hallTime: { fontSize: 12, lineHeight: 16, letterSpacing: 0, fontVariant: ["tabular-nums"] },
+  hallName: { fontSize: 13, lineHeight: 20 },
+  hallTime: { fontVariant: ["tabular-nums"] },
   hallStamp: { textAlign: "right" },
   hallDay: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 20 },
-  hallDayText: { fontSize: 11, lineHeight: 16, letterSpacing: 0 },
+  hallDayText: { fontSize: 11, lineHeight: 16 },
   hallDayRule: { borderTopWidth: StyleSheet.hairlineWidth },
   hallState: { paddingHorizontal: 20, paddingBottom: 8 },
   hallStateText: { fontSize: 13, lineHeight: 20 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   metaMine: { justifyContent: "flex-end" },
-  metaTime: { fontSize: 12, lineHeight: 16 },
-  metaText: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   newTagText: { fontFamily: family.ui[500], fontSize: 12, lineHeight: 16, letterSpacing: 1.1 },
   rejected: { marginTop: 2 },

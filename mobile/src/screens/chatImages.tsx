@@ -141,11 +141,11 @@ export function ChatImageMessage({ image, mine, ts, now, onOpen, receipt }: { im
       <View testID="chat-image-message" style={mine ? styles.endAligned : undefined}>
         <Picture image={image} width={width} onPress={onOpen} testID="chat-image" />
         <View style={[styles.meta, mine && styles.metaMine]}>
-          <OneLine variant="value" tone="subtle" style={styles.metaTime}>
+          <OneLine variant="valueSm" tone="subtle">
             {bubbleStamp(ts, now)}
           </OneLine>
           {receipt ? (
-            <Txt variant="label" tone="subtle" style={styles.metaText}>
+            <Txt variant="meta" tone="subtle">
               {receipt}
             </Txt>
           ) : null}
@@ -199,7 +199,7 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
                 <Loader size={16} testID="pending-image-wait" />
               )}
               {o.state === "queued" ? (
-                <Txt variant="label" tone="ink" style={styles.metaText}>
+                <Txt variant="meta" tone="ink">
                   {tr("soul_app.chat.receipt.queued")}
                 </Txt>
               ) : null}
@@ -208,18 +208,18 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
         </View>
         {failed ? (
           <View style={styles.failedRow}>
-            <AlertTxt testID="pending-image-error" variant="label" tone="negInk" style={styles.metaText}>
+            <AlertTxt testID="pending-image-error" variant="meta" tone="negInk">
               {`! ${tr("soul_app.chat.image.failed")}`}
             </AlertTxt>
             {retryable(o) ? (
               <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
-                <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+                <Txt variant="meta" tone="ink" style={styles.underline}>
                   {` · ${tr("soul_app.circle.media.retry")}`}
                 </Txt>
               </Press>
             ) : null}
             <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {` · ${tr("soul_app.chat.receipt.delete")}`}
               </Txt>
             </Press>
@@ -356,8 +356,6 @@ const styles = StyleSheet.create({
   progress: { fontSize: 12 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   metaMine: { justifyContent: "flex-end" },
-  metaTime: { fontSize: 12, lineHeight: 16 },
-  metaText: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   failedRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   underline: { textDecorationLine: "underline" },
   reason: { marginTop: 2 },
