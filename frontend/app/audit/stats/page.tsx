@@ -9,7 +9,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
+import { AuditRefusal } from "@/src/components/audit/AuditGate";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -27,10 +27,16 @@ import { auditActionsQuery } from "@soulledger/core/hooks/sharedQueries";
  * 无殿的管理员数的是不止一殿:系统管理员(SYSTEM_ADMIN)是全部殿,无殿 ADMIN 是本文明各殿(分殿 1A)。
  */
 export default function AuditStatsPage() {
+  // The gate (`tests/test_page_gates_match_the_backend.py` reads it from the default export).
+  const { hasPermission } = usePermissions();
+  const canReadAudit = hasPermission("audit.read");
+  if (!canReadAudit) return <AuditRefusal />;
+  return <AuditStatsContent />;
+}
+
+function AuditStatsContent() {
   const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
-  const { hasPermission, permissionsReady } = usePermissions();
-  const canReadAudit = hasPermission("audit.read");
   const { user, tenantCode } = useTenant();
   const isGlobalAdmin = isAdminRole(user?.role) && tenantCode === null;
   const allScope = isSystemAdminRole(user?.role) ? "audit.stats.scope_all" : "audit.stats.scope_civilization";
@@ -38,11 +44,9 @@ export default function AuditStatsPage() {
   const { data, isPending, isError, error: listError, refetch } = useQuery({
     queryKey: ["audit-stats"],
     queryFn: async () => (await auditApi.stats()).data,
-    enabled: canReadAudit,
   });
   const { data: actionValues = [] } = useQuery({
     ...auditActionsQuery(),
-    enabled: canReadAudit,
   });
 
   const actions = useMemo(
@@ -66,18 +70,6 @@ export default function AuditStatsPage() {
       <MenuGloss path="/audit" />
     </>
   );
-  if (!canReadAudit) {
-    return (
-      <PageShell variant="full" title={title}>
-        {permissionsReady === false ? (
-          <PermissionsPending />
-        ) : (
-          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
-        )}
-      </PageShell>
-    );
-  }
-
   let body: ReactNode;
   if (isError) body = <QueryError onRetry={() => void refetch()} error={listError} detail={t("audit.stats.failed")} />;
   else if (isPending) body = null; // PageShell shows the skeleton under the running top line (第三十批 一.5: no spinner)

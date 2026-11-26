@@ -15,7 +15,6 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { ColumnMenu, DataGrid, parseOrdering, useColumnVisibility, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { EmptyState } from "@/src/components/ui/EmptyState";
 import {
   collapseRepeats,
   groupAuditLogsByTrace,
@@ -26,7 +25,7 @@ import {
 } from "@/lib/auditGrouping";
 import { TreeName } from "@/src/components/ui/TreeRow";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
+import { AuditRefusal } from "@/src/components/audit/AuditGate";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
@@ -158,32 +157,6 @@ export default function AuditPage() {
   );
 }
 
-/** Access denied. A refusal is a note in the file, not a poster, so it goes through EmptyState
-    (left-aligned, civ-marked) instead of a centred box — and the page keeps its header, so the
-    operator can still see *which* page refused them. */
-function AuditRefusal() {
-  const { t } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.records")) });
-  const { permissionsReady } = usePermissions();
-  return (
-    <PageShell
-      variant="full"
-      title={
-        <>
-          {t("audit.title")}
-          <MenuGloss path="/audit" />
-        </>
-      }
-    >
-      {permissionsReady === false ? (
-        <PermissionsPending />
-      ) : (
-        <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
-      )}
-    </PageShell>
-  );
-}
-
 function AuditPageContent() {
   const { t, formatDate, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
@@ -197,9 +170,8 @@ function AuditPageContent() {
   // held. The audit finding that first described this page said it had **no**
   // gate at all; it had one, pointed at the wrong question. Both are in the
   // same ledger (M47 and M65), which is why this comment names the codename
-  // rather than the role.
+  // rather than the role. The gate is the default export's; this only renders for a holder.
   const { hasPermission } = usePermissions();
-  const canReadAudit = hasPermission("audit.read");
   // 「殿」下拉只给全局管理员(`ADMIN` 且不属于任何殿,后端审计列表与导出唯一跨殿的人)。绑了殿的人
   // (含绑了殿的 ADMIN)只看得到自己殿的行,后端对他们点别的殿的名答 403 —— 所以这里不是权限闸,
   // 只是不画一个选了也没用的控件。
@@ -290,18 +262,16 @@ function AuditPageContent() {
 
   const { data: actionValues = [] } = useQuery({
     ...auditActionsQuery(),
-    enabled: canReadAudit,
   });
   const { data: resourceValues = [] } = useQuery({
     queryKey: ["audit-resources"],
     queryFn: async () => (await auditApi.resources()).data,
-    enabled: canReadAudit,
   });
   const actionLabel = (action: string) => resolveEnumDisplay(t, "audit.actions", action).label ?? action;
   const resourceLabel = (resource: string) => auditResourceLabel(t, resource);
 
   // 殿的清单。一个殿的名字按文明的冥界名写(同身份带),认不出文明才退回租户展示名。
-  const { data: halls } = useTenantNames({ enabled: canReadAudit && isGlobalAdmin });
+  const { data: halls } = useTenantNames({ enabled: isGlobalAdmin });
   const hallLabel = (hall: Tenant) => {
     const civ = civSkinOf(hall.code);
     return civ === "neutral" ? hall.display_name : t(`plaque.realm.${civ}`);
@@ -313,7 +283,6 @@ function AuditPageContent() {
       const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
       return res.data;
     },
-    enabled: canReadAudit,
     // 翻页 / 换筛选时留着上一页，不闪骨架。
     placeholderData: (previous) => previous,
   });
