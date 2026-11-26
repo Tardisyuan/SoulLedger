@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog } from "@base-ui/react/dialog";
 import { mediaGridColumns, mediaUrl, type PostMedia } from "@soulledger/core/domain/postMedia";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { cn } from "@/lib/utils";
+import { MediaViewer } from "@/src/components/social/PostMedia";
 
 /**
  * 审阅详情里的配图(C-08 的 MediaTile):方角、细线框、底部一行等宽的「图 1 · 1080×1080」。
@@ -14,8 +14,7 @@ import { cn } from "@/lib/utils";
  * 地址是服务器签给当前官员的短时路径,取文件时再按官员的码名与文明查一次。取不到(过期、
  * 失去权限)时格子里说「图片加载失败」,不留空白。
  *
- * 点开是查看器(规范 v2 补足 C15「图片上传与查看器」):纯黑底、原图居中;右上「关闭」,
- * ← → 切换,Esc 关闭。不做缩放动画,直接显示 —— 所以查看器不挂任何 transition。
+ * 点开是网页唯一的全屏查看器(`social/PostMedia` 的 `MediaViewer`,规范 v2 C15:纯黑底、原图居中)。
  */
 function caption(t: (k: string, p?: Record<string, string>) => string, media: PostMedia, index: number) {
   return t("social_moderation.review.media_caption", {
@@ -49,46 +48,6 @@ function Tile({ media, index, onOpen }: { media: PostMedia; index: number; onOpe
         {label}
       </span>
     </li>
-  );
-}
-
-/** 全屏查看器。审阅详情的配图格与殿司收件箱里灵魂来信的图共用(`index` 为 null 时不显示)。 */
-export function MediaViewer({ media, index, onIndex, onClose }: { media: PostMedia[]; index: number | null; onIndex: (i: number) => void; onClose: () => void }) {
-  const { t } = useI18n();
-  const open = index !== null;
-  const current = open ? media[index] : null;
-  const step = (d: number) => {
-    if (index === null) return;
-    onIndex((index + d + media.length) % media.length);
-  };
-  return (
-    <Dialog.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Popup
-          data-media-viewer=""
-          aria-label={current && index !== null ? caption(t, current, index) : undefined}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowRight") step(1);
-            else if (e.key === "ArrowLeft") step(-1);
-          }}
-          // 纯黑底是查看器的规格(不是 canvas):照片在任何主题下都放在同一种底上看。上面的字与框取 on-main(v4 onSolid,两主题都是白)。
-          className="fixed inset-0 z-dialog flex items-center justify-center bg-black p-12 focus:outline-hidden"
-        >
-          {current && index !== null ? (
-            <>
-              <img src={mediaUrl(current.url)} alt={caption(t, current, index)} className="max-h-full max-w-full object-contain" />
-              <span className="absolute bottom-4 left-4 font-mono text-2xs text-[oklch(var(--color-on-main))]">
-                {caption(t, current, index)}
-                {media.length > 1 ? ` · ${index + 1} / ${media.length}` : ""}
-              </span>
-              <Dialog.Close className="absolute right-4 top-4 rounded-control min-h-(--control-h-sm) border border-[oklch(var(--color-on-main))] px-3 text-sm text-[oklch(var(--color-on-main))] focus-visible:outline-[oklch(var(--color-on-main))]">
-                {t("common.close")}
-              </Dialog.Close>
-            </>
-          ) : null}
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }
 

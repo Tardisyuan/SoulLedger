@@ -53,7 +53,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { MediaViewer } from "@/src/components/moderation/MediaGrid";
+import { MediaViewer } from "@/src/components/social/PostMedia";
 import { TemplateManager } from "./TemplateManager";
 import { AssignDialog } from "./AssignDialog";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";

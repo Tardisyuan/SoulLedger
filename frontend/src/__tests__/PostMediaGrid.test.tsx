@@ -106,6 +106,17 @@ describe("查看器", () => {
     expect(within(viewer).getByText("梅瑞特")).toBeInTheDocument();
   });
 
+  it("第六十七批六:与审阅、收件箱同一个全屏纯黑查看器,不是遮罩上的面板", () => {
+    grid(2);
+    fireEvent.click(within(cells()[0] as HTMLElement).getByRole("button"));
+    const viewer = document.querySelector("[data-media-viewer]") as HTMLElement;
+    expect(viewer).toHaveClass("fixed", "inset-0", "bg-black");
+    expect(viewer.className).not.toMatch(/rounded-panel|shadow-overlay|transition/);
+    expect(document.querySelector("[data-motion]")).toBeNull();
+    // 关闭键是「关闭」二字、高度走 --control-h-sm(触屏 44)
+    expect(within(viewer).getByRole("button", { name: "common.close" }).className).toContain("min-h-(--control-h-sm)");
+  });
+
   it("缩略图:当前那张有 ink 描边,别的没有;点缩略图跳过去", () => {
     grid(3);
     fireEvent.click(within(cells()[0] as HTMLElement).getByRole("button"));
