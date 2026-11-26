@@ -15,13 +15,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { isDenied } from "./rules";
-import { BusyLine, Button, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
+import { BusyLine, Button, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press, sharedTouch } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
- * controls 44 / 48 / 56, the 2px top line, a status tag 28 high, a desk row 72.
+ * controls 44 / 48 / 56, the 2px top line, a status tag 28 high (all `touch` in theme.ts), and a desk row 72.
  */
-export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, topline: 2, tag: 28, row: 72 } as const;
+export const touch = { ...sharedTouch, row: 72 } as const;
 
 // ── status tags ────────────────────────────────────────────────────────
 

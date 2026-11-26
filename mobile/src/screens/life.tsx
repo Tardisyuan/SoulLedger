@@ -1407,7 +1407,7 @@ const styles = StyleSheet.create({
   /** ✓ from the status-glyph face: the mono face (Plex then, Geist Mono now) has none, so the OS fell back to a √-like mark. */
   stageGlyph: { fontFamily: family.glyph },
   stageWord: { fontSize: 12, lineHeight: 16, textAlign: "center" },
-  /** The balance panel (as applications' A11 panel): s1, a hairline, `radius.dialog`, 16 inside; the number title 28 / 36. */
+  /** The balance panel (as applications' A11 panel): s1, a hairline, `radius.dialog`, 16 inside; the number title 32 / 40. */
   balanceWrap: { paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1 },
   balance: { flexDirection: "row", alignItems: "center", gap: 24, borderWidth: 1, borderRadius: radius.dialog, padding: 16 },
   side: { alignItems: "flex-start", gap: 4 },

@@ -90,5 +90,6 @@ export {
   radius,
   space,
   themeFor,
+  touch as sharedTouch,
   type ColorScheme,
 } from "@soulledger/mobile-ui/src/theme";

@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   /** The current item's 14 × 2 rule, 3 under its character. */
   tabCurrent: { position: "absolute", bottom: -3, width: 14, height: 2, borderRadius: 1 },
   tabBadge: { position: "absolute", top: -2, right: -8, width: 8, height: 8, borderRadius: radius.pill },
-  /** v4: 11 / 14 under a 22 icon. */
+  /** v4: 11 / 16 under a 22 icon. */
   tabLabel: { fontSize: 11, lineHeight: 16, textAlign: "center" },
   /** v4 page header: the seal, then the big title over its sub line. */
   plaque: { paddingTop: 12, paddingBottom: 16, paddingLeft: 16, paddingRight: 4 },
