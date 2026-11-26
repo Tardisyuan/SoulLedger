@@ -258,7 +258,7 @@ describe("SoulDetailPage — inheritance panel", () => {
     // 20 - 100 = -80: under the old `karmic_balance * 0.2` formula (with
     // merit_score === demerit_score === 100, karmic_balance is 0) this line
     // rendered "+0". This is the regression the endpoint switch fixes.
-    expect(screen.getByText("-80")).toBeInTheDocument();
+    expect(screen.getByText("−80")).toBeInTheDocument();
 
     // The two ratio bars are sized from the response's rates rather than from
     // percentages hard-coded in the card. Asserted on the widths because this

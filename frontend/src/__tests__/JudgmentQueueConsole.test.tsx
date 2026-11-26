@@ -213,7 +213,7 @@ describe("JudgmentQueueConsole", () => {
     // was 罪业 with a plus (found in the demo, 2026-11-02).
     const row = (text: string) => screen.getByText(text).closest("tr") as HTMLElement;
     expect(within(row("修桥铺路")).getByText("+18.5")).toBeInTheDocument();
-    expect(within(row("苛待仆役")).getByText("-2.25")).toBeInTheDocument();
+    expect(within(row("苛待仆役")).getByText("−2.25")).toBeInTheDocument();
     expect(row("修桥铺路")).not.toHaveTextContent(row("苛待仆役").querySelector("td")?.textContent ?? "\0");
     expect(screen.queryByText("判决存证")).not.toBeInTheDocument();
     // Heading and the grid's <caption> both carry the label.

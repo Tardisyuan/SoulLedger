@@ -77,7 +77,7 @@ describe("SoulKarmaLedgerCard — every number says which kind it is", () => {
       { field: "karmic_balance", quantity: "magnitude", text: "+15", scaled: true },
       { field: "inherited_merit", quantity: "magnitude", text: "+5", scaled: true },
       { field: "inherited_demerit", quantity: "magnitude", text: "-9", scaled: true },
-      { field: "inherited_balance", quantity: "magnitude", text: "-4", scaled: true },
+      { field: "inherited_balance", quantity: "magnitude", text: "−4", scaled: true },
     ]);
   });
 
@@ -181,7 +181,7 @@ describe("SoulKarmaLedgerCard — every number says which kind it is", () => {
     expect(figures(container).slice(-3)).toEqual([
       { field: "inherited_merit", quantity: "magnitude", text: "+5", scaled: true },
       { field: "inherited_demerit", quantity: "magnitude", text: "-9", scaled: true },
-      { field: "inherited_balance", quantity: "magnitude", text: "-4", scaled: true },
+      { field: "inherited_balance", quantity: "magnitude", text: "−4", scaled: true },
     ]);
   });
 });
@@ -198,7 +198,7 @@ describe("LedgerPanel — the numbers the operator decides on", () => {
 
     expect(figures(container)).toEqual([
       { field: "merit_score", quantity: "magnitude", text: "+120", scaled: true },
-      { field: "demerit_score", quantity: "magnitude", text: "-78", scaled: true },
+      { field: "demerit_score", quantity: "magnitude", text: "−78", scaled: true },
       { field: "karmic_balance", quantity: "magnitude", text: "+42", scaled: true },
     ]);
   });
@@ -238,7 +238,7 @@ describe("LedgerPanel — the numbers the operator decides on", () => {
     const numeral = container.querySelector<HTMLElement>('[data-quantity-field="demerit_score"]');
     const mark = container.querySelector<HTMLElement>('[data-quantity-scale="demerit_score"]');
 
-    expect(numeral!.textContent).toBe("-78");
+    expect(numeral!.textContent).toBe("−78"); // U+2212: an ASCII hyphen here was the defect (audit 2026-11-26 §2.1)
     expect(mark!.textContent).toBe(ZH.scale);
     expect(mark!.hasAttribute("aria-hidden")).toBe(false);
   });

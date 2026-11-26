@@ -37,6 +37,7 @@ import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { StatCard } from "@/src/components/dashboard/StatCard";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 /**
  * 三个标签:概览 = v4 三张卡;更多 = v3 起就在这一页的待办条与普查图(用户 2026-11-06:收进「更多」,默认不显示);
@@ -57,11 +58,8 @@ function ChartCard({ title, aside, children }: { title: React.ReactNode; aside?:
   );
 }
 
-/** 平均余额带正负号、一位小数(「+42.7」);零不带号。 */
-function signedBalance(n: number): string {
-  const fixed = n.toFixed(1);
-  return n > 0 ? `+${fixed}` : fixed === "-0.0" ? "0.0" : fixed;
-}
+/** 平均余额带正负号、一位小数(「+42.7」、「−3.2」U+2212);零不带号。 */
+const signedBalance = (n: number): string => signedNumber(n, { fractionDigits: 1 });
 
 /** 「占容量」:在押 / 容量,与界域页同一条线 —— 在押 ≥ 容量即满;容量未记录写「未记录」。 */
 function Occupancy({ held, capacity }: { held: number; capacity: number | null }) {
@@ -505,7 +503,7 @@ function DashboardContent() {
                         {" · "}
                         {t("dashboard.vs_last_month")}{" "}
                         <span data-avg-delta="" className="font-mono tabular-nums">
-                          {signedBalance(stats.average_balance_delta).replace("-", "−")}
+                          {signedBalance(stats.average_balance_delta)}
                         </span>
                       </>
                     )}

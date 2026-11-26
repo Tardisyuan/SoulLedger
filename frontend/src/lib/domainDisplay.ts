@@ -300,20 +300,5 @@ export function isColumnUninformative<T>(rows: readonly T[], hasValue: (row: T) 
 // Signed numbers
 // ---------------------------------------------------------------------------
 
-/**
- * `+0` is a lie: zero has no sign, and printing one implies a positive
- * balance the ledger does not have. A sign is only ever attached to a value
- * that has one.
- */
-export function signedNumber(n: number): string {
-  if (n > 0) return `+${n}`;
-  if (n < 0) return `−${Math.abs(n)}`; // U+2212 minus, not a hyphen
-  return "0";
-}
-
-/** Ink for a signed number. Zero is neutral — it is neither good news nor bad. */
-export function signedTone(n: number): "success" | "error" | "neutral" {
-  if (n > 0) return "success";
-  if (n < 0) return "error";
-  return "neutral";
-}
+// Moved to core (audit 2026-11-26 §2.1); re-exported because DomainValue and its tests import them here.
+export { signedNumber, signedTone } from "@soulledger/core/domain/signedNumber";

@@ -8,6 +8,7 @@ import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@soulledger/core/api/ledger";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import {
   INHERITANCE_QUANTITIES,
@@ -277,8 +278,7 @@ export function SoulKarmaLedgerCard({
                   t={t}
                   className="text-md tabular-nums text-[oklch(var(--color-ink))]"
                 >
-                  {karmicBalance !== null && karmicBalance >= 0 ? "+" : ""}
-                  {karmicBalance}
+                  {karmicBalance !== null && signedNumber(karmicBalance)}
                 </Figure>
               </div>
               <p className="sr-only">{tf("ledger.raw_balance_sr", "原始余额 {{n}}", { n: String(rawBalance) })}</p>
@@ -461,8 +461,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              {inheritance.inherited_merit - inheritance.inherited_demerit >= 0 ? "+" : ""}
-              {inheritance.inherited_merit - inheritance.inherited_demerit}
+              {signedNumber(inheritance.inherited_merit - inheritance.inherited_demerit)}
             </Figure>
           </div>
           <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">

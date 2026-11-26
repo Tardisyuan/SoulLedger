@@ -6,6 +6,7 @@ import type { SoulEvent } from "@soulledger/core/api/events";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import type { SentencePlan } from "@soulledger/core/api/sentence-plans";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 export type SoulTab = "identity" | "judgments" | "karma" | "fate" | "events";
 
@@ -28,9 +29,9 @@ export function soulTabs(permissions: readonly string[]): SoulTab[] {
   ];
 }
 
-/** `+12` / `−4` (U+2212, as the board), `0`. Never a colour. */
+/** `+12` / `−4` (U+2212, as the board), `0`. Never a colour. The one rule lives in core. */
 export function signed(n: number): string {
-  return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
+  return signedNumber(n);
 }
 
 export interface KarmaGroup {

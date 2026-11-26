@@ -1,4 +1,5 @@
 import type { LedgerJournalRow } from "@soulledger/core/api";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 /** Pure helpers of the 功过总账 page (app/ledger/page.tsx). */
 
@@ -13,10 +14,9 @@ export function shiftMonth(month: string, by: number): string {
   return currentMonth(d);
 }
 
-const fmt = (n: number) => Math.abs(n).toLocaleString("en");
 /** A signed figure: `+1,284`, `−937` (U+2212), a bare `0`. */
 export function signed(n: number): string {
-  return n > 0 ? `+${fmt(n)}` : n < 0 ? `−${fmt(n)}` : "0";
+  return signedNumber(n, { grouping: true });
 }
 
 /**

@@ -6,6 +6,7 @@ import type { SoulEvent, SoulEventListParams } from "@soulledger/core/api/events
 import { groupSystemEvents, sameSoulAndEvent, type SystemEventLabels } from "@/src/components/souls/soulLifecycleRows";
 import { MISSING_GLYPH } from "@/src/lib/domainDisplay";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { signedNumber } from "@soulledger/core/domain/signedNumber";
 
 export type DatePreset = "" | "7d" | "30d";
 
@@ -61,7 +62,7 @@ type Translate = (key: string, params?: Record<string, string>) => string;
 /** `+12` / `−4`(U+2212,同 Design 稿);老事件没有过的增量(只记了功),写「尚未记录」的 —。 */
 function signed(n: unknown): string {
   if (typeof n !== "number") return MISSING_GLYPH.unrecorded;
-  return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
+  return signedNumber(n);
 }
 
 /**
