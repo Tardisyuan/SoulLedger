@@ -126,7 +126,7 @@ chmod +x "$HOOKS_DIR/pre-push"
 # that file existed has none, so a copy of it (and of the gate lock it sources)
 # goes next to the hook; it is exactly as current as the hook itself.
 mkdir -p "$HOOKS_DIR/soulledger-gates"
-cp "$SCRIPT_DIR/run-gates.sh" "$SCRIPT_DIR/gates-remote.sh" "$SCRIPT_DIR/gate-lock.sh" "$HOOKS_DIR/soulledger-gates/"
+cp "$SCRIPT_DIR/run-gates.sh" "$SCRIPT_DIR/gates-remote.sh" "$SCRIPT_DIR/remote-common.sh" "$SCRIPT_DIR/gate-lock.sh" "$HOOKS_DIR/soulledger-gates/"
 
 echo "✅ Git hooks installed successfully"
 echo "   - pre-commit: ESLint on staged frontend files"

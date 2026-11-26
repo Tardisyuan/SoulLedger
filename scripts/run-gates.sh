@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/run-gates.sh — the gates `.git/hooks/pre-push` runs, runnable by hand.
 #
-#   scripts/run-gates.sh [--full|--affected] [--base <ref>]   the gates for what changed
+#   scripts/run-gates.sh [--full] [--base <ref>]              the gates for what changed
 #   scripts/run-gates.sh --real-pg [--full]                    backend pytest on real PostgreSQL
 #   scripts/run-gates.sh --e2e[=auto|all|<project>,...]        Playwright, on GATES_REMOTE only
 #   scripts/run-gates.sh [--real-pg] [--workers N] [--timeout 20m] --tests <pytest args…>
@@ -31,7 +31,7 @@
 #     area that changed. A rule in FULL_RULES below sends the web jest to a full run and says which.
 #   Readers of the other side's files follow the changes in the side's own change set.
 # FULL: `--full` or GATES_FULL=1 - everything, with the coverage floors. A push to main is NOT full
-# (2026-10-24). `--affected` is the default spelled out; nothing forces selective (GATES_FULL=0 does not).
+# (2026-10-24). Nothing forces selective (GATES_FULL=0 does not).
 # ONE SIDE: GATES_SIDES=js or GATES_SIDES=backend (default both, 2026-11-15) runs that side only; the other
 # prints that it was skipped and records nothing. Ignored on a push (a push runs the sides its ledgers do
 # not vouch for); GATES_SIDES=js with
@@ -87,35 +87,27 @@ VITEST_WORKERS="${VITEST_WORKERS:-2}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREPUSH=0; MODE=auto; BASE=""; REAL_PG=0; E2E=""; TESTS=0; TESTS_FROM=""; TEST_ARGS=(); TESTS_LIMIT=20m; TESTS_WORKERS=""
+# Everything after --tests is pytest's, except --real-pg (pytest has none: easy to put last), --workers N and
+# --timeout T (2026-11-20: `--tests --workers 1 f.py` handed --workers to pytest, which stopped with a usage error,
+# exit 4, before any test). Those three are read by the same lines before and after --tests.
+IN_TESTS=0
 while [ $# -gt 0 ]; do
     case "$1" in
-        --tests)    TESTS=1; shift
-                    # Everything after --tests is pytest's, except --real-pg (pytest has none): easy to put last.
-                    # So are --workers N / --timeout T (2026-11-20: `--tests --workers 1 f.py` handed --workers to
-                    # pytest, which stopped with a usage error, exit 4, before any test).
-                    while [ $# -gt 0 ]; do
-                        case "$1" in
-                            --real-pg) REAL_PG=1 ;;
-                            --workers) TESTS_WORKERS="${2:?--workers needs a number}"; shift
-                                       [[ "$TESTS_WORKERS" =~ ^[0-9]+$ ]] || { echo "run-gates: --workers takes a number (0 = serial)"; exit 2; } ;;
-                            --timeout) TESTS_LIMIT="${2:?--timeout needs a time limit}"; shift ;;
-                            *) TEST_ARGS+=("$1") ;;
-                        esac; shift
-                    done
-                    break ;;
-        --tests-from) TESTS=1; TESTS_FROM="${2:?--tests-from needs a file}"; shift ;;  # the container's side
+        --real-pg)  REAL_PG=1 ;;
         --workers)  TESTS_WORKERS="${2:?--workers needs a number}"; shift
                     [[ "$TESTS_WORKERS" =~ ^[0-9]+$ ]] || { echo "run-gates: --workers takes a number (0 = serial)"; exit 2; } ;;
         --timeout)  TESTS_LIMIT="${2:?--timeout needs a time limit}"; shift ;;
+        *) if [ "$IN_TESTS" = 1 ]; then TEST_ARGS+=("$1"); else case "$1" in
+        --tests)    TESTS=1; IN_TESTS=1 ;;
+        --tests-from) TESTS=1; TESTS_FROM="${2:?--tests-from needs a file}"; shift ;;  # the container's side
         --prepush)  PREPUSH=1 ;;
         --full)     MODE=full ;;
-        --real-pg)  REAL_PG=1 ;;
         --e2e)      E2E=chromium ;;
         --e2e=*)    E2E="${1#--e2e=}"; [ "$E2E" = all ] && E2E="chromium,firefox,mobile-chrome" ;;
-        --affected) MODE=auto ;;
         --base)     BASE="${2:?--base needs a ref}"; shift ;;
         -h|--help)  awk 'NR == 1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"; exit 0 ;;
         *)          echo "run-gates: unknown argument $1 (see --help)"; exit 2 ;;
+        esac; fi ;;
     esac
     shift
 done
@@ -165,13 +157,13 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_
 # migration" for a commit that touched no model (2026-09-11, twice). The main
 # checkout's copy describes the same machine, so it is the fallback; a
 # worktree's own copy still wins.
+# The lookup is prepush_env in scripts/remote-common.sh, which demo-remote.sh and mobile-remote.sh use too, with
+# the rest this script shares with them (the remote lock / limit words, the ledger line, two regexes). Fail closed,
+# as for gates-remote.sh below.
+[ -f "$HERE/remote-common.sh" ] || { echo "$P: no remote-common.sh beside $HERE/run-gates.sh — run scripts/install-hooks.sh. Refusing."; exit 1; }
+. "$HERE/remote-common.sh"
 MAIN_ROOT="$(cd "$(git rev-parse --path-format=absolute --git-common-dir)/.." 2>/dev/null && pwd)"
-PREPUSH_ENV=""
-if [ -f "$ROOT/.prepush.env" ]; then
-    PREPUSH_ENV="$ROOT/.prepush.env"
-else
-    [ -n "$MAIN_ROOT" ] && [ -f "$MAIN_ROOT/.prepush.env" ] && PREPUSH_ENV="$MAIN_ROOT/.prepush.env"
-fi
+PREPUSH_ENV="$(prepush_env)"
 if [ -n "$PREPUSH_ENV" ]; then
     echo "$P: per-machine settings from $PREPUSH_ENV"
     . "$PREPUSH_ENV"
@@ -318,19 +310,18 @@ changed_since_base() {
     [ "$from_js" = 1 ] && [ -n "$MB" ] && COVERED_JS="$(printf '%s\n%s\n' "$CHANGED_JS" "$branch" | grep -v '^$' | sort -u)"
     return 0
 }
-# Root-level files that change nothing a gate measures (documentation, deployment). Used by the root-level
-# rules further down (where the list is explained) and by --e2e=auto.
-INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)'
+# INERT_ROOT_RE, the root-level files that change nothing a gate measures: scripts/remote-common.sh (the
+# root-level rules further down explain the list; --e2e=auto and demo-remote.sh --auto use it too).
 
 # --e2e=auto (2026-11-12, user decision): browsers only when the change can reach them. The change list is
 # the selective gates' (changed_since_base: the diff against --base, default the merge-base with
 # origin/main, plus untracked files). E2E serves the frontend build with mocked API fixtures
 # (frontend/e2e/fixtures.ts, `next start` only — no backend), so what it can see is frontend/ (pages,
 # playwright.config.ts, e2e/, demo/), packages/core/ (compiled into the build; e2e reads its messages),
-# the JS dependency tree, its own runner (this script, gates-remote.sh, e2e-report.py), and — failing closed — any
+# the JS dependency tree, its own runner (this script, gates-remote.sh, remote-common.sh, e2e-report.py), and — failing closed — any
 # root-level file not on INERT_ROOT_RE. Nothing of that changed → print why and exit 0. Something did →
 # chromium + mobile-chrome, the set CLAUDE.md asks for before main. An explicit list always runs.
-E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(run-gates\.sh|gates-remote\.sh|e2e-report\.py)$)'
+E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(run-gates\.sh|gates-remote\.sh|remote-common\.sh|e2e-report\.py)$)'
 # ... EXCEPT WHAT NO BROWSER LOADS (2026-11-13, test review #10a): of the last 300 commits, 181 matched the
 # rule above and 39 of those changed only files below. Unit tests and their support files
 # (frontend/src/__tests__/, *.test.ts(x), packages/core's __tests__), the jest / vitest / eslint
@@ -340,8 +331,8 @@ E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvm
 # them). `next build` does type-check the test files (frontend/tsconfig.json includes **/*.ts(x) and
 # next.config.js does not switch the check off), so a type error in one would fail the E2E build — and
 # fails `tsc --noEmit` first, which the ordinary gates run on every frontend change. This script itself
-# stays a trigger. demo-remote.sh --auto carries a copy of the common part.
-E2E_BLIND_COMMON_RE='(\.md$|^frontend/src/__tests__/|^frontend/.*\.test\.tsx?$|^packages/core/(.*/)?__tests__/|^packages/core/.*\.test\.tsx?$|^frontend/(jest|eslint)\.[^/]+$|^packages/core/(vitest|eslint)\.[^/]+$)'
+# stays a trigger. The common part, E2E_BLIND_COMMON_RE, is in scripts/remote-common.sh: demo-remote.sh --auto
+# uses it as well.
 E2E_BLIND_RE="$E2E_BLIND_COMMON_RE|^frontend/e2e/demo/|^frontend/demo/data/"
 if [ "$E2E" = auto ]; then
     changed_since_base
@@ -398,8 +389,7 @@ if [ -n "$E2E" ]; then
         elif ! tree_is_clean || [ "$(git rev-parse HEAD^{tree})" != "$E2E_TREE" ]; then
             echo "$P: not recording this E2E pass — the checkout changed while it ran"
         else
-            printf '%s\t%s\t%s, %s\n' "$E2E_TREE" "$E2E" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$E2E_STAMP"
-            tail -n 50 "$E2E_STAMP" >"$E2E_STAMP.tmp" && mv "$E2E_STAMP.tmp" "$E2E_STAMP"
+            ledger_append "$E2E_STAMP" "$E2E_TREE" "$E2E" "$(date '+%Y-%m-%d %H:%M'), $(git rev-parse --short HEAD)"
             echo "$P: recorded an E2E pass for tree ${E2E_TREE:0:10} (${E2E//,/ }) — the same tree and projects will not run again"
         fi
         exit 0
@@ -598,8 +588,7 @@ record_side() {
         cov="$(echo "$COVERED_JS" | grep -v '^$' | paste -sd'|' -)"
     fi
     for file in "${files[@]}"; do
-        printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" "$cov" >>"$file"
-        tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+        ledger_append "$file" "$tree" "$(date '+%Y-%m-%d %H:%M'), $(git rev-parse --short HEAD)" "$cov"
     done
     echo "$P: recorded a $kind pass ($1) for tree ${tree:0:10}"
 }
@@ -607,6 +596,16 @@ record_side() {
 unset PREPUSH_CHANGED PREPUSH_CHANGED_BACKEND PREPUSH_CHANGED_JS PREPUSH_RANGE
 [ -z "$CHANGED" ] && { echo "$P: no file changes in $RANGE"; exit 0; }
 
+# readers_for <list file> — of a readers list (backend/tests/reads-outside-backend.txt, frontend/jest.always-run.txt),
+# the first field of each line whose other fields name `*` or a top-level entry in $TOPS. awk, not a shell loop: a
+# `*` entry must not glob.
+readers_for() {
+    TOPS="$TOPS" awk '
+        BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
+        /^[[:space:]]*(#|$)/ { next }
+        { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
+    ' "$1"
+}
 # classify <changed files> — every decision below, from one change list. Called once per side when the two
 # sides' lists differ (EACH SIDE DECIDES FROM ITS OWN CHANGES, after it).
 classify() {
@@ -616,7 +615,7 @@ TOUCHES_FRONTEND=$(echo "$CHANGED" | grep -cE '^frontend/' || true)
 # (test_prepush_runs_the_gates_a_change_can_break.py), which reads these files
 # rather than importing them. Before 2026-09-30 a push changing only the hook
 # generator ran nothing at all.
-TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/|^scripts/(run-gates|gates-remote|install-hooks|gate-lock)\.sh$' || true)
+TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/|^scripts/(run-gates|gates-remote|remote-common|install-hooks|gate-lock)\.sh$' || true)
 # `packages/` had no gate at all, so a commit touching only @soulledger/core ran
 # nothing. That is the whole of the package's boundary: `lib: ["ES2020"]` with
 # no "dom", the `host-globals.d.ts` allowlist, and the `no-restricted-syntax`
@@ -746,12 +745,7 @@ READERS_LIST="$ROOT/backend/tests/reads-outside-backend.txt"
 BACKEND_READERS=""
 if [ "$RUN_BACKEND" = 0 ]; then
     if [ -f "$READERS_LIST" ]; then
-        # awk, not a shell loop: a `*` entry must not glob.
-        BACKEND_READERS=$(TOPS="$TOPS" awk '
-            BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
-            /^[[:space:]]*(#|$)/ { next }
-            { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
-        ' "$READERS_LIST")
+        BACKEND_READERS=$(readers_for "$READERS_LIST")
     else
         echo "$P: no backend/tests/reads-outside-backend.txt in this checkout — cannot tell which backend tests read other areas, so the backend suite runs"
         RUN_BACKEND=1
@@ -766,11 +760,7 @@ RUN_JEST_READERS=0
 # The labels are derived and checked by frontend/src/__tests__/jestAlwaysRunList.test.ts.
 JEST_READERS=""
 if [ "$RUN_JEST_READERS" = 1 ]; then
-    JEST_READERS=$(TOPS="$TOPS" awk '
-        BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
-        /^[[:space:]]*(#|$)/ { next }
-        { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
-    ' "$ROOT/frontend/jest.always-run.txt")
+    JEST_READERS=$(readers_for "$ROOT/frontend/jest.always-run.txt")
     # Empty means "nothing reads what changed", and must never reach jest as an empty path list.
     [ -z "$JEST_READERS" ] && RUN_JEST_READERS=0
 fi
@@ -923,7 +913,7 @@ fi
 # 205, zh-Hans.json 209. Parity and lexicon tests read the packs and are
 # always-run. A pack loaded by a computed path would not be traced — keep them
 # static imports. The data-file rule below therefore skips messages/.
-FULL_RULES='^scripts/(run-gates\.sh|gates-remote\.sh|install-hooks\.sh)$	the gate machinery itself changed
+FULL_RULES='^scripts/(run-gates\.sh|gates-remote\.sh|remote-common\.sh|install-hooks\.sh)$	the gate machinery itself changed
 ^(package\.json|package-lock\.json|\.nvmrc)$	the JS dependency tree changed
 ^(frontend|packages/core)/[^/]+$	top-level config of frontend/ or packages/core/ changed (jest, ts, next, eslint, package.json)
 ^(frontend|packages/core)/.*\.(json|md|ya?ml)$	a data file under frontend/ or packages/core/ changed
@@ -1022,6 +1012,12 @@ fi
 
 echo "$P: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files (root: js $JS_ROOT, backend $BACKEND_ROOT)"
 
+# backend_selection <python> — scripts/select-backend-tests.py over CHANGED_BE, into BE_SEL: the test files to
+# run, or "FULL<tab>why". Its one call site for the three paths, each of which ends the run, so it runs once
+# per run: PREPUSH_CLASSIFY_ONLY and the delegated run's time limit here (python3), pytest where it runs ($PY).
+backend_selection() {
+    BE_SEL=$(echo "$CHANGED_BE" | "$1" -I "$HERE/select-backend-tests.py")
+}
 if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     echo "classify: core=$RUN_CORE frontend=$RUN_FRONTEND backend=$RUN_BACKEND"
     # A separate line so the existing `classify:` contract (parsed by
@@ -1034,7 +1030,7 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     echo "classify-meta: meta=$RUN_META"
     echo "classify-collection-scope: scope=$RUN_SCOPE"
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ -f "$HERE/select-backend-tests.py" ]; then
-        SEL=$(echo "$CHANGED_BE" | python3 -I "$HERE/select-backend-tests.py")
+        backend_selection python3; SEL="$BE_SEL"
         case "$SEL" in FULL*) echo "classify-backend-select: whole suite (${SEL#FULL	})" ;;
                        *) echo "classify-backend-select: $(echo "$SEL" | grep -c . || true) test files" ;; esac
     fi
@@ -1108,7 +1104,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     elif [ "$RUN_BACKEND" = 1 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
         BE_WHOLE="no select-backend-tests.py next to this script"
     elif [ "$RUN_BACKEND" = 1 ]; then
-        SEL=$(echo "$CHANGED_BE" | python3 -I "$HERE/select-backend-tests.py" 2>/dev/null) || SEL="FULL	select-backend-tests.py failed"
+        backend_selection python3 2>/dev/null && SEL="$BE_SEL" || SEL="FULL	select-backend-tests.py failed"
         case "$SEL" in FULL*) BE_WHOLE="${SEL#FULL	}" ;; esac
     fi
     if [ -n "$BE_WHOLE" ]; then RLIMIT="${GATES_REMOTE_FULL_TIMEOUT:-90m}"; RLIMIT_VAR=GATES_REMOTE_FULL_TIMEOUT
@@ -1632,15 +1628,12 @@ PROBE_PY
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
         echo "    (whole suite: no select-backend-tests.py next to this script)"
     elif [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ]; then
-        SELECTED=$(echo "$CHANGED_BE" | "$PY" -I "$HERE/select-backend-tests.py") || fail "select-backend-tests.py failed"
+        backend_selection "$PY" || fail "select-backend-tests.py failed"
+        SELECTED="$BE_SEL"
         case "$SELECTED" in
             FULL*) echo "    (whole suite: ${SELECTED#FULL	})" ;;
             *)
-                READERS=$(TOPS="$TOPS" awk '
-                    BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
-                    /^[[:space:]]*(#|$)/ { next }
-                    { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
-                ' "$READERS_LIST" 2>/dev/null)
+                READERS=$(readers_for "$READERS_LIST" 2>/dev/null)
                 # The suite-about-the-suite tests this run owes (RUN_META / RUN_SCOPE) are named outright. The
                 # selection picks by app and the readers by top-level entry; neither knows those rules, so a
                 # rule that said "run it" only stopped ignoring a test nothing had selected: a changed
