@@ -212,8 +212,15 @@ describe("create: the checklist comes from the server and the secret is shown on
     await within(form).findByLabelText(tZh("death_sync.webhooks.api_key"));
     const urlField = within(form).getByLabelText(new RegExp(tZh("death_sync.webhooks.url")));
     fireEvent.change(urlField, { target: { value: "ftp://hooks.example.org/x" } });
-    expect(within(form).getByRole("button", { name: tZh("common.create") })).toBeDisabled();
+    // 按钮不再灰着(审计 2026-11-26 B6):点了不提交,地址格下说差什么。
+    fireEvent.click(within(form).getByRole("button", { name: tZh("common.create") }));
+    expect(await within(form).findByText(tZh("death_sync.webhooks.url_invalid"))).toBeInTheDocument();
+    expect(deathSyncApi.createWebhook).not.toHaveBeenCalled();
+    fireEvent.change(urlField, { target: { value: "" } });
+    expect(within(form).getByText(tZh("common.field_required"))).toBeInTheDocument();
+    expect(within(form).queryByText(tZh("death_sync.webhooks.url_invalid"))).toBeNull();
     fireEvent.change(urlField, { target: { value: "http://hooks.example.org/x" } });
+    expect(within(form).queryByText(tZh("common.field_required"))).toBeNull();
     fireEvent.click(within(form).getByRole("button", { name: tZh("common.create") }));
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("death_sync.webhooks.save_failed"), "error"));
     expect(screen.queryByTestId("revealed-webhook-secret")).toBeNull();

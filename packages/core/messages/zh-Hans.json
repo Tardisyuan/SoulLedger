@@ -4219,6 +4219,7 @@
       "create": "新建 Webhook",
       "edit_title": "编辑 Webhook",
       "url": "地址",
+      "url_invalid": "要以 http:// 或 https:// 开头",
       "api_key": "所属密钥",
       "events": "订阅事件",
       "events_hint": "不勾选即订阅全部事件。事件名即请求头 X-SoulLedger-Event 的值。",
@@ -10123,6 +10124,7 @@
       "here": "你现在在这里"
     },
     "close_up": "近处",
+    "pause_motion": "暂停流动",
     "card": {
       "arrived": "到达 {{date}}",
       "today_in": "今日进",

@@ -238,6 +238,8 @@ function WebhookDialog({
   const [url, setUrl] = useState(webhook?.url ?? "");
   const [apiKey, setApiKey] = useState(webhook?.api_key ?? "");
   const [events, setEvents] = useState<AdminWebhookEvent[]>(webhook?.events ?? []);
+  // 提交过一次才在地址格下说差什么(审计 2026-11-26 B6:按钮不再灰着不说原因)。
+  const [tried, setTried] = useState(false);
 
   // ponytail: first page of keys only (20); a key-picker with search if a tenant ever has more.
   const keys = useQuery({
@@ -258,10 +260,16 @@ function WebhookDialog({
     onSuccess: ({ data }) => onSaved(data, webhook === null),
     onError: () => showToast(t("death_sync.webhooks.save_failed"), "error"),
   });
-  const valid = /^https?:\/\/\S+$/.test(url.trim()) && (webhook !== null || selectedKey !== "");
+  const urlOk = /^https?:\/\/\S+$/.test(url.trim());
+  const urlError = !tried || urlOk ? undefined : url.trim() ? t("death_sync.webhooks.url_invalid") : t("common.field_required");
+  // 没有可用密钥时表单里已有一句 `no_keys_hint`,这里不再重复。
+  const valid = urlOk && (webhook !== null || selectedKey !== "");
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!valid) return;
+    if (!valid) {
+      setTried(true);
+      return;
+    }
     save.mutate({ url: url.trim(), api_key: selectedKey, events });
   };
   const toggle = (ev: AdminWebhookEvent, on: boolean) =>
@@ -278,7 +286,7 @@ function WebhookDialog({
           <Button type="button" variant="secondary" onClick={onClose} disabled={save.isPending}>
             {t("common.cancel")}
           </Button>
-          <Button type="submit" form={formId} loading={save.isPending} disabled={!valid}>
+          <Button type="submit" form={formId} loading={save.isPending}>
             {webhook ? t("common.save") : t("common.create")}
           </Button>
         </div>
@@ -291,6 +299,7 @@ function WebhookDialog({
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
+          error={urlError}
         />
         {webhook === null &&
           (keyOptions.length === 0 && !keys.isLoading ? (

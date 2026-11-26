@@ -117,6 +117,8 @@ export function StartWorkflowDialog({
   const [priority, setPriority] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
+  // 提交过一次才标出没选的灵魂 / 案由(审计 2026-11-26 B6)。
+  const [tried, setTried] = useState(false);
   const [judgment, setJudgment] = useState("");
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   /** 第 1 步填表,第 2 步选站(第四十三批 W-1a:审批页手动发起时选站是第 2 步)。 */
@@ -258,7 +260,7 @@ export function StartWorkflowDialog({
               {t("workflow.pick.back")}
             </Button>
           )}
-          <Button type="submit" form={FORM_ID} variant="primary" loading={start.isPending} disabled={!soulId || !caseType}>
+          <Button type="submit" form={FORM_ID} variant="primary" loading={start.isPending}>
             {step === 1 && !noPick ? t("workflow.pick.next") : t("workflow.start.submit")}
           </Button>
         </div>
@@ -269,7 +271,10 @@ export function StartWorkflowDialog({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!soulId || !caseType) return;
+          if (!soulId || !caseType) {
+            setTried(true);
+            return;
+          }
           // 理由为空:不出提示条,只在理由框下写一行。
           if (!reason.trim()) {
             setReasonError(t("workflow.start.errors.reason_required"));
@@ -335,6 +340,7 @@ export function StartWorkflowDialog({
             required
             className={cn(bold("soul"))}
             value={pickedSoulId}
+            error={tried && !soulId ? t("common.field_required") : undefined}
             onValueChange={(next) => {
               setPickedSoulId(next);
               // 换了灵魂,依赖它的三格都作废。
@@ -362,6 +368,7 @@ export function StartWorkflowDialog({
           className={cn(bold("case_type"))}
           disabled={!soulId}
           value={caseType}
+          error={tried && soulId && !caseType ? t("common.field_required") : undefined}
           onChange={(e) => {
             setCaseType(e.target.value);
             setTemplate("");

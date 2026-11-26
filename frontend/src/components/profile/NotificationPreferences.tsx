@@ -7,6 +7,7 @@ import {
   NOTIFICATION_LOCKED,
   type NotificationCategory,
   type NotificationChannel,
+  type UserPreferences,
 } from "@soulledger/core/api/auth";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -26,6 +27,8 @@ const WITH_NOTE: readonly NotificationCategory[] = [
   "city_god",
 ];
 
+const PREFS_KEY = ["profile", "preferences"];
+
 const GRID = "grid grid-cols-[minmax(0,1fr)_80px_80px] items-center gap-3";
 
 /**
@@ -39,7 +42,7 @@ export function NotificationPreferences({ hasAddress }: { hasAddress: boolean })
   const { t, locale, formatDateTime } = useI18n();
   const { user } = useTenant();
   const queryClient = useQueryClient();
-  const prefs = useQuery({ queryKey: ["profile", "preferences"], queryFn: () => authApi.preferences().then((r) => r.data) });
+  const prefs = useQuery({ queryKey: PREFS_KEY, queryFn: () => authApi.preferences().then((r) => r.data) });
   const status = useQuery({
     queryKey: ["profile", "email-status"],
     queryFn: () => notificationsApi.emailStatus().then((r) => r.data),
@@ -53,9 +56,27 @@ export function NotificationPreferences({ hasAddress }: { hasAddress: boolean })
           ...(v.channel === "mail" && v.on ? { email_locale: locale === "zh-Hans" ? ("zh-Hans" as const) : ("en" as const) } : {}),
         })
         .then((r) => r.data),
-    onSuccess: (data) => queryClient.setQueryData(["profile", "preferences"], data),
-    onError: () => showToast(t("profile.profile_update_failed"), "error"),
+    // 乐观、按格(审计 2026-11-26 B5):点下去这一格当场翻过去,失败只把这一格放回并提示。不按整张快照回滚 ——
+    // 两格同时在途时,先失败的那格会把后点的另一格一起翻回去。服务端的整份回包只在最后一个在途请求回来时写,
+    // 免得较早的回包盖掉较晚那格的乐观值。
+    mutationKey: PREFS_KEY,
+    onMutate: async (v) => {
+      await queryClient.cancelQueries({ queryKey: PREFS_KEY });
+      setCell(v.category, v.channel, v.on);
+    },
+    onSuccess: (data) => {
+      if (queryClient.isMutating({ mutationKey: PREFS_KEY }) === 1) queryClient.setQueryData(PREFS_KEY, data);
+    },
+    onError: (_error, v) => {
+      setCell(v.category, v.channel, !v.on);
+      showToast(t("profile.profile_update_failed"), "error");
+    },
   });
+  function setCell(category: NotificationCategory, channel: NotificationChannel, on: boolean) {
+    queryClient.setQueryData<UserPreferences>(PREFS_KEY, (old) =>
+      old ? { ...old, notifications: { ...old.notifications, [category]: { ...old.notifications?.[category], [channel]: on } } } : old,
+    );
+  }
   const failure = status.data?.last_failure ?? null;
   const categories = NOTIFICATION_CATEGORIES.filter((c) => c !== "password_help" || isAdminRole(user?.role));
 
@@ -89,7 +110,7 @@ export function NotificationPreferences({ hasAddress }: { hasAddress: boolean })
                     category={category}
                     channel={channel}
                     on={prefs.data?.notifications?.[category]?.[channel] === true}
-                    disabled={!prefs.data || toggle.isPending}
+                    disabled={!prefs.data}
                     onToggle={(on) => toggle.mutate({ category, channel, on })}
                   />
                 </span>

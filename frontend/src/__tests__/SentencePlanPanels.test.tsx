@@ -345,7 +345,12 @@ describe("联审详情的各站", () => {
     renderWith(<CrossJudgmentStops judgment={bench()} />);
     const form = screen.getByRole("form", { name: tZh("sentence_plan.cross.fill_title") });
     const submit = within(form).getByRole("button", { name: tZh("sentence_plan.cross.submit") });
-    expect(submit).toBeDisabled();
+    // 没选界域:按钮可点(审计 2026-11-26 B6),点了不提交,界域格下说「此项为必填」。
+    expect(submit).not.toBeDisabled();
+    expect(within(form).queryByText(tZh("common.field_required"))).toBeNull();
+    fireEvent.click(submit);
+    expect(await within(form).findByText(tZh("common.field_required"))).toBeInTheDocument();
+    expect(cjApi.sentence).not.toHaveBeenCalled();
     await screen.findByRole("option", { name: "两真之殿" });
     fireEvent.change(within(form).getByLabelText(tZh("sentence_plan.cross.realm")), { target: { value: "EG_HALL_TWO_TRUTHS" } });
     fireEvent.click(submit);
@@ -372,8 +377,9 @@ describe("联审详情的各站", () => {
     await screen.findByRole("option", { name: "两真之殿" });
     fireEvent.change(within(form).getByLabelText(tZh("sentence_plan.cross.realm")), { target: { value: "EG_HALL_TWO_TRUTHS" } });
     fireEvent.change(within(form).getByLabelText(tZh("sentence_plan.cross.years")), { target: { value: "-3" } });
-    expect(within(form).getByRole("button", { name: tZh("sentence_plan.cross.submit") })).toBeDisabled();
     expect(within(form).getByText(tZh("sentence_plan.cross.years_invalid"))).toBeInTheDocument();
+    fireEvent.click(within(form).getByRole("button", { name: tZh("sentence_plan.cross.submit") }));
+    expect(cjApi.sentence).not.toHaveBeenCalled();
     fireEvent.change(within(form).getByLabelText(tZh("sentence_plan.cross.years")), { target: { value: "12" } });
     fireEvent.click(within(form).getByRole("button", { name: tZh("sentence_plan.cross.submit") }));
     await waitFor(() => expect(cjApi.sentence).toHaveBeenCalledWith("cj1", expect.objectContaining({ sentence_years: 12 })));

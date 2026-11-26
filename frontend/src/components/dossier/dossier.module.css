@@ -183,8 +183,10 @@
   text-decoration: none;
   white-space: nowrap;
 }
-.tab:hover {
-  color: oklch(var(--color-ink));
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: oklch(var(--color-ink));
+  }
 }
 .tab[aria-current="page"] {
   color: oklch(var(--color-ink));

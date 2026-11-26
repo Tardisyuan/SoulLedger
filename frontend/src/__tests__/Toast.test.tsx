@@ -273,4 +273,57 @@ describe("Toast 回到设计系统里", () => {
     // 没有东西扫得到它,而它的时长和缓动是裸 0.25s 加第三条曲线。
     expect(document.getElementById("toast-keyframes")).toBeNull();
   });
+
+  // 审计 2026-11-26 B4:正在读、正在点、或标签页在后台时不计时;回来后重新计满。
+  describe("停表", () => {
+    const leaving = (id: string) => document.getElementById(`toast-${id}`)!.classList.contains("toast-leaving");
+    const stay = TOAST_DURATION.success!;
+
+    it.each([
+      ["悬停", "mouseenter", "mouseleave"],
+      ["聚焦", "focusin", "focusout"],
+    ])("%s时不收,离开后从头再计 %#", (_name, enter, leave) => {
+      const id = showToast("saved", "success");
+      const el = document.getElementById(`toast-${id}`)!;
+      jest.advanceTimersByTime(stay - 100);
+      el.dispatchEvent(new Event(enter, { bubbles: true }));
+      jest.advanceTimersByTime(stay * 3);
+      expect(leaving(id)).toBe(false);
+
+      el.dispatchEvent(new Event(leave, { bubbles: true }));
+      jest.advanceTimersByTime(stay - 1);
+      expect(leaving(id)).toBe(false); // 重新计满,不是接着剩下的 100 ms
+      jest.advanceTimersByTime(1);
+      expect(leaving(id)).toBe(true);
+    });
+
+    it("标签页在后台时不收", () => {
+      let hidden = false;
+      const spy = jest.spyOn(document, "hidden", "get").mockImplementation(() => hidden);
+      try {
+        const id = showToast("saved", "success");
+        hidden = true;
+        document.dispatchEvent(new Event("visibilitychange"));
+        jest.advanceTimersByTime(stay * 3);
+        expect(leaving(id)).toBe(false);
+
+        hidden = false;
+        document.dispatchEvent(new Event("visibilitychange"));
+        jest.advanceTimersByTime(stay);
+        expect(leaving(id)).toBe(true);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("焦点在 Toast 里挪动(移到关闭键)不算离开", () => {
+      const id = showToast("saved", "success");
+      const el = document.getElementById(`toast-${id}`)!;
+      const close = el.querySelector<HTMLButtonElement>(".toast-close")!;
+      el.dispatchEvent(new Event("focusin", { bubbles: true }));
+      el.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: close }));
+      jest.advanceTimersByTime(stay * 3);
+      expect(leaving(id)).toBe(false);
+    });
+  });
 });

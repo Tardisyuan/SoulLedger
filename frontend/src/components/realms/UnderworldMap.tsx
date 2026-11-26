@@ -57,7 +57,7 @@ import {
   stationPoint,
   type StationLoad,
 } from "@/src/lib/underworldMapLayers";
-import { Locate, Maximize2 } from "lucide-react";
+import { Locate, Maximize2, Pause } from "lucide-react";
 
 /**
  * 冥界地图(规范 v4 第七批 S07,Design 第八批的四张 SVG):挂在 /realms(世界图,全部点亮)与灵魂详情
@@ -165,6 +165,8 @@ export function UnderworldMap({
   const [template, setTemplate] = useState<SVGSVGElement | null>(null);
   const [view, setView] = useState<MapView>({ k: 1, x: 0, y: 0 });
   const [branchesHidden, setBranchesHidden] = useState(true);
+  // 流光与扫描弧无限循环,给一个停的入口(WCAG 2.2.2;审计 2026-11-26 B8)。
+  const [motionPaused, setMotionPaused] = useState(false);
   const [replayAt, setReplayAt] = useState<number | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
@@ -480,6 +482,7 @@ export function UnderworldMap({
       data-testid="underworld-map"
       data-map={skin}
       data-camera={camera ? "close" : "whole"}
+      data-paused={motionPaused || undefined}
       className={cn("v4-map m-0 min-w-0 space-y-2", className)}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -546,6 +549,17 @@ export function UnderworldMap({
               <Locate aria-hidden="true" className="size-4" />
             </button>
           )}
+          <button
+            type="button"
+            data-testid="underworld-map-pause"
+            aria-label={t("map.pause_motion")}
+            title={t("map.pause_motion")}
+            onClick={() => setMotionPaused((p) => !p)}
+            aria-pressed={motionPaused}
+            className={BUTTON}
+          >
+            <Pause aria-hidden="true" className="size-4" />
+          </button>
         </div>
         {cardId && cardName && (
           <div

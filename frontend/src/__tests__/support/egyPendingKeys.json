@@ -1,4 +1,6 @@
 [
   "death_sync.api_keys.allowed_sources",
-  "death_sync.api_keys.allowed_sources_hint"
+  "death_sync.api_keys.allowed_sources_hint",
+  "death_sync.webhooks.url_invalid",
+  "map.pause_motion"
 ]
