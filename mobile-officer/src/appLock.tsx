@@ -8,10 +8,7 @@
  * The cover goes up when the app LEAVES the foreground (the OS snapshots the app switcher then), so nothing flashes.
  * Decisions still ask `deviceCheck` on their own; this lock is in addition.
  */
-import { onSessionResume, onSessionSuspend } from "@soulledger/core/platform";
-import * as LocalAuthentication from "expo-local-authentication";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler } from "react-native";
+import { useState } from "react";
 
 import { OFFICER_BRAND } from "./brand";
 import { useBio } from "./bioLogin";
@@ -19,77 +16,16 @@ import { DossierSeal, civOf } from "./dossierSeal";
 import { officerDevice } from "./deviceLogin";
 import { hallLabel } from "./rules";
 import { takeRestoredSession, useSession } from "./session";
-import { BrandMark, LockView, useI18n } from "./shared";
+import { BrandMark, LockView, useAppLock, useI18n } from "./shared";
 
-export const LOCK_AFTER_MS = 5 * 60 * 1000;
-
-type Phase = "off" | "cover" | "locked";
+export { LOCK_AFTER_MS } from "./shared";
 
 export function AppLock() {
   const { t } = useI18n();
   const { state, signOut } = useSession();
   const bio = useBio(false);
   const [coldStart] = useState(() => takeRestoredSession() && officerDevice.appLockOn());
-  const [phase, setPhase] = useState<Phase>(coldStart ? "locked" : "off");
-  const [failed, setFailed] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const leftAt = useRef<number | null>(null);
-  const phaseRef = useRef(phase);
-  useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
-
-  const unlock = useCallback(async () => {
-    setBusy(true);
-    setFailed(false);
-    let ok = false;
-    try {
-      ok = (await LocalAuthentication.authenticateAsync({ promptMessage: t("officer_app.bio_login.prompt_unlock"), disableDeviceFallback: true })).success;
-    } catch {
-      ok = false;
-    }
-    setBusy(false);
-    if (ok) setPhase("off");
-    else setFailed(true);
-  }, [t]);
-
-  useEffect(() => {
-    // Asked once, from a timer: `unlock` sets state before its first await.
-    if (!coldStart) return;
-    const id = setTimeout(() => void unlock(), 0);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the cold start is asked about once, on mount
-  }, []);
-
-  useEffect(() => {
-    const offSuspend = onSessionSuspend(() => {
-      if (!officerDevice.appLockOn()) return;
-      // A lock that is up stays up: leaving while LOCKED must not become the brief-switch cover, which a return
-      // within five minutes takes down unasked (state-machine audit 2026-11-20).
-      if (phaseRef.current === "locked") return;
-      leftAt.current = Date.now();
-      setPhase("cover");
-    });
-    const offResume = onSessionResume(() => {
-      const at = leftAt.current;
-      leftAt.current = null;
-      if (at === null) return;
-      if (Date.now() - at < LOCK_AFTER_MS) return setPhase("off");
-      setPhase("locked");
-      void unlock();
-    });
-    return () => {
-      offSuspend();
-      offResume();
-    };
-  }, [unlock]);
-
-  // Android's back key must not reach the screens under the lock.
-  useEffect(() => {
-    if (phase !== "locked") return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
-    return () => sub.remove();
-  }, [phase]);
+  const { phase, failed, busy, unlock } = useAppLock({ enabled: officerDevice.appLockOn, coldStart, prompt: t("officer_app.bio_login.prompt_unlock") });
 
   if (phase === "off") return null;
   const user = state.status === "signedIn" ? state.user : null;

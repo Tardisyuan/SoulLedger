@@ -10,22 +10,17 @@
  * never passes the sign-in page -- `boot()` trades the stored refresh token straight for the home page -- so swiping
  * the app away and reopening it used to walk past the lock. A session the soul has just signed into is not locked.
  */
-import { onSessionResume, onSessionSuspend } from "@soulledger/core/platform";
-import * as LocalAuthentication from "expo-local-authentication";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler } from "react-native";
+import { useState } from "react";
 
 import { BrandMark } from "@soulledger/mobile-ui/src/brandMarkView";
-import { appLockOn } from "./deviceLogin";
+import { appLockOn, knownBiometry } from "./deviceLogin";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
-import { LockView } from "@soulledger/mobile-ui/src/lockView";
+import { LockView, useAppLock } from "@soulledger/mobile-ui/src/lockView";
 import { takeRestoredSession, useSession } from "./session";
 import { useTheme } from "@soulledger/mobile-ui/src/ui";
-import { useBiometry } from "./useBiometry";
+import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
 
-export const LOCK_AFTER_MS = 5 * 60 * 1000;
-
-type Phase = "off" | "cover" | "locked";
+export { LOCK_AFTER_MS } from "@soulledger/mobile-ui/src/lockView";
 
 /**
  * `coldStart`: the caller may decide it (the welcome waits on the same answer, so both read it at once); left out,
@@ -35,71 +30,10 @@ export function AppLock({ coldStart: given, onLocked }: { coldStart?: boolean; o
   const theme = useTheme();
   const { t } = useI18n();
   const { signOut } = useSession();
-  const bio = useBiometry();
+  const bio = useBiometry(knownBiometry);
   const [coldStart] = useState(() => given ?? (takeRestoredSession() && appLockOn()));
-  const [phase, setPhase] = useState<Phase>(coldStart ? "locked" : "off");
-  const [failed, setFailed] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const leftAt = useRef<number | null>(null);
-  const phaseRef = useRef(phase);
-  useEffect(() => {
-    phaseRef.current = phase;
-    onLocked?.(phase === "locked");
-  }, [phase, onLocked]);
-
-  const unlock = useCallback(async () => {
-    setBusy(true);
-    setFailed(false);
-    let ok = false;
-    try {
-      // The reason the system shows with its check, in the app's language (review 2026-11-01).
-      ok = (await LocalAuthentication.authenticateAsync({ promptMessage: t("soul_app.biometric.prompt_unlock"), disableDeviceFallback: true })).success;
-    } catch {
-      ok = false;
-    }
-    setBusy(false);
-    if (ok) setPhase("off");
-    else setFailed(true);
-  }, [t]);
-
-  useEffect(() => {
-    // Asks once, as on a return. From a timer callback, not the effect body: `unlock` sets state before its
-    // first await, and react-hooks/set-state-in-effect refuses that synchronously in an effect.
-    if (!coldStart) return;
-    const id = setTimeout(() => void unlock(), 0);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the cold start is asked about once, on mount
-  }, []);
-
-  useEffect(() => {
-    const offSuspend = onSessionSuspend(() => {
-      if (!appLockOn()) return;
-      // A lock that is up stays up: leaving while LOCKED must not become the brief-switch cover, which a return
-      // within five minutes takes down unasked (state-machine audit 2026-11-20).
-      if (phaseRef.current === "locked") return;
-      leftAt.current = Date.now();
-      setPhase("cover");
-    });
-    const offResume = onSessionResume(() => {
-      const at = leftAt.current;
-      leftAt.current = null;
-      if (at === null) return;
-      if (Date.now() - at < LOCK_AFTER_MS) return setPhase("off");
-      setPhase("locked");
-      void unlock(); // asks once as the lock comes up
-    });
-    return () => {
-      offSuspend();
-      offResume();
-    };
-  }, [unlock]);
-
-  // Android's back key must not reach the screens under the lock (it would pop or close them unseen).
-  useEffect(() => {
-    if (phase !== "locked") return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
-    return () => sub.remove();
-  }, [phase]);
+  // The reason the system shows with its check, in the app's language (review 2026-11-01).
+  const { phase, failed, busy, unlock } = useAppLock({ enabled: appLockOn, coldStart, prompt: t("soul_app.biometric.prompt_unlock"), onLocked });
 
   if (phase === "off") return null;
   // 第五十批 C5: the page is the officer app's too (lockView.tsx); the words and the mark are this app's.
