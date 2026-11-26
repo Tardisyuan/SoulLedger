@@ -82,7 +82,7 @@ def note_rows_in(civ, soul_pks):
 
 def rows_abroad(soul_pk, civ):
     """A row naming the soul may be on a shard of a civilization other than `civ` (the soul's primary's)."""
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return _codes().filter(kind=ROWS_IN, value__in=[f"{soul_pk}:{c}" for c in Civilization.values if c != civ]).exists()
 

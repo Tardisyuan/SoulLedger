@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from functools import partial
 from importlib import import_module
 
-from apps.souls.models import Civilization
+from apps.core.civilization import Civilization
 
 REHEAR = "REHEAR"
 ACQUIT_TO_REBIRTH = "ACQUIT_TO_REBIRTH"

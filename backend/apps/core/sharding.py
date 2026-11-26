@@ -165,14 +165,14 @@ def placement(model):
 
 def alias_for_civilization(civ):
     """Database alias of a civilization's shard: CHINESE -> "civ_chinese". UNKNOWN has none (D2)."""
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return f"civ_{Civilization(civ).value.lower()}"
 
 
 def civilization_aliases():
     """Every civilization's shard alias, configured or not, sorted: derived from `Civilization`."""
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return sorted(alias_for_civilization(c) for c in Civilization.values)
 
@@ -186,7 +186,7 @@ def shard_aliases():
 def cut_civilizations():
     """The civilizations whose rows live on their own shard: every one while `settings.SHARDED`, none otherwise
     (config/settings.py: the aliases decide; the per-civilization switches of stages 3-5 are gone)."""
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return list(Civilization.values) if settings.SHARDED else []
 

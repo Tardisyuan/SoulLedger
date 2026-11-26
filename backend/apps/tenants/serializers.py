@@ -2,7 +2,7 @@ import unicodedata
 
 from rest_framework import serializers
 
-from apps.souls.models import Civilization
+from apps.core.civilization import Civilization
 from apps.tenants.models import (
     DEADLINE_SETTING,
     REBIRTH_COOLDOWN_SETTING,
@@ -231,7 +231,7 @@ class TenantCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        from apps.souls.models import TENANT_CIVILIZATION
+        from apps.core.civilization import TENANT_CIVILIZATION
 
         fixed = TENANT_CIVILIZATION.get(attrs["code"])
         if fixed is not None and fixed != attrs["declared_civilization"]:

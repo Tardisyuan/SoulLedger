@@ -1,4 +1,4 @@
-"""文明→租户的映射只能有一份,写在 `apps/souls/models.py` 里。
+"""文明→租户的映射只能有一份,写在 `apps/core/civilization.py` 里(`apps/souls/models.py` 转导出)。
 
 `CIVILIZATION_TENANT` 那段注释说得很清楚:这份映射「曾存在于另外三处,各自可以
 漂移」,所以它被导出,并写下「需要这个方向的调用方 import 它,而不是自己写一份」。
@@ -21,7 +21,7 @@ import pytest
 from apps.souls.models import CIVILIZATION_TENANT, TENANT_CIVILIZATION
 
 BACKEND = pathlib.Path(__file__).resolve().parent.parent
-CANONICAL = BACKEND / "apps" / "souls" / "models.py"
+CANONICAL = BACKEND / "apps" / "core" / "civilization.py"
 
 #: Files whose copy is the point. A test that took its expectations from
 #: `TENANT_CIVILIZATION` would follow that map wherever it went, so
@@ -163,7 +163,7 @@ def test_the_detector_recognises_the_canonical_map_itself():
         if _looks_like_the_map(keys, values)
     ]
     assert hits, (
-        "检测器在 apps/souls/models.py 里都认不出那份映射 —— "
+        "检测器在 apps/core/civilization.py 里都认不出那份映射 —— "
         "上面那条断言因此什么都没检查"
     )
 

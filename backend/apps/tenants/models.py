@@ -46,7 +46,7 @@ VISIT_SETTINGS = {"visit_address": 80, "visit_hours": 40, "visit_phone": 40}
 
 
 def _civilization_of(code, declared):
-    from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION, Civilization
+    from apps.core.civilization import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION, Civilization
 
     if code in TENANT_CIVILIZATION:
         return TENANT_CIVILIZATION[code]
@@ -122,7 +122,7 @@ class Tenant(AuditUserFields, models.Model):
     def known_civilization(self):
         """`civilization`,认不出时是 None —— 给原来写 `TENANT_CIVILIZATION.get(code)` 的调用点:
         那张表只认四个种子殿,新建的殿要读 `declared_civilization`(2026-10-26)。"""
-        from apps.souls.models import UNKNOWN_CIVILIZATION
+        from apps.core.civilization import UNKNOWN_CIVILIZATION
 
         civ = self.civilization
         return None if civ == UNKNOWN_CIVILIZATION else civ

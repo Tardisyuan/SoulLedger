@@ -57,13 +57,13 @@ def shard_aliases():
 
     if hasattr(sharding, "shard_aliases"):
         return sharding.shard_aliases()
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return sorted(a for a in (alias_for_civilization(c) for c in Civilization.values) if a in settings.DATABASES)
 
 
 def civilization_of(alias):
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return next(c for c in Civilization.values if alias_for_civilization(c) == alias)
 

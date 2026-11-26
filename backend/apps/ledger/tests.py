@@ -177,7 +177,7 @@ class TestLedgerInheritanceView:
         # cosmology that has a next life, and the tenant code is what says
         # which cosmology this is. An unrecognised code used to fall through
         # to CHINESE, so this fixture passed by accident — see
-        # UNKNOWN_CIVILIZATION in apps/souls/models.py.
+        # UNKNOWN_CIVILIZATION in apps/core/civilization.py.
         self.tenant = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
         )[0]

@@ -281,7 +281,7 @@ class DispositionService:
         if policy is None:
             # No cosmology, so no realm. This branch is reached when the
             # soul's tenant code is not in TENANT_CIVILIZATION — see
-            # UNKNOWN_CIVILIZATION in apps/souls/models.py.
+            # UNKNOWN_CIVILIZATION in apps/core/civilization.py.
             #
             # It used to return CHINESE_PURGATORY, which was the same mistake
             # the civilization fallback itself was making, one layer down: a

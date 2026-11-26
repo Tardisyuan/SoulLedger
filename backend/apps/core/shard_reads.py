@@ -249,7 +249,7 @@ def _soul_state(user):
         return None
     cached = getattr(user, _SOUL_CONTEXT_ATTR, None)
     if cached is None:
-        from apps.souls.models import Civilization
+        from apps.core.civilization import Civilization
 
         soul = _primary_soul(user)
         civ = soul.tenant.civilization if soul is not None and soul.tenant is not None else None
@@ -355,7 +355,7 @@ def reads_control():
 
 
 def _civ_of_alias(alias):
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     return next((c for c in Civilization.values if alias_for_civilization(c) == alias), None)
 

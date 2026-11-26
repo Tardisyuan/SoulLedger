@@ -89,7 +89,7 @@ def request_civilization(request):
     None also for a civilization ADMIN whose ``civilization`` is blank or not a member of the enum: such an
     account reaches no hall (fail closed), the same answer ``civilization_halls`` gives.
     """
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     user = getattr(request, "user", None)
     if not is_civilization_admin(user):
@@ -105,7 +105,7 @@ def civilization_halls(civilization):
     ``declared_civilization``; any other hall answers from ``declared_civilization``. An unknown or blank
     civilization has no halls.
     """
-    from apps.souls.models import TENANT_CIVILIZATION, Civilization
+    from apps.core.civilization import TENANT_CIVILIZATION, Civilization
     from apps.tenants.models import Tenant
 
     if civilization not in Civilization.values:
@@ -117,7 +117,7 @@ def civilization_halls(civilization):
 
 
 def user_civilization_halls(user):
-    from apps.souls.models import Civilization
+    from apps.core.civilization import Civilization
 
     civ = getattr(user, "civilization", None)
     return civilization_halls(civ if civ in Civilization.values else None)
