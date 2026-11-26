@@ -221,8 +221,11 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const left = at >= 0 ? sequence!.length - at - 1 : 0;
   // A one-visit filter only applies while 待办 is the current tab; every other way into 待办 clears it (above).
   const todoFilterOnce = current === "todo" ? todoOnce : null;
-  // What fills the page, as `PageEnter`'s key: a change plays its entrance once (M1).
-  const shown = swipe ? "swipe" : account ? `account:${account}` : detail ? `detail:${goneKey(detail)}` : `tab:${current}`;
+  // What fills the page, as `PageEnter`'s key: a change plays its entrance once (M1). A detail is drawn over the tab it
+  // was opened from, which stays mounted (and keeps its scroll) under it: back shows the list where it was, the iOS edge
+  // swipe shows it behind the page, and nothing fades in (ux-motion-mobile S1).
+  const shown = swipe ? "swipe" : account ? `account:${account}` : `tab:${current}`;
+  const over = !swipe && !account && detail ? detail : null;
   // A door in the bar or a page in the switch under the top bar: either way the officer moves to that page.
   const go = (next: TabKey) => {
     if (locked) return; // the recovery codes are on screen and not yet confirmed saved
@@ -254,6 +257,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       )}
       {account || detail || swipe ? null : <PageSwitch current={current} tabs={tabs} unread={unread} onSelect={go} />}
       <View style={{ flex: 1 }}>
+        {/* Under a detail the tab is still there but hidden from a screen reader; the detail is opaque and takes the touches. */}
+        <View style={{ flex: 1 }} importantForAccessibility={over ? "no-hide-descendants" : "auto"} accessibilityElementsHidden={!!over}>
         <PageEnter key={shown} slide={!shown.startsWith("tab:")}>
         {swipe ? (
           // No edge swipe here: the cards themselves are dragged sideways.
@@ -276,31 +281,6 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <NotifyScreen onBack={() => setAccount(null)} />
         ) : null}
           </EdgeBack>
-        ) : detail ? (
-          <Detail
-            // A new target is a new screen: 「下一件」 must not carry the last one's stack, sheets or decision.
-            key={goneKey(detail)}
-            target={detail}
-            from={t(`officer_app.tabs.${origin}`)}
-            {...(origin === "queue" && at >= 0
-              ? { backLabel: t("officer_app.desk.title"), position: t("officer_app.desk.position", { n: String(at + 1), total: String(sequence!.length) }) }
-              : {})}
-            // Offered after a decision, never taken for the officer (D1: a link opens a page, it does not decide).
-            next={next ? { name: next.name ?? "", left, onNext: () => { setDetail(next.target); setVersion((v) => v + 1); } } : undefined}
-            last={at >= 0 && !next}
-            // 返回 goes back to the page the detail was opened from: a notice lands on a case under 审判 / 待办, and
-            // 返回 used to stay there instead of the 通知 list (simulator 2026-11-21).
-            onBack={() => {
-              close();
-              setTab(origin);
-            }}
-            onLeave={() => {
-              close();
-              setTab(origin);
-            }}
-            onSettled={() => setVersion((v) => v + 1)}
-            onGone={markGone}
-          />
         ) : current === "todo" ? (
           <TodoTab key={todoFilterOnce ? "once" : "saved"} initialFilter={todoFilterOnce ?? undefined} version={version} highlight={highlight} gone={gone} onOpen={(item, rows) => { setOrigin("todo"); setSequence(rows?.map(({ name, ...r }) => ({ target: { type: "todo" as const, ...r }, name })) ?? null); setDetail({ type: "todo", kind: item.kind, id: item.id }); }} />
         ) : current === "queue" ? (
@@ -326,6 +306,37 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <MeTab onOpen={setAccount} />
         )}
         </PageEnter>
+        </View>
+        {over ? (
+          <View style={StyleSheet.absoluteFill}>
+            <PageEnter key={`detail:${goneKey(over)}`} slide>
+              <Detail
+                // A new target is a new screen: 「下一件」 must not carry the last one's stack, sheets or decision.
+                key={goneKey(over)}
+                target={over}
+                from={t(`officer_app.tabs.${origin}`)}
+                {...(origin === "queue" && at >= 0
+                  ? { backLabel: t("officer_app.desk.title"), position: t("officer_app.desk.position", { n: String(at + 1), total: String(sequence!.length) }) }
+                  : {})}
+                // Offered after a decision, never taken for the officer (D1: a link opens a page, it does not decide).
+                next={next ? { name: next.name ?? "", left, onNext: () => { setDetail(next.target); setVersion((v) => v + 1); } } : undefined}
+                last={at >= 0 && !next}
+                // 返回 goes back to the page the detail was opened from: a notice lands on a case under 审判 / 待办, and
+                // 返回 used to stay there instead of the 通知 list (simulator 2026-11-21).
+                onBack={() => {
+                  close();
+                  setTab(origin);
+                }}
+                onLeave={() => {
+                  close();
+                  setTab(origin);
+                }}
+                onSettled={() => setVersion((v) => v + 1)}
+                onGone={markGone}
+              />
+            </PageEnter>
+          </View>
+        ) : null}
       </View>
       <TabBar
         current={current}
