@@ -9,19 +9,21 @@ names its own shard's civilization as `tenant`, of a civilization whose writes a
 primary; two such claims is a soul written in two places (a cross-civilization move half done).
 
 Copies allowed besides the primary row:
-  control                         the reverse sync's mirror of a cut-over civilization (stage 4, until stage 5)
-  the shard of `tenant`'s civ     the stage-2 shadow, while that civilization's writes are not cut over
+  control                         while sharded, the copy control kept before stage 5 -- only until the purge of
+                                  `tenant`'s civilization is recorded (`shard_sync.purge_records`, SHARD_PURGED):
+                                  after it control holds none of that civilization's souls (`purged_models`)
   the shard of `home_tenant`'s civ  only while the soul resides in another civilization (an executed
                                   cross-civilization dispatch: `tenant` and `home_tenant` of different
                                   civilizations) -- the home shard's rows point at it (D6)
-Any other row of the soul is a copy nothing justifies. A saga message that is a dead letter (FAILED: a move, a
+Any other row of the soul is a copy nothing justifies (the stage-2 shadow went with the per-civilization cut-over,
+2026-11-21: sharded, the shard of `tenant`'s civilization is the primary). A saga message that is a dead letter (FAILED: a move, a
 seat, a D6 write that will not be delivered on its own) is a problem too. Prints one line per problem, exits 1
 when any.
 """
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.core.shard_reads import CONTROL_ALIAS
-from apps.core.shard_sync import shard_aliases
+from apps.core.shard_sync import purge_records, shard_aliases
 
 
 def ownership_problems(aliases):
@@ -36,6 +38,7 @@ def ownership_problems(aliases):
         return alias_for_civilization(civ) if civ in Civilization.values else None
 
     cut_over = {alias_for_civilization(c) for c in cut_civilizations()}
+    purged = purge_records()
     rows = {}  # soul pk -> {alias: (tenant_id, home_tenant_id)}
     for alias in aliases:
         for pk, tenant_id, home_id in Soul._base_manager.using(alias).values_list("pk", "tenant_id", "home_tenant_id").iterator():
@@ -57,7 +60,9 @@ def ownership_problems(aliases):
                             + f"; rows on {sorted(held)}")
             continue
         tenant_id, home_id = held[primary]
-        allowed = {primary, CONTROL_ALIAS, shard_of(tenant_id)}
+        allowed = {primary}
+        if primary != CONTROL_ALIAS and civ_of.get(tenant_id) not in purged:
+            allowed.add(CONTROL_ALIAS)
         if shard_of(home_id) != shard_of(tenant_id):
             allowed.add(shard_of(home_id))
         for alias in sorted(set(held) - allowed):

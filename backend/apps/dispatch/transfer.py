@@ -28,8 +28,8 @@ record was never moved, so it is APPROVED again the moment the message closes.
 Gap 4d, replica identity: a demoted row keeps its pk and gets the NEW hall as `tenant` (its keys to other shard rows
 blanked, as shard sync's copies are, `copy_blanks`), so `primary_alias` / `write_alias_of` read it as a row of the
 new hall's master -- a copy -- and deleting it there never clears the control SoulAccount that names the soul
-(`apps.core.bare_ids._on_pre_delete`). Kept where a copy is allowed (`check_soul_ownership`): control's mirror and
-the home civilization's shard while the soul resides away. Elsewhere it is deleted, after the rewrite.
+(`apps.core.bare_ids._on_pre_delete`). Kept where a copy is allowed (`check_soul_ownership`): the home civilization's
+shard while the soul resides away (and control in the single-database form, where it is the new master too). Elsewhere it is deleted, after the rewrite.
 """
 import json
 

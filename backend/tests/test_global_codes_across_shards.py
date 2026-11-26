@@ -265,6 +265,22 @@ def test_a_sharded_soul_with_a_leftover_control_copy_passes(halls, settings):
     assert ok, out
 
 
+def test_a_soul_back_on_control_after_its_civilizations_purge_is_reported(halls, settings):
+    """SHARD_PURGED (stage 5, recorded on 115): control holds none of that civilization's souls, so a row of one
+    there again is a copy nothing justifies. Until 2026-11-26 control was always an allowed copy and this passed.
+    A civilization not purged keeps its leftover control copy allowed."""
+    from apps.core.shard_sync import PURGED
+    from apps.tenants.models import GlobalCode
+
+    settings.SHARDED = True
+    GlobalCode.objects.using(CONTROL_ALIAS).create(kind=PURGED, value="EGYPTIAN")
+    soul = _soul_rows(halls["EGYPTIAN"], halls["EGYPTIAN"], CONTROL_ALIAS, EGYPTIAN)
+    greek = _soul_rows(halls["GREEK"], halls["GREEK"], CONTROL_ALIAS, GREEK)
+    out, ok = _ownership(settings)
+    assert not ok and f"soul {soul.pk}: a copy on {CONTROL_ALIAS} nothing justifies (primary on {EGYPTIAN})" in out
+    assert f"soul {greek.pk}" not in out
+
+
 def test_a_residence_copy_in_the_home_shard_is_justified(halls, settings):
     settings.SHARDED = True
     _soul_rows(halls["EGYPTIAN"], halls["GREEK"], EGYPTIAN, GREEK, CONTROL_ALIAS)  # resides in Egypt, home Greece
@@ -274,9 +290,10 @@ def test_a_residence_copy_in_the_home_shard_is_justified(halls, settings):
 
 def test_a_copy_nothing_justifies_is_reported(halls, settings):
     settings.SHARDED = True
-    soul = _soul_rows(halls["GREEK"], halls["GREEK"], GREEK, CONTROL_ALIAS, EGYPTIAN)  # never left Greece
+    soul = _soul_rows(halls["GREEK"], halls["GREEK"], GREEK, EGYPTIAN)  # never left Greece
     out, ok = _ownership(settings)
     assert not ok and f"soul {soul.pk}: a copy on {EGYPTIAN} nothing justifies (primary on {GREEK})" in out
+    assert CONTROL_ALIAS not in out.split("problem(s)")[0]
 
 
 def test_two_primary_rows_are_reported(halls, settings):
