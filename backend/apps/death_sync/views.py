@@ -25,6 +25,7 @@ from apps.death_sync.models import (
     DeathRegistrationStatus,
     ExternalApiKey,
     WebhookConfig,
+    source_identifier_problem,
 )
 from apps.death_sync.permissions import CanManageWebhooks, CanQueryStatus
 from apps.death_sync.serializers import (
@@ -222,6 +223,20 @@ class DeathRegistrationViewSet(
         if not api_key.can_register_death:
             return problem(status.HTTP_403_FORBIDDEN, "KEY_NO_DEATH_PERMISSION", "API key lacks death registration permission")
 
+        # The source the registration is recorded under. Absent: the key's own system_type, as it always was.
+        # Present: only a source the hall granted this key (`allowed_sources`; empty = system_type alone), so a
+        # key cannot write into another system's idempotency space (`uniq_death_reg_idempotency` is per source).
+        source_system = request.headers.get("X-Source-System")
+        if source_system is None:
+            source_system = api_key.system_type
+        else:
+            reason = source_identifier_problem(source_system)
+            if reason:
+                return problem(status.HTTP_400_BAD_REQUEST, "INVALID_SOURCE_SYSTEM", reason)
+            if not api_key.permits_source(source_system):
+                return problem(status.HTTP_403_FORBIDDEN, "KEY_SOURCE_NOT_ALLOWED",
+                               f"This API key may not register as {source_system}")
+
         # Batch registration
         if data.get("batch") and "registrations" in data:
             registrations = data["registrations"]
@@ -232,6 +247,7 @@ class DeathRegistrationViewSet(
                 api_key=api_key,
                 registrations=registrations,
                 source_ip=self._get_client_ip(request),
+                source_system=source_system,
             )
             succeeded = sum(1 for r in results if r.status == DeathRegistrationStatus.PROCESSED)
             return Response({
@@ -259,9 +275,6 @@ class DeathRegistrationViewSet(
             "X-Idempotency-Key",
             f"{api_key.id}_{hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()}",
         )
-        # Use API key's system_type, not client-provided header (prevents impersonation)
-        source_system = api_key.system_type
-
         try:
             result = DeathSyncService.register_death(
                 tenant=tenant,
@@ -269,6 +282,7 @@ class DeathRegistrationViewSet(
                 payload=serializer.validated_data,
                 idempotency_key=idempotency_key,
                 source_ip=self._get_client_ip(request),
+                source_system=source_system,
             )
         except IntegrityError:
             # Idempotency conflict

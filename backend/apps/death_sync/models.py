@@ -2,6 +2,7 @@
 Death Sync models — external death registration integration.
 """
 import hashlib
+import re
 import secrets
 import uuid
 
@@ -57,6 +58,24 @@ class TudiGodOfficer(models.Model):
         unique_together = [("tudigod", "user")]
 
 
+#: `DeathRegistrationRequest.source_system` of a registration a 土地公 made (no API key). Reserved: no key may
+#: declare it, or its rows would share the 土地公 registrations' idempotency space (`uniq_death_reg_idempotency`).
+TUDI_SOURCE = "TUDI"
+
+#: A source identifier (`X-Source-System`, `ExternalApiKey.allowed_sources`): upper-case, digits, underscore, like
+#: the `system_type` values; 50 is `DeathRegistrationRequest.source_system`'s width.
+SOURCE_SYSTEM_RE = re.compile(r"[A-Z][A-Z0-9_]{0,49}")
+
+
+def source_identifier_problem(value) -> str | None:
+    """Why `value` cannot be a declared source, or None when it can."""
+    if not isinstance(value, str) or not SOURCE_SYSTEM_RE.fullmatch(value):
+        return "A source is 1-50 characters of A-Z, 0-9 and _, starting with a letter"
+    if value == TUDI_SOURCE:
+        return f"{TUDI_SOURCE} is reserved for registrations made by a 土地公"
+    return None
+
+
 class ExternalApiKey(AuditUserFields, models.Model):
     """
     API key for external system authentication.
@@ -108,7 +127,8 @@ class ExternalApiKey(AuditUserFields, models.Model):
     allowed_sources = models.JSONField(
         default=list,
         blank=True,
-        help_text="Source identifiers this key may use",
+        help_text="Sources this key may declare in X-Source-System on a registration. "
+                  "Empty = only its own system_type. A registration without the header is system_type.",
     )
 
     # Permissions
@@ -136,6 +156,10 @@ class ExternalApiKey(AuditUserFields, models.Model):
         if self.expires_at is None:
             return False
         return timezone.now() > self.expires_at
+
+    def permits_source(self, source: str) -> bool:
+        """May a registration with this key be recorded as coming from `source` (`X-Source-System`)?"""
+        return source in (self.allowed_sources or [self.system_type])
 
     @staticmethod
     def generate_key():
