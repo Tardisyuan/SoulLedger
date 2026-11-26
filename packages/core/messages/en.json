@@ -4219,6 +4219,7 @@
       "create": "New webhook",
       "edit_title": "Edit webhook",
       "url": "URL",
+      "url_invalid": "Must start with http:// or https://",
       "api_key": "API key",
       "events": "Events",
       "events_hint": "Nothing checked means every event. The name is the value of the X-SoulLedger-Event header.",
@@ -10123,6 +10124,7 @@
       "here": "You are here"
     },
     "close_up": "Close up",
+    "pause_motion": "Pause motion",
     "card": {
       "arrived": "Arrived {{date}}",
       "today_in": "In today",

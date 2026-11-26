@@ -190,6 +190,8 @@ function RoleDrawerBody({
   const [copying, setCopying] = useState(false);
   const [copyCode, setCopyCode] = useState("");
   const [copyName, setCopyName] = useState("");
+  // 提交过一次才标出空着的格(审计 2026-11-26 B6:按钮不再灰着不说原因)。
+  const [copyTried, setCopyTried] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [refusal, setRefusal] = useState<RoleDeleteRefusal | null>(null);
   // 页签:详情 / 成员(rbac-snowy 2026-10-29)。切走不丢详情里没保存的字。
@@ -215,7 +217,10 @@ function RoleDrawerBody({
 
   const submitCopy = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!copyCode.trim() || !copyName.trim()) return;
+    if (!copyCode.trim() || !copyName.trim()) {
+      setCopyTried(true);
+      return;
+    }
     copy.mutate(
       { sourceId: role.id, data: { name: copyCode.trim(), display_name: copyName.trim() } },
       {
@@ -300,15 +305,21 @@ function RoleDrawerBody({
           <TextField
             label={t("permissions.role_name_label")}
             value={copyCode}
+            error={copyTried && !copyCode.trim() ? t("common.field_required") : undefined}
             onChange={(e) => setCopyCode(e.target.value.toUpperCase())}
             placeholder={t("permissions.role_name_placeholder")}
           />
-          <TextField label={t("permissions.display_name_label")} value={copyName} onChange={(e) => setCopyName(e.target.value)} />
+          <TextField
+            label={t("permissions.display_name_label")}
+            value={copyName}
+            onChange={(e) => setCopyName(e.target.value)}
+            error={copyTried && !copyName.trim() ? t("common.field_required") : undefined}
+          />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setCopying(false)}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" variant="primary" size="sm" loading={copy.isPending} disabled={!copyCode.trim() || !copyName.trim()}>
+            <Button type="submit" variant="primary" size="sm" loading={copy.isPending}>
               {t("permissions.roles.copy")}
             </Button>
           </div>
@@ -342,6 +353,7 @@ function RoleDrawerBody({
                   setMenuOpen(false);
                   setCopyCode(`${role.name}_COPY`);
                   setCopyName(role.display_name);
+                  setCopyTried(false);
                   setCopying(true);
                 }}
               >

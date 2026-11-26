@@ -53,6 +53,8 @@ function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTen
   const [realmCode, setRealmCode] = useState(seat.sentence_realm_code);
   const [years, setYears] = useState(seat.sentence_years == null ? "" : String(seat.sentence_years));
   const [notes, setNotes] = useState(seat.sentence_notes);
+  // 提交过一次才标出没选的冥界(审计 2026-11-26 B6)。
+  const [tried, setTried] = useState(false);
   const chosen = realms?.find((r) => r.realm_code === realmCode);
 
   const submit = useMutation({
@@ -79,12 +81,14 @@ function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTen
       onSubmit={(e) => {
         e.preventDefault();
         if (realmCode && !yearsInvalid) submit.mutate();
+        else setTried(true);
       }}
     >
       <SelectField
         label={t("sentence_plan.cross.realm")}
         value={realmCode}
         onChange={(e) => setRealmCode(e.target.value)}
+        error={tried && !realmCode ? t("common.field_required") : undefined}
         options={[
           { value: "", label: t("sentence_plan.cross.realm_placeholder") },
           ...(realms ?? []).map((r) => ({
@@ -103,7 +107,7 @@ function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTen
         error={yearsInvalid ? t("sentence_plan.cross.years_invalid") : undefined}
       />
       <TextAreaField label={t("sentence_plan.cross.notes")} value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-      <Button type="submit" size="sm" loading={submit.isPending} disabled={!realmCode || yearsInvalid}>
+      <Button type="submit" size="sm" loading={submit.isPending}>
         {t("sentence_plan.cross.submit")}
       </Button>
     </form>
