@@ -5271,7 +5271,6 @@
       "ledger_hint": "Wen Sep: Maa",
       "stations_card": "Er Duat · Sekhet 13",
       "station_here": "Min: {{station}} · {{desc}}",
-      "station": "Sekhet Min",
       "station_at": "Sekhet {{n}} / 13",
       "continent": "Ta Mesut",
       "capture": {
@@ -5729,7 +5728,6 @@
       "image": {
         "failed": "Nen Per",
         "errors": {
-          "too_many_pending": "Tut Hab Djer. Setep Er Khet.",
           "images_unavailable": "Er Wesheb-Ef: Sesh Medu Wa."
         },
         "button": "Tut"

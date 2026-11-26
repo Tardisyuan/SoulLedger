@@ -80,7 +80,9 @@ export type SoulChatErrorCode = (typeof SOUL_CHAT_ERROR_CODES)[number];
 
 /**
  * Codes the image endpoints add (backend `apps/chat/images.py`). The first three are the circle's
- * (`soul_app.circle.media.errors.*`); the last two are the chat's own (`soul_app.chat.image.errors.*`).
+ * (`soul_app.circle.media.errors.*`); `images_unavailable` is the chat's own (`soul_app.chat.image.errors.*`).
+ * `too_many_pending` has no words in the chat: the app treats it as retryable and says no reason (mobile
+ * `chat.tsx`); the circle's 409 has its own (`soul_app.circle.media.errors.too_many_pending`).
  * Everything else a send can meet is in `SOUL_CHAT_ERROR_CODES`.
  */
 export const SOUL_CHAT_IMAGE_ERROR_CODES = ["not_an_image", "too_large", "too_many_pixels", "too_many_pending", "images_unavailable"] as const;

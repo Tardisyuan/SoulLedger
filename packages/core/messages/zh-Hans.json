@@ -5289,7 +5289,6 @@
       "balance_none": "功过都还没有记上。",
       "ledger": "本世账目",
       "ledger_hint": "展开一项查看",
-      "station": "所在之站",
       "station_at": "第 {{n}} / 13 站",
       "continent": "出身部洲",
       "stations_card": "赴冥 · 十三站",
@@ -5760,7 +5759,6 @@
       "image": {
         "failed": "没能发出",
         "errors": {
-          "too_many_pending": "未发出的图片太多，稍等一下再选",
           "images_unavailable": "对方回信之前只能写文字"
         },
         "button": "图"

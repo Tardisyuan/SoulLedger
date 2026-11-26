@@ -5289,7 +5289,6 @@
       "balance_none": "Nothing has been entered for or against you yet.",
       "ledger": "This life’s ledger",
       "ledger_hint": "Open an item to read it",
-      "station": "Where you are",
       "station_at": "Station {{n}} / 13",
       "continent": "Continent of birth",
       "stations_card": "To the underworld · thirteen stations",
@@ -5760,7 +5759,6 @@
       "image": {
         "failed": "Could not send",
         "errors": {
-          "too_many_pending": "Too many images waiting to send; wait a moment",
           "images_unavailable": "Until they reply, only text can be sent"
         },
         "button": "Photo"
