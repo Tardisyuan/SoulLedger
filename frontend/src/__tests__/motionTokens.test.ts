@@ -118,7 +118,7 @@ describe("v3 general motion rows", () => {
       expect([file, /transition-transform duration-fast ease-standard \$\{[^}]*-rotate-90/.test(src(file))]).toEqual([file, true]);
     }
     for (const file of ["app/actors/page.tsx", "app/organizations/page.tsx", "app/scheduler/page.tsx"]) {
-      expect([file, src(file).includes("sticky top-(--below-band) z-1")]).toEqual([file, true]);
+      expect([file, src(file).includes("sticky top-(--below-band) z-sticky")]).toEqual([file, true]);
     }
   });
 
