@@ -6,7 +6,7 @@
  * A package file that later imports the soul's `session` or a screen would quietly pull the soul's accounts
  * into this bundle, and no other check would notice: the import compiles, and both apps' tests stay green.
  * So this reads the files as text (it imports no app code) and walks every relative and
- * `@soulledger/mobile-ui/src/*` import, starting from each non-test file under `mobile-officer/src/` and
+ * `@soulledger/mobile-ui/src/*` import, starting from the entry (`index.ts`, `App.tsx`) and each non-test file under `mobile-officer/src/`, and
  * continuing through the package's own imports, and pins the set of package files that walk reaches.
  *
  * The set must EQUAL the list below, not merely avoid the forbidden ones: a new file in it is a change to
@@ -48,7 +48,9 @@ const walk = (dir: string): string[] =>
 const inShared = (f: string) => f.startsWith(SHARED + sep);
 const inMobile = (f: string) => f.startsWith(MOBILE + sep);
 
-const STARTS = walk(OFFICER).filter((f) => !isTest(relative(OFFICER, f)));
+// The entry (index.ts -> App.tsx) sits outside src/ and imports from it, so it is a start too.
+const ENTRY = [join(ROOT, "mobile-officer/index.ts"), join(ROOT, "mobile-officer/App.tsx")];
+const STARTS = [...ENTRY, ...walk(OFFICER).filter((f) => !isTest(relative(OFFICER, f)))];
 const seen = new Set<string>();
 const reached = STARTS.flatMap(imports);
 const queue = reached.filter(inShared);
@@ -98,6 +100,7 @@ describe("the shared files the officer app reaches", () => {
   it("walks real files, so the checks below are not vacuous", () => {
     expect(STARTS.length).toBeGreaterThan(10);
     expect(STARTS).toContain(join(OFFICER, "shared.ts"));
+    for (const f of ENTRY) expect(existsSync(f)).toBe(true);
   });
 
   it("is exactly the reviewed list", () => {
