@@ -253,7 +253,7 @@ export default function NotificationsPage() {
             // truthfully. Before this the selected one differed only by border
             // and text COLOUR, so a screen-reader user heard two identical
             // buttons and could not tell which view was showing.
-            // `components/ui/data-grid/FilterBar.tsx:181` already does this.
+            // `src/components/ui/FilterChip.tsx`'s `FilterChipToggle` already does this.
             aria-pressed={filter === "all"}
             onClick={() => setFilter("all")}
             className={`${TAB_BASE} ${filter === "all" ? TAB_ON : TAB_OFF}`}

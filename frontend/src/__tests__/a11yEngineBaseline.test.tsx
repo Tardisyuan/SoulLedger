@@ -173,7 +173,8 @@ import {
 } from "@/src/components/ui/DomainValue";
 import { showToast } from "@/src/components/ui/Toast";
 import { DataTable } from "@/components/ui/data-table";
-import { DataGrid, FilterBar, ActionsMenu, type DataGridColumn } from "@/components/ui/data-grid";
+import { DataGrid, ActionsMenu, type DataGridColumn } from "@/components/ui/data-grid";
+import { FilterBar } from "@/src/components/ui/FilterChip";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -577,53 +578,51 @@ const SUBJECTS: Subject[] = [
     // read as proof the engine catches a missing button name, and it is not.
     open: () => clickButton("\u22ef"),
   },
+  // The product filter bar (`src/components/ui/FilterChip.tsx`): every list page's. The data-grid copy these two
+  // subjects used to render had no product caller and was deleted (audit 2026-11-26 §1.5).
   {
     id: "ui/FilterBar",
     ui: () => (
       <FilterBar
-        searchValue=""
-        onSearchChange={() => {}}
-        searchPlaceholder="filter.search"
-        chips={[
+        search={(where) => <input type="search" aria-label="filter.search" placeholder="filter.search" data-where={where} />}
+        selects={[
           {
-            key: "state",
             label: "filter.state",
-            value: "",
+            value: "ALIVE",
             options: [
+              { value: "", label: "filter.all" },
               { value: "ALIVE", label: "filter.alive" },
               { value: "JUDGED", label: "filter.judged" },
             ],
             onChange: () => {},
+            clearLabel: "filter.clear",
           },
         ]}
-        isFiltered
-        onClearAll={() => {}}
-        clearAllLabel="filter.clear"
+        toggles={[{ label: "filter.overdue", active: true, onToggle: () => {} }]}
       />
     ),
   },
   {
-    id: "ui/FilterBar.chipOpen",
+    id: "ui/FilterBar.sheetOpen",
     ui: () => (
       <FilterBar
-        chips={[
+        selects={[
           {
-            key: "state",
             label: "filter.state",
             value: "",
             options: [
+              { value: "", label: "filter.all" },
               { value: "ALIVE", label: "filter.alive" },
-              { value: "JUDGED", label: "filter.judged" },
             ],
             onChange: () => {},
+            clearLabel: "filter.clear",
           },
         ]}
-        isFiltered={false}
-        onClearAll={() => {}}
-        clearAllLabel="filter.clear"
+        quick={[{ label: "filter.mine", active: false, onToggle: () => {} }]}
       />
     ),
-    open: () => clickButton("filter.state"),
+    // The narrow layout's 「筛选」 button opens the bottom sheet with the same selects.
+    open: () => clickButton("filter.bar.open"),
   },
   {
     id: "ui/skeleton",

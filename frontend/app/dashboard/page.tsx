@@ -192,7 +192,7 @@ function DashboardContent() {
         // truthfully. Before this the selected one differed only by border
         // and text COLOUR, so a screen-reader user heard two identical
         // buttons and could not tell which view was showing.
-        // `components/ui/data-grid/FilterBar.tsx:181` already does this.
+        // `src/components/ui/FilterChip.tsx`'s `FilterChipToggle` already does this.
         aria-pressed={activeTab === tabItem.key}
         onClick={() => setTab(tabItem.key)}
         className={`${TAB_BASE} ${activeTab === tabItem.key ? TAB_ON : TAB_OFF}`}

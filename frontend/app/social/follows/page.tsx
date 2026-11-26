@@ -69,7 +69,7 @@ export default function FollowsPage() {
           // truthfully. Before this the selected one differed only by border
           // and text COLOUR, so a screen-reader user heard two identical
           // buttons and could not tell which view was showing.
-          // `components/ui/data-grid/FilterBar.tsx:181` already does this.
+          // `src/components/ui/FilterChip.tsx`'s `FilterChipToggle` already does this.
           aria-pressed={tab === key}
           // 规范 v2 A1 的标签页:与仪表盘同一组类名(src/lib/tabClasses)。
           className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF}`}

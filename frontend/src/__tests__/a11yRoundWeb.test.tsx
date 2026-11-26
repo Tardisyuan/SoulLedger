@@ -1,6 +1,6 @@
 /** Screen-reader basics: the grid search box is named, and each language option is read in its own language. */
 import { render, screen } from "@testing-library/react";
-import { FilterBar } from "@/components/ui/data-grid/FilterBar";
+import { FilterBar } from "@/src/components/ui/FilterChip";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LOCALE_LABELS } from "@soulledger/core/config/locale";
 
@@ -9,9 +9,13 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ locale: "zh-Hans", setLocale: jest.fn(), hydrated: true, t: (k: string) => k }),
 }));
 
-it("the FilterBar search input has an accessible name (not only a placeholder)", () => {
-  render(<FilterBar searchValue="" onSearchChange={jest.fn()} searchPlaceholder="搜索灵魂" isFiltered={false} onClearAll={jest.fn()} clearAllLabel="清除" />);
-  expect(screen.getByRole("textbox", { name: "搜索灵魂" })).toBeInTheDocument();
+it("the FilterBar's dimension select has an accessible name (its visible 「状态 ·」 is aria-hidden)", () => {
+  render(
+    <FilterBar
+      selects={[{ label: "状态", value: "", options: [{ value: "", label: "全部" }], onChange: jest.fn(), clearLabel: "清除状态筛选" }]}
+    />
+  );
+  expect(screen.getAllByRole("combobox", { name: "状态" }).length).toBeGreaterThan(0);
 });
 
 it("LanguageSwitcher options carry lang (Kemet's text is English, so en)", () => {
