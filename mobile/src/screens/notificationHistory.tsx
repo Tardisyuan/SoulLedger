@@ -6,7 +6,7 @@
  */
 import { soulApi, soulErrorMessage, type PushHistoryItem } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
@@ -77,7 +77,11 @@ export function NotificationHistoryScreen() {
   const { reload: reloadFirst } = remote;
   // Pages after the first, appended by 「更多」; a refresh drops them with the first page.
   const [tail, setTail] = useState<{ rows: PushHistoryItem[]; next: number | null; busy: boolean; failed: boolean } | null>(null);
+  // Which list a 「更多」 was asked for: a refresh starts a new one, and a page still on its way is then dropped
+  // (it was appended under the new page 1).
+  const ticket = useRef(0);
   const reload = useCallback(() => {
+    ticket.current += 1;
     setTail(null);
     return reloadFirst();
   }, [reloadFirst]);
@@ -88,9 +92,14 @@ export function NotificationHistoryScreen() {
   const more = () => {
     if (next === null || tail?.busy) return;
     setTail((prev) => ({ rows: prev?.rows ?? [], next, busy: true, failed: false }));
+    const mine = ticket.current;
     soulApi.notifications(next).then(
-      (page) => setTail((prev) => ({ rows: [...(prev?.rows ?? []), ...page.results], next: page.next ? next + 1 : null, busy: false, failed: false })),
-      () => setTail((prev) => ({ rows: prev?.rows ?? [], next, busy: false, failed: true }))
+      (page) => {
+        if (ticket.current === mine) setTail((prev) => ({ rows: [...(prev?.rows ?? []), ...page.results], next: page.next ? next + 1 : null, busy: false, failed: false }));
+      },
+      () => {
+        if (ticket.current === mine) setTail((prev) => ({ rows: prev?.rows ?? [], next, busy: false, failed: true }));
+      }
     );
   };
 

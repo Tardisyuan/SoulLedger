@@ -12,7 +12,8 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform } from "@soulledger/mobile-ui/src/platform";
 import { SessionProvider } from "../session";
 import { renderSoul } from "./harness";
-import { PROFILE, application, life, stubApi, type Reply, resetLoginMemory } from "./stubApi";
+import { Screen } from "@soulledger/mobile-ui/src/ui";
+import { PROFILE, application, heldReply, life, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 const SETTINGS = { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" };
@@ -134,4 +135,28 @@ it("tapping a row with a target goes where the push would have gone; one without
   await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("ApplicationDetail"));
   expect(navigationRef.getCurrentRoute()?.params).toEqual({ id: APP_ID, landed: true });
   await act(async () => {});
+});
+
+// A 「更多」 still on its way when the list is pulled to refresh belongs to the old list: it used to be appended under
+// the NEW page 1 (a row that had moved up to page 1 came twice, with a clashing key). Now it is dropped.
+it("a page that was on its way when the list refreshed is not appended to the new list", async () => {
+  const late = heldReply();
+  signedIn({
+    "GET /me/notifications/": [
+      page([item("b"), item("c")], "http://x/me/notifications/?page=2"),
+      late.reply,
+      page([item("a"), item("b")], "http://x/me/notifications/?page=2"),
+    ],
+  });
+  renderApp();
+  await openHistory();
+  await screen.findByTestId("notification-c");
+  fireEvent.press(screen.getByTestId("history-more"));
+  const list = screen.UNSAFE_getAllByType(Screen).find((s) => s.props.testID === "notification-history")!;
+  await act(async () => void list.props.onRefresh());
+  await screen.findByTestId("notification-a");
+  await act(async () => late.answer(page([item("c"), item("d")])));
+  const rows = screen.queryAllByTestId(/^notification-[a-z]$/).map((r) => r.props.testID);
+  expect(rows).toEqual(["notification-a", "notification-b"]);
+  expect(screen.getByTestId("history-more")).toBeTruthy();
 });
