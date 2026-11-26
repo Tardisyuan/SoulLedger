@@ -30843,6 +30843,14 @@ components:
           type: integer
         allowed_ips:
           description: List of allowed source IPs. Empty = allow all.
+        allowed_sources:
+          type: array
+          items:
+            type: string
+          description: Sources this key may declare in X-Source-System on a registration.
+            Empty = only its own system_type. A registration without the header is
+            system_type.
+          maxItems: 20
         can_register_death:
           type: boolean
         can_query_status:
@@ -41081,6 +41089,14 @@ components:
           type: integer
         allowed_ips:
           description: List of allowed source IPs. Empty = allow all.
+        allowed_sources:
+          type: array
+          items:
+            type: string
+          description: Sources this key may declare in X-Source-System on a registration.
+            Empty = only its own system_type. A registration without the header is
+            system_type.
+          maxItems: 20
         can_register_death:
           type: boolean
         can_query_status:
@@ -43292,7 +43308,9 @@ components:
     ProblemCodeEnum:
       enum:
       - BATCH_TOO_LARGE
+      - INVALID_SOURCE_SYSTEM
       - KEY_NO_DEATH_PERMISSION
+      - KEY_SOURCE_NOT_ALLOWED
       - MAX_RETRIES
       - NOT_FAILED
       - NOT_RETRYABLE
@@ -43820,7 +43838,9 @@ components:
       type: string
       description: |-
         * `BATCH_TOO_LARGE` - BATCH_TOO_LARGE
+        * `INVALID_SOURCE_SYSTEM` - INVALID_SOURCE_SYSTEM
         * `KEY_NO_DEATH_PERMISSION` - KEY_NO_DEATH_PERMISSION
+        * `KEY_SOURCE_NOT_ALLOWED` - KEY_SOURCE_NOT_ALLOWED
         * `MAX_RETRIES` - MAX_RETRIES
         * `NOT_FAILED` - NOT_FAILED
         * `NOT_RETRYABLE` - NOT_RETRYABLE
