@@ -101,7 +101,21 @@ describe("P6: closing a photo viewer", () => {
   it("thumbnail off screen: fades in place over 160, no shrink", async () => {
     const { calls, leaving } = await close(false, <Thumb at={{ x: 0, y: -500, width: 100, height: 100 }} />);
     expect(calls).toEqual([expect.objectContaining({ toValue: 0, duration: 160, easing: EASE.exit })]);
-    expect(leaving?.transform).toBeUndefined();
+    // The same three entries as a shrink, at the identity: dropping the transform handed RN `transform: null`.
+    expect(JSON.stringify(leaving?.transform)).not.toContain("null");
+    expect(leaving?.transform).toHaveLength(3);
+  });
+
+  it("reopened after shrinking onto its thumbnail, the layer keeps its transform (null was a red screen on Android)", async () => {
+    const thumb = <Thumb at={{ x: 0, y: 0, width: 100, height: 100 }} />;
+    const view = renderSoul(ui(true, thumb));
+    await act(async () => {});
+    view.rerender(inSoulFrame(ui(false, thumb)));
+    await act(async () => {});
+    await wait(motion.photoClose + 50);
+    view.rerender(inSoulFrame(ui(true, thumb)));
+    await act(async () => {});
+    expect(flat(screen.getByTestId("fade-modal")).transform).toHaveLength(3);
   });
 
   it("thumbnail gone: fades in place over 160", async () => {

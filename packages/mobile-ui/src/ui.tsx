@@ -57,7 +57,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Reanimated, { Easing as REasing, FadeOut, Keyframe, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { notify } from "@soulledger/core/platform";
@@ -242,6 +242,8 @@ export function useToplineRuns(): number {
  * layer back onto that thumbnail over `photoClose` (160, exit curve), fading as it goes; a thumbnail off screen or gone
  * fades in place over the same 160; under reduce motion an 80 fade, as any modal.
  */
+const NO_SHRINK: PhotoShrink = { dx: 0, dy: 0, scale: 1 };
+
 export function FadeModal({
   visible,
   closeTo,
@@ -297,18 +299,24 @@ export function FadeModal({
     play(thumb ? photoShrinkTo(thumb, Dimensions.get("window"), closeFromRef.current?.()) : null, motion.photoClose);
     return () => run?.stop();
   }, [visible, mounted, opacity, shrink, dialogIn, dialogOut, reduced]);
-  const transform = onto
-    ? [
-        { translateX: shrink.interpolate({ inputRange: [0, 1], outputRange: [0, onto.dx] }) },
-        { translateY: shrink.interpolate({ inputRange: [0, 1], outputRange: [0, onto.dy] }) },
-        { scale: shrink.interpolate({ inputRange: [0, 1], outputRange: [1, onto.scale] }) },
-      ]
-    : undefined;
+  // Always the same three entries: going from an animated transform to none hands RN `transform: null`, and
+  // processTransform throws on it -- reopening a viewer that had shrunk onto its thumbnail was a red screen
+  // (Huawei phone, 2026-11-26). With no target the entries are the identity.
+  const to = onto ?? NO_SHRINK;
+  const transform = [
+    { translateX: shrink.interpolate({ inputRange: [0, 1], outputRange: [0, to.dx] }) },
+    { translateY: shrink.interpolate({ inputRange: [0, 1], outputRange: [0, to.dy] }) },
+    { scale: shrink.interpolate({ inputRange: [0, 1], outputRange: [1, to.scale] }) },
+  ];
   return (
     <Modal {...rest} visible={mounted} transparent animationType="none">
-      <Animated.View testID="fade-modal" style={[styles.fill, { opacity, transform }]}>
-        {visible ? children : held}
-      </Animated.View>
+      {/* An Android Modal is a window of its own, outside App.tsx's root: without a root here no gesture inside it
+          (PhotoPager's zoom, tap and drag-down) receives a touch (RNGH docs; seen on the Huawei phone 2026-11-26). */}
+      <GestureHandlerRootView style={styles.fill}>
+        <Animated.View testID="fade-modal" style={[styles.fill, { opacity, transform }]}>
+          {visible ? children : held}
+        </Animated.View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
