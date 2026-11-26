@@ -21,7 +21,7 @@ import { Press, ThemeContext, pressedFace, shade, styles as uiStyles } from "@so
 const REPO = path.join(__dirname, "..", "..", "..");
 const DIRS = [path.join("mobile", "src"), path.join("mobile-officer", "src"), path.join("packages", "mobile-ui", "src")];
 
-type Why = "SCRIM" | "FULL_SCREEN_SKIP" | "VIEWER_PAGE" | "HIDDEN_FIELD_TAP" | "HOLD_FILLS_ITSELF";
+type Why = "SCRIM" | "FULL_SCREEN_SKIP" | "HIDDEN_FIELD_TAP" | "HOLD_FILLS_ITSELF";
 
 /** 文件 → 每一处不画按下态的 `Pressable` 是什么(数组长度 = 次数)。 */
 const PLAIN: Record<string, Why[]> = {
@@ -37,9 +37,6 @@ const PLAIN: Record<string, Why[]> = {
   // 欢迎层 / 冷启动:整屏点一下跳过。
   "mobile/src/welcome.tsx": ["FULL_SCREEN_SKIP"],
   "packages/mobile-ui/src/coldStartView.tsx": ["FULL_SCREEN_SKIP"],
-  // 看大图时的一整页(点一下关)。
-  "mobile/src/screens/chatImages.tsx": ["VIEWER_PAGE"],
-  "mobile-officer/src/screens/letterImages.tsx": ["VIEWER_PAGE"],
   // 验证码格子:点它只是把焦点给下面那个看不见的输入框(accessible={false})。
   "mobile/src/screens/forgotPassword.tsx": ["HIDDEN_FIELD_TAP"],
   // 按住才成立的两处:按下时自己的进度环 / 印色在走,就是按下态。
