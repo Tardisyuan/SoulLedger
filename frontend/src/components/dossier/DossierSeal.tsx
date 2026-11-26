@@ -13,7 +13,7 @@ const HALL_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "
  * 所以随 `[data-civ]` 与深浅主题走 —— 这是组件而不是 public/ 下 SVG 的原因,另一个是地府的四个字随殿变。
  *
  * `pending`:落印前的虚线预览(22% + 虚线框)。`stamp`:这一次会话里刚落下 —— 全站同一下落印 `.stamp-in`
- * (globals.css,第五十三批 G1:200ms 从 1.18 倍落到 1,只播一次;减少动效时 120ms 淡入)。尺寸 96 / 72 / 40(`--seal-size`)。
+ * (globals.css,第五十三批 G1:200ms 从 1.18 倍落到 1,只播一次;减少动效时 120ms 淡入)。尺寸 96 / 72 / 40(由 `size` 给)。
  * 印面文字不翻译,读屏读 `aria-label`。
  */
 export function DossierSeal({

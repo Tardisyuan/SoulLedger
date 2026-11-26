@@ -269,12 +269,6 @@
   box-shadow: inset 0 0 0 1px oklch(var(--color-line));
   min-width: 0;
 }
-.judgeHead {
-  margin: 0;
-  font: var(--tai-head);
-  letter-spacing: 0.08em;
-  color: oklch(var(--color-ink-subtle));
-}
 .sealBox {
   display: grid;
   grid-template-columns: 96px minmax(0, 1fr);

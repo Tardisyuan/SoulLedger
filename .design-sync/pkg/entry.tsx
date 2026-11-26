@@ -115,7 +115,7 @@ export { LogoutConfirmDialog } from "../../frontend/src/components/layout/Logout
 export { MfaRequiredBanner } from "../../frontend/src/components/layout/MfaRequiredBanner";
 export { ConnectionStatus, ConnectionBanner } from "../../frontend/src/components/connection-status";
 export { PageSection } from "../../frontend/components/ui/page-section";
-export { Skeleton, TableSkeleton, CardSkeleton, ListSkeleton } from "../../frontend/components/ui/skeleton";
+export { Skeleton, TableSkeleton, ListSkeleton } from "../../frontend/components/ui/skeleton";
 export { DataTable } from "../../frontend/components/ui/data-table";
 export { GlobalNav, BottomBar } from "../../frontend/src/components/layout/GlobalNav";
 export { Breadcrumb } from "../../frontend/src/components/layout/Breadcrumb";

@@ -551,22 +551,6 @@
             }
           }
         }
-      },
-      "6": {
-        "$value": {
-          "colorSpace": "oklch",
-          "components": [0.650533, 0.044564, 249.6206]
-        },
-        "$extensions": {
-          "org.soulledger": {
-            "modes": {
-              ".light": {
-                "colorSpace": "oklch",
-                "components": [0.620712, 0.045066, 249.6583]
-              }
-            }
-          }
-        }
       }
     }
   }
