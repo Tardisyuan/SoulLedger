@@ -194,7 +194,7 @@ export function SoulCodeField({
             style={[styles.scan, { borderLeftColor: theme.hair }]}
           >
             <ScanGlyph color={theme.ink} />
-            <Txt variant="label" style={styles.scanText}>
+            <Txt variant="meta">
               {t("soul_app.login.scan")}
             </Txt>
           </Press>
@@ -249,6 +249,5 @@ const styles = StyleSheet.create({
   switch: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", marginTop: -8, marginBottom: -12 },
   switchText: { textDecorationLine: "underline" },
   scan: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderLeftWidth: 1 },
-  scanText: { letterSpacing: 0 },
   problem: { fontFamily: family.ui[600] },
 });

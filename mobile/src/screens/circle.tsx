@@ -40,7 +40,7 @@ import { GoneScreen, useGone } from "../gone";
 import { quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   FadeModal,
@@ -118,7 +118,7 @@ export function tellScreening(
 
 function Mono({ children, tone = "subtle" }: { children: string; tone?: "subtle" | "muted" }) {
   return (
-    <Txt variant="value" tone={tone} style={styles.mono}>
+    <Txt variant="valueSm" tone={tone}>
       {children}
     </Txt>
   );
@@ -147,7 +147,7 @@ function ReactionSummary({ post }: { post: SoulPost }) {
             style={[styles.chip, { borderColor: lamp ? t.lamp : post.my_reaction === r.type ? t.ink : t.hair2, backgroundColor: lamp ? t.lampBg : "transparent" }]}
           >
             <ReactionMark type={r.type} size={12} color={color} />
-            <Txt variant="value" style={[styles.chipCount, { color }]}>
+            <Txt variant="valueSm" style={{ color }}>
               {String(post.reaction_counts[r.type])}
             </Txt>
           </View>
@@ -226,7 +226,7 @@ export function PostCard({
             {reborn ? <Tag testID={`reborn-${post.id}`} text={tr("soul_app.circle.post.reborn")} tone="quiet" /> : null}
           </View>
           <View style={[styles.line, styles.meta]}>
-            <OneLine variant="value" tone="subtle" style={styles.mono} onPress={onPress}>
+            <OneLine variant="valueSm" tone="subtle" onPress={onPress}>
               {formatStamp(post.create_time) ?? ""}
             </OneLine>
             <Tag text={tr(visLabel(post.visibility))} tone="quiet" />
@@ -275,7 +275,7 @@ export function PostCard({
   );
   const style = [styles.card, { paddingHorizontal: gutter, borderBottomColor: t.hair }, gone && styles.gone];
   return onPress ? (
-    <Pressable testID={`post-${post.id}`} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: t.s1 }]}>
+    <Pressable testID={`post-${post.id}`} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: t.hair }]}>
       {body}
     </Pressable>
   ) : (
@@ -678,7 +678,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
               ]}
             >
               {lamp ? <Icon name={on ? "lampLit" : "lamp"} size={13} color={color} strokeWidth={1.2} /> : <ReactionMark type={r.type} size={13} color={color} />}
-              <Txt variant="label" style={[styles.noSpacing, { color }]}>
+              <Txt variant="meta" style={{ color }}>
                 {tr(r.key)}
               </Txt>
             </Press>
@@ -694,7 +694,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
         </View>
       ) : null}
       <Sheet open={asking} onClose={() => setAsking(false)} edge={t.lamp} closeLabel={tr("soul_app.circle.react.lamp_cancel")}>
-        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingBottom: 24 + insets.bottom }]}>
+        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingHorizontal: gutter }, { paddingBottom: 24 + insets.bottom }]}>
           <View style={styles.line}>
             <Icon name="lampLit" size={22} color={t.lamp} strokeWidth={1.2} />
             <Txt variant="title" style={styles.sheetTitle}>
@@ -704,17 +704,17 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
           <Txt variant="caption" tone="muted">
             {tr("soul_app.circle.react.lamp_confirm_body")}
           </Txt>
-          <Pressable
+          <Press
             testID="lamp-confirm"
             accessibilityRole="button"
             onPress={() => {
               setAsking(false);
               onReact("ETERNAL_LIGHT");
             }}
-            style={({ pressed }) => [styles.lampButton, { backgroundColor: t.lamp, opacity: pressed ? 0.85 : 1 }]}
+            style={[styles.lampButton, { backgroundColor: t.lamp }]}
           >
             <Txt style={[styles.lampButtonText, { color: t.lampBg }]}>{tr("soul_app.circle.react.lamp_confirm")}</Txt>
-          </Pressable>
+          </Press>
           <Button testID="lamp-cancel" kind="secondary" title={tr("soul_app.circle.react.lamp_cancel")} onPress={() => setAsking(false)} />
         </View>
       </Sheet>
@@ -751,7 +751,7 @@ function CommentRow({
           <OneLine style={styles.commentName} onPress={onAuthor}>
             {c.author.display_name}
           </OneLine>
-          <OneLine variant="value" tone="subtle" style={styles.mono}>
+          <OneLine variant="valueSm" tone="subtle">
             {formatStamp(c.create_time) ?? ""}
           </OneLine>
           {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
@@ -788,6 +788,7 @@ function CommentRow({
  * more before anything is sent. Deleting cannot be undone, so it is never one tap.
  */
 function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | "comment"; id: string } | null; onClose: () => void; onDeleted: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
@@ -817,7 +818,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
       <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} accessibilityRole="button" onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
         {asking ? (
-          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 24 + insets.bottom }]}>
+          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 24 + insets.bottom }]}>
             <Txt variant="title" style={styles.sheetTitle}>
               {tr(target?.kind === "post" ? "soul_app.circle.delete.post_title" : "soul_app.circle.delete.comment_title")}
             </Txt>
@@ -829,7 +830,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
           </View>
         ) : (
           <View testID="delete-menu" accessibilityViewIsModal style={[styles.menu, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
-            <Press testID="delete-row" accessibilityRole="button" onPress={() => setAsking(true)} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+            <Press testID="delete-row" accessibilityRole="button" onPress={() => setAsking(true)} style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: t.hair }]}>
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.circle.delete.action")}
               </Txt>
@@ -1089,11 +1090,9 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   center: { textAlign: "center" },
-  noSpacing: { letterSpacing: 0 },
   pad: { paddingVertical: 24 },
-  mono: { fontSize: 12, lineHeight: 16 },
   line: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   meta: { marginTop: 4 },
   name: { fontSize: 16, lineHeight: 24, flexShrink: 1 },
@@ -1103,9 +1102,8 @@ const styles = StyleSheet.create({
   note: { marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 12, paddingVertical: 8 },
   cardFoot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" },
   summary: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1 },
-  chipCount: { fontSize: 12, lineHeight: 16 },
-  tagNeg: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: radius.control },
+  tagNeg: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   tagNegText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.8 },
   subTabs: { flexDirection: "row", borderBottomWidth: 1 },
   subTab: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderBottomWidth: 2 },
@@ -1128,7 +1126,7 @@ const styles = StyleSheet.create({
   lockUntil: { marginTop: 8 },
   bar: { paddingVertical: 12, borderBottomWidth: 1 },
   lampPill: { borderWidth: 2, borderRadius: radius.pill },
-  reaction: { minWidth: 44, minHeight: 44, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
+  reaction: { minWidth: 44, minHeight: 44, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderRadius: radius.control },
   lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   scrim: { flex: 1 },
   sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingTop: 24, paddingHorizontal: 20, gap: 12 },

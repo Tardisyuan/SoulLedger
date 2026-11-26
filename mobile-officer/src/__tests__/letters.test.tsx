@@ -387,7 +387,7 @@ describe("a soul's pictures in the thread (2026-10-10)", () => {
     await screen.findByText("附上一张");
     const tiles = screen.getAllByTestId("letter-image");
     expect(tiles).toHaveLength(2);
-    expect(StyleSheet.flatten(tiles[0].props.style)).toMatchObject({ width: 160, height: 120, borderRadius: 6, borderWidth: StyleSheet.hairlineWidth });
+    expect(StyleSheet.flatten(tiles[0].props.style)).toMatchObject({ width: 160, height: 120, borderRadius: 6, borderWidth: 1 });
     expect(StyleSheet.flatten(tiles[1].props.style)).toMatchObject({ width: 90, height: 120 });
     expect(StyleSheet.flatten(tiles[0].props.style).aspectRatio).toBeUndefined();
     expect(tiles[0].props.accessibilityLabel).toBe("一张图，没有附字");

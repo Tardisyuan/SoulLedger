@@ -14,7 +14,7 @@ import { realmLabel } from "@soulledger/core/config/civilizations";
 import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
@@ -23,37 +23,8 @@ import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, stateNote, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
 import { publishVoiceNumber } from "@soulledger/mobile-ui/src/voiceCache";
-import { radius, space } from "@soulledger/mobile-ui/src/theme";
-import {
-  Block,
-  Button,
-  DataRow,
-  DataRows,
-  EnumBadge,
-  enumText,
-  EnumValue,
-  FadeIn,
-  GUTTER,
-  Input,
-  Interp,
-  Notice,
-  OneLine,
-  PageEmptyArt,
-  Quote,
-  RadioMark,
-  Screen,
-  ScreenError,
-  SectionLabel,
-  Skeleton,
-  StaleLine,
-  Txt,
-  useLandingFade,
-  useLayout,
-  useReducedMotion,
-  useReloadOnRefocus,
-  useRemote,
-  useTheme,
-} from "@soulledger/mobile-ui/src/ui";
+import { radius, space, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
+import { Block, Button, DataRow, DataRows, EnumBadge, enumText, EnumValue, FadeIn, GUTTER, Input, Interp, Notice, OneLine, PageEmptyArt, Quote, RadioMark, Screen, ScreenError, SectionLabel, Skeleton, StaleLine, Txt, useLandingFade, useLayout, useReducedMotion, useReloadOnRefocus, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 import { CooldownShorteningBlock } from "./cooldown";
 import { useDiscardGuard } from "./discardGuard";
 import { useResidenceNames } from "../residence";
@@ -124,7 +95,7 @@ export function EligibilityCard({
             {/* An approved shortening moved the date: say so beside it; the original date lives in the officer's detail only. */}
             {cooling && list.cooldown_shortening?.status === "APPROVED" ? (
               <View testID="cooldown-brought-forward" style={[styles.forwardTag, { borderColor: theme.ink }]}>
-                <Txt variant="label" style={styles.forwardText}>
+                <Txt variant="meta" style={styles.forwardText}>
                   ↑ {t("soul_app.cooldown.brought_forward")}
                 </Txt>
               </View>
@@ -149,13 +120,13 @@ function ApplicationRow({ a, onOpen, gone }: { a: MeRebirthApplication; onOpen: 
   const { gutter } = useLayout();
   const press = gone ? undefined : onOpen;
   return (
-    <Pressable
+    <Press
       testID={`open-${a.id}`}
       accessibilityRole={press ? "button" : undefined}
       accessibilityState={gone ? { disabled: true } : undefined}
       disabled={!press}
       onPress={press}
-      style={({ pressed }) => [styles.appRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed, gone && styles.gone]}
+      style={[styles.appRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, gone && styles.gone]}
     >
       <View style={styles.fill}>
         <EnumBadge namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
@@ -167,7 +138,7 @@ function ApplicationRow({ a, onOpen, gone }: { a: MeRebirthApplication; onOpen: 
         </OneLine>
       </View>
       <Icon name="chevron" size={15} color={theme.inkSubtle} />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -245,15 +216,14 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
   const { t } = useI18n();
   const { compact } = useLayout();
   return (
-    <Pressable
+    <Press
       testID={`form-${form}`}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       onPress={onPick}
-      style={({ pressed }) => [
+      style={[
         styles.formCard,
         { backgroundColor: theme.s0, borderLeftColor: selected ? theme.ink : "transparent" },
-        pressed && styles.pressed,
       ]}
     >
       <View style={styles.dot}>
@@ -271,7 +241,7 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
           {t(`soul_app.form_notes.${form}`)}
         </Txt>
       </View>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -447,7 +417,7 @@ function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }
       <View testID="landing-rule" pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.ink }]} />
       {reduced ? null : (
         <Animated.View pointerEvents="none" style={[styles.landingTag, { borderColor: theme.ink, opacity }]}>
-          <Txt testID="landing-tag" variant="label" tone="ink" style={styles.landingTagText}>
+          <Txt testID="landing-tag" variant="label" tone="ink">
             {t("soul_app.detail.new_result")}
           </Txt>
         </Animated.View>
@@ -661,8 +631,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  pressed: { opacity: 0.8 },
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   gap4: { marginTop: 4 },
   gap10: { marginTop: 12 },
   /** A11 panel: radius 6 (`radius.dialog`), 16 inside, 12 between the eligibility items. */
@@ -673,7 +642,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginVertical: space[1] },
   /** 24 high, 1px ink outline, 12 / 16 600 (the `label` variant is 12 / 18: the nearest on the type scale). */
   forwardTag: { height: 24, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: space[2], justifyContent: "center" },
-  forwardText: { letterSpacing: 0, fontWeight: "600" },
+  forwardText: { fontWeight: "600" },
   appRow: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1 },
   stack: { gap: 24 },
   note: { borderLeftWidth: 2, paddingLeft: 12 },
@@ -690,8 +659,7 @@ const styles = StyleSheet.create({
   formTitle: { marginTop: 16 },
   stateNote: { marginTop: 8 },
   landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
-  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  landingTagText: { fontSize: 12, letterSpacing: 0.4 },
+  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   badgeItem: { flexShrink: 0, maxWidth: "100%" },
   handler: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4 },

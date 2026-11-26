@@ -44,6 +44,7 @@ import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { useDay } from "./lifeProgress";
 import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 import { useDiscardGuard } from "./discardGuard";
 import { ButtonPair, MfaSheet } from "./mfaParts";
@@ -284,7 +285,7 @@ export function AppealDeadlineNote({ list, onOpen }: { list: MeJudgmentAppealLis
       testID="appeal-deadline-note"
       accessibilityRole="button"
       onPress={onOpen}
-      style={({ pressed }) => [styles.note, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && { backgroundColor: theme.s2 }]}
+      style={({ pressed }) => [styles.note, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && { backgroundColor: theme.hair }]}
     >
       <Txt variant="body" style={styles.fill}>
         {t("appeals.open_note", { n: String(open.length), date: day(open[0]) })}
@@ -514,13 +515,13 @@ export function JudgmentAppealScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   note: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
-  line: { marginTop: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, gap: 4 },
+  line: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, gap: 4 },
   entry: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12 },
   round: { paddingVertical: 8, gap: 4 },
   compensation: { gap: 2, marginTop: 4 },
   form: { paddingVertical: 24, gap: 20 },
   count: { alignSelf: "flex-end", marginTop: 4 },
-  tag: { borderWidth: 2, paddingHorizontal: 4 },
+  tag: { borderWidth: 2, borderRadius: radius.control, paddingHorizontal: 4 },
   ladder: { gap: 8, marginTop: 4 },
   station: { flexDirection: "row", gap: 8 },
   awaiting: { paddingHorizontal: 8, paddingVertical: 4 },

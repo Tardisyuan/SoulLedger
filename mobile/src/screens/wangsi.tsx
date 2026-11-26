@@ -149,7 +149,7 @@ export function WangsiGrievanceScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  line: { marginTop: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, gap: 4 },
+  line: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, gap: 4 },
   entry: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12 },
   form: { paddingVertical: 24, gap: 20 },
   count: { alignSelf: "flex-end", marginTop: 4 },

@@ -16,7 +16,7 @@ import { soulChatApi, soulChatErrorMessage, type SoulChatLookupResult, type Soul
 import { soulSocialApi, type PaginatedSoulCards, type SoulCard } from "@soulledger/core/api/soul-social";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { useChat, type Chat } from "../chat";
 import { CLOSED_REASONS, chatSections } from "@soulledger/core/domain/soulChat";
@@ -28,7 +28,7 @@ import { TAG_GLYPH } from "../rules";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
 import { radius, touch, type Theme } from "@soulledger/mobile-ui/src/theme";
-import { Button, Empty, FadeIn, LATIN_KEYBOARD, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { Button, Empty, FadeIn, Input, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, pressedFace, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 
 export const ANDROID = Platform.OS === "android";
@@ -138,7 +138,7 @@ function Row({
   const { gutter, twoLine } = useLayout();
   // S4: the name and the time keep to one line each; above 1.5× text the time moves under the name.
   const time = stamp ? (
-    <OneLine testID={`${testID}-stamp`} variant="value" tone="subtle" style={styles.stamp} onPress={onPress}>
+    <OneLine testID={`${testID}-stamp`} variant="valueSm" tone="subtle" onPress={onPress}>
       {stamp}
     </OneLine>
   ) : null;
@@ -153,7 +153,8 @@ function Row({
         { paddingHorizontal: gutter, borderBottomColor: hall ? t.hair2 : t.hair },
         hall && { backgroundColor: t.s1, borderLeftWidth: 3, borderLeftColor: t.ink, paddingLeft: gutter - 3 },
         dim && { opacity: 0.82 },
-        pressed && { backgroundColor: t.s2 },
+        // A1: no ground takes `hair`; the hall row's s1 darkens (`pressedFace`).
+        pressed && pressedFace(t, hall ? t.s1 : undefined),
       ]}
     >
       {glyph}
@@ -199,6 +200,7 @@ export function Fab({ onPress, label }: { onPress: () => void; label: string }) 
 }
 
 export function LettersScreen() {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const chat = useChat();
@@ -230,7 +232,7 @@ export function LettersScreen() {
   if (chat.availability === "not_configured") {
     return (
       <Screen scroll={false} edges={["left", "right"]}>
-        <View style={styles.pad}>
+        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           <Notice tone="neutral" testID="chat-not-configured">
             {tr("soul_app.chat.not_configured")}
           </Notice>
@@ -241,7 +243,7 @@ export function LettersScreen() {
   if (!chat.conversations) {
     return (
       <Screen scroll={false} edges={["left", "right"]}>
-        <View style={styles.pad}>
+        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           {chat.listError ? (
             <Notice tone="neutral" onRetry={() => void chat.reload()} testID="chat-list-error">
               {tr("soul_app.chat.unavailable.list")}
@@ -281,7 +283,7 @@ export function LettersScreen() {
             ListHeaderComponent={
               <>
                 {chat.availability === "unavailable" ? (
-                  <View style={styles.pad}>
+                  <View style={[styles.pad, { paddingHorizontal: gutter }]}>
                     <Notice tone="neutral" onRetry={chat.reconnect} testID="chat-unavailable">
                       {tr("soul_app.chat.unavailable.list")}
                     </Notice>
@@ -367,6 +369,7 @@ async function everyPage(load: (page: number) => Promise<PaginatedSoulCards>): P
 type Lookup = { state: "idle" } | { state: "busy" } | { state: "found"; card: SoulChatLookupResult } | { state: "not_found" } | { state: "error"; key: string; params?: Record<string, string> };
 
 export function FindSoulScreen() {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const chat = useChat();
@@ -429,32 +432,27 @@ export function FindSoulScreen() {
 
   return (
     <Screen edges={["left", "right", "bottom"]} testID="find-soul">
-      <View style={[styles.findBlock, { borderBottomColor: t.hair }]}>
-        <SectionLabel>{tr("soul_app.chat.find.by_code")}</SectionLabel>
-        <View style={[styles.codeBox, { backgroundColor: t.s1, borderColor: lookup.state === "error" ? t.negStrong : t.inkSubtle }]}>
-          <TextInput
-            testID="find-code"
-            accessibilityLabel={tr("soul_app.chat.find.by_code")}
-            value={code}
-            onChangeText={(v) => {
-              setCode(v);
-              if (lookup.state !== "idle") setLookup({ state: "idle" });
-            }}
-            onSubmitEditing={(e) => void find(e.nativeEvent.text)}
-            placeholder={tr("soul_app.chat.find.code_placeholder")}
-            placeholderTextColor={t.inkSubtle}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            // As on the login screen: a pinyin / kana keyboard would compose the letters of a code into words.
-            keyboardType={LATIN_KEYBOARD}
-            maxLength={16}
-            returnKeyType="search"
-            style={[styles.codeInput, { color: t.ink }]}
-          />
-        </View>
-        <Txt variant="label" tone="subtle" style={styles.noSpacing}>
-          {tr("soul_app.chat.find.code_hint")}
-        </Txt>
+      <View style={[styles.findBlock, { paddingHorizontal: gutter }, { borderBottomColor: t.hair }]}>
+        <Input
+          testID="find-code"
+          label={tr("soul_app.chat.find.by_code")}
+          hint={tr("soul_app.chat.find.code_hint")}
+          invalid={lookup.state === "error"}
+          mono
+          value={code}
+          onChangeText={(v) => {
+            setCode(v);
+            if (lookup.state !== "idle") setLookup({ state: "idle" });
+          }}
+          onSubmitEditing={(e) => void find(e.nativeEvent.text)}
+          placeholder={tr("soul_app.chat.find.code_placeholder")}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          // As on the login screen: a pinyin / kana keyboard would compose the letters of a code into words.
+          keyboardType="ascii-capable"
+          maxLength={16}
+          returnKeyType="search"
+        />
         <Button testID="find-submit" kind="secondary" title={tr("soul_app.chat.find.title")} busy={lookup.state === "busy"} onPress={() => void find()} />
         {lookup.state === "found" ? (
           <View testID="find-result" style={[styles.card, { borderColor: t.hair, backgroundColor: t.s1 }]}>
@@ -478,9 +476,9 @@ export function FindSoulScreen() {
           </Notice>
         ) : null}
       </View>
-      <View style={styles.findBlock}>
+      <View style={[styles.findBlock, { paddingHorizontal: gutter }]}>
         <SectionLabel>{tr("soul_app.chat.find.from_circle")}</SectionLabel>
-        <Txt variant="label" tone="subtle" style={styles.noSpacing}>
+        <Txt variant="meta" tone="subtle">
           {tr("soul_app.chat.find.circle_hint")}
         </Txt>
         {circle === null ? (
@@ -524,29 +522,25 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   center: { textAlign: "center" },
-  noSpacing: { letterSpacing: 0 },
   pad: { padding: 20 },
   sectionLabel: { paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1 },
   row: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 16, borderBottomWidth: 1, minHeight: 64 },
   rowHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   rowTitle: { fontSize: 16, lineHeight: 24, flexShrink: 1 },
-  stamp: { fontSize: 12, lineHeight: 16 },
   preview: { fontSize: 16, lineHeight: 24, marginTop: 4 },
   hint: { marginTop: 4 },
   dot: { width: 8, height: 8, marginTop: 8 },
   glyph: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   glyphText: { fontFamily: family.ui[500] },
   tag: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: touch.tag, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 4 },
-  tagText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, letterSpacing: 0 },
-  tagGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
+  tagText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20 },
+  tagGlyph: { fontFamily: family.glyph },
   empty: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48 },
   emptyButton: { alignSelf: "stretch", marginTop: 4 },
   fab: { position: "absolute", right: 16, bottom: 16, width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   fabSpace: { height: 88 },
   findBlock: { paddingHorizontal: 20, paddingVertical: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: "transparent" },
-  codeBox: { minHeight: 48, borderWidth: 1, borderRadius: radius.control, justifyContent: "center" },
-  codeInput: { minHeight: 46, paddingHorizontal: 12, fontFamily: family.mono[500], fontSize: 16, letterSpacing: 2.2 },
-  card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
+  card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderRadius: radius.dialog, padding: 16 },
   write: { minHeight: ANDROID ? 48 : 44, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   writeText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 16 },
   circle: { gap: 2 },

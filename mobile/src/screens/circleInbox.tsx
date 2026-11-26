@@ -12,12 +12,13 @@ import { soulErrorMessage } from "@soulledger/core/api/soul";
 import { soulSocialApi, type SoulInteraction } from "@soulledger/core/api/soul-social";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useEffect, useRef } from "react";
-import { Pressable, SectionList, StyleSheet, View } from "react-native";
+import { SectionList, StyleSheet, View } from "react-native";
 
 import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useGone } from "../gone";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
-import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { invalidateSocialStatus, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, usePaged } from "../paged";
@@ -66,13 +67,13 @@ function Row({ row, onPress: open }: { row: SoulInteraction; onPress: () => void
   const gone = useGone().has(row.kind !== "FOLLOW" && row.post_id ? `post:${row.post_id}` : "");
   const onPress = gone ? undefined : open;
   return (
-    <Pressable
+    <Press
       testID={`interaction-${row.id}`}
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityState={gone ? { disabled: true } : undefined}
       disabled={!onPress}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, { paddingHorizontal: gutter, borderTopColor: t.hair, backgroundColor: t.s1 }, pressed && styles.pressed, gone && styles.gone]}
+      style={[styles.row, { paddingHorizontal: gutter, borderTopColor: t.hair, backgroundColor: t.s1 }, gone && styles.gone]}
     >
       <View style={styles.dotCol}>
         {row.unread ? (
@@ -94,7 +95,7 @@ function Row({ row, onPress: open }: { row: SoulInteraction; onPress: () => void
           {interactionStamp(row.last_at)}
         </OneLine>
       </View>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -189,9 +190,8 @@ export function useUnreadInteractions(): string | null {
 }
 
 const styles = StyleSheet.create({
-  gone: { opacity: 0.45 },
+  gone: { opacity: GONE_OPACITY },
   fill: { flex: 1, minWidth: 0 },
-  pressed: { opacity: 0.8 },
   pad: { paddingVertical: 16 },
   group: { paddingTop: 12, paddingBottom: 4, fontFamily: family.ui[600] },
   row: { minHeight: 72, flexDirection: "row", gap: 12, paddingVertical: 12, borderTopWidth: 1 },

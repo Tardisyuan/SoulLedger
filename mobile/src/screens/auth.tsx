@@ -47,7 +47,7 @@ export function LanguageSwitch() {
             onPress={() => setLocale(l)}
             style={[styles.language, { borderColor: on ? t.ink : "transparent" }]}
           >
-            <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.languageText}>
+            <Txt variant="meta" tone={on ? "ink" : "subtle"}>
               {LOCALE_LABELS[l]}
             </Txt>
           </Press>
@@ -75,7 +75,7 @@ function NetworkNotice({ onRetry }: { onRetry: () => void }) {
   return (
     <View testID="login-error" accessibilityRole="alert" style={[styles.network, { borderColor: theme.neg, backgroundColor: theme.s0 }]}>
       <View style={styles.fill}>
-        <Txt testID="login-network-title" style={[styles.noticeTitle, { color: theme.negInk }]}>
+        <Txt testID="login-network-title" variant="section" style={{ color: theme.negInk }}>
           {t("soul_app.mfa.login.network")}
         </Txt>
         <Txt testID="login-network-body" variant="caption" tone="muted">
@@ -117,7 +117,7 @@ function LapsedNotice({ lapse, bio }: { lapse: Lapse; bio: string }) {
         ◇
       </Txt>
       <View style={styles.fill}>
-        <Txt testID="login-lapsed-title" style={styles.noticeTitle}>
+        <Txt testID="login-lapsed-title" variant="section">
           {t(keys.title, { bio })}
         </Txt>
         <Txt testID="login-lapsed-body" variant="caption" tone="muted">
@@ -354,7 +354,7 @@ export function LoginScreen() {
   const canSubmit = canSubmitLogin(code, password, busy);
   const forgot = (
     <Press testID="login-forgot" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgot}>
-      <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+      <Txt variant="meta" tone="muted" style={styles.underline}>
         {t("soul_app.forgot_password.link")}
       </Txt>
     </Press>
@@ -385,7 +385,7 @@ export function LoginScreen() {
             accessibilityLiveRegion="polite"
             style={[styles.gapTop, styles.resetNotice, { borderColor: theme.ink, borderLeftColor: theme.pos }]}
           >
-            <Txt testID="login-reset-title" style={styles.resetTitle}>
+            <Txt testID="login-reset-title" variant="section">
               {t("soul_app.forgot_password.success_title")}
             </Txt>
             <Txt testID="login-reset-body" variant="caption" tone="muted">
@@ -457,7 +457,7 @@ export function LoginScreen() {
         ) : (
         <>
         {bioFailed ? (
-          <Txt testID="login-bio-failed" accessibilityRole="alert" style={[styles.gapTop, styles.noticeTitle]}>
+          <Txt testID="login-bio-failed" accessibilityRole="alert" variant="section" style={styles.gapTop}>
             {t(bioFailed === "locked" ? "soul_app.bio.locked" : "soul_app.bio.failed", { bio: bio.word })}
           </Txt>
         ) : null}
@@ -540,7 +540,7 @@ export function LoginScreen() {
         {/* 第二十八批 S5: the sign-in group of the help page, reachable signed out. */}
         {final ? <View /> : (
           <Press testID="login-trouble" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("Help", { only: "login" })} style={styles.trouble}>
-            <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+            <Txt variant="meta" tone="muted" style={styles.underline}>
               {t("soul_app.help.login_trouble")}
             </Txt>
           </Press>
@@ -599,9 +599,8 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
       </Txt>
       <Interp
         testID="expiry-remaining"
-        variant="label"
+        variant="meta"
         tone={warn ? "warn" : "subtle"}
-        style={styles.noSpacing}
         text={t(
           expiry.expired
             ? "soul_app.change_password.expired_consequence"
@@ -744,19 +743,15 @@ const styles = StyleSheet.create({
   // 24 under the field above like every other label, not 36 (iPhone 17, 2026-11-21: 「隔得太开」).
   forgotAside: { marginVertical: -12 },
   underline: { textDecorationLine: "underline" },
-  resetNotice: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
-  resetTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
+  resetNotice: { gap: 4, borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
   footer: { borderTopWidth: 1, marginHorizontal: 24, marginTop: 24, paddingTop: 24, paddingBottom: 16 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
   language: { minWidth: 56, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
-  languageText: { fontSize: 12, letterSpacing: 0 },
   stack: { gap: 16, paddingHorizontal: GUTTER + 8 },
-  expiry: { borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
+  expiry: { borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
   expiryValue: { fontSize: 16, lineHeight: 24, fontFamily: family.mono[500] },
   inlineMono: { fontSize: 12 },
-  noSpacing: { letterSpacing: 0 },
-  noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   network: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   lapsed: { flexDirection: "row", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   list: { borderWidth: 1, borderRadius: radius.sheet, overflow: "hidden" },

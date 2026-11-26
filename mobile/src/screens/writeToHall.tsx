@@ -22,6 +22,7 @@ import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { Button, Input, Notice, Screen, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 import { compressWithSize, pickImages } from "./circleMedia";
 import { useDiscardGuard } from "./discardGuard";
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   underline: { textDecorationLine: "underline" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, justifyContent: "center" },
+  chip: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderRadius: radius.control, justifyContent: "center" },
   shots: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   shot: { width: 88, height: 88, borderWidth: 1 },
   shotImage: { width: "100%", height: "100%" },

@@ -97,7 +97,7 @@ function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderA
             accessibilityRole="button"
             accessibilityLabel={a.label}
             onPress={a.onPress}
-            style={({ pressed }) => [styles.icon, a.text ? styles.textAction : null, a.framed && { borderWidth: 1, borderColor: t.ink }, pressed && { backgroundColor: t.s2 }]}
+            style={({ pressed }) => [styles.icon, a.text ? styles.textAction : null, a.framed && { borderWidth: 1, borderColor: t.ink }, pressed && { backgroundColor: t.hair }]}
           >
             {a.text ? (
               <Txt variant="label" tone="ink">
@@ -108,7 +108,7 @@ function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderA
             )}
             {a.badge ? (
               <View testID={`${a.testID}-badge`} style={[styles.actionBadge, { backgroundColor: t.ink }]}>
-                <Txt variant="label" style={[styles.actionBadgeText, { color: t.s0 }]}>
+                <Txt variant="meta" style={{ color: t.s0 }}>
                   {a.badge}
                 </Txt>
               </View>
@@ -126,7 +126,7 @@ function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderA
           accessibilityRole="button"
           accessibilityLabel={tr("soul_app.settings.title")}
           onPress={onAccount}
-          style={({ pressed }) => [styles.icon, pressed && { backgroundColor: t.s2 }]}
+          style={({ pressed }) => [styles.icon, pressed && { backgroundColor: t.hair }]}
         >
           <Icon name="person" size={18} color={t.ink} strokeWidth={1.2} />
         </Pressable>
@@ -307,7 +307,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               }}
               style={({ pressed }) => [
                 stack ? [styles.tabRow, { borderBottomColor: t.hair }] : [styles.tab, wide && styles.tabWide],
-                !selected && pressed && { backgroundColor: t.s2 },
+                !selected && pressed && { backgroundColor: t.hair },
               ]}
             >
               <View style={styles.tabGlyphBox} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -319,7 +319,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               </View>
               <Txt
                 testID={`tab-${route.name}-label`}
-                variant="label"
+                variant="meta"
                 numberOfLines={wide || stack ? 2 : 1}
                 // Stacked, four rows share the screen with the page: the label stops at 1.5x (11 → 16.5pt)
                 // instead of the app's 2.35 cap.
@@ -342,10 +342,9 @@ const styles = StyleSheet.create({
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   textAction: { width: undefined, minWidth: 44, paddingHorizontal: 8 },
   actionBadge: { position: "absolute", top: 4, right: 0, minWidth: 16, height: 16, paddingHorizontal: 4, alignItems: "center", justifyContent: "center" },
-  actionBadgeText: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   title: { flex: 1, paddingHorizontal: 4 },
   /** 补足 A3: 20 / 28 — the simplified plaque's title. */
-  barTitle: { fontSize: 20, lineHeight: 28, letterSpacing: 0 },
+  barTitle: { fontSize: 20, lineHeight: 28 },
   /** 16 from the edge, as 1e draws it: the bar's 4 plus this. */
   titleStart: { paddingLeft: 12 },
   frame: { overflow: "hidden" },
@@ -358,12 +357,12 @@ const styles = StyleSheet.create({
   tabRow: { minHeight: 48, paddingVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
   tabGlyphBox: { alignItems: "center" },
   /** v4's title serif: 18 / 22. */
-  tabGlyph: { fontSize: 18, lineHeight: 22, letterSpacing: 0 },
+  tabGlyph: { fontSize: 18, lineHeight: 22 },
   /** The current item's 14 × 2 rule, 3 under its character. */
   tabCurrent: { position: "absolute", bottom: -3, width: 14, height: 2, borderRadius: 1 },
   tabBadge: { position: "absolute", top: -2, right: -8, width: 8, height: 8, borderRadius: radius.pill },
-  /** v4: 11 / 14 under a 22 icon. */
-  tabLabel: { fontSize: 11, lineHeight: 16, letterSpacing: 0, textAlign: "center" },
+  /** v4: 11 / 16 under a 22 icon. */
+  tabLabel: { fontSize: 11, lineHeight: 16, textAlign: "center" },
   /** v4 page header: the seal, then the big title over its sub line. */
   plaque: { paddingTop: 12, paddingBottom: 16, paddingLeft: 16, paddingRight: 4 },
   plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12 },

@@ -68,8 +68,8 @@ export default function App() {
 }
 
 /**
- * The hall's theme once signed in -- its civilization colour on the band, the primary button and the
- * current tab, the shared neutrals everywhere else -- and the neutral skin before. Paper (light) is
+ * The hall's theme once signed in -- its civilization colour on the band (the primary button and the current tab
+ * are ink since 第四十八批), the shared neutrals everywhere else -- and the neutral skin before. Paper (light) is
  * the default; the system's dark, or the choice made in 我的, switches it.
  */
 function Themed() {

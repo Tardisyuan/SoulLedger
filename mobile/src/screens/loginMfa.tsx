@@ -27,6 +27,7 @@ import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { recoveryOf, stateOfFailure, type StepState } from "../mfa";
 import { useSession, type MfaChallenge } from "../session";
 import { Button, Input, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { CheckRow, CoverRule, DigitField, Heading, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 
@@ -139,7 +140,7 @@ export function LoginSecondStep({
           <Icon name="back" size={18} color={theme.ink} strokeWidth={1.4} />
         </Press>
         <BrandMark size={24} color={theme.ink} />
-        <Txt style={styles.brand}>{t("soul_app.app_name")}</Txt>
+        <Txt variant="title">{t("soul_app.app_name")}</Txt>
       </View>
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
       <ScrollView style={{ backgroundColor: theme.s1 }} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -264,12 +265,11 @@ const styles = StyleSheet.create({
   mono: { fontFamily: family.mono[400] },
   bar: { height: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 4, paddingRight: 16 },
   backHit: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  brand: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
   body: { paddingVertical: 32, paddingHorizontal: 24, gap: 20, flexGrow: 1 },
   titleBlock: { gap: 4 },
   recovery: { fontSize: 24, letterSpacing: 2 },
   lost: { padding: 16, paddingTop: 24, gap: 20 },
-  card: { borderWidth: 1, padding: 16, gap: 8 },
+  card: { borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 8 },
   cardRow: { flexDirection: "row", gap: 16 },
   cardKey: { minWidth: 40 },
   note: { flexDirection: "row", gap: 12, alignItems: "baseline" },

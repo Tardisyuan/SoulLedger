@@ -24,6 +24,7 @@ import { stateOfFailure, type StepState } from "../mfa";
 import type { AppStackParams } from "../navTypes";
 import { SessionContext } from "../session";
 import { Button, Input, Notice, Screen, Skeleton, Txt, useLayout, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { DigitField, StepNotice } from "./mfaParts";
 
 type Step = "verify" | "email" | "code";
@@ -285,7 +286,7 @@ function NudgeCard({ onEnd }: { onEnd: () => void }) {
 const styles = StyleSheet.create({
   page: { paddingVertical: 16, gap: 16 },
   fill: { flex: 1 },
-  nudge: { borderWidth: 1, padding: 16, gap: 8, marginVertical: 12 },
+  nudge: { borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 8, marginVertical: 12 },
   nudgeTitle: { fontFamily: family.ui[600] },
   nudgeButtons: { flexDirection: "row", gap: 8, marginTop: 4 },
 });

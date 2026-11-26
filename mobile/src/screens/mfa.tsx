@@ -31,6 +31,7 @@ import { secretLines, stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { useSession } from "../session";
 import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import type { AppStackParams } from "../navTypes";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
@@ -83,7 +84,7 @@ function WizardHeader({ step, onClose }: { step: 1 | 2 | 3; onClose?: () => void
         ) : (
           <View style={styles.closeGap} />
         )}
-        <Txt accessibilityRole="header" style={styles.barTitle}>
+        <Txt accessibilityRole="header" variant="title">
           {tr("soul_app.mfa.setup.title")}
         </Txt>
         <Txt testID="wizard-step" variant="value" tone="muted" style={styles.stepText}>
@@ -631,7 +632,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
       </ScrollView>
 
       <MfaSheet testID="regen-sheet" open={asking === "regen"} onClose={close} closeLabel={tr("soul_app.common.cancel")}>
-        <Txt accessibilityRole="header" style={styles.sheetTitle}>
+        <Txt accessibilityRole="header" variant="title">
           {tr("soul_app.mfa.regen.title")}
         </Txt>
         <Txt variant="bodyLg">{tr("soul_app.mfa.regen.body", { n: String(left) })}</Txt>
@@ -650,7 +651,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
       </MfaSheet>
 
       <MfaSheet testID="disable-sheet" open={asking === "disable"} onClose={close} closeLabel={tr("soul_app.common.cancel")}>
-        <Txt accessibilityRole="header" style={styles.sheetTitle}>
+        <Txt accessibilityRole="header" variant="title">
           {tr("soul_app.mfa.disable.title")}
         </Txt>
         <Txt variant="bodyLg">{tr("soul_app.mfa.disable.body")}</Txt>
@@ -769,7 +770,6 @@ const styles = StyleSheet.create({
   bar: { height: 56, flexDirection: "row", alignItems: "center", gap: 4, paddingRight: 16, paddingLeft: 4, borderBottomWidth: 1 },
   closeHit: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   closeGap: { width: 12 },
-  barTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
   stepText: { marginLeft: "auto" },
   page: { padding: 16, paddingTop: 24, gap: 16 },
   footer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, borderTopWidth: 1, gap: 8 },
@@ -786,11 +786,10 @@ const styles = StyleSheet.create({
   code: { width: "46%", fontFamily: family.mono[500], fontSize: 20, lineHeight: 28, letterSpacing: 0.7 },
   manage: { padding: 16, gap: 16 },
   panel: { borderWidth: 1, padding: 16 },
-  tag: { alignSelf: "flex-start", height: 24, paddingHorizontal: 8, marginBottom: 8, justifyContent: "center", borderWidth: 1 },
+  tag: { alignSelf: "flex-start", height: 24, paddingHorizontal: 8, marginBottom: 8, justifyContent: "center", borderWidth: 1, borderRadius: radius.control },
   tagText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 16 },
   panelBody: { marginBottom: 12 },
   fact: { minHeight: 56, justifyContent: "center", borderTopWidth: 1 },
   factRow: { flexDirection: "row", alignItems: "center" },
   low: { flexDirection: "row", gap: 12, padding: 12, borderWidth: 1, marginTop: 8 },
-  sheetTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
 });

@@ -83,11 +83,13 @@ export {
   type Biometry,
 } from "@soulledger/mobile-ui/src/deviceCredential";
 export {
+  GONE_OPACITY,
   HIGHLIGHT_ALPHA,
   civKeyOf,
   motion,
   radius,
   space,
   themeFor,
+  touch as sharedTouch,
   type ColorScheme,
 } from "@soulledger/mobile-ui/src/theme";

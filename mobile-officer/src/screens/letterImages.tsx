@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { Image, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { FadeModal, PhotoPager, Txt, space, thumbRef, useFrontPhoto, useI18n, useOnline, useTheme, Press } from "../shared";
+import { FadeModal, PhotoPager, Txt, radius, space, thumbRef, useFrontPhoto, useI18n, useOnline, useTheme, Press } from "../shared";
 
 export interface LetterImageRef {
   id: string;
@@ -39,7 +39,7 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
   if (broken && offline) {
     // Pictures are not cached (readCache.ts): a grey block of the picture's own shape until the network is back.
     return (
-      <View testID="letter-image-later" style={{ ...box, borderRadius: 6, backgroundColor: theme.s2, alignItems: "center", justifyContent: "center" }}>
+      <View testID="letter-image-later" style={{ ...box, borderRadius: radius.dialog, backgroundColor: theme.s2, alignItems: "center", justifyContent: "center" }}>
         <Txt variant="caption" tone="muted">
           {t("officer_app.offline.image_later")}
         </Txt>
@@ -68,7 +68,7 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
       accessibilityRole="imagebutton"
       accessibilityLabel={label}
       onPress={onOpen}
-      style={{ ...box, borderRadius: 6, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: theme.hair, backgroundColor: theme.s2 }}
+      style={{ ...box, borderRadius: radius.dialog, overflow: "hidden", borderWidth: 1, borderColor: theme.hair, backgroundColor: theme.s2 }}
     >
       <Image source={{ uri: mediaUrl(image.url) }} style={styles.fill} resizeMode="cover" accessibilityLabel={label} onError={() => setBroken(true)} />
     </Press>

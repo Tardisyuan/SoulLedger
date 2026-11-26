@@ -22,6 +22,7 @@ import { stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { Button, Input, Notice, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useAnnounceOnMount, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
 import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
 /** While a request is in preparation, ask the server this often. A push also says when it is ready. */
@@ -93,7 +94,7 @@ function RequestSheet({ open, onClose, onDone }: { open: boolean; onClose: () =>
   };
   return (
     <MfaSheet testID="export-sheet" open={open} onClose={close} closeLabel={t("soul_app.common.cancel")}>
-      <Txt accessibilityRole="header" style={styles.sheetTitle}>
+      <Txt accessibilityRole="header" variant="title">
         {t("soul_app.export.sheet_title")}
       </Txt>
       <Txt variant="bodyLg">{t("soul_app.export.sheet_body")}</Txt>
@@ -344,7 +345,6 @@ const styles = StyleSheet.create({
   pad: { paddingVertical: 24, gap: 16 },
   bullets: { gap: 4 },
   bullet: { flexDirection: "row", gap: 8 },
-  card: { borderWidth: 1, padding: 16, gap: 8 },
+  card: { borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 8 },
   mono: { fontFamily: family.mono[400] },
-  sheetTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
 });

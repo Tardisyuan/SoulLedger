@@ -50,7 +50,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
 import { radius } from "@soulledger/mobile-ui/src/theme";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
-import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press, useLayout } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
@@ -69,12 +69,13 @@ const lineKey = (line: Line) => line.key;
 const NO_MESSAGES: ChatMessage[] = [];
 
 const Mono = ({ children, tone = "muted" }: { children: string; tone?: "muted" | "negInk" }) => (
-  <Txt variant="value" tone={tone} style={styles.inlineMono}>
+  <Txt variant="valueSm" tone={tone}>
     {children}
   </Txt>
 );
 
 export function ConversationScreen({ id, landed }: { id: string; landed?: boolean }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const chat = useChat();
@@ -355,7 +356,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         <PlaqueFrame testID="header">
           <Header onBack={navigation.goBack} title="" />
         </PlaqueFrame>
-        <View style={styles.pad}>
+        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           {chat.availability === "not_configured" ? (
             <Notice tone="neutral" testID="chat-not-configured">
               {tr("soul_app.chat.not_configured")}
@@ -455,7 +456,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             {tr("soul_app.chat.unavailable.banner")}
           </Txt>
           <Press testID="chat-reconnect" accessibilityRole="button" onPress={chat.reconnect} style={[styles.smallButton, { borderColor: t.hair2 }]}>
-            <Txt variant="label" style={styles.noSpacing}>
+            <Txt variant="meta">
               {tr("soul_app.chat.unavailable.retry")}
             </Txt>
           </Press>
@@ -481,7 +482,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         data={rows}
         keyExtractor={lineKey}
         style={[styles.fill, sealed && styles.sealed]}
-        contentContainerStyle={styles.thread}
+        contentContainerStyle={[styles.thread, { paddingHorizontal: gutter }]}
         keyboardShouldPersistTaps="handled"
         // Dragging the thread takes the keyboard down, as the system's messages do; iOS follows the finger.
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
@@ -522,7 +523,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       />
       <ChatImageViewer images={gallery} index={viewing} onClose={() => setViewing(null)} />
       {mode.kind === "hall" && hallLast ? (
-        <View style={styles.hallState}>
+        <View style={[styles.hallState, { paddingHorizontal: gutter }]}>
           <Txt testID="hall-state" variant="body" tone="muted" style={styles.hallStateText}>
             {tr(hallLast === "soul" ? "soul_app.chat.state.awaiting_hall" : "soul_app.chat.state.awaiting_me")}
           </Txt>
@@ -568,7 +569,7 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
           {title}
         </Txt>
         {subtitle ? (
-          <Txt testID="relation" variant="value" tone="subtle" style={styles.subtitle}>
+          <Txt testID="relation" variant="valueSm" tone="subtle">
             {subtitle}
           </Txt>
         ) : null}
@@ -583,6 +584,7 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
  * 「拉黑」 (2026-11-01) asks first (`BlockSheet`); absent once I have blocked them.
  */
 function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onBlock?: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const page = usePageTheme();
   const { t: tr } = useI18n();
@@ -603,21 +605,21 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
         <View style={[styles.fill, { backgroundColor: page.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setOpen(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
           <View testID="chat-menu-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: page.s1, borderTopColor: page.hair2, paddingBottom: 20 + insets.bottom }]}>
-            <Press testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
+            <Press testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: page.hair }]}>
               <Txt variant="bodyLg">{tr("soul_app.chat.menu.profile")}</Txt>
             </Press>
             <Press
               testID="chat-menu-report"
               accessibilityRole="button"
               onPress={go(() => navigation.navigate("CircleReport", { target: "USER", id: String(userId), preview: name }))}
-              style={[styles.menuRow, { borderBottomColor: page.hair }]}
+              style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: page.hair }]}
             >
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.chat.menu.report")}
               </Txt>
             </Press>
             {onBlock ? (
-              <Press testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
+              <Press testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: page.hair }]}>
                 <Txt variant="bodyLg" tone="neg">
                   {tr("soul_app.chat.menu.block")}
                 </Txt>
@@ -638,6 +640,7 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
 
 /** 拉黑 asks once: what it does, and where it is undone. */
 function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; open: boolean; busy: boolean; onConfirm: () => void; onClose: () => void }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
@@ -645,7 +648,7 @@ function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; op
     <FadeModal visible={open} onRequestClose={onClose}>
       <View style={[styles.fill, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} accessibilityRole="button" onPress={onClose} accessibilityLabel={tr("soul_app.common.cancel")} />
-        <View testID="block-sheet" accessibilityViewIsModal style={[styles.sheet, styles.confirmSheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
+        <View testID="block-sheet" accessibilityViewIsModal style={[styles.sheet, styles.confirmSheet, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
           <Txt variant="bodyLg">{tr("soul_app.chat.block.confirm_title", { name })}</Txt>
           <Txt variant="caption" tone="muted">
             {tr("soul_app.chat.block.confirm_body")}
@@ -709,9 +712,10 @@ function Band({
   onDecline: () => void;
   onBlock: () => void;
 }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
-  const box = [styles.band, { backgroundColor: t.s1, borderBottomColor: t.hair }];
+  const box = [styles.band, { paddingHorizontal: gutter }, { backgroundColor: t.s1, borderBottomColor: t.hair }];
   const line = (icon: "info" | "lock", text: ReactNode, testID: string) => (
     <View style={styles.bandRow}>
       <View style={styles.nudge}>
@@ -810,11 +814,11 @@ const Bubble = memo(function Bubble({ m, mine, read, landed, now }: { m: ChatMes
         ) : null}
         <Body text={m.body} />
         <View style={[styles.meta, mine && styles.metaMine]}>
-          <OneLine variant="value" tone="subtle" style={styles.metaTime}>
+          <OneLine variant="valueSm" tone="subtle">
             {bubbleStamp(m.ts, now)}
           </OneLine>
           {mine ? (
-            <Txt testID={read ? "receipt-read" : "receipt-sent"} variant="label" tone="subtle" style={styles.metaText}>
+            <Txt testID={read ? "receipt-read" : "receipt-sent"} variant="meta" tone="subtle">
               {tr(read ? "soul_app.chat.receipt.read" : "soul_app.chat.receipt.sent")}
             </Txt>
           ) : null}
@@ -853,19 +857,19 @@ function PendingBubble({ o, onResend, onDismiss, now }: { o: Outgoing; onResend:
         <Body text={o.body} dim={failed || queued} />
         <View style={[styles.meta, styles.metaMine]}>
           {queued || o.state === "sending" ? <Loader size={14} /> : null}
-          <Txt variant="label" tone={failed ? "negInk" : "subtle"} style={styles.metaText}>
+          <Txt variant="meta" tone={failed ? "negInk" : "subtle"}>
             {tr(receipt)}
           </Txt>
           {resendable ? (
             <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {tr("soul_app.chat.receipt.retry")}
               </Txt>
             </Press>
           ) : null}
           {failed ? (
             <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {tr("soul_app.chat.receipt.delete")}
               </Txt>
             </Press>
@@ -888,7 +892,7 @@ function HallDay({ day }: { day: string }) {
   const t = useTheme();
   return (
     <View testID={`hall-day-${day}`} style={styles.hallDay}>
-      <Txt variant="label" tone="subtle" style={styles.hallDayText}>
+      <Txt variant="meta" tone="subtle" style={styles.hallDayText}>
         {day}
       </Txt>
       <View style={[styles.fill, styles.hallDayRule, { borderTopColor: t.hair }]} />
@@ -900,11 +904,11 @@ function HallHead({ own, ts }: { own: boolean; ts: number | null }) {
   const { t: tr } = useI18n();
   return (
     <View style={styles.hallHead}>
-      <Txt variant="label" style={[styles.hallName, styles.fill]}>
+      <Txt variant="meta" style={[styles.hallName, styles.fill]}>
         {tr(own ? "soul_app.chat.side.me" : "soul_app.chat.side.hall")}
       </Txt>
       {ts !== null ? (
-        <Txt variant="label" tone="subtle" style={styles.hallTime}>
+        <Txt variant="meta" tone="subtle" style={styles.hallTime}>
           {hhmm(new Date(ts))}
         </Txt>
       ) : null}
@@ -917,12 +921,12 @@ const HallLetterGroup = memo(function HallLetterGroup({ group, onOpenImage }: { 
   const t = useTheme();
   const own = group.side === "soul";
   return (
-    <View testID={`hall-group-${own ? "me" : "hall"}`} style={[styles.hallGroup, own && { backgroundColor: t.s2, borderRadius: 6, padding: 12 }]}>
+    <View testID={`hall-group-${own ? "me" : "hall"}`} style={[styles.hallGroup, own && { backgroundColor: t.s2, borderRadius: radius.dialog, padding: 12 }]}>
       <HallHead own={own} ts={group.ts} />
       {group.letters.map(({ item: m, stamp }) => (
         <View key={m.eventId} testID={`hall-letter-${m.eventId}`} style={styles.hallLetter}>
           {stamp ? (
-            <Txt variant="label" tone="subtle" style={[styles.hallTime, styles.hallStamp]}>
+            <Txt variant="meta" tone="subtle" style={[styles.hallTime, styles.hallStamp]}>
               {hhmm(new Date(m.ts))}
             </Txt>
           ) : null}
@@ -944,29 +948,29 @@ function HallPendingLetter({ o, onResend, onDismiss, now }: { o: Outgoing; onRes
   const failed = o.state === "failed";
   const resendable = failed && (!o.refused || (o.refused.code === "request_throttled" && !!o.refused.retryAt && Date.parse(o.refused.retryAt) <= now));
   return (
-    <View testID={`pending-${o.state}`} style={[styles.hallGroup, { borderWidth: 1, borderStyle: "dashed", borderColor: t.inkSubtle, borderRadius: 6, padding: 12 }]}>
+    <View testID={`pending-${o.state}`} style={[styles.hallGroup, { borderWidth: 1, borderStyle: "dashed", borderColor: t.inkSubtle, borderRadius: radius.dialog, padding: 12 }]}>
       <HallHead own ts={null} />
       <Body text={o.body} />
       {failed ? (
         <View testID="pending-not-sent" style={styles.meta}>
-          <Txt variant="label" tone="neg" style={styles.metaText}>
+          <Txt variant="meta" tone="neg">
             {`${tr("letters.not_sent")} ·`}
           </Txt>
           {resendable ? (
             <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {tr("common.retry")}
               </Txt>
             </Press>
           ) : null}
           <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
-            <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+            <Txt variant="meta" tone="ink" style={styles.underline}>
               {tr("soul_app.chat.receipt.delete")}
             </Txt>
           </Press>
         </View>
       ) : (
-        <Txt testID="pending-queued-line" variant="label" tone="muted" style={styles.metaText}>
+        <Txt testID="pending-queued-line" variant="meta" tone="muted">
           {`◌ ${tr("letters.queued")}`}
         </Txt>
       )}
@@ -999,6 +1003,7 @@ function Dock({
   /** The screen hands a deleted letter's words back through this. */
   restore: RefObject<((text: string) => void) | null>;
 }) {
+  const { gutter } = useLayout();
   const t = useTheme();
   const { t: tr } = useI18n();
   const input = useRef<TextInput>(null);
@@ -1013,7 +1018,7 @@ function Dock({
   switch (mode.kind) {
     case "outgoing_locked":
       return (
-        <View testID="dock-locked" style={[styles.dock, pad, { backgroundColor: t.s1 }]}>
+        <View testID="dock-locked" style={[styles.dock, { paddingHorizontal: gutter }, pad, { backgroundColor: t.s1 }]}>
           <View style={[styles.lockedLine, { borderColor: t.hair2 }]}>
             <Txt variant="body" tone="subtle">
               {tr("soul_app.chat.request.locked")}
@@ -1039,7 +1044,7 @@ function Dock({
       return <View style={{ height: bottom }} />;
     case "hall_sealed":
       return (
-        <View style={[styles.dock, pad]}>
+        <View style={[styles.dock, { paddingHorizontal: gutter }, pad]}>
           <Button testID="go-current-hall" kind="secondary" title={tr("soul_app.chat.hall.go_current", { hall: hallName })} onPress={onHall} />
         </View>
       );
@@ -1048,7 +1053,7 @@ function Dock({
         mode.kind === "incoming" ? "soul_app.chat.compose.reply_placeholder" : mode.kind === "hall" ? "soul_app.chat.compose.hall_placeholder" : "soul_app.chat.compose.placeholder";
       const size = ANDROID ? 48 : 44;
       return (
-        <View testID="composer" style={[styles.dock, styles.composer, pad]}>
+        <View testID="composer" style={[styles.dock, { paddingHorizontal: gutter }, styles.composer, pad]}>
           {/* A request room (throttled) takes text only: the server refuses an image there. */}
           {mode.kind === "free" || mode.kind === "hall" ? <ImageButton size={size} onPress={onImage} disabled={picking} /> : null}
           <TextInput
@@ -1096,12 +1101,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   centered: { alignItems: "center" },
   pad: { padding: 20 },
-  noSpacing: { letterSpacing: 0 },
   underline: { textDecorationLine: "underline" },
-  inlineMono: { fontSize: 12, lineHeight: 16 },
   header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8 },
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
-  subtitle: { fontSize: 12, lineHeight: 16 },
   rightSlot: { flexDirection: "row", alignItems: "center" },
   sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
@@ -1110,7 +1112,7 @@ const styles = StyleSheet.create({
   hallSub: { fontSize: 12, lineHeight: 16, marginTop: 2 },
   unavailable: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
   square: { width: 9, height: 9 },
-  smallButton: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, minHeight: ANDROID ? 48 : 32, justifyContent: "center" },
+  smallButton: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 4, minHeight: ANDROID ? 48 : 32, justifyContent: "center" },
   band: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
   bandRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
   requestActions: { flexDirection: "row", gap: 8, paddingTop: 12, paddingLeft: 24 },
@@ -1124,32 +1126,30 @@ const styles = StyleSheet.create({
   day: { textAlign: "center", fontSize: 12, marginBottom: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 16 },
   mineRow: { justifyContent: "flex-end" },
-  bubble: { maxWidth: "76%", borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
+  bubble: { maxWidth: "76%", borderWidth: 1, borderRadius: radius.dialog, paddingHorizontal: 16, paddingVertical: 12 },
   body: { fontSize: 16, lineHeight: 24 },
   // 第六十四批: the hall thread. Groups 20 apart (as the officer app), letters in a group 16 apart.
   hallGroup: { gap: 16, alignSelf: "stretch", marginBottom: 20 },
   hallLetter: { gap: 8 },
   hallHead: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-  hallName: { fontSize: 13, lineHeight: 20, letterSpacing: 0 },
-  hallTime: { fontSize: 12, lineHeight: 16, letterSpacing: 0, fontVariant: ["tabular-nums"] },
+  hallName: { fontSize: 13, lineHeight: 20 },
+  hallTime: { fontVariant: ["tabular-nums"] },
   hallStamp: { textAlign: "right" },
   hallDay: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 20 },
-  hallDayText: { fontSize: 11, lineHeight: 16, letterSpacing: 0 },
-  hallDayRule: { borderTopWidth: StyleSheet.hairlineWidth },
+  hallDayText: { fontSize: 11, lineHeight: 16 },
+  hallDayRule: { borderTopWidth: 1 },
   hallState: { paddingHorizontal: 20, paddingBottom: 8 },
   hallStateText: { fontSize: 13, lineHeight: 20 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   metaMine: { justifyContent: "flex-end" },
-  metaTime: { fontSize: 12, lineHeight: 16 },
-  metaText: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
-  newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   newTagText: { fontFamily: family.ui[500], fontSize: 12, lineHeight: 16, letterSpacing: 1.1 },
   rejected: { marginTop: 2 },
   dock: { paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1 },
   composer: { flexDirection: "row", gap: 12, alignItems: "flex-end" },
   // 24, not 20: the Han text is Noto Serif SC, whose glyph box is taller than 20 at 15 — Android clipped the top of
   // the first line. Padding stays 12 (the spacing scale), so one line is 48 tall on both platforms.
-  input: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, fontSize: 16, lineHeight: 32, maxHeight: 140 },
+  input: { flex: 1, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, fontSize: 16, lineHeight: 32, maxHeight: 140 },
   send: { paddingHorizontal: ANDROID ? 0 : 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
   lockedLine: { minHeight: 44, borderWidth: 1, borderStyle: "dotted", justifyContent: "center", paddingHorizontal: 12 },

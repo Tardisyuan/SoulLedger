@@ -163,7 +163,7 @@ describe("feed and viewer", () => {
   });
 
   it.each([
-    [false, 120],
+    [false, 160],
     [true, 0],
   ])("reduce motion %s: images fade in over %i ms", async (reduced, ms) => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);

@@ -15,13 +15,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { isDenied } from "./rules";
-import { BusyLine, Button, EASE, Emblem, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./shared";
+import { BusyLine, Button, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press, sharedTouch } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
- * controls 44 / 48 / 56, the 2px top line, a status tag 28 high, a desk row 72.
+ * controls 44 / 48 / 56, the 2px top line, a status tag 28 high (all `touch` in theme.ts), and a desk row 72.
  */
-export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, topline: 2, tag: 28, row: 72 } as const;
+export const touch = { ...sharedTouch, row: 72 } as const;
 
 // ── status tags ────────────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ export function LoadingRows({ inContent = false }: { inContent?: boolean } = {})
   const shown = useAfter(motion.skeletonDelay);
   const [x] = useState(() => new Animated.Value(0));
   const [width, setWidth] = useState(0);
-  // The 30% run travels left to right and starts again, as the soul app's `Skeleton` line and the web's page-head
+  // The 32% run travels left to right and starts again, as the soul app's `Skeleton` line and the web's page-head
   // top line do; it stood still here from the start (found on the simulator 2026-11-16). Reduce motion: still.
   useEffect(() => {
     if (reduced || !width) return;
@@ -116,10 +116,10 @@ export function LoadingRows({ inContent = false }: { inContent?: boolean } = {})
           testID="state-loading-line"
           style={{
             height: touch.topline,
-            width: "30%",
+            width: "32%",
             backgroundColor: inContent ? t.ink : t.plaque,
             opacity: inContent ? 0.6 : 1,
-            transform: [{ translateX: reduced ? 0 : x.interpolate({ inputRange: [0, 1], outputRange: [-0.3 * width, width] }) }],
+            transform: [{ translateX: reduced ? 0 : x.interpolate({ inputRange: [0, 1], outputRange: [-0.32 * width, width] }) }],
           }}
         />
       </View>
@@ -179,7 +179,7 @@ export function StateView({
   }
   return (
     <View testID="state-empty" style={[styles.state, styles.empty]}>
-      {/* The hall's mark at 96, 12%: decoration, never a target. */}
+      {/* The hall's mark at 96, ink 10% (第四十八批第三节 A8, as the soul app's): decoration, never a target. */}
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.emptyMark}>
         <Emblem civ={t.civ} size={96} stroke={t.ink} />
       </View>
@@ -287,7 +287,7 @@ export function Row({
       accessibilityState={gone ? { disabled: true } : undefined}
       disabled={!press}
       onPress={press}
-      style={({ pressed }) => [styles.row, { minHeight, borderBottomColor: t.hair, backgroundColor: pressed ? t.hair : "transparent" }, gone ? { opacity: 0.45 } : null]}
+      style={({ pressed }) => [styles.row, { minHeight, borderBottomColor: t.hair, backgroundColor: pressed ? t.hair : "transparent" }, gone ? { opacity: GONE_OPACITY } : null]}
     >
       {highlight ? <Highlight /> : null}
       {glyph ? (
@@ -377,7 +377,7 @@ export function ActionButton({
       ? { bg: t.ink, border: t.ink, ink: t.s0 }
         : { bg: "transparent", border: kind === "ink-outline" ? t.ink : t.inkSubtle, ink: t.ink };
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={title}
@@ -385,13 +385,13 @@ export function ActionButton({
       accessibilityState={{ busy: !!busy, disabled: !!inert }}
       disabled={inert}
       onPress={onPress}
-      style={({ pressed }) => [styles.action, { backgroundColor: look.bg, borderColor: look.border, opacity: pressed ? 0.7 : 1 }, style]}
+      style={[styles.action, { backgroundColor: look.bg, borderColor: look.border }, style]}
     >
-      <Txt variant="nav" style={[styles.actionText, { color: look.ink }]}>
+      <Txt variant="nav" style={{ color: look.ink }}>
         {title}
       </Txt>
       {busy && !disabled ? <BusyLine color={look.ink} testID={testID ? `${testID}-busy` : "action-busy"} /> : null}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -432,7 +432,7 @@ export function Segmented<K extends string>({
             {/* One line, always: four segments on a 360dp phone left 「他人手上 · 0」 its count on a second
                 line (华为真机 10-29 第二轮). Four or more take 13pt, so the label fits, not cut; a label still too wide for
                 its third (「Medu Kemet」, 华为真机 11-14) shrinks to fit rather than end in …. */}
-            <Txt variant="nav" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[{ color: on ? t.s0 : t.ink, letterSpacing: 0 }, options.length > 3 && styles.segmentTight]}>
+            <Txt variant="nav" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[{ color: on ? t.s0 : t.ink }, options.length > 3 && styles.segmentTight]}>
               {label}
             </Txt>
           </Press>
@@ -523,7 +523,7 @@ export function IdentityBand({ hall, name }: { hall: string; name: string }) {
     <View
       testID="identity-band"
       onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
-      style={{ backgroundColor: t.s0, paddingTop: top, overflow: "hidden", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.hair }}
+      style={{ backgroundColor: t.s0, paddingTop: top, overflow: "hidden", borderBottomWidth: 1, borderBottomColor: t.hair }}
     >
       {height ? <GlowTop testID="identity-band-glow" color={t.glow} scheme={t.scheme} width={width} height={height} /> : null}
       {/* 第三十批 一.1: the civilization's line at the top of every page — four shapes since 第四十六批 (civHead.tsx). */}
@@ -804,14 +804,13 @@ const styles = StyleSheet.create({
   skeletonRow: { height: 72, justifyContent: "center", gap: space[3], paddingHorizontal: GUTTER, borderBottomWidth: 1 },
   state: { padding: GUTTER, gap: space[4] },
   empty: { alignItems: "center", paddingTop: space[7] },
-  emptyMark: { opacity: 0.12 },
+  emptyMark: { opacity: 0.1 },
   tag: { minHeight: touch.tag, borderRadius: radius.control, paddingHorizontal: space[2], justifyContent: "center", alignSelf: "flex-end" },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },
   rowText: { flex: 1, gap: space[1] },
   rowValue: { flexShrink: 1, maxWidth: "60%" },
   action: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center", paddingHorizontal: space[3] },
-  actionText: { letterSpacing: 0 },
   segmented: { flexDirection: "row", borderWidth: 1, borderRadius: radius.control, overflow: "hidden", marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
   // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.

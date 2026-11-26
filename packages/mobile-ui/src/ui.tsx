@@ -583,10 +583,10 @@ export function thumbRef(key: string): (node: View | null) => () => void {
 // ── type ───────────────────────────────────────────────────────────────
 
 /**
- * v4 (定稿 V4Batch07 的手机屏; user decision 2026-11-06 一律按 v4): 11 / 12 / 13 / 14 / 15 / 20 / 30
- * with line heights 16 / 16 / 20 / 22 / 24 / 28 / 38. Body is 14/22 (v3 13/20), the big serif
- * title 30/38 (v3 28/36), the line under a title 13/20 in --sub (`caption`, v3 12/18). v4 tracks
- * no control text; the eyebrow keeps its 0.08em. letterSpacing is in pt.
+ * v4 (定稿 V4Batch07 的手机屏; user decision 2026-11-06 一律按 v4), on the 4px grid since 第五十四批:
+ * 11 / 12 / 14 / 16 / 20 / 32 with line heights 16 / 16 / 20 / 24 / 28 / 40. Body is 14/20, the big serif
+ * title 32/40, the line under a title 14/20 in --sub (`caption`). v4 tracks no control text (`meta`,
+ * `valueSm`); `label` keeps its 0.4 and the eyebrow its 0.08em. letterSpacing is in pt.
  */
 export const TYPE = {
   /** Titles and display text in Noto Serif SC 600 (`family.title`); body and controls stay `ui`. */
@@ -596,7 +596,9 @@ export const TYPE = {
   body: { fontSize: 14, lineHeight: 20, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[500] },
   label: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.4 },
-  /** A ledger row's title (v3 `.life-records article b`), 15 / 600 on its row. */
+  /** `label` without its tracking (令牌 `tai.head` 12/16/500): a meta line, a time, a link under a message. */
+  meta: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[500] },
+  /** A ledger row's title (v3 `.life-records article b`), 16 / 24 / 600 on its row. */
   section: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[600] },
   /**
    * What a block of the page is — 11, upper case, always in `muted` (`SectionLabel`). Every
@@ -607,9 +609,11 @@ export const TYPE = {
   eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.88, textTransform: "uppercase" },
   caption: { fontSize: 14, lineHeight: 20, fontFamily: family.ui[400] },
   value: { fontSize: 14, lineHeight: 20, fontFamily: family.mono[400] },
+  /** `value` at 12/16: a time stamp, a code or a count beside a row. */
+  valueSm: { fontSize: 12, lineHeight: 16, fontFamily: family.mono[400] },
   valueLg: { fontSize: 32, lineHeight: 40, fontFamily: family.mono[500] },
   /**
-   * 第三十批 `--juan`: the 「卷」 register — a record's own words, the serif 16/28. Design draws 400; the app
+   * 第三十批 `--juan`: the 「卷」 register — a record's own words, the serif 16/24. Design draws 400; the app
    * bundles Noto Serif SC at 500 / 600 only, so it is 500 (a value with no Han takes EB Garamond, `quoteFamily`,
    * as quoted words do). `--juan-strong` (600) waits for the screen that draws it.
    */
@@ -1073,14 +1077,14 @@ export function Section({
   const ledger = index !== undefined;
   const header = ledger ? (
     <>
-      <Txt testID={testID ? `${testID}-index` : undefined} variant="value" tone="subtle" style={styles.ledgerIndex}>
+      <Txt testID={testID ? `${testID}-index` : undefined} variant="valueSm" tone="subtle" style={styles.ledgerIndex}>
         {String(index).padStart(2, "0")}
       </Txt>
       <Txt variant="section" style={styles.fill}>
         {title}
       </Txt>
       {count ? (
-        <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
+        <Txt testID={countTestID} variant="valueSm" tone="subtle" style={styles.count}>
           {count}
         </Txt>
       ) : null}
@@ -1094,7 +1098,7 @@ export function Section({
     <>
       <SectionLabel>{title}</SectionLabel>
       {count ? (
-        <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
+        <Txt testID={countTestID} variant="valueSm" tone="subtle" style={styles.count}>
           {count}
         </Txt>
       ) : null}
@@ -1453,7 +1457,7 @@ export function Input({
       onPress={() => setRevealed((v) => !v)}
       style={stack ? [styles.revealRow, { borderColor: t.hair, backgroundColor: t.s1 }] : [styles.reveal, { borderLeftColor: t.hair }]}
     >
-      <Txt variant="label" tone="muted" style={styles.noSpacing}>
+      <Txt variant="meta" tone="muted">
         {revealed ? secureToggle.hide : secureToggle.show}
       </Txt>
     </Press>
@@ -1522,7 +1526,7 @@ export function Input({
         {suffix}
       </View>
       {secureToggle && stack ? reveal : null}
-      {error ? <FieldError text={error} /> : hint ? <Txt variant="label" tone="subtle" style={styles.noSpacing}>{hint}</Txt> : null}
+      {error ? <FieldError text={error} /> : hint ? <Txt variant="meta" tone="subtle">{hint}</Txt> : null}
     </View>
   );
 }
@@ -1743,7 +1747,7 @@ export function SmallButton({ title, onPress, testID }: { title: string; onPress
       hitSlop={8}
       style={({ pressed }) => [styles.small, { borderColor: t.inkSubtle }, pressed && { backgroundColor: t.hair }]}
     >
-      <Txt variant="label" style={styles.noSpacing}>
+      <Txt variant="meta">
         {title}
       </Txt>
     </Pressable>
@@ -1827,7 +1831,7 @@ export function FailedLine({ text, onRetry, testID, retryTestID }: { text: strin
 
 /**
  * `juan` (第三十批 卷): the rows are a 「卷」 — hairline-ruled, the field names in a column of their own, the
- * values in the serif at 16/28 (`TYPE.juan`) in ink. The 本世 page's rows. Without it, the compact list.
+ * values in the serif at 16/24 (`TYPE.juan`) in ink. The 本世 page's rows. Without it, the compact list.
  */
 const JuanContext = createContext(false);
 
@@ -2006,7 +2010,7 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
       </Text>
       <View style={styles.original}>
         <View style={[styles.originalTag, { borderColor: t.hair2 }]}>
-          <Txt testID="original-tag" variant="label" tone="subtle" style={styles.originalText}>
+          <Txt testID="original-tag" variant="label" tone="subtle">
             {han ? tr("soul_app.original.tag_language", { language: tr("soul_app.original.zh") }) : tr("soul_app.original.tag")}
           </Txt>
         </View>
@@ -2293,18 +2297,17 @@ export const styles = StyleSheet.create({
   grow: { flexGrow: 1 },
   center: { textAlign: "center" },
   pressed: { opacity: 0.8 },
-  noSpacing: { letterSpacing: 0 },
   pullIndicator: { position: "absolute", top: 0, left: 0, right: 0, height: PULL_REFRESH_PT, alignItems: "center", justifyContent: "center" },
   pullGlyph: { fontFamily: family.glyph, fontSize: 20, lineHeight: 24 },
   block: { paddingHorizontal: GUTTER, paddingVertical: GUTTER },
-  count: { marginLeft: space[3], fontSize: 12, lineHeight: 16 },
+  count: { marginLeft: space[3] },
   sectionRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   // B11: a section's title row is 48 high.
   sectionHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", paddingHorizontal: GUTTER, paddingVertical: space[3] },
   sectionBody: { paddingHorizontal: GUTTER, paddingBottom: space[4] },
   /** v3 .life-records: a 60pt row — number, title, count, ＋. */
   ledgerHeader: { minHeight: 60 },
-  ledgerIndex: { width: 30, fontSize: 12, lineHeight: 16 },
+  ledgerIndex: { width: 30 },
   ledgerPlus: { width: 24, textAlign: "right", fontSize: 16, lineHeight: 24 },
   ledgerPlusOpen: { transform: [{ rotate: "45deg" }] },
   ledgerBody: { marginHorizontal: space[3], marginBottom: space[3], paddingHorizontal: space[4], paddingVertical: space[3], borderLeftWidth: 3 },
@@ -2347,7 +2350,7 @@ export const styles = StyleSheet.create({
   buttonText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, textAlign: "center" },
   // M10: the busy line's track, along the button's inner foot.
   busyTrack: { position: "absolute", left: 0, right: 0, bottom: 0, height: touch.topline, overflow: "hidden" },
-  notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
+  notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
   failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
   failedText: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
   small: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: space[3], paddingVertical: space[2] },
@@ -2380,16 +2383,15 @@ export const styles = StyleSheet.create({
     paddingVertical: space[1],
   },
   badgeWraps: { flexWrap: "wrap" },
-  badgeText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20, letterSpacing: 0 },
+  badgeText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 20 },
   // Design E 组: every status glyph from the one bundled font, never a per-glyph OS fallback.
-  badgeGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
+  badgeGlyph: { fontFamily: family.glyph },
   badgeRaw: { fontFamily: family.mono[400], fontSize: 12, lineHeight: 16, opacity: 0.85 },
   quote: { borderLeftWidth: 2, paddingLeft: space[4], paddingVertical: 2 },
   quoteText: { fontSize: 16, lineHeight: 24 },
   quoteCompact: { paddingLeft: space[3] },
   original: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2], marginTop: space[2] },
-  originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[1], paddingVertical: 2 },
-  originalText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.4 },
+  originalTag: { borderWidth: 1, borderStyle: "dashed", borderRadius: radius.control, paddingHorizontal: space[1], paddingVertical: 2 },
   skeleton: { paddingVertical: space[2] },
   skeletonRow: { paddingVertical: space[3], borderBottomWidth: 1 },
   progressTrack: { height: touch.topline, overflow: "hidden" },

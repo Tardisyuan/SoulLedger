@@ -25,7 +25,7 @@ import type { Outgoing } from "../chat";
 import { bubbleStamp } from "../chatRules";
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
-import { ON_PLAQUE } from "@soulledger/mobile-ui/src/theme";
+import { ON_PLAQUE, radius } from "@soulledger/mobile-ui/src/theme";
 import { AlertTxt, FadeModal, Loader, OneLine, PhotoPager, Txt, thumbRef, useFrontPhoto, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
@@ -141,11 +141,11 @@ export function ChatImageMessage({ image, mine, ts, now, onOpen, receipt }: { im
       <View testID="chat-image-message" style={mine ? styles.endAligned : undefined}>
         <Picture image={image} width={width} onPress={onOpen} testID="chat-image" />
         <View style={[styles.meta, mine && styles.metaMine]}>
-          <OneLine variant="value" tone="subtle" style={styles.metaTime}>
+          <OneLine variant="valueSm" tone="subtle">
             {bubbleStamp(ts, now)}
           </OneLine>
           {receipt ? (
-            <Txt variant="label" tone="subtle" style={styles.metaText}>
+            <Txt variant="meta" tone="subtle">
               {receipt}
             </Txt>
           ) : null}
@@ -199,7 +199,7 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
                 <Loader size={16} testID="pending-image-wait" />
               )}
               {o.state === "queued" ? (
-                <Txt variant="label" tone="ink" style={styles.metaText}>
+                <Txt variant="meta" tone="ink">
                   {tr("soul_app.chat.receipt.queued")}
                 </Txt>
               ) : null}
@@ -208,18 +208,18 @@ export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing
         </View>
         {failed ? (
           <View style={styles.failedRow}>
-            <AlertTxt testID="pending-image-error" variant="label" tone="negInk" style={styles.metaText}>
+            <AlertTxt testID="pending-image-error" variant="meta" tone="negInk">
               {`! ${tr("soul_app.chat.image.failed")}`}
             </AlertTxt>
             {retryable(o) ? (
               <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
-                <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+                <Txt variant="meta" tone="ink" style={styles.underline}>
                   {` · ${tr("soul_app.circle.media.retry")}`}
                 </Txt>
               </Press>
             ) : null}
             <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
-              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+              <Txt variant="meta" tone="ink" style={styles.underline}>
                 {` · ${tr("soul_app.chat.receipt.delete")}`}
               </Txt>
             </Press>
@@ -351,16 +351,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", marginBottom: 16 },
   mineRow: { justifyContent: "flex-end" },
   endAligned: { alignItems: "flex-end" },
-  frame: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 0, overflow: "hidden" },
-  rounded: { borderRadius: 6 },
+  frame: { borderWidth: 1, borderRadius: radius.none, overflow: "hidden" },
+  rounded: { borderRadius: radius.dialog },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 8 },
   centered: { textAlign: "center" },
   mask: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", gap: 8 },
   progress: { fontSize: 12 },
   meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   metaMine: { justifyContent: "flex-end" },
-  metaTime: { fontSize: 12, lineHeight: 16 },
-  metaText: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   failedRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   underline: { textDecorationLine: "underline" },
   reason: { marginTop: 2 },
@@ -368,5 +366,5 @@ const styles = StyleSheet.create({
   viewerText: { color: "#FFFFFF" },
   counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   counter: { color: ON_PLAQUE, fontSize: 14, lineHeight: 20 },
-  button: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  button: { borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
 });

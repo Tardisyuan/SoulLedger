@@ -28,10 +28,11 @@ import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { fileField } from "@soulledger/mobile-ui/src/platform";
 import { AlertTxt, FadeModal, PhotoPager, Txt, thumbRef, useFrontPhoto, useLayout, useReducedMotion, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { motion, radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 
 const GAP = 3;
-/** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
-const FADE_MS = 120;
+/** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长(`motion.fade`)。 */
+const FADE_MS = motion.fade;
 
 /** 帖子图的来源:签名地址取图,缓存按图的 id(见文件头)。 */
 export function postImageSource(m: PostMedia): ImageSource {
@@ -359,19 +360,19 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
 
 const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP, marginTop: 12 },
-  tile: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 0, overflow: "hidden", justifyContent: "center", alignItems: "center" },
+  tile: { borderWidth: 1, borderRadius: radius.none, overflow: "hidden", justifyContent: "center", alignItems: "center" },
   fill: { width: "100%", height: "100%" },
-  dim: { opacity: 0.45 },
+  dim: { opacity: GONE_OPACITY },
   broken: { textAlign: "center", paddingHorizontal: 8 },
   overlay: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, justifyContent: "flex-end", padding: 8, gap: 4 },
   mono: { fontSize: 12 },
   track: { height: 3, width: "100%" },
   bar: { height: 3 },
   actions: { flexDirection: "row", gap: 4, flexWrap: "wrap" },
-  action: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  action: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   corner: { position: "absolute", top: 4, right: 4, width: 22, height: 22, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   add: { borderStyle: "dashed", borderWidth: 1, gap: 4 },
   count: { marginTop: 8, fontSize: 12 },
   viewer: { flex: 1 },
-  viewerBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, height: 48, borderBottomWidth: StyleSheet.hairlineWidth },
+  viewerBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, height: 48, borderBottomWidth: 1 },
 });

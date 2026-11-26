@@ -75,7 +75,7 @@ function Count({ n, label, onPress, testID }: { n: number; label: string; onPres
     </>
   );
   return onPress ? (
-    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.countCell, { borderColor: t.hair }, pressed && { backgroundColor: t.s1 }]}>
+    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.countCell, { borderColor: t.hair }, pressed && { backgroundColor: t.hair }]}>
       {body}
     </Pressable>
   ) : (
@@ -232,7 +232,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
           <View testID="profile-menu" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
             {chat.availability !== "not_configured" && p ? (
               <>
-                <Press testID="menu-letter" accessibilityRole="button" onPress={() => void letter()} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+                <Press testID="menu-letter" accessibilityRole="button" onPress={() => void letter()} style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: t.hair }]}>
                   <Txt variant="bodyLg" style={styles.fill}>
                     {tr("soul_app.circle.profile.menu.letter")}
                   </Txt>
@@ -241,7 +241,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
                   </Txt>
                 </Press>
                 {p.is_mutual ? null : (
-                  <Txt testID="menu-letter-rule" variant="caption" tone="subtle" style={[styles.menuNote, { borderBottomColor: t.hair }]}>
+                  <Txt testID="menu-letter-rule" variant="caption" tone="subtle" style={[styles.menuNote, { paddingHorizontal: gutter }, { borderBottomColor: t.hair }]}>
                     {tr("soul_app.circle.profile.menu.letter_rule")}
                   </Txt>
                 )}
@@ -254,7 +254,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
                 setMenu(false);
                 if (p) navigation.navigate("CircleReport", { target: "USER", id: String(userId), preview: p.display_name });
               }}
-              style={[styles.menuRow, { borderBottomColor: t.hair }]}
+              style={[styles.menuRow, { paddingHorizontal: gutter }, { borderBottomColor: t.hair }]}
             >
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.circle.profile.menu.report")}
@@ -447,7 +447,7 @@ export function FollowListScreen({ relation }: { relation: "following" | "follow
                 testID={`soul-${r.user_id}`}
                 accessibilityRole="button"
                 onPress={() => navigation.navigate("SoulProfile", { userId: r.user_id })}
-                style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.s1 }]}
+                style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.hair }]}
               >
                 <Glyph text={r.display_name} tone={r.is_active ? "muted" : "subtle"} dotted={!r.is_active} size={36} />
                 <View style={styles.fill}>
@@ -596,7 +596,7 @@ export function CircleSearchScreen() {
               testID={`result-${r.user_id}`}
               accessibilityRole="button"
               onPress={() => navigation.navigate("SoulProfile", { userId: r.user_id })}
-              style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.s1 }]}
+              style={({ pressed }) => [styles.listRow, { paddingHorizontal: gutter, borderBottomColor: t.hair }, pressed && { backgroundColor: t.hair }]}
             >
               <Glyph text={r.display_name} tone="muted" size={36} />
               <View style={styles.fill}>

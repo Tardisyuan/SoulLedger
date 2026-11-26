@@ -17,11 +17,12 @@ import { stateOfFailure, type StepState } from "../mfa";
 import { useSession } from "../session";
 import { useBiometry } from "@soulledger/mobile-ui/src/deviceCredential";
 import { Button, Input, SwitchMark, Txt, useLayout, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
 export function SheetTitle({ children }: { children: string }) {
   return (
-    <Txt accessibilityRole="header" style={styles.sheetTitle}>
+    <Txt accessibilityRole="header" variant="title">
       {children}
     </Txt>
   );
@@ -274,10 +275,9 @@ export function BioAsk({ soulCode, welcomePending, onSettled }: { soulCode: stri
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  forget: { minHeight: 48, borderWidth: 1, borderRadius: 4, alignItems: "center", justifyContent: "center", marginTop: 8 },
+  forget: { minHeight: 48, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center", marginTop: 8 },
   forgetCancel: { minHeight: 48, alignItems: "center", justifyContent: "center" },
-  sheetTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
-  row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderBottomWidth: 1 },
   dim: { opacity: 0.6 },
   on: { fontFamily: family.ui[600] },
 });

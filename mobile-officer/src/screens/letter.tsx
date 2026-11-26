@@ -59,6 +59,7 @@ import {
   Sheet,
   SmallButton,
   Txt,
+  radius,
   space,
   useI18n,
   useOnline,
@@ -599,7 +600,7 @@ function DayDivider({ day }: { day: string }) {
   const theme = useTheme();
   return (
     <View testID={`letter-day-${day}`} style={styles.dayRow}>
-      <Txt variant="label" tone="subtle" style={styles.day}>
+      <Txt variant="meta" tone="subtle" style={styles.day}>
         {day}
       </Txt>
       <View style={[styles.dayRule, { borderTopColor: theme.hair }]} />
@@ -612,12 +613,12 @@ function GroupHead({ name, side, ts }: { name: string; side: "soul" | "hall"; ts
   const { t } = useI18n();
   return (
     <View style={styles.head}>
-      <Txt variant="label" numberOfLines={1} style={[styles.headName, styles.fill]}>
+      <Txt variant="meta" numberOfLines={1} style={[styles.headName, styles.fill]}>
         {name}
         <Txt variant="body" tone="muted" style={styles.headName}>{` · ${t(`letters.side.${side}`)}`}</Txt>
       </Txt>
       {ts !== null ? (
-        <Txt variant="label" tone="subtle" style={styles.time}>
+        <Txt variant="meta" tone="subtle" style={styles.time}>
           {hhmm(new Date(ts))}
         </Txt>
       ) : null}
@@ -650,13 +651,13 @@ const LetterGroupView = memo(function LetterGroupView({
   return (
     <View
       testID={`letter-group-${group.side}${group.open ? "-open" : ""}`}
-      style={[styles.group, own && { backgroundColor: theme.s2, borderRadius: 6, padding: 12 }, group.open && { borderLeftWidth: 2, borderLeftColor: theme.ink, paddingLeft: 12 }]}
+      style={[styles.group, own && { backgroundColor: theme.s2, borderRadius: radius.dialog, padding: 12 }, group.open && { borderLeftWidth: 2, borderLeftColor: theme.ink, paddingLeft: 12 }]}
     >
       <GroupHead name={name} side={group.side} ts={group.ts} />
       {group.letters.map(({ item: m, stamp }) => (
         <View key={m.event_id} testID={`letter-${own ? "hall" : "soul"}-${m.event_id}`} style={styles.letter}>
           {stamp ? (
-            <Txt variant="label" tone="subtle" style={[styles.time, styles.stamp]}>
+            <Txt variant="meta" tone="subtle" style={[styles.time, styles.stamp]}>
               {hhmm(new Date(m.timestamp))}
             </Txt>
           ) : null}
@@ -685,26 +686,26 @@ function OutboxLetter({ entry, name, offline, onRetry }: { entry: OutboxEntry; n
   const failed = entry.state === "failed";
   const retryable = (entry.reason ?? "retry") === "retry";
   return (
-    <View testID={`letter-outbox-${entry.state}`} style={[styles.group, { borderWidth: 1, borderStyle: "dashed", borderColor: theme.inkSubtle, borderRadius: 6, padding: 12 }]}>
+    <View testID={`letter-outbox-${entry.state}`} style={[styles.group, { borderWidth: 1, borderStyle: "dashed", borderColor: theme.inkSubtle, borderRadius: radius.dialog, padding: 12 }]}>
       <GroupHead name={name} side="hall" ts={null} />
       <Txt variant="body" style={styles.body}>
         {entry.text}
       </Txt>
       {failed ? (
         <View testID="letter-not-sent" style={styles.outboxLine}>
-          <Txt variant="label" tone="neg" style={styles.small}>
+          <Txt variant="meta" tone="neg">
             {retryable ? `${t("letters.not_sent")} · ` : `${t("letters.not_sent")} · ${t(`officer_app.outbox.${entry.reason}`)}`}
           </Txt>
           {retryable ? (
             <Press testID="letter-outbox-retry" accessibilityRole="button" disabled={offline} onPress={onRetry} hitSlop={12}>
-              <Txt variant="label" style={[styles.small, styles.link]}>
+              <Txt variant="meta" style={styles.link}>
                 {t("common.retry")}
               </Txt>
             </Press>
           ) : null}
         </View>
       ) : (
-        <Txt testID="letter-queued" variant="label" tone="muted" style={styles.small}>
+        <Txt testID="letter-queued" variant="meta" tone="muted">
           {`◌ ${t("letters.queued")}`}
         </Txt>
       )}
@@ -717,15 +718,14 @@ const styles = StyleSheet.create({
   group: { gap: 16, alignSelf: "stretch" },
   letter: { gap: 8 },
   head: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-  headName: { fontSize: 13, lineHeight: 20, letterSpacing: 0 },
-  time: { fontSize: 12, lineHeight: 16, letterSpacing: 0, fontVariant: ["tabular-nums"] },
+  headName: { fontSize: 13, lineHeight: 20 },
+  time: { fontVariant: ["tabular-nums"] },
   stamp: { textAlign: "right" },
   body: { fontSize: 16, lineHeight: 24 },
   dayRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  day: { fontSize: 11, lineHeight: 16, letterSpacing: 0 },
-  dayRule: { flex: 1, borderTopWidth: StyleSheet.hairlineWidth },
+  day: { fontSize: 11, lineHeight: 16 },
+  dayRule: { flex: 1, borderTopWidth: 1 },
   status: { fontSize: 13, lineHeight: 20 },
   outboxLine: { flexDirection: "row", alignItems: "center" },
-  small: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   link: { textDecorationLine: "underline" },
 });

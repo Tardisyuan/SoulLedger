@@ -19,13 +19,14 @@ import { platform } from "@soulledger/core/platform";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Linking, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Linking, StyleSheet, View } from "react-native";
 
 import { useAssist } from "../assist";
 import { Emblem, Icon, type IconName } from "@soulledger/mobile-ui/src/emblems";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useAskLogout } from "../logout";
 import { translate, useI18n } from "@soulledger/mobile-ui/src/i18n";
+import { radius } from "@soulledger/mobile-ui/src/theme";
 import { PRIMER_SEEN_KEY, easProjectId, hasRegisteredDevice, permission, registerDevice, requestPermission, type Permission } from "../push";
 import { useSession } from "../session";
 import {
@@ -81,23 +82,22 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
   const current =
     selected && !busy ? (
       <View testID={`language-${l}-current`} style={[styles.current, stack && styles.currentStacked, { borderColor: theme.ink }]}>
-        <Txt variant="label" style={styles.currentText}>
+        <Txt variant="label">
           {t("soul_app.settings.current")}
         </Txt>
       </View>
     ) : null;
   return (
-    <Pressable
+    <Press
       testID={`language-${l}`}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       // The row reads the language's own name and note, so it is read in that language (iOS; Android has no such prop).
       accessibilityLanguage={BCP47_FOR_LOCALE[l]}
       onPress={onPick}
-      style={({ pressed }) => [
+      style={[
         styles.row,
         { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: selected ? theme.ink : "transparent" },
-        pressed && styles.pressed,
       ]}
     >
       {/* 单选:墨色,不是强调色(第三类 F 组);v2 起是圆的(补足 A2),不再和复选框同形。 */}
@@ -111,7 +111,7 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       </View>
       {busy ? <Loader testID="language-saving" size={20} /> : null}
       {stack ? null : current}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -208,16 +208,15 @@ function Toggle({
   const theme = useTheme();
   const { gutter, stack } = useLayout();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="switch"
       accessibilityLabel={title}
       accessibilityState={{ checked: value }}
       onPress={() => onChange(!value)}
-      style={({ pressed }) => [
+      style={[
         stack ? styles.toggleStacked : styles.row,
         { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: "transparent" },
-        pressed && styles.pressed,
       ]}
     >
       <View style={stack ? undefined : styles.fill}>
@@ -230,7 +229,7 @@ function Toggle({
       </View>
       {/* Handoff 3c: square, like everything else — the knob's side and the ink fill (补足 A1) say "on". */}
       <SwitchMark on={value} large={stack} />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -356,14 +355,13 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
       <Txt variant="caption" tone="subtle" style={[styles.foot, { paddingHorizontal: gutter }]}>
         {t("soul_app.settings.lock_screen")}
       </Txt>
-      <Pressable
+      <Press
         testID="open-history"
         accessibilityRole="button"
         onPress={() => navigation.navigate("NotificationHistory")}
-        style={({ pressed }) => [
+        style={[
           styles.row,
           { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: "transparent" },
-          pressed && styles.pressed,
         ]}
       >
         <View style={styles.fill}>
@@ -373,7 +371,7 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
           </Txt>
         </View>
         <Icon name="chevron" size={14} color={theme.inkSubtle} />
-      </Pressable>
+      </Press>
     </>
   );
 }
@@ -386,11 +384,11 @@ function NavRow({ testID, label, state, bold, onPress }: { testID: string; label
   const theme = useTheme();
   const { gutter } = useLayout();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.navRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+      style={[styles.navRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}
     >
       <Txt variant="bodyLg" style={styles.fill}>
         {label}
@@ -401,7 +399,7 @@ function NavRow({ testID, label, state, bold, onPress }: { testID: string; label
         </Txt>
       ) : null}
       <Icon name="chevron" size={14} color={theme.inkSubtle} />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -420,11 +418,11 @@ function EmailRow() {
   // A failed fetch must not make the account-recovery row look like it does not exist.
   if (!d && email.error)
     return (
-      <Pressable
+      <Press
         testID="email-load-failed"
         accessibilityRole="button"
         onPress={() => void email.reload()}
-        style={({ pressed }) => [styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+        style={[styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}
       >
         <View style={styles.fill}>
           <Txt variant="bodyLg">{t("soul_app.settings.email")}</Txt>
@@ -433,7 +431,7 @@ function EmailRow() {
           </Txt>
         </View>
         <Txt variant="body">{`${t("soul_app.common.retry")} ›`}</Txt>
-      </Pressable>
+      </Press>
     );
   if (!d) return null;
   const action = d.can_change ? t(d.email_masked ? "soul_app.settings.email_change" : "soul_app.settings.email_add") : null;
@@ -455,14 +453,14 @@ function EmailRow() {
   return (
     <>
       {action ? (
-        <Pressable
+        <Press
           testID="open-contact-email"
           accessibilityRole="button"
           onPress={() => navigation.navigate("ContactEmail")}
-          style={({ pressed }) => [styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+          style={[styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}
         >
           {body}
-        </Pressable>
+        </Press>
       ) : (
         <View testID="open-contact-email" style={[styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
           {body}
@@ -674,7 +672,7 @@ export function NotificationPrimerScreen() {
         <Hairline style={styles.primerRule} />
         <View style={styles.primerItem}>
           <View style={[styles.glyph, { borderColor: theme.hair2 }]}>
-            <Txt variant="label" tone="subtle" style={styles.never}>
+            <Txt variant="meta" tone="subtle">
               ×
             </Txt>
           </View>
@@ -699,7 +697,6 @@ export function NotificationPrimerScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1, minWidth: 0 },
   center: { textAlign: "center" },
-  pressed: { opacity: 0.8 },
   heading: { paddingTop: 24, paddingBottom: 12 },
   identity: { paddingVertical: GUTTER, borderBottomWidth: 1, gap: 8 },
   civRow: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -708,15 +705,14 @@ const styles = StyleSheet.create({
   toggleStacked: { gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   current: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 },
   currentStacked: { alignSelf: "flex-start", marginTop: 4 },
-  currentText: { fontSize: 12, letterSpacing: 0.4 },
   saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 12 },
-  saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
+  saveFailed: { marginTop: 12, borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, padding: 16, gap: 12 },
   saveRow: { flexDirection: "row", gap: 8 },
   saveActions: { flexDirection: "row", gap: 12 },
   foot: { paddingTop: 12, paddingBottom: 16 },
   dimmed: { opacity: 0.55 },
   notice: { paddingBottom: 12 },
-  denied: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
+  denied: { borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, padding: 16, gap: 12 },
   end: { paddingTop: 24, paddingBottom: 32, gap: 16, alignItems: "stretch" },
   groupLabel: { paddingTop: 24, paddingBottom: 8 },
   rows: { borderTopWidth: 1 },
@@ -730,6 +726,5 @@ const styles = StyleSheet.create({
   primerItem: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   primerRule: { marginVertical: 2 },
   glyph: { width: 18, height: 18, marginTop: 4, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  never: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   primerButtons: { gap: 12 },
 });

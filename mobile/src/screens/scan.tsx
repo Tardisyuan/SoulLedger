@@ -24,7 +24,7 @@ import Svg, { Path } from "react-native-svg";
 import { family } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { INVALID_BANNER_MS } from "../loginRules";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, v4 } from "@soulledger/mobile-ui/src/theme";
 import { Button, Screen, Txt, useTheme, Press } from "@soulledger/mobile-ui/src/ui";
 
 /** What the sign-in page receives: a fresh `at` per scan, so the same code twice still lands. */
@@ -45,7 +45,7 @@ function PhotoGlyph({ color }: { color: string }) {
 }
 
 /** The no-code notice: a light card on the camera's dark (v4 light --card2 / --ink / --sub), not themed. */
-const NOTICE = { ground: "#F3F3F1", ink: "#16171A", sub: "#54575C" };
+const NOTICE = { ground: v4.light.card2, ink: v4.light.ink, sub: v4.light.sub };
 
 export function ScanScreen() {
   const theme = useTheme();
@@ -117,7 +117,7 @@ export function ScanScreen() {
   const banner = (top: number) =>
     invalid === "invalid" ? (
       <View testID="scan-invalid" accessibilityRole="alert" accessibilityLiveRegion="assertive" style={[styles.invalid, { top, backgroundColor: theme.s1, borderColor: theme.neg }]}>
-        <Txt style={[styles.invalidTitle, { color: theme.negInk }]}>{t("soul_app.scan.invalid")}</Txt>
+        <Txt variant="section" style={{ color: theme.negInk }}>{t("soul_app.scan.invalid")}</Txt>
         <Txt variant="caption" tone="muted">
           {t("soul_app.scan.invalid_body")}
         </Txt>
@@ -126,7 +126,7 @@ export function ScanScreen() {
   // In place of the link and the privacy line while it is up.
   const photoNone = (
     <View testID="scan-photo-none" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.notice}>
-      <Txt style={[styles.noticeTitle, { color: NOTICE.ink }]}>{t("soul_app.scan.photo_none")}</Txt>
+      <Txt variant="section" style={{ color: NOTICE.ink }}>{t("soul_app.scan.photo_none")}</Txt>
       <Txt variant="caption" style={{ color: NOTICE.sub }}>
         {t("soul_app.scan.photo_none_body")}
       </Txt>
@@ -144,7 +144,7 @@ export function ScanScreen() {
           </Press>
         </View>
         <View style={styles.denied}>
-          <Txt accessibilityRole="header" style={styles.deniedTitle}>
+          <Txt accessibilityRole="header" variant="title">
             {t("soul_app.scan.denied_title")}
           </Txt>
           <Txt variant="bodyLg">{t("soul_app.scan.denied_body")}</Txt>
@@ -180,7 +180,7 @@ export function ScanScreen() {
         <Press testID="scan-close" accessibilityRole="button" accessibilityLabel={t("soul_app.scan.close")} onPress={close} style={styles.close}>
           <Txt style={[styles.closeGlyph, { color: WHITE }]}>×</Txt>
         </Press>
-        <Txt accessibilityRole="header" style={styles.title}>
+        <Txt accessibilityRole="header" variant="title" style={styles.title}>
           {t("soul_app.scan.title")}
         </Txt>
       </View>
@@ -240,9 +240,8 @@ const styles = StyleSheet.create({
   barFlow: { height: 56, flexDirection: "row", alignItems: "center", paddingLeft: 4 },
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   closeGlyph: { fontSize: 28, lineHeight: 32 },
-  title: { color: WHITE, fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
+  title: { color: WHITE },
   invalid: { position: "absolute", left: 16, right: 16, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
-  invalidTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   aim: { position: "absolute", left: 24, right: 24, top: "28%", alignItems: "center", gap: 24 },
   frame: { width: 248, height: 248 },
   corner: { position: "absolute", width: 32, height: 32, borderColor: WHITE },
@@ -256,7 +255,5 @@ const styles = StyleSheet.create({
   manualText: { color: WHITE, textDecorationLine: "underline" },
   privacy: { color: "#D8D8D2", textAlign: "center" },
   notice: { alignSelf: "stretch", backgroundColor: NOTICE.ground, borderRadius: radius.sheet, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
-  noticeTitle: { fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 },
   denied: { padding: 24, gap: 16 },
-  deniedTitle: { fontFamily: family.ui[600], fontSize: 24, lineHeight: 32 },
 });

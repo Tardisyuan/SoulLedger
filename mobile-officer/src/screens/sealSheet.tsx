@@ -227,7 +227,7 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
 const styles = StyleSheet.create({
   option: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: space[4], paddingVertical: space[2], borderRadius: radius.control },
   ordinal: { width: 16, textAlign: "center" },
-  preview: { flexDirection: "row", alignItems: "center", gap: space[4], paddingTop: space[3], borderTopWidth: StyleSheet.hairlineWidth },
+  preview: { flexDirection: "row", alignItems: "center", gap: space[4], paddingTop: space[3], borderTopWidth: 1 },
   seals: { width: 96, height: 96 },
   hold: { minHeight: 56, alignItems: "center", justifyContent: "center", borderRadius: radius.control },
 });

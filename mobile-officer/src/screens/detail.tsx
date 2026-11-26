@@ -14,7 +14,7 @@ import { officerAppApi, type TodoFacts, type TodoItemDetail, type TodoKind } fro
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BackHandler, Pressable, type ScrollView, Share, View } from "react-native";
+import { BackHandler, type ScrollView, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { useKeptText } from "../keptText";
@@ -23,7 +23,7 @@ import { noteOpened } from "../recentOpened";
 import { ActionButton, EdgeBack, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
-import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, family, radius, space, useI18n, useOnline, useRemote, useTheme, Press } from "../shared";
+import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, Press } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
 import { SealSheet } from "./sealSheet";
@@ -222,12 +222,12 @@ function BarButton({ testID, ink, grow, title, caption, label, onPress }: { test
   const theme = useTheme();
   const fg = ink ? theme.s0 : theme.ink;
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label ?? (caption ? `${title}, ${caption}` : title)}
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={{
         flex: grow,
         minHeight: 56,
         borderWidth: 1,
@@ -237,10 +237,9 @@ function BarButton({ testID, ink, grow, title, caption, label, onPress }: { test
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: space[3],
-        opacity: pressed ? 0.7 : 1,
-      })}
+      }}
     >
-      <Txt variant="nav" style={{ color: fg, letterSpacing: 0 }}>
+      <Txt variant="nav" style={{ color: fg }}>
         {title}
       </Txt>
       {caption ? (
@@ -248,7 +247,7 @@ function BarButton({ testID, ink, grow, title, caption, label, onPress }: { test
           {caption}
         </OneLine>
       ) : null}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -263,7 +262,7 @@ function SealedStrip({ civilization, court, at }: { civilization: string | null 
     <View testID="detail-sealed" style={{ flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.dialog, backgroundColor: theme.s2 }}>
       <DossierSeal testID="detail-sealed-seal" civilization={civilization} court={court} size={44} stamp label={t("officer_app.seal.a11y")} />
       <View style={{ flex: 1, gap: 2 }}>
-        <Txt style={{ fontFamily: family.ui[600], fontSize: 16, lineHeight: 24 }}>{t("officer_app.detail.sealed")}</Txt>
+        <Txt variant="section">{t("officer_app.detail.sealed")}</Txt>
         <Txt variant="caption" tone="muted">
           {t("officer_app.detail.sealed_meta", { time: formatWhen(at) })}
         </Txt>

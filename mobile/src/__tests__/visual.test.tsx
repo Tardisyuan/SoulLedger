@@ -20,6 +20,7 @@ import { FONT_ASSETS, quoteFamily, titleFamily } from "@soulledger/mobile-ui/src
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
+import { MfaSheet } from "../screens/mfaParts";
 import { RememberedCard } from "@soulledger/mobile-ui/src/rememberedCard";
 import { motion, radius, themeFor } from "@soulledger/mobile-ui/src/theme";
 import {
@@ -27,6 +28,7 @@ import {
   DataRow,
   EnumBadge,
   Input,
+  Notice,
   PULL_REFRESH_PT,
   Screen,
   Quote,
@@ -469,6 +471,14 @@ describe("timings (v3) and corners (v4)", () => {
     fireEvent.press(screen.getByTestId("ask"));
     expect(flat(screen.getByTestId("confirm-sheet"))).toMatchObject({ borderTopLeftRadius: 12, borderTopRightRadius: 12 });
     expect(flat(screen.getByTestId("confirm-sheet")).borderBottomLeftRadius).toBeUndefined();
+    screen.unmount();
+    // The soul app's own MfaSheet (two-step, export, biometrics, appeals…) takes the same top corners.
+    wrap(<MfaSheet testID="mfa-sheet" open onClose={jest.fn()} closeLabel="close"><View /></MfaSheet>);
+    expect(flat(screen.getByTestId("mfa-sheet"))).toMatchObject({ borderTopLeftRadius: 12, borderTopRightRadius: 12 });
+    screen.unmount();
+    // A bordered notice is a panel: 6.
+    wrap(<Notice tone="neutral"><Txt>n</Txt></Notice>);
+    expect(flat(screen.UNSAFE_getByProps({ accessibilityRole: "alert" })).borderRadius).toBe(6);
     screen.unmount();
     // The remembered-account card is a sheet-sized surface too; its compact row (inside the account list) draws no frame.
     wrap(<RememberedCard testID="card" name="Ada" masked="QU3-•••-W5F" />);

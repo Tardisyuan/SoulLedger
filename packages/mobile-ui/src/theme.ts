@@ -98,12 +98,12 @@ export const GUTTER_PT = 20;
 
 /**
  * 第三十批「卷宗」 step 1, the touch sizes — the web's tokens of the same names, same values:
- *   controlSm / Md / Lg   --control-h-sm 44 · --control-h-md 48 · --control-h-lg 56
+ *   controlSm             --control-h-sm 44 (the web's md 48 / lg 56 had no reader here and were removed 2026-11-26)
  *   tag                   a status tag on a touch screen (the web's 22 on a desk)
  *   topline               --topline, the 2px civilization line across the top of a page
  *   toastBar              --toast-bar, a toast's 3px semantic rule on its left
  */
-export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, tag: 28, topline: 2, toastBar: 3 } as const;
+export const touch = { controlSm: 44, tag: 28, topline: 2, toastBar: 3 } as const;
 /**
  * v4 (user decision 2026-11-06): controls 4 — inputs, buttons, tags / badges; panels and dialogs 6.
  * Design batch 55: the large mobile surfaces — bottom sheets (top corners only), the remembered-account
@@ -112,6 +112,8 @@ export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, tag: 28, top
  * `pill`. `none` is left for what is still square (a rule, a table cell). The focus ring follows its
  * element's shape.
  */
+/** A row that is gone (a deleted post, a withdrawn application, a closed thread) still shows, at this opacity. */
+export const GONE_OPACITY = 0.45;
 export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.sheet, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds and waits excepted, and the fades that stay at `reduced` 80:
