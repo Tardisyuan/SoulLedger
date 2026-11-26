@@ -258,6 +258,10 @@ export function FadeModal({
   const [opacity] = useState(() => new Animated.Value(0));
   const [shrink] = useState(() => new Animated.Value(0));
   const [onto, setOnto] = useState<PhotoShrink | null>(null);
+  // Whether `shrink` has left 0 since the last open. The layer's transform always reads it (see `transform` below),
+  // so resetting it pushes an update through the view: on an open that follows no shrink that update is for nothing,
+  // and it lands in this effect, after the render that opened the layer (in a test, outside act()).
+  const shrunk = useRef(false);
   // What it showed last while open: callers drop their content with `visible`, and a fade (or a shrink) of an empty
   // layer would show nothing leaving.
   const [held, setHeld] = useState<ReactNode>(children);
@@ -273,6 +277,7 @@ export function FadeModal({
     let run: Animated.CompositeAnimation | null = null;
     const play = (target: PhotoShrink | null, ms: number) => {
       setOnto(target);
+      if (target) shrunk.current = true;
       const out = { toValue: visible ? 1 : 0, duration: ms, easing: visible ? EASE.enter : EASE.exit, useNativeDriver: true };
       run = Animated.parallel([
         Animated.timing(opacity, out),
@@ -281,7 +286,10 @@ export function FadeModal({
       run.start(({ finished }) => finished && !visible && setMounted(false));
     };
     if (visible) {
-      shrink.setValue(0);
+      if (shrunk.current) {
+        shrunk.current = false;
+        shrink.setValue(0);
+      }
       play(null, dialogIn);
       return () => run?.stop();
     }

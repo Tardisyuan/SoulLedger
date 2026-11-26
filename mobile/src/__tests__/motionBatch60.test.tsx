@@ -118,6 +118,25 @@ describe("P6: closing a photo viewer", () => {
     expect(flat(screen.getByTestId("fade-modal")).transform).toHaveLength(3);
   });
 
+  // The layer always reads the shrink (its transform keeps three animated entries), so a reset is an update through
+  // the view. Reset only after a shrink: an open after none would push that update from the effect, outside act()
+  // (the officer app's attachments test, 2026-11-27). The tests' native driver never moves the value in JS, so this
+  // watches the reset itself.
+  it("an open resets the shrink only after a shrink: never on a first open, always on the reopen after one", async () => {
+    const thumb = <Thumb at={{ x: 0, y: 0, width: 100, height: 100 }} />;
+    const setValue = jest.spyOn(Animated.Value.prototype, "setValue");
+    const view = renderSoul(ui(true, thumb));
+    await act(async () => {});
+    expect(setValue).not.toHaveBeenCalled();
+    view.rerender(inSoulFrame(ui(false, thumb)));
+    await act(async () => {});
+    await wait(motion.photoClose + 50);
+    view.rerender(inSoulFrame(ui(true, thumb)));
+    await act(async () => {});
+    expect(setValue).toHaveBeenCalledTimes(1);
+    expect(setValue).toHaveBeenCalledWith(0);
+  });
+
   it("thumbnail gone: fades in place over 160", async () => {
     const { calls } = await close(false, null);
     expect(calls).toEqual([expect.objectContaining({ toValue: 0, duration: 160, easing: EASE.exit })]);
