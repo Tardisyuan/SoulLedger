@@ -57,7 +57,7 @@ class TestEventBusPublish:
                 return True
 
         bus = EventBus()
-        bus.register_handler("test", TestHandler())
+        bus._get_registry.register_domain("test", TestHandler())
 
         bus.publish(
             event_type="TEST_EVENT",
@@ -85,7 +85,7 @@ class TestEventBusPublish:
                 return True
 
         bus = EventBus()
-        bus.register_handler("workflow", TestHandler())
+        bus._get_registry.register_domain("workflow", TestHandler())
 
         bus.publish(
             event_type="WORKFLOW_ASSIGNED",
@@ -109,7 +109,7 @@ class TestEventBusPublish:
                 return True
 
         bus = EventBus()
-        bus.register_handler("workflow", TestHandler())
+        bus._get_registry.register_domain("workflow", TestHandler())
 
         bus.publish(
             event_type="WORKFLOW_APPROVED",
@@ -143,7 +143,7 @@ class TestHandlerRegistration:
                 return True
 
         bus = EventBus()
-        bus.register_handler("workflow", DomainHandler())
+        bus._get_registry.register_domain("workflow", DomainHandler())
 
         bus.publish("EVENT_A", {}, domain="workflow")
         bus.publish("EVENT_B", {}, domain="workflow")
@@ -164,7 +164,7 @@ class TestHandlerRegistration:
                 return True
 
         bus = EventBus()
-        bus.register_event_handler("WORKFLOW_APPROVED", SpecificHandler())
+        bus._get_registry.register("WORKFLOW_APPROVED", SpecificHandler())
 
         bus.publish("WORKFLOW_APPROVED", {}, domain="workflow")
         bus.publish("WORKFLOW_REJECTED", {}, domain="workflow")
@@ -184,7 +184,7 @@ class TestHandlerRegistration:
                 return True
 
         bus = EventBus()
-        bus.register_global_handler(GlobalHandler())
+        bus._get_registry.register_global(GlobalHandler())
 
         bus.publish("EVENT_A", {}, domain="workflow")
         bus.publish("EVENT_B", {}, domain="notification")
@@ -208,7 +208,7 @@ class TestHandlerRegistration:
                 return envelope.event_type == "ONLY_ME"
 
         bus = EventBus()
-        bus.register_handler("workflow", FilteringHandler())
+        bus._get_registry.register_domain("workflow", FilteringHandler())
 
         bus.publish("ONLY_ME", {}, domain="workflow")
         bus.publish("NOT_ME", {}, domain="workflow")
@@ -226,7 +226,7 @@ class TestHandlerRegistration:
                 return True
 
         bus = EventBus()
-        bus.register_handler("workflow", BrokenHandler())
+        bus._get_registry.register_domain("workflow", BrokenHandler())
 
         # Should not raise
         bus.publish("TEST", {}, domain="workflow")
@@ -288,38 +288,6 @@ class TestAuditHandlerIntegration:
         assert event.event_type == "SOUL_CREATED"
         assert event.actor == "test"
         assert event.payload["name"] == soul.name
-
-    @pytest.mark.asyncio
-    async def test_workflow_event_creates_audit_log(self, soul, cn_tenant):
-        """publish_workflow() → AuditHandler → SoulEvent record."""
-        from apps.events.event_bus import event_bus
-        from apps.events.models import EventType, SoulEvent
-        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
-
-        workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
-            soul=soul,
-            workflow_name="Integration Test WF",
-            status=ApprovalWorkflowStatus.PENDING,
-            tenant=cn_tenant,
-        )
-
-        await database_sync_to_async(event_bus.publish_workflow)(
-            event_type="WORKFLOW_CREATED",
-            payload={
-                "soul_id": str(soul.id),
-                "workflow_id": str(workflow.id),
-                "workflow_name": workflow.workflow_name,
-            },
-            tenant_code=cn_tenant.code,
-        )
-
-        event_exists = await database_sync_to_async(
-            lambda: SoulEvent.objects.filter(
-                soul=soul,
-                event_type=EventType.WORKFLOW_CREATED,
-            ).exists()
-        )()
-        assert event_exists
 
 
 # ------------------------------------------------------------------

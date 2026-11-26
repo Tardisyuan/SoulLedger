@@ -68,7 +68,7 @@ def w():
 def merged(w, realms, *, skip_orders=(), convene=True):
     """原审判挂一场还没结束的跨域审判(每个参与域一个 CO_JUDGE 席,已填站),然后结案 → 强制生成审批流程。"""
     soul, case = plan.open_case(w.cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", w.cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", w.cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     for order, realm in enumerate(realms, start=2):
@@ -542,7 +542,7 @@ def test_another_realm_does_not_read_the_flows_notes_or_other_stations_opinions(
 def test_a_seat_reads_its_own_sentence_notes_not_another_halls(w):
     """用户 2026-10-29(决定 24 余项):联审别殿那一席的量刑备注不给,殿名与站照给;召集殿看全部。"""
     _soul, case = plan.open_case(w.cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", w.cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", w.cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     for order, (realm, notes) in enumerate([(w.eg, "埃及的备注"), (w.eu, "欧洲的备注")], start=2):
@@ -604,7 +604,7 @@ PREVIEW = f"{WF}flow-preview/"
 
 def _open_cross(w, realms):
     soul, case = plan.open_case(w.cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", w.cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", w.cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     for order, realm in enumerate(realms, start=2):

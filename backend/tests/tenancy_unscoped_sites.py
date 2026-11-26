@@ -313,7 +313,7 @@ SITES = [
     ('apps/social/media.py', 'Post.all_objects', 1, 'FILTERED', 'CONTEXT', "scope_to_tenant(field='post__tenant') for the media; the Post probe is by pk of that media's post"),
     ('apps/social/media.py', 'PostMedia.all_objects', 1, 'FILTERED', 'CONTEXT', "scope_to_tenant(field='post__tenant') for the media; the Post probe is by pk of that media's post"),
     ('apps/social/media.py', 'PostMedia.all_objects', 2, 'CLI', 'CONTEXT', '_stray_files: cleanup sweep: every file name any row points to, across tenants, to find orphan files on disk ‖ orphans: cleanup sweep over unattached uploads of every tenant (media has no tenant column; scoped through post)'),
-    ('apps/social/media.py', 'PostMedia.all_objects', 2, 'PK', 'CONTEXT', 'delete_pending: deletes one media row by pk ‖ purge_for_post: deletes the media of one post'),
+    ('apps/social/media.py', 'PostMedia.all_objects', 1, 'PK', 'CONTEXT', 'delete_pending: deletes one media row by pk'),
     ('apps/social/media_views.py', 'PostMedia.all_objects', 1, 'PK', 'CONTEXT', 'media by pk from a signed grant; may_view(viewer, media, tenant) is checked right after'),
     ('apps/social/moderation_views.py', 'Post.all_objects', 2, 'FILTERED', 'CONTEXT', 'HandledContentViewSet: class-level queryset placeholder; get_queryset applies scope_to_tenant to each part ‖ HandledContentViewSet.get_queryset: scope_to_tenant(model.all_objects.all(), request) per part; the other use is .none()'),
     ('apps/social/moderation_views.py', 'model.all_objects', 1, 'FILTERED', 'CONTEXT', 'scope_to_tenant(model.all_objects.all(), request) per part; the other use is .none()'),

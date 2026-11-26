@@ -87,8 +87,8 @@ def _soul():
     return apps.get_model("souls", "Soul")
 
 
-def owned(model, alias, civ, halls, *, copies=True):
-    """The rows of `model` on `alias` that belong to `civ`'s shard. On a shard alias every row there is
+def owned(model, alias, halls, *, copies=True):
+    """The rows of `model` on `alias` that belong to the shard of `halls` (one civilization's halls, `halls_of`). On a shard alias every row there is
     claimed (a path through a control table cannot be followed there), except that `copies=False`
     leaves out the soul copies."""
     qs = model._base_manager.using(alias)
@@ -114,7 +114,7 @@ def purge_plan(civ):
     `reconcile_shards --assert-control-empty` counts: the rows of its halls (a soul is its hall's, `tenant`, never its
     home's). D2 rows (no hall, a hall of UNKNOWN civilization) are in no civilization's plan."""
     halls = halls_of(civ)
-    return {m: owned(m, "default", civ, halls, copies=False) for m in purged_models()}
+    return {m: owned(m, "default", halls, copies=False) for m in purged_models()}
 
 
 def _digest(row):
@@ -252,8 +252,7 @@ def _sides(model, shard, halls, recorded=()):
         return None
     if not _control_masters(model):
         return None
-    civ = civilization_of(shard)
-    return owned(model, "default", civ, halls), owned(model, shard, civ, halls)
+    return owned(model, "default", halls), owned(model, shard, halls)
 
 
 def _keys_within_shards(model):

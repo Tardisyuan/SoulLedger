@@ -193,14 +193,6 @@ class DomainEventHandlerRegistry:
             ),
         }
 
-    def registered_event_types(self) -> list[str]:
-        """Return all event types that have at least one handler."""
-        return sorted(self._handlers.keys())
-
-    def registered_domains(self) -> list[str]:
-        """Return all domains that have at least one handler."""
-        return sorted(self._domain_handlers.keys())
-
     def reset(self) -> None:
         """Clear all registrations. For testing only."""
         self._handlers.clear()

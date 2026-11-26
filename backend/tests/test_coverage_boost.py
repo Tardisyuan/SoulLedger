@@ -709,42 +709,6 @@ class TestEventBusReachesTheChannelLayer:
     """
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_workflow(self, mock_get_cl, django_capture_on_commit_callbacks):
-        mock_cl = MagicMock()
-        mock_cl.group_send = AsyncMock()
-        mock_get_cl.return_value = mock_cl
-        # `WebSocketHandler` defers its `group_send` to
-        # `transaction.on_commit` (M40: the push was going out inside the
-        # publisher's uncommitted transaction, announcing a row no other
-        # connection could read). `django_db` never commits, so without
-        # this the callback never runs and the assertion below reads
-        # `group_send` as uncalled — a fixture artefact, not a defect.
-        with django_capture_on_commit_callbacks(execute=True):
-            event_bus.publish_workflow(
-                "WORKFLOW_APPROVED", {"workflow_id": "123"},
-                tenant_code="CN_DIYU",
-            )
-        mock_cl.group_send.assert_called_once()
-
-    @patch("channels.layers.get_channel_layer")
-    def test_publish_dispatch(self, mock_get_cl, django_capture_on_commit_callbacks):
-        mock_cl = MagicMock()
-        mock_cl.group_send = AsyncMock()
-        mock_get_cl.return_value = mock_cl
-        # `WebSocketHandler` defers its `group_send` to
-        # `transaction.on_commit` (M40: the push was going out inside the
-        # publisher's uncommitted transaction, announcing a row no other
-        # connection could read). `django_db` never commits, so without
-        # this the callback never runs and the assertion below reads
-        # `group_send` as uncalled — a fixture artefact, not a defect.
-        with django_capture_on_commit_callbacks(execute=True):
-            event_bus.publish_dispatch(
-                "DISPATCH_CREATED", {"dispatch_id": "456"},
-                tenant_code="EU_HEAVEN_HELL",
-            )
-        mock_cl.group_send.assert_called_once()
-
-    @patch("channels.layers.get_channel_layer")
     def test_publish_deathsync(self, mock_get_cl, django_capture_on_commit_callbacks):
         mock_cl = MagicMock()
         mock_cl.group_send = AsyncMock()

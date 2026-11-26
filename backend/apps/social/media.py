@@ -111,11 +111,6 @@ def delete_pending(user, media_id):
     PostMedia.all_objects.filter(pk=row.pk).delete()
 
 
-def purge_for_post(post):
-    """作者自己删帖:这条帖子的图片行与文件都真删(不进回收站,也没有恢复路径)。"""
-    PostMedia.all_objects.filter(post=post).delete()
-
-
 def orphans(older_than=ORPHAN_AFTER):
     """上传超过 `older_than` 仍未挂到帖子的图片。"""
     return PostMedia.all_objects.filter(post__isnull=True, created_at__lt=timezone.now() - older_than)

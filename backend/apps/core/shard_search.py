@@ -43,6 +43,19 @@ class ShardSearchFilter(SearchFilter):
         return matched
 
 
+
+class SearchFieldsMixin:
+    """For a django-filter FilterSet with `search = CharFilter(method="filter_search")`: OR `<field>__icontains`
+    over its `search_fields`, a crossing key read by ids (`crossing_q`; not sharded, or no crossing key on the path,
+    the plain Q). Four FilterSets had their own copy (actors, realms: plain Q; dispatch, workflow: `crossing_q`)."""
+
+    def filter_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(reduce(operator.or_, (crossing_q(queryset.model, f"{field}__icontains", value)
+                                                     for field in self.search_fields)))
+
+
 class ShardOrderingFilter(OrderingFilter):
     def get_valid_fields(self, queryset, view, context=None):
         fields = super().get_valid_fields(queryset, view, context or {})

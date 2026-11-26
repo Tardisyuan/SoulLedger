@@ -1006,7 +1006,7 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     @transaction.atomic()
-    def create(title, description, initiating_tenant, creator):
+    def create(title, description, initiating_tenant):
         """
         Create a new cross-tenant judgment.
 
@@ -1014,7 +1014,6 @@ class CrossTenantJudgmentService:
             title: Judgment title
             description: Judgment description
             initiating_tenant: Tenant initiating the judgment
-            creator: User creating the judgment
 
         Returns:
             CrossTenantJudgment: Created judgment

@@ -25,7 +25,6 @@ _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _USERNAME = re.compile(r"^[\w.@+-]{1,150}$")
 _RESOURCE_ID = re.compile(r"^[\w:.-]{1,100}$")
 _TRACE = re.compile(r"^[\w-]{1,64}$")
-_JSON = re.compile(r"\{.*\}", re.S)
 MAX_QUESTION = 500
 
 SYSTEM = (
@@ -53,17 +52,6 @@ def context(request):
 
         halls = sorted(within_reach(Tenant.objects.all(), request, field="pk").values_list("code", flat=True))
     return {"actions": [a for a, _ in AuditAction.choices], "resources": resources, "halls": halls}
-
-
-def _parse(text):
-    m = _JSON.search(text or "")
-    if not m:
-        return None
-    try:
-        value = json.loads(m.group(0))
-    except ValueError:
-        return None
-    return value if isinstance(value, dict) else None
 
 
 def _date(value):
@@ -113,7 +101,7 @@ def propose(request, question, *, ctx=None, today=None, lang="zh-Hans", conn=Non
     data = {"today": (today or timezone.localdate()).isoformat(), "language": lang, **ctx}
     done = features.complete("audit_query", request, system=SYSTEM, facts=json.dumps(data, ensure_ascii=False),
                              prompt=data_block("question", question[:MAX_QUESTION]), conn=conn)
-    raw = _parse(done.text)
+    raw = features.json_object(done.text)
     if raw is None:
         return done, {}, [], False
     kept, dropped = validate(raw, ctx)

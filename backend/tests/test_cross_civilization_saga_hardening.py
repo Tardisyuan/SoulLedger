@@ -232,7 +232,7 @@ def _seat(w, halls):
 
     src, tgt = halls[w["src"]], halls[w["tgt"]]
     with _in_hall(src):
-        bench = CrossTenantJudgmentService.create("联审", "d", src, None)
+        bench = CrossTenantJudgmentService.create("联审", "d", src)
         return CrossTenantJudgmentService.add_participant(bench, tgt, None, ParticipantRole.ADVISOR)
 
 

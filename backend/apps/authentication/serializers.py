@@ -257,9 +257,9 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         `rbac_role` is deliberately no longer consulted. `check_permission`
         resolves off `obj.role` and never reads the FK, so preferring the FK
         here made the reported list depend on which of two role fields happened
-        to be populated — a divergence in its own right. The FK still drives
-        the WebSocket permission set (`apps/core/ws_permissions.py`), which is
-        a fourth answer to this same question and is not reconciled yet.
+        to be populated — a divergence in its own right. The WebSocket
+        permission set (`apps/core/ws_permissions.py`) goes through the same
+        `get_role_permission_codenames`, so it does not read the FK either.
         """
         from apps.perm.services import get_role_permission_codenames
         return get_role_permission_codenames(obj.role, obj.extra_roles, user=obj)
@@ -1218,7 +1218,7 @@ class NotificationPrefsSerializer(_StrictSerializer):
         return attrs
 
 
-class UserPreferencesSerializer(serializers.Serializer):
+class UserPreferencesSerializer(_StrictSerializer):
     """`User.preferences`, as the API reads and writes it.
 
     Four keys. Language and theme are not here: both are browser-side
@@ -1241,16 +1241,6 @@ class UserPreferencesSerializer(serializers.Serializer):
     #: 所以 /profile 开开关时把当时的界面语言记在这里;空则按所属文明(`mail_locale`)。
     #: 只有 zh-Hans 与 en:官员邮件文案只写了这两种(egy 界面落到 en)。
     email_locale = serializers.ChoiceField(choices=EMAIL_LOCALES, allow_null=True, required=False)
-
-    def to_internal_value(self, data):
-        # Unknown keys are refused rather than silently dropped: this is a
-        # JSON column, and a client that believes it saved `theme` should hear
-        # that it did not.
-        if isinstance(data, dict):
-            unknown = sorted(set(data) - set(self.fields))
-            if unknown:
-                raise serializers.ValidationError({key: ["Unknown preference."] for key in unknown})
-        return super().to_internal_value(data)
 
 
 class OfficerInviteSerializer(serializers.Serializer):

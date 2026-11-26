@@ -93,7 +93,7 @@ def test_once_the_flow_has_ended_the_convener_concludes_as_before(w):
 
 
 def test_a_bench_with_no_workflow_concludes_as_before(w):
-    cj = CrossTenantJudgmentService.create("会审", "d", w.cn, None)
+    cj = CrossTenantJudgmentService.create("会审", "d", w.cn)
     CrossTenantJudgmentService.add_participant(cj, w.eg, None, ParticipantRole.ADVISOR)
     CrossTenantJudgmentService.activate(_cj(cj))
     CrossTenantJudgmentService.conclude(_cj(cj), "PASS", w.cn_mod)

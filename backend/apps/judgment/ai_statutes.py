@@ -26,7 +26,6 @@ from apps.judgment.snapshot import localized_text, localized_title
 TOP = 20
 SUGGEST = 5
 MAX_WHY = 300
-_JSON = re.compile(r"\{.*\}", re.S)
 _CJK = re.compile(r"[㐀-鿿]+")
 _WORD = re.compile(r"[A-Za-z]{3,}")
 
@@ -102,16 +101,6 @@ def _card(s, lang):
     return {"code": s.code, "title": localized_title(s, lang), "text": localized_text(s, lang)[:600]}
 
 
-def _parse(text):
-    m = _JSON.search(text or "")
-    try:
-        value = json.loads(m.group(0)) if m else None
-    except ValueError:
-        return None
-    rows = value.get("suggestions") if isinstance(value, dict) else None
-    return rows if isinstance(rows, list) else None
-
-
 def validate(raw, seen, cited):
     """模型的建议 → (留下的 [(条文, 理由)], 丢掉的编号)。只认这次见过的、还没引用的;去重;最多 5 条。"""
     kept, dropped = [], []
@@ -164,7 +153,7 @@ def propose(judgment, request, *, lang="zh-Hans", conn=None, ignore_cited=False)
                                  run_tool=run_tool, max_rounds=2, conn=conn)
     except features.FeatureUnavailableError:
         return None, [(s, "", "keyword") for s in keyword_suggestions(judgment, facts)], []
-    raw = _parse(done.text)
+    raw = features.json_list(done.text, "suggestions")
     if raw is None:
         return done, [(s, "", "keyword") for s in keyword_suggestions(judgment, facts)], []
     kept, dropped = validate(raw, seen, set(facts["already_cited"]))

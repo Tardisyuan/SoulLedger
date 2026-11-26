@@ -6,6 +6,7 @@ from django.db.models import DateTimeField, F, Func, Q
 from django.utils import timezone
 
 from apps.core.shard_reads import crossing_q
+from apps.core.shard_search import SearchFieldsMixin
 from apps.souls.models import Civilization
 from apps.workflow.models import (
     REACHABLE_WORKFLOW_STATUSES,
@@ -33,7 +34,7 @@ class _AddHours(Func):
         return f"({ts[0]} + {hours[0]} * INTERVAL '1 hour')", [*ts[1], *hours[1]]
 
 
-class WorkflowFilter(filters.FilterSet):
+class WorkflowFilter(SearchFieldsMixin, filters.FilterSet):
     """
     FilterSet for ApprovalWorkflow API endpoints.
     Supports search, exact match, range, and date filtering.
@@ -113,12 +114,3 @@ class WorkflowFilter(filters.FilterSet):
     def filter_soul_name(self, queryset, name, value):
         """`soul__name` through the crossing key ApprovalWorkflow.soul, read by ids (`crossing_q`)."""
         return queryset.filter(crossing_q(queryset.model, "soul__name__icontains", value)) if value else queryset
-
-    def filter_search(self, queryset, name, value):
-        """Search across multiple fields."""
-        if not value:
-            return queryset
-        q = Q()
-        for field in self.search_fields:
-            q |= crossing_q(queryset.model, f"{field}__icontains", value)
-        return queryset.filter(q)

@@ -250,26 +250,6 @@ class TestReactionService:
         assert created is True
         assert reaction.comment_id == comment.pk
 
-    def test_remove_reaction_on_post(self):
-        ReactionService.add_reaction(
-            user=self.user, reaction_type=ReactionType.LIKE,
-            post=self.post, tenant=self.tenant,
-        )
-        self.post.refresh_from_db()
-        assert self.post.reaction_count == 1
-        removed = ReactionService.remove_reaction(
-            user=self.user, post=self.post,
-        )
-        assert removed is True
-        self.post.refresh_from_db()
-        assert self.post.reaction_count == 0
-
-    def test_remove_nonexistent_reaction(self):
-        removed = ReactionService.remove_reaction(
-            user=self.user, post=self.post,
-        )
-        assert removed is False
-
     def test_multiple_users_can_react(self):
         ReactionService.add_reaction(
             user=self.user, reaction_type=ReactionType.LIKE,
@@ -507,15 +487,3 @@ class TestReactionServiceTenantScoping:
         assert reaction.tenant_id == self.tenant_a.id
         self.post.refresh_from_db()
         assert self.post.reaction_count == 1
-
-    def test_remove_reaction_decrements_using_reaction_tenant(self):
-        ReactionService.add_reaction(
-            user=self.user, reaction_type=ReactionType.LIKE,
-            post=self.post, tenant=self.tenant_a,
-        )
-        self.post.refresh_from_db()
-        assert self.post.reaction_count == 1
-        removed = ReactionService.remove_reaction(user=self.user, post=self.post)
-        assert removed is True
-        self.post.refresh_from_db()
-        assert self.post.reaction_count == 0

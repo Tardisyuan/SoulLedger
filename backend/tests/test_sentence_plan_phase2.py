@@ -74,7 +74,7 @@ def test_a_fail_bench_is_recorded_but_its_seats_are_not_copied(cn, eg):
 
 def test_a_cancelled_bench_does_not_hold_the_conclusion(cn, eg):
     soul, case = plan.open_case(cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     cj.transition_to(JudgmentStatus.CANCELLED)
@@ -90,7 +90,7 @@ def test_the_judgment_detail_names_the_bench_hung_on_it(cn):
     assert first.status_code == 200, first.data
     assert first.data["cross_judgment_id"] is None
 
-    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     assert client.get(f"/api/v1/judgment/{case.pk}/").data["cross_judgment_id"] == str(cj.pk)
@@ -102,7 +102,7 @@ def test_an_unfinished_bench_refuses_a_conclusion_without_a_workflow_and_writes_
     `create_workflow: false` → 400 `workflow_required`;裁决、处置、计划、灵魂状态都不动。
     不说就强制生成流程,见 tests/test_workflow_segments.py。"""
     soul, case = plan.open_case(cn)
-    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj = CrossTenantJudgmentService.create("联审", "d", cn)
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     if convened:

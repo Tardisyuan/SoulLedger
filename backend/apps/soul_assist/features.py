@@ -12,6 +12,7 @@
 接入点自己决定送什么(白名单、`redact.py`)、怎么校验产出 —— 这里不碰任何业务数据。
 """
 import json
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,6 +20,24 @@ from pathlib import Path
 from apps.soul_assist import config, failover, service
 from apps.soul_assist.models import FEATURES
 from apps.soul_assist.providers import ProviderError, Turn, get_provider
+
+_JSON = re.compile(r"\{.*\}", re.S)
+
+
+def json_object(text):
+    """The JSON object in a model's reply (first `{` to last `}`, prose around it ignored); None if there is none."""
+    m = _JSON.search(text or "")
+    try:
+        value = json.loads(m.group(0)) if m else None
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def json_list(text, key):
+    """`json_object(text)[key]` when that is a list, else None."""
+    rows = (json_object(text) or {}).get(key)
+    return rows if isinstance(rows, list) else None
 
 
 class FeatureUnavailableError(Exception):

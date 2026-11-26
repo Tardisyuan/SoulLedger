@@ -2,14 +2,14 @@
 Dispatch FilterSet — filtering, search, and ordering for Dispatch API.
 """
 import django_filters as filters
-from django.db.models import Q
 
 from apps.core.shard_reads import crossing_q
+from apps.core.shard_search import SearchFieldsMixin
 from apps.core.tenant import request_tenant
 from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus, JudgmentStatus
 
 
-class DispatchFilter(filters.FilterSet):
+class DispatchFilter(SearchFieldsMixin, filters.FilterSet):
     """
     FilterSet for DispatchRecord API endpoints.
     Supports search, exact match, and date filtering.
@@ -34,14 +34,6 @@ class DispatchFilter(filters.FilterSet):
     search_fields = ["soul__name", "reason"]
     ordering_fields = ["proposed_at", "status"]
 
-    def filter_search(self, queryset, name, value):
-        """Search across multiple fields."""
-        if not value:
-            return queryset
-        q = Q()
-        for field in self.search_fields:
-            q |= crossing_q(queryset.model, f"{field}__icontains", value)
-        return queryset.filter(q)
 
     def filter_soul_name(self, queryset, name, value):
         """`soul__name` through the crossing key DispatchRecord.soul, read by ids (`crossing_q`)."""
