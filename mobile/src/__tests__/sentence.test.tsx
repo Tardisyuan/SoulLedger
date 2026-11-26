@@ -175,7 +175,7 @@ describe("the full list in the six plan states (1c)", () => {
     wrap(<SentenceScreen />);
     await screen.findByTestId("station-3");
     expect(StyleSheet.flatten(screen.getByText("铁树狱").props.style)).toMatchObject({ textDecorationLine: "line-through" });
-    expect(StyleSheet.flatten(screen.getByTestId("station-3").props.style)).toMatchObject({ opacity: 0.62 });
+    expect(StyleSheet.flatten(screen.getByTestId("station-3").props.style)).toMatchObject({ opacity: 0.45 }); // 第六十七批 三: a struck station is gone, 0.45
     expect(screen.getByTestId("station-3-status").props.children).toBe("已赦免");
     expect(StyleSheet.flatten(screen.getByText("寒冰狱").props.style).textDecorationLine).toBeUndefined();
   });

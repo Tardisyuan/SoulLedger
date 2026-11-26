@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
 import { SHEET_CLOSE_DRAG_PT } from "@soulledger/mobile-ui/src/feedback";
-import { radius, withAlpha } from "@soulledger/mobile-ui/src/theme";
+import { radius, touch, withAlpha } from "@soulledger/mobile-ui/src/theme";
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
@@ -526,7 +526,7 @@ function Limited({ retryAt }: { retryAt: string | null }) {
   return (
     <View testID="assist-limited" style={[styles.card, { borderColor: t.hair2, backgroundColor: t.s1 }]}>
       <Txt variant="nav">{tr("soul_app.assist.limited_title")}</Txt>
-      <Txt testID="assist-limited-body" variant="caption" tone="muted">
+      <Txt testID="assist-limited-body" variant="body" tone="muted">
         {retryAt ? tr("soul_app.assist.limited_body", { time: clock(retryAt) }) : tr("soul_app.assist.limited_later")}
       </Txt>
     </View>
@@ -542,7 +542,7 @@ function NotConfigured({ assist }: { assist: Assist }) {
     <View style={[styles.body, { paddingHorizontal: gutter }]}>
       <View testID="assist-not-configured" style={[styles.card, { borderColor: t.hair2, backgroundColor: t.s1 }]}>
         <Txt variant="nav">{tr("soul_app.assist.not_configured_title")}</Txt>
-        <Txt variant="caption" tone="muted">
+        <Txt variant="body" tone="muted">
           {tr("soul_app.assist.not_configured_body")}
         </Txt>
         {assist.openLetters ? <Button testID="assist-letters" kind="secondary" title={tr("soul_app.assist.to_letters")} onPress={assist.openLetters} /> : null}
@@ -744,7 +744,7 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
       {asking ? (
         <Confirm>
           <Txt variant="title">{tr("soul_app.assist.delete_title")}</Txt>
-          <Txt variant="caption" tone="muted">
+          <Txt variant="body" tone="muted">
             {tr("soul_app.assist.delete_body", { screen: tr(SCREEN_TITLE[asking.screen]) })}
           </Txt>
           {failed ? (
@@ -810,15 +810,15 @@ const styles = StyleSheet.create({
   dots: { flexDirection: "row", gap: 2, width: 20, justifyContent: "center" },
   dot: { width: 4, height: 4 },
   interrupted: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingLeft: 8, gap: 8 },
-  stop: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  stop: { minHeight: touch.controlMd, borderWidth: 1, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   jump: { position: "absolute", right: 12, bottom: 72, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
   en: { borderWidth: 1, borderStyle: "dotted", paddingHorizontal: 4 },
-  enText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.6 },
+  enText: { fontSize: 12, lineHeight: 16 },
   card: { borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 12 },
   introItem: { flexDirection: "row", gap: 12, borderTopWidth: 1, paddingTop: 12 },
   composer: { borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
-  input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16 },
-  send: { width: 44, height: 44, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
+  input: { flex: 1, minHeight: touch.controlMd, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16 },
+  send: { width: touch.controlMd, height: touch.controlMd, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   historyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
   screenTag: { borderLeftWidth: 2, paddingLeft: 8 },
   confirmScrim: { justifyContent: "flex-end" },

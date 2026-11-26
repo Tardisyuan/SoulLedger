@@ -38,7 +38,7 @@ import {
 import { useSession } from "../session";
 import { OutlineSeal } from "../seal";
 import { entranceStyle, headerSeal } from "../entrance";
-import { radius, sealedTheme, type CivKey, GONE_OPACITY, withAlpha } from "@soulledger/mobile-ui/src/theme";
+import { radius, sealedTheme, type CivKey, GONE_OPACITY, withAlpha, RECEDE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import {
   Block,
   Button,
@@ -187,7 +187,7 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
       {/* Handoff 2d: at large text the mark drops to its own line. */}
       {record.is_milestone && stack ? <View style={styles.milestoneLine}>{milestone}</View> : null}
       {record.description ? (
-        <Txt variant="caption" tone="subtle">
+        <Txt variant="body" tone="subtle">
           {record.description}
         </Txt>
       ) : null}
@@ -206,7 +206,7 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
           ) : null}
         </View>
       ) : null}
-      <OneLine variant="value" tone="subtle" style={styles.recordDate}>
+      <OneLine variant="value" style={[styles.recordDate, { color: t.faintText }]}>
         {formatHistoricalDate(record.event_date, locale) ?? tr("common.value.unrecorded")}
       </OneLine>
     </View>
@@ -375,7 +375,7 @@ export function LifeSections({
                     </OneLine>
                   </View>
                   {onOpenApplication && !dead ? (
-                    <Txt variant="caption" tone="ink" style={styles.link}>
+                    <Txt variant="body" tone="ink" style={styles.link}>
                       {`${tr("soul_app.applications.view")} →`}
                     </Txt>
                   ) : null}
@@ -967,7 +967,7 @@ function Homecoming({ me }: { me: MeProfile }) {
             {t("soul_app.homecoming.title", { home })}
           </Txt>
         </View>
-        <Txt variant="caption" tone="muted">
+        <Txt variant="body" tone="muted">
           {t("soul_app.homecoming.body", { from: civName(from), home })}
         </Txt>
         <Button testID="homecoming-ok" kind="secondary" title={t("soul_app.homecoming.ok")} onPress={acknowledge} />
@@ -1343,7 +1343,8 @@ const styles = StyleSheet.create({
   kind: { width: 20, height: 18, alignItems: "flex-start", justifyContent: "center" },
   milestone: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
   milestoneLine: { flexDirection: "row" },
-  recordDate: { fontSize: 12, opacity: 0.8 },
+  /** A text-only fade takes `faintText`, not opacity (Design batch 67 三). */
+  recordDate: { fontSize: 12 },
   basisLine: { flexDirection: "row", flexWrap: "wrap", columnGap: 12 },
   apps: { gap: 12 },
   appCard: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
@@ -1351,7 +1352,7 @@ const styles = StyleSheet.create({
   /** v3 .life-identity: 116pt (meta line, seal row) → 48pt (one row) on scroll. */
   band: { overflow: "hidden", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 12 },
   bandSmall: { paddingVertical: 0, paddingLeft: 12, paddingRight: 4, justifyContent: "center" },
-  bandMeta: { fontFamily: family.mono[400], fontSize: 12, lineHeight: 16, letterSpacing: 0.6 },
+  bandMeta: { fontFamily: family.mono[400], fontSize: 12, lineHeight: 16 },
   bandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   bandText: { flex: 1, minWidth: 0, gap: 4 },
   // Sized to its words (not stretched), so its width is where the name ends: the head mark's clearance reads it.
@@ -1368,7 +1369,7 @@ const styles = StyleSheet.create({
   codeTargetSmall: { paddingTop: CODE_REACH - CODE_FOOT_SMALL, paddingBottom: CODE_FOOT_SMALL, marginTop: -(CODE_REACH - CODE_FOOT_SMALL), marginBottom: -CODE_FOOT_SMALL },
   /** Stacked the line is 16 × the text scale (≥ 27pt) and the band has no fixed height: no negative margins to push the box past the clipped edge, just a 44pt floor. */
   codeTargetStack: { minHeight: 44 },
-  codeText: { fontSize: 12, lineHeight: CODE_LINE, letterSpacing: 1.6, fontFamily: family.mono[500] },
+  codeText: { fontSize: 12, lineHeight: CODE_LINE, fontFamily: family.mono[500] },
   account: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   /** v3 .life-now. */
   now: { paddingTop: 24, paddingBottom: 24, alignItems: "center", gap: 8, borderBottomWidth: 1, overflow: "hidden" },
@@ -1394,7 +1395,7 @@ const styles = StyleSheet.create({
   stations: { paddingTop: 16, paddingBottom: 16, gap: 12, borderBottomWidth: 1 },
   stationsHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   stationsStrip: { flexDirection: "row", justifyContent: "space-between" },
-  stationGlyph: { fontFamily: family.glyph, fontSize: 13, lineHeight: 18 },
+  stationGlyph: { fontFamily: family.glyph, fontSize: 14, lineHeight: 20 },
   path: { alignSelf: "stretch", flexDirection: "row", marginTop: 16 },
   /** The line behind the circles, centre to centre: walked in ink, ahead in the hairline. */
   segment: { position: "absolute", top: 14, height: 2 },
@@ -1402,7 +1403,7 @@ const styles = StyleSheet.create({
   stageRing: { width: 30, height: 30, borderRadius: radius.pill, borderWidth: 1, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
   stageDot: { width: 30, height: 30, borderRadius: radius.pill, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   stageHere: { width: 28, height: 28, borderWidth: 4 },
-  stageMark: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 14 },
+  stageMark: { fontFamily: family.mono[400], fontSize: 12, lineHeight: 16 },
   /** ✓ from the status-glyph face: the mono face (Plex then, Geist Mono now) has none, so the OS fell back to a √-like mark. */
   stageGlyph: { fontFamily: family.glyph },
   stageWord: { fontSize: 12, lineHeight: 16, textAlign: "center" },
@@ -1424,12 +1425,12 @@ const styles = StyleSheet.create({
   readOnly: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   pastList: { borderWidth: 1 },
   nudge: { marginTop: 4 },
-  pastLife: { borderBottomWidth: 1, opacity: 0.92 },
+  pastLife: { borderBottomWidth: 1, opacity: RECEDE_OPACITY },
   pastHead: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 16, paddingVertical: 16 },
-  pastNo: { paddingTop: 4, letterSpacing: 0.8 },
+  pastNo: { paddingTop: 4 },
   sealed: { marginHorizontal: 16, marginBottom: 16, borderWidth: 1 },
   stampRow: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 12, paddingHorizontal: 12 },
   stamp: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
-  stampText: { fontSize: 12, letterSpacing: 1.6 },
+  stampText: { fontSize: 12 },
   sealedFoot: { paddingHorizontal: GUTTER, paddingVertical: 12 },
 });

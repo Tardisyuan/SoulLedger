@@ -93,7 +93,7 @@ export function ForgotPassword({ initial, onBack }: { initial: string; onBack: (
       <View testID="forgot-sent" style={{ gap: space[4] }}>
         <Txt variant="title">{t("auth.forgot_password")}</Txt>
         <Notice tone="neutral">
-          <Txt variant="caption">{t("auth.forgot_email_sent")}</Txt>
+          <Txt variant="body">{t("auth.forgot_email_sent")}</Txt>
         </Notice>
         <Txt variant="body" tone="muted">{t("auth.forgot_email_sent_body")}</Txt>
         <ActionButton testID="forgot-admin" kind="outline" title={`${t("auth.forgot_notify_admin")} ↗︎`} onPress={() => void Linking.openURL(adminHelpUrl()).catch(() => {})} />
@@ -158,7 +158,7 @@ export function ChangePasswordScreen({ onBack, required }: { onBack: () => void;
   return (
     <AccountFrame testID="password-screen" onBack={onBack} locked={required} scrollRef={holdScroller}>
       <Txt variant="title">{t("profile.change_password")}</Txt>
-      {required ? <Notice tone="neutral" testID="password-must-change"><Txt variant="caption">{t("profile.password_must_change")}</Txt></Notice> : null}
+      {required ? <Notice tone="neutral" testID="password-must-change"><Txt variant="body">{t("profile.password_must_change")}</Txt></Notice> : null}
       {fail?.network ? <Notice tone="neg" testID="password-failure">{t("officer_app.login.reasons.network")}</Notice> : null}
       {none ? <Notice tone="neg" testID="password-failure">{t("profile.password_change_failed")}</Notice> : null}
       {fail?.other.length ? (

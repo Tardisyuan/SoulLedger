@@ -221,7 +221,7 @@ export function SoulCodeField({
         </Txt>
       )}
       <Press testID="login-switch-entry" accessibilityRole="button" disabled={off} onPress={() => switchTo(!email)} style={styles.switch}>
-        <Txt variant="caption" tone="ink" style={styles.switchText}>
+        <Txt variant="body" tone="ink" style={styles.switchText}>
           {t(email ? "soul_app.login.use_code" : "soul_app.login.use_email")}
         </Txt>
       </Press>

@@ -437,7 +437,7 @@ export function Segmented<K extends string>({
   const t = useTheme();
   const radio = role === "radiogroup";
   return (
-    <View testID={testID} accessibilityRole={role} style={[styles.segmented, { borderColor: t.inkSubtle }, disabled && { opacity: 0.5 }]}>
+    <View testID={testID} accessibilityRole={role} style={[styles.segmented, { borderColor: t.inkSubtle }, disabled && { opacity: GONE_OPACITY }]}>
       {options.map(({ key, label }) => {
         const on = key === value;
         return (
@@ -479,7 +479,7 @@ export function Chip({ label, count, on = false, size = "md", onPress, testID }:
       onPress={onPress}
       style={[styles.chip, size === "lg" && styles.chipLg, { borderColor: on ? t.ink : t.hair2, backgroundColor: on ? t.ink : "transparent" }]}
     >
-      <Txt variant="caption" numberOfLines={1} style={{ flexShrink: 1, color: on ? t.s0 : t.ink, fontFamily: on ? family.ui[500] : family.ui[400] }}>
+      <Txt variant="body" numberOfLines={1} style={{ flexShrink: 1, color: on ? t.s0 : t.ink, fontFamily: on ? family.ui[500] : family.ui[400] }}>
         {label}
       </Txt>
       {count == null ? null : (
@@ -651,7 +651,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
           >
             <View style={styles.mark}>
               {zh ? (
-                <Txt maxFontSizeMultiplier={TAB_FONT_SCALE} style={{ color: colour, fontFamily: family.title, fontSize: 18, lineHeight: 22 }}>{tr(`officer_app.doors.${door}.glyph`)}</Txt>
+                <Txt maxFontSizeMultiplier={TAB_FONT_SCALE} style={{ color: colour, fontFamily: family.title, fontSize: 18, lineHeight: 24 }}>{tr(`officer_app.doors.${door}.glyph`)}</Txt>
               ) : (
                 <Svg testID={`door-${door}-icon`} width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colour} strokeWidth={selected ? 1.8 : 1.6} strokeLinecap="round" strokeLinejoin="round">
                   {DOOR_ICON[door].map((d) => (

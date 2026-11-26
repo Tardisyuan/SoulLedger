@@ -98,7 +98,7 @@ describe("「下一件」 after a decision (D1)", () => {
     expect(screen.getByTestId("detail-next").props.accessibilityLabel).toBe("下一件：审批 wf-3，还剩 1 件");
     expect(screen.getByTestId("detail-leave")).toHaveTextContent("回到待办");
     expect(screen.queryByTestId("detail-leave-caption")).toBeNull();
-    expect(screen.getByTestId("detail-dimmed")).toHaveStyle({ opacity: 0.55 });
+    expect(screen.getByTestId("detail-dimmed")).toHaveStyle({ opacity: 0.45 }); // 第六十七批 三
     expect(screen.queryByTestId("action-bar")).toBeNull();
     expect(mockItem).not.toHaveBeenCalledWith("approval", "wf-3"); // not jumped to
 

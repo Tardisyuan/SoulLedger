@@ -76,7 +76,7 @@ export function DevicesScreen({ onBack }: { onBack: () => void }) {
           // The answers open at the foot of a long list, under the tab bar: bring them into view (as 我的 does).
           <View style={{ gap: space[3] }} onLayout={() => scroll.current?.scrollToEnd({ animated: true })}>
             <Notice tone="neutral">
-              <Txt variant="caption">{t("profile.devices.confirm_title", { n: String(others.length) })}</Txt>
+              <Txt variant="body">{t("profile.devices.confirm_title", { n: String(others.length) })}</Txt>
             </Notice>
             <Txt variant="body" tone="muted">
               {t("profile.devices.confirm_body")}

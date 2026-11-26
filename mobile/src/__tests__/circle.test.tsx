@@ -550,6 +550,9 @@ describe("replying", () => {
     fireEvent.press(await screen.findByTestId("comment-reply-c1"));
     expect(within(screen.getByTestId("replying")).getByText("回复 许南")).toBeTruthy();
     fireEvent.changeText(screen.getByTestId("comment-body"), "谢谢");
+    // 第六十七批 一: the comment field and its send key are both 48 (touch.controlMd), not 44.
+    expect(StyleSheet.flatten(screen.getByTestId("comment-body").props.style)).toMatchObject({ minHeight: 48 });
+    expect(StyleSheet.flatten(screen.getByTestId("comment-send").props.style)).toMatchObject({ minHeight: 48 });
     fireEvent.press(screen.getByTestId("comment-send"));
     await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
     expect(sent(calls, "POST")[0].body).toEqual({ content: "谢谢", parent: "c1", txn_id: expect.any(String) });

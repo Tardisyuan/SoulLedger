@@ -10,7 +10,7 @@ import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { ActionButton } from "../kit";
-import { Icon, Input, Sheet, Txt, family, radius, space, titleFamily, useI18n, useRemote, useTheme, Press } from "../shared";
+import { Icon, Input, Sheet, Txt, family, radius, space, titleFamily, useI18n, useRemote, useTheme, Press, GONE_OPACITY } from "../shared";
 import {
   CN_TOP,
   DENIED_IMMORTALITY_CIRCLE,
@@ -57,7 +57,7 @@ export function Choice({
       accessibilityState={{ checked: on, disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={[styles.choice, { borderColor: on ? theme.ink : theme.hair2, backgroundColor: on ? theme.field : "transparent", opacity: disabled ? 0.45 : 1 }]}
+      style={[styles.choice, { borderColor: on ? theme.ink : theme.hair2, backgroundColor: on ? theme.field : "transparent", opacity: disabled ? GONE_OPACITY : 1 }]}
     >
       <View style={[styles.mark, { borderRadius: multi ? radius.control : radius.pill, borderColor: on ? theme.ink : theme.inkSubtle, backgroundColor: on ? theme.ink : "transparent" }]}>
         {on ? <Icon name="check" size={10} color={theme.s0} strokeWidth={2} /> : null}

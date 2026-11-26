@@ -15,7 +15,7 @@ import { permission, registerDevice, requestPermission, unregisterDevice, hasReg
 import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { SignOutButton } from "./signOut";
-import { GUTTER, Notice, OneLine, Screen, SectionLabel, SmallButton, SwitchMark, Txt, family, space, translate, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { GUTTER, Notice, OneLine, Screen, SectionLabel, SmallButton, SwitchMark, Txt, family, space, translate, useI18n, useRemote, useTheme, useToast, GONE_OPACITY } from "../shared";
 
 export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name" | "stats";
 
@@ -74,7 +74,7 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
             // No address at all is the case that most needs saying: the reset mail has nowhere to go.
             <View testID="me-email-none" style={{ gap: space[2] }}>
               <Fact label={t("officer_app.me.email")} value="—" />
-              <Txt variant="caption" tone="muted">
+              <Txt variant="body" tone="muted">
                 {t("officer_app.me.email_none")}
               </Txt>
             </View>
@@ -327,7 +327,7 @@ function ConfirmBlock() {
   };
   return (
     <Block label={t("officer_app.biometric.setting", { bio: bio.inside })}>
-      <View style={{ opacity: possible ? 1 : 0.45 }}>
+      <View style={{ opacity: possible ? 1 : GONE_OPACITY }}>
         <Row
           testID="me-confirm-bio"
           minHeight={56}

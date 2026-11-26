@@ -26,7 +26,7 @@ import { Screen, Section, SectionLabel, Txt, useLayout, useTheme, Press } from "
 function Link({ label, url, testID }: { label: string; url: string; testID?: string }) {
   return (
     <Press testID={testID} accessibilityRole="link" onPress={() => void Linking.openURL(url)} hitSlop={13}>
-      <Txt variant="caption" tone="muted" style={styles.link}>
+      <Txt variant="body" tone="muted" style={styles.link}>
         {label} {"↗\uFE0E"}
       </Txt>
     </Press>
@@ -112,7 +112,7 @@ export function AboutScreen() {
   const pad = { paddingHorizontal: gutter };
   return (
     <Screen testID="about">
-      <Txt variant="caption" tone="muted" style={[styles.intro, pad]}>
+      <Txt variant="body" tone="muted" style={[styles.intro, pad]}>
         {t("about.intro")}
       </Txt>
       <Group title={t("about.fonts")} credits={FONT_CREDITS} />
@@ -128,7 +128,7 @@ export function AboutScreen() {
         <Heading title={t("about.literature")} />
         {LITERATURE_CIVILIZATIONS.map((civ) => (
           <View key={civ}>
-            <Txt variant="caption" tone="subtle" style={styles.subheading}>
+            <Txt variant="body" tone="subtle" style={styles.subheading}>
               {t(`home.civ_subtitle.${civ}`)}
             </Txt>
             {LITERATURE_CREDITS.filter((c) => c.civilization === civ).map((c) => (

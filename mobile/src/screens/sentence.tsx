@@ -27,7 +27,7 @@ import { Emblem, Node } from "@soulledger/mobile-ui/src/emblems";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { termServed } from "../rules";
 import { SessionContext } from "../session";
-import { civKeyOf, radius } from "@soulledger/mobile-ui/src/theme";
+import { civKeyOf, radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import {
   Button,
   Empty,
@@ -370,7 +370,7 @@ export function SentenceSection({
           <View style={styles.fill} />
           {hasPlan ? (
             <Press testID="sentence-all" accessibilityRole="button" hitSlop={13} onPress={() => navigation.navigate("Sentence", { landing })}>
-              <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.all")} →`}</Txt>
+              <Txt variant="body" tone="ink" style={styles.link}>{`${t("soul_app.sentence.all")} →`}</Txt>
             </Press>
           ) : null}
         </View>
@@ -514,7 +514,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
           {residence ? (
             <View testID="sentence-residing" style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
               <Txt variant="bodyLg">{t("soul_app.life.residing", residence)}</Txt>
-              <Txt variant="caption" tone="muted">
+              <Txt variant="body" tone="muted">
                 {t("soul_app.sentence.residing_body", residence)}
               </Txt>
             </View>
@@ -566,7 +566,7 @@ export function SentenceBlocked() {
   return (
     <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
       <Txt variant="bodyLg">{t(word("soul_app.sentence.blocked_title"))}</Txt>
-      <Txt variant="caption" tone="muted">
+      <Txt variant="body" tone="muted">
         {plan && plan.stations.length
           ? t("soul_app.sentence.blocked_body", { total: String(plan.stations.length) })
           : t(civKey(t, "soul_app.errors.sentence_in_progress", home))}
@@ -590,7 +590,7 @@ export function SentenceBlocked() {
         </View>
       ) : null}
       <Press testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
-        <Txt variant="caption" tone="ink" style={styles.link}>{`${t(word("soul_app.sentence.blocked_link"))} →`}</Txt>
+        <Txt variant="body" tone="ink" style={styles.link}>{`${t(word("soul_app.sentence.blocked_link"))} →`}</Txt>
       </Press>
     </View>
   );
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   rows: { marginTop: 8, gap: 4 },
   row: { flexDirection: "row", gap: 16 },
   rowLabel: { minWidth: 36 },
-  struck: { opacity: 0.62 },
+  struck: { opacity: GONE_OPACITY },
   strike: { textDecorationLine: "line-through" },
   banner: { paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 8 },
   summary: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },

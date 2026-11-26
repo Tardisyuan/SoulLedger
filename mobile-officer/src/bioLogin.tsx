@@ -14,6 +14,7 @@ import { Row } from "./kit";
 import { useSession } from "./session";
 import {
   Button,
+  GONE_OPACITY,
   CredentialStoreError,
   Input,
   Notice,
@@ -99,7 +100,7 @@ export function BioLoginBlock() {
   const title = t("officer_app.bio_login.row", { bio: bio.word });
   return (
     <View style={{ gap: space[3] }}>
-      <View style={{ opacity: unavailable ? 0.45 : 1 }}>
+      <View style={{ opacity: unavailable ? GONE_OPACITY : 1 }}>
         <Row
           testID="me-bio-login"
           minHeight={56}

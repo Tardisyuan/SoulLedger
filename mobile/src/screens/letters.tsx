@@ -27,7 +27,7 @@ import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { TAG_GLYPH } from "../rules";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
-import { radius, touch, type Theme } from "@soulledger/mobile-ui/src/theme";
+import { radius, touch, type Theme, RECEDE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { Button, Empty, FadeIn, Input, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, pressedFace, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
 
@@ -152,7 +152,7 @@ function Row({
         styles.row,
         { paddingHorizontal: gutter, borderBottomColor: hall ? t.hair2 : t.hair },
         hall && { backgroundColor: t.s1, borderLeftWidth: 3, borderLeftColor: t.ink, paddingLeft: gutter - 3 },
-        dim && { opacity: 0.82 },
+        dim && { opacity: RECEDE_OPACITY },
         // A1: no ground takes `hair`; the hall row's s1 darkens (`pressedFace`).
         pressed && pressedFace(t, hall ? t.s1 : undefined),
       ]}
@@ -318,7 +318,7 @@ export function LettersScreen() {
               <View testID="chat-empty" style={styles.empty}>
                 <PageEmptyArt />
                 <Txt variant="nav">{tr("soul_app.chat.empty.title")}</Txt>
-                <Txt variant="caption" tone="subtle" style={styles.center}>
+                <Txt variant="body" tone="subtle" style={styles.center}>
                   {tr("soul_app.chat.empty.body")}
                 </Txt>
                 <Button testID="chat-empty-find" title={tr("soul_app.chat.new")} onPress={() => navigation.navigate("FindSoul")} style={styles.emptyButton} />

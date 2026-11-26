@@ -113,8 +113,17 @@ export const touch = { controlSm: 44, controlMd: 48, tag: 28, topline: 2, toastB
  * `pill`. `none` is left for what is still square (a rule, a table cell). The focus ring follows its
  * element's shape.
  */
-/** A row that is gone (a deleted post, a withdrawn application, a closed thread) still shows, at this opacity. */
+/**
+ * Design batch 67 三: fading takes three tiers, on a whole block only (a row, an image, a bubble) — a line
+ * of text that must recede takes `faintText` instead, so its contrast stays computable in both schemes.
+ *   GONE_OPACITY     0.45  unavailable or gone: a deleted post, a withdrawn application, a closed thread,
+ *                          a row that cannot be chosen, biometrics unavailable, a struck station
+ *   PENDING_OPACITY  0.6   in progress, not settled yet: a message still sending, a form while it submits
+ *   RECEDE_OPACITY   0.85  a step back but still read: a sealed bubble, a past life
+ */
 export const GONE_OPACITY = 0.45;
+export const PENDING_OPACITY = 0.6;
+export const RECEDE_OPACITY = 0.85;
 export const radius = { none: 0, control: 4, dialog: 6, sheet: generated.radius.sheet, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds and waits excepted, and the fades that stay at `reduced` 80:

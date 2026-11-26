@@ -494,7 +494,7 @@ describe("notification settings", () => {
     fireEvent.press(screen.getByTestId("header-account"));
     expect(await screen.findByTestId("push-denied")).toBeTruthy();
     expect(screen.getByTestId("open-system-settings")).toBeTruthy();
-    expect(StyleSheet.flatten(screen.getByTestId("push-toggles").props.style)).toMatchObject({ opacity: 0.55 });
+    expect(StyleSheet.flatten(screen.getByTestId("push-toggles").props.style)).toMatchObject({ opacity: 0.45 }); // 第六十七批 三: unavailable, the 0.45 tier
     expect(screen.getByTestId("toggle-rebirth").props.accessibilityState).toEqual({ checked: true });
     expect(screen.queryByTestId("enable-push")).toBeNull();
     // Dimmed is not disabled: the choice is saved for when the system allows it.

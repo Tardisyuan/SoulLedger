@@ -128,7 +128,7 @@ export function ErrorBanner({ banner, testID }: { banner: Banner; testID?: strin
         {`! ${banner.title}`}
       </Txt>
       {banner.body ? (
-        <Txt testID={testID ? `${testID}-body` : undefined} variant="caption" tone="muted">
+        <Txt testID={testID ? `${testID}-body` : undefined} variant="body" tone="muted">
           {banner.body}
         </Txt>
       ) : null}
@@ -265,7 +265,7 @@ function EmailStep({ onSent, onNoEmail }: { onSent: (sent: Sent) => void; onNoEm
           style={styles.primary}
         />
         <Press testID="forgot-no-email" accessibilityRole="link" onPress={onNoEmail} style={styles.link}>
-          <Txt variant="caption" style={[styles.underline, { color: theme.inkMuted }]}>
+          <Txt variant="body" style={[styles.underline, { color: theme.inkMuted }]}>
             {t("soul_app.forgot_password.no_email_link")}
           </Txt>
         </Press>
@@ -504,7 +504,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
           <Txt testID="forgot-sent-title" variant="section">
             {t("soul_app.forgot_password.sent_neutral")}
           </Txt>
-          <Txt variant="caption" tone="muted">
+          <Txt variant="body" tone="muted">
             {t("soul_app.forgot_password.sent_to", { email: maskEmail(sent.email) })}
           </Txt>
         </View>
@@ -571,7 +571,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
         >
           <Txt
             testID={resendIn > 0 ? "forgot-resend-in" : undefined}
-            variant="caption"
+            variant="body"
             style={resendIn > 0 ? { color: theme.inkSubtle } : [styles.underline, { color: theme.inkMuted }]}
           >
             {resendIn > 0

@@ -26,7 +26,7 @@ import { Emblem, Icon, type IconName } from "@soulledger/mobile-ui/src/emblems";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { useAskLogout } from "../logout";
 import { translate, useI18n } from "@soulledger/mobile-ui/src/i18n";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, GONE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { PRIMER_SEEN_KEY, easProjectId, hasRegisteredDevice, permission, registerDevice, requestPermission, type Permission } from "../push";
 import { useSession } from "../session";
 import {
@@ -439,7 +439,7 @@ function EmailRow() {
     <>
       <View style={styles.fill}>
         <Txt variant="bodyLg">{t("soul_app.settings.email")}</Txt>
-        <Txt testID="email-masked" variant={d.email_masked ? "value" : "caption"} tone="muted">
+        <Txt testID="email-masked" variant={d.email_masked ? "value" : "body"} tone="muted">
           {d.email_masked || t("soul_app.settings.email_none")}
         </Txt>
       </View>
@@ -650,7 +650,7 @@ export function NotificationPrimerScreen() {
         <Txt variant="title" style={styles.center}>
           {t("soul_app.push.primer_title")}
         </Txt>
-        <Txt variant="caption" tone="muted" style={styles.center}>
+        <Txt variant="body" tone="muted" style={styles.center}>
           {t("soul_app.push.primer_body")}
         </Txt>
       </View>
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   saveRow: { flexDirection: "row", gap: 8 },
   saveActions: { flexDirection: "row", gap: 12 },
   foot: { paddingTop: 12, paddingBottom: 16 },
-  dimmed: { opacity: 0.55 },
+  dimmed: { opacity: GONE_OPACITY },
   notice: { paddingBottom: 12 },
   denied: { borderWidth: 1, borderRadius: radius.dialog, borderLeftWidth: 3, padding: 16, gap: 12 },
   end: { paddingTop: 24, paddingBottom: 32, gap: 16, alignItems: "stretch" },

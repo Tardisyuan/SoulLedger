@@ -18,7 +18,7 @@ import { Animated, Pressable, StyleSheet, View } from "react-native";
 import { submitVerdict } from "../decisions";
 import { DECISION_TOAST, confirmedDecision, decisionFailureKind } from "../deviceCheck";
 import { DossierSeal, sealEasing } from "../dossierSeal";
-import { Input, Sheet, Txt, family, radius, space, useI18n, useOnline, useReducedMotion, useTheme, useToast, Press } from "../shared";
+import { Input, Sheet, Txt, family, radius, space, useI18n, useOnline, useReducedMotion, useTheme, useToast, Press, GONE_OPACITY, PENDING_OPACITY } from "../shared";
 import { GR_ACCOUNTS, NO_SEAL, SEAL_VERDICTS, blockedSide, passBarredBy, sealPayload, sealReady, type SealChoice, type SealVerdict } from "../verdict";
 import { Choice, RejectFields } from "./rejectSheet";
 import { buzz, verdictFailure } from "./swipe";
@@ -79,7 +79,7 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
               accessibilityState={{ checked: on, disabled: !!o.why }}
               disabled={!!o.why}
               onPress={() => setC((prev) => ({ ...prev, verdict: o.verdict }))}
-              style={[styles.option, { borderColor: on ? theme.ink : theme.hair2, borderWidth: on ? 1.5 : 1, opacity: o.why ? 0.45 : 1 }]}
+              style={[styles.option, { borderColor: on ? theme.ink : theme.hair2, borderWidth: on ? 1.5 : 1, opacity: o.why ? GONE_OPACITY : 1 }]}
             >
               <Txt variant="caption" tone="muted" style={styles.ordinal}>
                 {String(i + 1)}
@@ -214,7 +214,7 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
           land();
           onSeal();
         }}
-        style={[styles.hold, { backgroundColor: disabled ? theme.s2 : theme.ink, opacity: busy ? 0.7 : 1 }]}
+        style={[styles.hold, { backgroundColor: disabled ? theme.s2 : theme.ink, opacity: busy ? PENDING_OPACITY : 1 }]}
       >
         <Txt variant="nav" style={{ color: disabled ? theme.inkSubtle : theme.s0 }}>
           {label}

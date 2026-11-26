@@ -11,7 +11,7 @@ import { StyleSheet, View } from "react-native";
 
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { family } from "@soulledger/mobile-ui/src/fonts";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, PENDING_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { formatStamp } from "../rules";
 import { Button, Empty, FadeModal, OneLine, Press, Screen, SectionError, SectionLabel, Skeleton, StaleLine, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "@soulledger/mobile-ui/src/ui";
@@ -179,7 +179,7 @@ export function SignInsScreen() {
         <Txt variant="bodyLg" style={styles.bold}>
           {t("soul_app.security.stranger_title")}
         </Txt>
-        <Txt variant="caption" tone="muted">
+        <Txt variant="body" tone="muted">
           {t("soul_app.security.stranger_body")}
         </Txt>
         <Button testID="sign-ins-change-password" title={t("profile.change_password")} onPress={() => navigation.navigate("AccountPassword")} />
@@ -190,7 +190,7 @@ export function SignInsScreen() {
             <Txt variant="bodyLg" style={styles.bold}>
               {t("profile.devices.confirm_title", { n: String(others) })}
             </Txt>
-            <Txt variant="caption" tone="muted">
+            <Txt variant="body" tone="muted">
               {t("profile.devices.confirm_body")}
             </Txt>
             <Button
@@ -216,10 +216,10 @@ const styles = StyleSheet.create({
   tag: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 2 },
   signOut: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center", paddingHorizontal: 8 },
   underline: { textDecorationLine: "underline" },
-  dim: { opacity: 0.5 },
+  dim: { opacity: PENDING_OPACITY },
   record: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
   recordTwoLine: { flexDirection: "column", alignItems: "stretch", gap: 4 },
-  stamp: { fontSize: 12, letterSpacing: 0.4 },
+  stamp: { fontSize: 12 },
   bold: { fontFamily: family.ui[600] },
   scrim: { flex: 1, justifyContent: "flex-end" },
   sheet: { borderTopWidth: 3, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden", padding: 20, gap: 12 },

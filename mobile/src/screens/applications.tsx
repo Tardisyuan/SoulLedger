@@ -192,7 +192,7 @@ export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
           {list.data.results.length === 0 ? (
             <View testID="applications-empty" style={styles.empty}>
               <PageEmptyArt />
-              <Txt variant="caption" tone="subtle" style={styles.center}>
+              <Txt variant="body" tone="subtle" style={styles.center}>
                 {t("soul_app.applications.empty")}
               </Txt>
             </View>
@@ -493,7 +493,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
             </View>
             {residence ? (
               <View style={[styles.handler, styles.badgeItem, { borderColor: theme.hair2 }]}>
-                <Txt testID="handled-by" variant="label" tone="muted" style={styles.handlerText}>
+                <Txt testID="handled-by" variant="label" tone="muted">
                   {t("soul_app.detail.handled_by", { home: residence.home })}
                 </Txt>
               </View>
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   formCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 16, paddingHorizontal: 16, borderLeftWidth: 2 },
   dot: { marginTop: 4 },
   formName: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 8 },
-  formCode: { fontSize: 12, letterSpacing: 1.1 },
+  formCode: { fontSize: 12 },
   statement: { marginTop: 4 },
   formTitle: { marginTop: 16 },
   stateNote: { marginTop: 8 },
@@ -663,7 +663,6 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   badgeItem: { flexShrink: 0, maxWidth: "100%" },
   handler: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4 },
-  handlerText: { letterSpacing: 0.4 },
   residenceNote: { flexDirection: "row", gap: 8, paddingVertical: 16, borderBottomWidth: 1 },
   nudge: { marginTop: 4 },
   facts: { marginTop: 16 },
@@ -678,7 +677,7 @@ const styles = StyleSheet.create({
   center: { textAlign: "center" },
   stepGap: { paddingBottom: 24 },
   stepName: { fontSize: 16, lineHeight: 24 },
-  stepWhen: { fontSize: 12, marginTop: 4 },
+  stepWhen: { marginTop: 4 },
   hint: { marginTop: 8 },
   appealBlock: { gap: 16, paddingBottom: 32 },
 });

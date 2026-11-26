@@ -672,7 +672,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
         <View testID="report-done" style={[styles.done, { paddingHorizontal: gutter }]}>
           <Icon name="check" size={28} color={t.pos} />
           <Txt variant="title">{tr("soul_app.circle.report.done_title")}</Txt>
-          <Txt variant="caption" tone="muted" style={styles.center}>
+          <Txt variant="body" tone="muted" style={styles.center}>
             {tr("soul_app.circle.report.done_body")}
           </Txt>
           <Button testID="report-back" kind="secondary" title={tr("common.back")} onPress={navigation.goBack} style={styles.stretch} />
@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 16 },
   head: { paddingTop: 24, paddingBottom: 16, gap: 16, borderBottomWidth: 1 },
   civ: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
-  civText: { fontSize: 12, lineHeight: 16, letterSpacing: 1.4 },
+  civText: { fontSize: 12, lineHeight: 16 },
   counts: { flexDirection: "row", gap: 24 },
   countBox: { flexDirection: "row", borderWidth: 1 },
   countCell: { flex: 1, minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingHorizontal: 16, borderLeftWidth: 0 },
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   countN: { fontSize: 16, lineHeight: 24 },
   reborn: { flexDirection: "row", gap: 12, alignItems: "flex-start", borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   smallFollow: { minHeight: 34, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
-  smallFollowText: { fontSize: 12, letterSpacing: 0.4 },
+  smallFollowText: { fontSize: 12 },
   listRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, paddingVertical: 12 },
   scrim: { flex: 1 },
   sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" },

@@ -607,8 +607,9 @@ export function thumbRef(key: string): (node: View | null) => () => void {
 /**
  * v4 (定稿 V4Batch07 的手机屏; user decision 2026-11-06 一律按 v4), on the 4px grid since 第五十四批:
  * 11 / 12 / 14 / 16 / 20 / 32 with line heights 16 / 16 / 20 / 24 / 28 / 40. Body is 14/20, the big serif
- * title 32/40, the line under a title 14/20 in --sub (`caption`). v4 tracks no control text (`meta`,
- * `valueSm`); `label` keeps its 0.4 and the eyebrow its 0.08em. letterSpacing is in pt.
+ * title 32/40; the line under a title is `body` in --sub. Design batch 67: `caption` is 12/16/400, an
+ * explanatory sentence; `meta` (12/16/500) a short label or a time. Only the 11pt upper-case Latin
+ * eyebrow is tracked (0.08em, the web's value); no 12pt text is. letterSpacing is in pt.
  */
 export const TYPE = {
   /** Titles and display text in Noto Serif SC 600 (`family.title`); body and controls stay `ui`. */
@@ -617,8 +618,8 @@ export const TYPE = {
   nav: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[600] },
   body: { fontSize: 14, lineHeight: 20, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[500] },
-  label: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.4 },
-  /** `label` without its tracking (令牌 `tai.head` 12/16/500): a meta line, a time, a link under a message. */
+  label: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[500] },
+  /** 令牌 `tai.head` 12/16/500: a meta line, a time, a link under a message (the same face as `label`). */
   meta: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[500] },
   /** A ledger row's title (v3 `.life-records article b`), 16 / 24 / 600 on its row. */
   section: { fontSize: 16, lineHeight: 24, fontFamily: family.ui[600] },
@@ -629,7 +630,8 @@ export const TYPE = {
    * mono `.product-label`; the 0.08em tracking is the prototype's.
    */
   eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.88, textTransform: "uppercase" },
-  caption: { fontSize: 14, lineHeight: 20, fontFamily: family.ui[400] },
+  /** 令牌 `tai.caption` 12/16/400: a secondary, explanatory sentence (Design batch 67 二). */
+  caption: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[400] },
   value: { fontSize: 14, lineHeight: 20, fontFamily: family.mono[400] },
   /** `value` at 12/16: a time stamp, a code or a count beside a row. */
   valueSm: { fontSize: 12, lineHeight: 16, fontFamily: family.mono[400] },
@@ -1265,7 +1267,7 @@ export function Empty({ text, testID }: { text: string; testID?: string }) {
   return (
     <View style={styles.empty}>
       <View style={{ width: 26, height: 1, backgroundColor: t.hair2 }} />
-      <Txt testID={testID} variant="caption" tone="subtle" style={styles.center}>
+      <Txt testID={testID} variant="body" tone="subtle" style={styles.center}>
         {text}
       </Txt>
     </View>
@@ -1755,7 +1757,7 @@ export function Notice({
           <Icon name="alert" size={15} color={t.neg} />
         </View>
       ) : null}
-      <Txt testID={testID} variant="caption" tone={neg ? "negInk" : "muted"} style={styles.fill}>
+      <Txt testID={testID} variant="body" tone={neg ? "negInk" : "muted"} style={styles.fill}>
         {children}
       </Txt>
       {onRetry ? <SmallButton title={tr("soul_app.common.retry")} onPress={onRetry} /> : null}
@@ -1834,7 +1836,7 @@ export function ScreenError({
       {onRetry ? <Button testID={retryTestID ?? "screen-retry"} title={tr("soul_app.common.retry")} onPress={onRetry} style={styles.retry} /> : null}
       {onHome ? <Button testID="crash-home" kind="secondary" title={tr("soul_app.errors.go_home")} onPress={onHome} style={styles.home} /> : null}
       {error ? (
-        <Txt testID="error-code" variant="value" style={[styles.errorCode, { color: t.faintText }]}>
+        <Txt testID="error-code" variant="valueSm" style={{ color: t.faintText }}>
           {`${code} · ${clock}${error.requestId ? ` · request ${error.requestId}` : ""}`}
         </Txt>
       ) : null}
@@ -2400,7 +2402,6 @@ export const styles = StyleSheet.create({
   screenError: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6], paddingVertical: space[7] },
   retry: { alignSelf: "stretch", marginTop: space[1] },
   home: { alignSelf: "stretch" },
-  errorCode: { fontSize: 12, opacity: 0.8 },
   rows: { gap: space[2] },
   juan: { borderTopWidth: 1 },
   juanRow: { paddingVertical: space[3], borderBottomWidth: 1 },
