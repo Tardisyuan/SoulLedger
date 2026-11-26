@@ -121,7 +121,13 @@ export function useDrawerA11y<T extends HTMLElement>({
     const first = focusablesWithin(node)[0];
     (first ?? node).focus();
 
+    // 4. The page under the scrim does not scroll (Base UI's Dialog does this for Modal / Drawer; this hook is
+    // the one modal drawer not on it). Restores whatever was there, so a nested lock is not undone early.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     return () => {
+      document.body.style.overflow = prevOverflow;
       // `isConnected` because the opener can be unmounted by the same change
       // that closed the drawer; focusing a detached node silently does nothing
       // in a browser and would leave focus on `<body>`.
