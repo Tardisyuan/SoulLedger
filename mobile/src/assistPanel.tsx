@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
 import { SHEET_CLOSE_DRAG_PT } from "@soulledger/mobile-ui/src/feedback";
-import { radius } from "@soulledger/mobile-ui/src/theme";
+import { radius, withAlpha } from "@soulledger/mobile-ui/src/theme";
 import { Icon } from "@soulledger/mobile-ui/src/emblems";
 import { quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
@@ -38,7 +38,7 @@ const PAGE_PEEK = 56;
 const MAX_QUESTION = 1000;
 /** A2: a new fragment fades in over 120 ms, in three steps of its colour's alpha (nested text has no opacity). */
 const FADE_STEP_MS = 40;
-const FADE_ALPHA = ["55", "AA", ""];
+const FADE_ALPHA = [1 / 3, 2 / 3, 1];
 /** A1: the three dots brighten one after another, 400 ms each. */
 const DOT_MS = 400;
 
@@ -452,7 +452,7 @@ function FadeIn({ text, color }: { text: string; color: string }) {
     const timer = setTimeout(() => setStep((n) => n + 1), FADE_STEP_MS);
     return () => clearTimeout(timer);
   }, [step]);
-  return <Text style={{ color: `${color}${FADE_ALPHA[step]}` }}>{text}</Text>;
+  return <Text style={{ color: FADE_ALPHA[step] < 1 ? withAlpha(color, FADE_ALPHA[step]) : color }}>{text}</Text>;
 }
 
 /** The answer being written (A2, A10): busy for assistive tech; it is announced once, when done. */

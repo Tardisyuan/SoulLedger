@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   rule: { height: 1 },
   checkRow: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12 },
-  box: { width: 20, height: 20, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  box: { width: 20, height: 20, borderWidth: 1.5, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   tick: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   underline: { textDecorationLine: "underline" },

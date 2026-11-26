@@ -22,6 +22,7 @@ import {
   splash,
   themeFor,
   v4,
+  withAlpha,
   type CivKey,
   type ColorScheme,
   type Theme,
@@ -362,5 +363,15 @@ describe("one theme object per (civilization, scheme)", () => {
   it("the shared object cannot be changed by one screen for all the others", () => {
     expect(Object.isFrozen(themeFor("GREEK", "dark"))).toBe(true);
     expect(sealedTheme(themeFor("GREEK", "dark"))).not.toBe(themeFor("GREEK", "dark"));
+  });
+});
+
+describe("withAlpha", () => {
+  it("adds two hex digits to #RRGGBB, and multiplies an rgba token's own alpha instead of appending to it", () => {
+    expect(withAlpha("#A81E3C", 0.14)).toBe("#A81E3C24");
+    expect(withAlpha("#FFFFFF", 1 / 3)).toBe("#FFFFFF55");
+    const hair = themeFor("CHINESE", "dark").hair;
+    expect(hair).toMatch(/^rgba\(/);
+    expect(withAlpha(hair, 0.5)).toBe("rgba(255,255,255, 0.06)");
   });
 });

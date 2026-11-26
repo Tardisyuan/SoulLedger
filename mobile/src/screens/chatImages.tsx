@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   underline: { textDecorationLine: "underline" },
   reason: { marginTop: 2 },
   viewer: { flex: 1, backgroundColor: "#000000" },
-  viewerText: { color: "#FFFFFF" },
+  viewerText: { color: ON_PLAQUE },
   counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   counter: { color: ON_PLAQUE, fontSize: 14, lineHeight: 20 },
   button: { borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },

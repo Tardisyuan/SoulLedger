@@ -20,7 +20,7 @@ import { FONT_ASSETS, quoteFamily, titleFamily } from "@soulledger/mobile-ui/src
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
-import { MfaSheet } from "../screens/mfaParts";
+import { CheckRow, MfaSheet } from "../screens/mfaParts";
 import { RememberedCard } from "@soulledger/mobile-ui/src/rememberedCard";
 import { motion, radius, themeFor } from "@soulledger/mobile-ui/src/theme";
 import {
@@ -458,9 +458,14 @@ describe("timings (v3) and corners (v4)", () => {
     wrap(<Input label="Name" testID="name" value="" onChangeText={jest.fn()} />);
     const box = screen.getByTestId("name").parent?.parent;
     expect(flat(box as never).borderRadius).toBe(4);
+    expect(flat(box as never).minHeight).toBe(48);
     screen.unmount();
     wrap(<Button testID="b" title="b" onPress={jest.fn()} />);
     expect(flat(screen.getByTestId("b")).borderRadius).toBe(4);
+    screen.unmount();
+    // The two-step checkbox is a control too.
+    wrap(<CheckRow testID="check" on={false} onToggle={jest.fn()}><Txt>c</Txt></CheckRow>);
+    expect(flat(screen.getByTestId("check").children[0] as never).borderRadius).toBe(4);
     screen.unmount();
     wrap(
       <LogoutProvider onConfirm={jest.fn()}>

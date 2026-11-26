@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { isDenied } from "./rules";
-import { BusyLine, Button, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press, sharedTouch } from "./shared";
+import { BusyLine, Button, EASE, Emblem, GONE_OPACITY, HIGHLIGHT_ALPHA, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, motion, radius, space, useI18n, useAfter, useLandingFade, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press, sharedTouch, withAlpha } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -45,8 +45,7 @@ export type TagTone = "neutral" | "pos" | "neg" | "warn";
 export function Tag({ tone = "neutral", children, testID }: { tone?: TagTone; children: string; testID?: string }) {
   const t = useTheme();
   const ink = tone === "neutral" ? t.inkMuted : t[tone];
-  // `pos` / `neg` / `warn` are #RRGGBB in both schemes: 8-digit hex puts the tint at ~14%.
-  const ground = tone === "neutral" ? t.s2 : `${ink}24`;
+  const ground = tone === "neutral" ? t.s2 : withAlpha(ink, 0.14);
   return (
     <View testID={testID} style={[styles.tag, { backgroundColor: ground }]}>
       <Txt variant="caption" numberOfLines={2} style={{ color: ink }}>
