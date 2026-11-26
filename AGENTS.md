@@ -296,7 +296,8 @@ npm run --workspace packages/core test      # vitest，不是 jest
 
 两个 Expo App 各有 `typecheck` / `lint` / `test` 三条（`npm run --workspace mobile …`、
 `npm run --workspace @soulledger/officer …`）；CI 里是 `mobile` 与 `officer` 两个 job，
-`mobile-officer` 原样引用 `mobile/src` 的叶子模块，所以改 `mobile/` 也会触发它。
+两端共用的代码在 `packages/mobile-ui`(官员端经 `mobile-officer/src/shared.ts` 拿),官员端不 import 任何 `mobile/` 文件;
+但它用着 `mobile/` 的 `jest.setup.shared.js`、`metro.base.js`、`plugins/`、`modules/`,所以改 `mobile/` 也会触发它。
 
 两个 App 的写法（2026-10-30 第二轮）：「回到前台就刷新」用 `onForeground`（`packages/mobile-ui/src/platform.ts`，只认 `background → active`；
 iOS 面容弹框、系统提示之后的 `inactive → active` 不算）。有意的例外是设置页读通知权限那处（从系统设置回来也要读）；

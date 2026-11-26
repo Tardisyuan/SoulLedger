@@ -194,8 +194,9 @@ npm run --workspace mobile android              # soul app; or ios — that is e
 npm run --workspace @soulledger/officer android # officer app (`mobile-officer/`)
 ```
 
-The officer app imports the soul app's leaf modules in place (`mobile-officer/src/shared.ts`), so a change
-under `mobile/src` can affect it. After changing `app.json` plugins (permission strings, a new native
+What the two apps share as code lives in `packages/mobile-ui` (the officer app takes it through
+`mobile-officer/src/shared.ts`); the officer app imports no file under `mobile/`. It does use the soul app's
+`jest.setup.shared.js`, `metro.base.js`, `plugins/` and `modules/`, so a change under `mobile/` can still affect it. After changing `app.json` plugins (permission strings, a new native
 module) run `npx expo prebuild --platform ios|android --no-install` first. Rebuild the dev client only when a
 native dependency or an `app.json` plugin changed; a JS change needs only Metro.
 
