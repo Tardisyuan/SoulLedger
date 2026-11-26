@@ -14,7 +14,7 @@ import { civSkinOf } from "@/src/lib/civSkin";
  * absolutely-positioned rings, the back one at 20% and the front one a
  * transparent ring with a single coloured top edge, spun by `animate-spin`.
  * Copy-paste is not the problem on its own — the drift is. Fifteen of those
- * twenty hardcode `border-amber-500/20` and `border-t-amber-500`; the other
+ * twenty hardcode `amber-500/20 border` and `amber-500 top border`; the other
  * five write `border-[oklch(var(--color-accent))]/20` and
  * `border-t-[oklch(var(--color-accent))]`. Those two spellings were NOT the same
  * colour until very recently: `tailwind.config.js` used to override the `amber`

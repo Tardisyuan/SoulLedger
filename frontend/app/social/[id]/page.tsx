@@ -44,7 +44,7 @@ export default function PostDetailPage() {
         /* Not an EmptyState. "This request failed" and "there is nothing
            here" are different facts, and the empty state says the second
            one — so a fetch failure would read as a post that does not
-           exist. `--color-status-error` replaces the `text-red-400` that
+           exist. `--color-status-error` replaces the `red-400 text` that
            went dead in light mode. */
         <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
           <span aria-hidden="true">✕ </span>

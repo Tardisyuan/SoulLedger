@@ -4,8 +4,8 @@
  * 与 app/dashboard/page.tsx 同形的骨架屏:PageShell 的页头(标题 + 副标题 +
  * 右侧动作)、一条标签页带,然后是四张 KPI 卡与两张图表。
  *
- * 换掉的是一个手搓双环转圈,它的两个环写着 `border-amber-500/20` 与
- * `border-t-amber-500` —— Tailwind 原生调色板(基线里的 `palette: 2`),而
+ * 换掉的是一个手搓双环转圈,它的两个环写着 `amber-500/20 border` 与
+ * `amber-500 top border` —— Tailwind 原生调色板(基线里的 `palette: 2`),而
  * amber-500 恰好就是 --color-accent 的值,于是一个「正在加载」用掉了全站的
  * 强调色。骨架屏还多做一件转圈做不到的事:KPI 现在是 `text-xl`(56px),
  * 加载态若不占住那个高度,数据落地时整页会往下跳一格。

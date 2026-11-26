@@ -285,7 +285,7 @@ function SoulsList() {
   };
 
   return (
-    /* `page` (1200px), up from the `max-w-5xl` (1024) this page chose for
+    /* `page` (1200px), up from the `5xl max width` (1024) this page chose for
        itself. The column count is variable — the death column comes and goes
        with the rows — so the wider column is what stops a page of dead souls
        from being narrower per-column than a page of living ones. */

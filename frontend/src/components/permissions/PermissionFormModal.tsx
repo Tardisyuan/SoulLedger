@@ -124,7 +124,7 @@ function PermissionForm({
         {/* 这条**表单级**消息仍然手写,而不是走 `Field` 的 `error` —— 那是刻意的,
             理由就在上面 `useSubmitErrorFocus` 那段:它不属于任何一个字段,交给
             `Field` 就等于把 `aria-invalid` 重新挂回三个 input 上,正是先前撤掉的
-            那件事。换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色
+            那件事。换掉的只有颜色:`red-400 text` 是 Tailwind 原生调色板,浅色
             模式下拿到的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
         {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-danger))] text-sm"><span aria-hidden="true">! </span>{error}</p>}
         <TextField

@@ -206,7 +206,7 @@ function UserForm({ isOpen, onClose, user }: UserModalProps) {
   };
 
   /**
-   * 保存键此前是 `bg-amber-500` —— 和 `SoulEditModal` 里那一个,是同一处缺陷的
+   * 保存键此前是 `amber-500 fill` —— 和 `SoulEditModal` 里那一个,是同一处缺陷的
    * 两个副本。
    *
    * Tailwind 的 `amber-500` 是 `#f59e0b` = `hsl(38 92% 50%)`,而

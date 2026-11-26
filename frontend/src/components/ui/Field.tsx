@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
  *    *something* failed.
  *
  * 2. THE TWO THAT DO USE THE PALETTE, NOT THE TOKEN. Modal writes
- *    `border-red-500` and `text-red-500`. `--color-status-error` exists, it is
+ *    `red-500 border` and `red-500 text`. `--color-status-error` exists, it is
  *    re-measured per theme (`0 84% 62%` dark, `0 78% 44%` light — the light
  *    value is darker specifically so error text clears AA on a light canvas),
  *    and `red-500` follows neither theme. This component uses the token:

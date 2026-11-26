@@ -59,7 +59,7 @@ export function PageSection({
         </div>
       )}
       {error ? (
-        // `--color-status-error`, not `text-red-400`. The raw class is one
+        // `--color-status-error`, not `red-400 text`. The raw class is one
         // fixed colour, so it rendered ~3:1 on light surfaces — under AA, on
         // the only text that says something went wrong. `role="alert"` because
         // a failure appearing in place of content is not something the reader

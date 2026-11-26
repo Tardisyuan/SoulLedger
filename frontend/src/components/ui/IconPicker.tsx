@@ -14,7 +14,7 @@ interface IconPickerProps {
 
 /*
  * The amber literals here meant "the accent" and were spelled as a fixed
- * colour. Two consequences: `text-amber-400` is one step off the accent and
+ * colour. Two consequences: `amber-400 text` is one step off the accent and
  * near-invisible on light surfaces, and none of the three followed the accent
  * the user picks in SettingsDrawer — choose Blue and the icon picker stayed
  * amber. They are accent tokens now, so they track the choice.

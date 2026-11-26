@@ -118,7 +118,7 @@ export default function RecycleBinPage() {
         </PageShell>
       }
     >
-      {/* variant="page" (1200), up from the hand-written max-w-5xl (1024).
+      {/* variant="page" (1200), up from the hand-written 5xl max width (1024).
           The intro sentence moves into the `subtitle` slot — it is one line
           saying what this screen is, which is exactly what that slot is for,
           and it was the only child above the table.

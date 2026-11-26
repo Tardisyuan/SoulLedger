@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 /* The demo's recordings are 8 MB of prose, and Tailwind generates CSS from words it finds in files. The normal build stays as if the demo were not there. */
 @source not "../demo/data";
+/* Tests spell out the class names they forbid; scanning them would ship those very rules. */
+@source not "../src/__tests__";
 
 @custom-variant dark (&:is(.dark *));
 

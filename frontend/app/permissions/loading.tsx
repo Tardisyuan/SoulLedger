@@ -3,7 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * 迁移前这里是一个手搓的双环转圈:`border-amber-500/20` + `border-t-amber-500`
+ * 迁移前这里是一个手搓的双环转圈:`amber-500/20 border` + `amber-500 top border`
  * ——两处 Tailwind 原生调色板(基线里 `palette: 2` 就是它们),在浅色主题下
  * 那一档偏亮偏淡;而且 amber-500 恰好是 --color-accent 的值,于是一个纯粹的
  * 「正在加载」用掉了全站的强调色。

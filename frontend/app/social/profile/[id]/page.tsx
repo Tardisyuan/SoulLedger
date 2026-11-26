@@ -101,7 +101,7 @@ export default function UserProfilePage() {
           <Skeleton className="h-32" />
         ) : profileError ? (
           /* An error is not an empty state — see app/social/[id]/page.tsx.
-             `--color-status-error` replaces `text-red-400`, which was a raw
+             `--color-status-error` replaces `red-400 text`, which was a raw
              palette value and went pale in light mode. */
           <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
             <span aria-hidden="true">✕ </span>

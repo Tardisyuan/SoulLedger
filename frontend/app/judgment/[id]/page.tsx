@@ -127,7 +127,7 @@ import { VerdictDraftPanel } from "@/src/components/ai/VerdictDraftPanel";
  *
  * This page is the product's climax and rendered as a generic settings form:
  * the four verdicts were a `grid-cols-2` of radio cards painted
- * `border-amber-500/40` / `border-red-600/40` / `border-blue-500/40` /
+ * `amber-500/40 border` / `red-600/40 border` / `blue-500/40 border` /
  * `border-purple-500/40`, the confession was `<p className="italic">` in a pair
  * of quotes, and the evidence was `JSON.stringify` in a `<pre>`.
  *

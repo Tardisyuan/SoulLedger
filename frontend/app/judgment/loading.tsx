@@ -7,7 +7,7 @@ import { TablePageSkeleton } from "@/components/ui/page-skeletons";
  * concluded tab strip, then a six-column DataTable.
  *
  * This was `<PageSpinner />`. The two hand-rolled rings that PageSpinner
- * itself replaced were `border-amber-500/20` and `border-t-amber-500` —
+ * itself replaced were `amber-500/20 border` and `amber-500 top border` —
  * palette literals rather than the accent token — and that note is kept here
  * because the spinner is still the right answer inside a card; it was the
  * wrong answer for a whole route, where it says nothing about what is coming.

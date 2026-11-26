@@ -436,8 +436,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
       {/* All three confirmations go through BaseModal (Base UI Dialog).
           The reject and execute dialogs were hand-rolled `fixed inset-0
-          bg-black/50 … z-50` overlays — a third scrim dialect alongside
-          Modal.tsx's own `bg-black/60 backdrop-blur-xs` and recycle-bin's
+          black/50 fill … z-index 50` overlays — a third scrim dialect alongside
+          Modal.tsx's own `black/60 fill xs backdrop blur` and recycle-bin's
           `z-9999`, since renamed `z-dialog` — and being plain divs they had
           no focus trap, no Escape,
           and no `aria-modal`. Adding a third hand-rolled one for approve would
