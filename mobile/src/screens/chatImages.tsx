@@ -255,11 +255,12 @@ export function ChatImageViewer({ images, index, onClose }: { images: ChatImageR
 
 type FramePhoto = ReturnType<typeof useFrontPhoto>["framePhoto"];
 
-function ViewerPage({ image, width, height, onClose, attach, onLoaded }: { image: ChatImageRef; width: number; height: number; onClose: () => void; attach: (node: View | null) => void; onLoaded: (e: { source?: { width: number; height: number } }) => void }) {
+// The tap that closes is PhotoPager's (`tapLabel`): it waits out a double tap, which zooms.
+function ViewerPage({ image, width, height, attach, onLoaded }: { image: ChatImageRef; width: number; height: number; attach: (node: View | null) => void; onLoaded: (e: { source?: { width: number; height: number } }) => void }) {
   const { t: tr } = useI18n();
   const { source, failed, reload } = useChatImageSource(image.id);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.media.close")} onPress={onClose} style={{ width, height, justifyContent: "center", alignItems: "center" }}>
+    <View style={{ width, height, justifyContent: "center", alignItems: "center" }}>
       {source ? (
         <View ref={attach}><Image onLoad={onLoaded} testID={`chat-viewer-image-${image.id}`} source={source} contentFit="contain" cachePolicy="memory-disk" transition={0} style={{ width, height }} onError={reload} /></View>
       ) : failed ? (
@@ -269,7 +270,7 @@ function ViewerPage({ image, width, height, onClose, attach, onLoaded }: { image
       ) : (
         <Loader size={20} />
       )}
-    </Pressable>
+    </View>
   );
 }
 
@@ -302,8 +303,10 @@ function ViewerPages({
         start={start}
         keyOf={(image) => String(image.id)}
         onIndex={setCurrent}
+        onClose={onClose}
+        tapLabel={tr("soul_app.circle.media.close")}
         renderPage={(image) => (
-          <ViewerPage image={image} width={width} height={pageHeight} onClose={onClose} attach={framePhoto(String(image.id)).attach} onLoaded={framePhoto(String(image.id)).onLoad} />
+          <ViewerPage image={image} width={width} height={pageHeight} attach={framePhoto(String(image.id)).attach} onLoaded={framePhoto(String(image.id)).onLoad} />
         )}
       />
       {n > 1 ? (

@@ -58,7 +58,7 @@ import {
 } from "react-native";
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
+import Reanimated, { Easing as REasing, FadeOut, Keyframe, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { notify } from "@soulledger/core/platform";
 import { formatAsOf, hhmm } from "@soulledger/core/domain/dates";
@@ -389,6 +389,12 @@ export function useFrontPhoto(prefix: string) {
  * (they were three ScrollViews that mounted every picture of a thread at once). A FlatList with `getItemLayout`, so
  * only the page in front and its neighbours are mounted; `contentOffset` still opens it on `start` (initialScrollIndex
  * picks what is rendered first). `onIndex` hears the page in front after a swipe, kept inside the list.
+ *
+ * Each page zooms (ux-motion-mobile B1): pinch up to `ZOOM_MAX` about the fingers, a double tap to `ZOOM_TAP` about
+ * the tap (again: back to 1), one finger pans a zoomed photo inside its page; while zoomed the pages do not turn.
+ * Unzoomed, a drag down past `CLOSE_DRAG_PT` (or flung) calls `onClose`. `tapLabel`: a single tap anywhere closes
+ * too (the chat's and the letters' viewers), and the page is a button of that name for a screen reader. Zoom settles
+ * over 160 on the standard curve; under reduce motion Reanimated's default lands it at once.
  */
 export function PhotoPager<T>({
   testID,
@@ -396,6 +402,8 @@ export function PhotoPager<T>({
   start,
   keyOf,
   onIndex,
+  onClose,
+  tapLabel,
   renderPage,
 }: {
   testID: string;
@@ -403,9 +411,12 @@ export function PhotoPager<T>({
   start: number;
   keyOf: (item: T) => string;
   onIndex: (index: number) => void;
+  onClose: () => void;
+  tapLabel?: string;
   renderPage: (item: T, index: number) => ReactElement;
 }) {
   const { width } = useWindowDimensions();
+  const [zoomed, setZoomed] = useState(false);
   const n = items.length;
   const first = Math.min(Math.max(0, start), Math.max(0, n - 1));
   return (
@@ -414,6 +425,7 @@ export function PhotoPager<T>({
       data={items}
       horizontal
       pagingEnabled
+      scrollEnabled={!zoomed}
       showsHorizontalScrollIndicator={false}
       keyExtractor={keyOf}
       getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
@@ -422,8 +434,137 @@ export function PhotoPager<T>({
       windowSize={3}
       contentOffset={{ x: first * width, y: 0 }}
       onMomentumScrollEnd={(e) => onIndex(Math.min(n - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))))}
-      renderItem={({ item, index }) => renderPage(item, index)}
+      renderItem={({ item, index }) => (
+        <ZoomPage width={width} onZoomed={setZoomed} onClose={onClose} tapLabel={tapLabel}>
+          {renderPage(item, index)}
+        </ZoomPage>
+      )}
     />
+  );
+}
+
+/** How far a pinch zooms a photo, and where a double tap takes it. */
+export const ZOOM_MAX = 4;
+export const ZOOM_TAP = 2.5;
+/** Unzoomed, a drag down this far (or flung faster than `CLOSE_FLING`, pt/s) closes the viewer. */
+export const CLOSE_DRAG_PT = 120;
+const CLOSE_FLING = 800;
+
+function ZoomPage({ width, onZoomed, onClose, tapLabel, children }: { width: number; onZoomed: (on: boolean) => void; onClose: () => void; tapLabel?: string; children: ReactNode }) {
+  const [zoomed, setZoomed] = useState(false);
+  const zoom = useCallback(
+    (on: boolean) => {
+      setZoomed(on);
+      onZoomed(on);
+    },
+    [onZoomed]
+  );
+  const scale = useSharedValue(1);
+  const x = useSharedValue(0);
+  const y = useSharedValue(0);
+  // The page's size (for the centre and the pan's bounds), and what a gesture started from.
+  const box = useSharedValue({ w: width, h: 0 });
+  const from = useSharedValue({ s: 1, x: 0, y: 0, fx: 0, fy: 0 });
+  const settle = { duration: motion.sheetOut, easing: REasing.bezier(...curves.standard) };
+  // Built every render, like the pull: `zoomed` (a state) switches the pan between moving the photo and closing.
+  const bound = (v: number, s: number, size: number) => {
+    "worklet";
+    const m = ((s - 1) * size) / 2;
+    return Math.min(m, Math.max(-m, v));
+  };
+  const reset = () => {
+    "worklet";
+    scale.value = withTiming(1, settle);
+    x.value = withTiming(0, settle);
+    y.value = withTiming(0, settle);
+    runOnJS(zoom)(false);
+  };
+  const pinch = Gesture.Pinch()
+    .withTestId("photo-pinch")
+    .onStart((e) => {
+      from.value = { s: scale.value, x: x.value, y: y.value, fx: e.focalX - box.value.w / 2, fy: e.focalY - box.value.h / 2 };
+      runOnJS(zoom)(true);
+    })
+    .onUpdate((e) => {
+      const f = from.value;
+      const s = Math.min(ZOOM_MAX, Math.max(1, f.s * e.scale));
+      // Keep the point that was under the fingers under them (and follow them as they move).
+      x.value = e.focalX - box.value.w / 2 - (s * (f.fx - f.x)) / f.s;
+      y.value = e.focalY - box.value.h / 2 - (s * (f.fy - f.y)) / f.s;
+      scale.value = s;
+    })
+    .onEnd(() => {
+      if (scale.value <= 1.01) return reset();
+      x.value = withTiming(bound(x.value, scale.value, box.value.w), settle);
+      y.value = withTiming(bound(y.value, scale.value, box.value.h), settle);
+    });
+  const pan = zoomed
+    ? Gesture.Pan()
+        .withTestId("photo-pan")
+        .maxPointers(1)
+        .onStart(() => {
+          from.value = { ...from.value, x: x.value, y: y.value };
+        })
+        .onUpdate((e) => {
+          x.value = bound(from.value.x + e.translationX, scale.value, box.value.w);
+          y.value = bound(from.value.y + e.translationY, scale.value, box.value.h);
+        })
+    : Gesture.Pan()
+        .withTestId("photo-pan")
+        .maxPointers(1)
+        // Down only, and a sideways drag is the pages' to turn.
+        .activeOffsetY(12)
+        .failOffsetX([-12, 12])
+        .onUpdate((e) => {
+          y.value = Math.max(0, e.translationY);
+        })
+        .onEnd((e) => {
+          if (e.translationY > CLOSE_DRAG_PT || e.velocityY > CLOSE_FLING) runOnJS(onClose)();
+          else y.value = withTiming(0, settle);
+        });
+  const doubleTap = Gesture.Tap()
+    .withTestId("photo-double-tap")
+    .numberOfTaps(2)
+    .onEnd((e) => {
+      if (scale.value > 1) return reset();
+      const fx = e.x - box.value.w / 2;
+      const fy = e.y - box.value.h / 2;
+      scale.value = withTiming(ZOOM_TAP, settle);
+      x.value = withTiming(bound(fx * (1 - ZOOM_TAP), ZOOM_TAP, box.value.w), settle);
+      y.value = withTiming(bound(fy * (1 - ZOOM_TAP), ZOOM_TAP, box.value.h), settle);
+      runOnJS(zoom)(true);
+    });
+  const tap = Gesture.Tap()
+    .withTestId("photo-tap")
+    .enabled(!!tapLabel)
+    .onEnd(() => {
+      runOnJS(onClose)();
+    });
+  const gesture = Gesture.Simultaneous(pinch, pan, Gesture.Exclusive(doubleTap, tap));
+  const moved = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }] }));
+  return (
+    <GestureDetector gesture={gesture}>
+      <View
+        testID="photo-page"
+        style={{ width, overflow: "hidden" }}
+        onLayout={(e) => {
+          box.value = { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height };
+        }}
+        {...(tapLabel
+          ? {
+              accessible: true,
+              accessibilityRole: "button" as const,
+              accessibilityLabel: tapLabel,
+              accessibilityActions: [{ name: "activate" }],
+              onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => {
+                if (e.nativeEvent.actionName === "activate") onClose();
+              },
+            }
+          : {})}
+      >
+        <Reanimated.View style={moved}>{children}</Reanimated.View>
+      </View>
+    </GestureDetector>
   );
 }
 

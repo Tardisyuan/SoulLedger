@@ -288,7 +288,8 @@ describe("full screen", () => {
     // No save, no share, no close button: the one control is a tap anywhere. (The "2 / 2" counter is read-only.)
     for (const word of [/保存/, /分享/, /下载/]) expect(screen.queryByText(word)).toBeNull();
     expect(screen.queryByLabelText(/保存|save/i)).toBeNull();
-    fireEvent.press(screen.getAllByLabelText("关闭")[0]);
+    // The page is a 「关闭」 button to a screen reader; the finger's tap is PhotoPager's gesture (photoZoom.test.tsx).
+    fireEvent(screen.getAllByLabelText("关闭")[0], "accessibilityAction", { nativeEvent: { actionName: "activate" } });
     await waitFor(() => expect(screen.queryByTestId("chat-image-viewer")).toBeNull());
   });
 
@@ -298,7 +299,7 @@ describe("full screen", () => {
     fireEvent.press(screen.getAllByTestId("chat-image")[0]);
     await screen.findByTestId("chat-image-viewer");
     expect(screen.queryByTestId("chat-image-viewer-counter")).toBeNull(); // one image: nothing to count
-    fireEvent.press(screen.getAllByLabelText("关闭")[0]);
+    fireEvent(screen.getAllByLabelText("关闭")[0], "accessibilityAction", { nativeEvent: { actionName: "activate" } });
     await waitFor(() => expect(screen.queryByTestId("chat-image-viewer")).toBeNull());
   });
 

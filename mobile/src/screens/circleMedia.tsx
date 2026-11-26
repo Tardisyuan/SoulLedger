@@ -147,7 +147,7 @@ function ViewerPages({ media, start, onClose, onFront, framePhoto }: { media: Po
         <Txt testID="media-viewer-counter" variant="value" tone="muted">
           {tr("soul_app.circle.media.viewer", { i: String(current + 1), n: String(media.length) })}
         </Txt>
-        <Press testID="media-viewer-close" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.media.close")} onPress={onClose} hitSlop={10}>
+        <Press testID="media-viewer-close" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.media.close")} onPress={onClose} hitSlop={13}>
           <Icon name="close" size={18} color={t.ink} />
         </Press>
       </View>
@@ -158,6 +158,7 @@ function ViewerPages({ media, start, onClose, onFront, framePhoto }: { media: Po
         start={start}
         keyOf={(m) => String(m.id)}
         onIndex={setCurrent}
+        onClose={onClose}
         renderPage={(m, i) => (
           <View ref={framePhoto(String(m.id)).attach}>
             <Image
