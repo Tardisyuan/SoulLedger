@@ -10503,7 +10503,6 @@
       "elsewhere": "Nen Wedja Sep Pen Em Medjat Sepu. Wen Sesh Er Maa Khet.",
       "hint": "Setep Wedja, Sesh Medu, Er Khet Khetem. Fekh Em At Nedjes 5; Hab Em Pehwy Tera.",
       "hint_readback": "Tepy Khetem: Djed Wehem Ren Ba, Ren Sep, Wedja; Smen: Hab Min.",
-      "sealed": "Khetem-N.",
       "announce": "{{name}} Khetem-N · Sep Ky: {{next}}",
       "announce_last": "{{name}} Khetem-N · Nen Sep Ky Em Medjat Sepu",
       "undone": "Fekh-N · {{name}} Em Medjat Sepu Wehem",

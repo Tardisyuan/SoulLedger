@@ -68,7 +68,7 @@ const VerdictRail = dynamic(() => import("./VerdictRail"), { ssr: false, loading
  * → 行高收起 160,共 400,落印那一刻开始划线。三段的时长写在 desk.module.css 的
  * `.row[data-leaving]`,改一处要改两处(motionBatch60.test.ts 核对)。
  * 第六十六批:这是行在摞上还画着的时长,选中不等它 —— 落印当场就移到下一件,滑出的那一行已经不是「当前件」,
- * 判栏也已换成下一件(所以判栏的 `sealed` 印此时画不出来:当前件从不在 `gone` 里)。
+ * 判栏也已换成下一件(当前件从不在 `gone` 里,所以判栏没有「已落印」的样子)。
  */
 export const SEAL_LEAVE_MS = 400;
 /** 减少动态时:不移动,划线后 120ms 淡出,行高立即收起。 */
@@ -226,7 +226,6 @@ export function CaseDesk() {
   const releasable = !!current && canClaim && current.group === "mine";
 
   // ── 就地判 ─────────────────────────────────────────────────────────────
-  const [stamp, setStamp] = useState(0);
   /** 撤回回来的那一件:判栏带着当时的裁决与判词重新打开。 */
   const [restored, setRestored] = useState<DeskSeal | null>(null);
   /** 偏好「落印前先确认」打开时,等回读层答复的那一印。 */
@@ -260,7 +259,6 @@ export function CaseDesk() {
     const rest = ids.filter((x) => x !== v.id);
     const next = rest[Math.min(Math.max(ids.indexOf(v.id), 0), rest.length - 1)] ?? null;
     const nextName = flat.find((f) => f.row.id === next)?.row.soul_name ?? "";
-    setStamp((n) => n + 1);
     setGone((prev) => (prev.includes(v.id) ? prev : [...prev, v.id]));
     setLeaving((prev) => (prev.includes(v.id) ? prev : [...prev, v.id]));
     setSealNote(next ? t("caseDesk.verdict.announce", { name: v.name, next: nextName }) : t("caseDesk.verdict.announce_last", { name: v.name }));
@@ -545,8 +543,6 @@ export function CaseDesk() {
             row={current.row}
             group={current.group}
             claim={claimable ? { busy: move.isPending, run: () => move.mutate({ id: current.row.id, kind: "claim" }) } : null}
-            sealed={gone.includes(current.row.id)}
-            stampKey={stamp}
             draft={restored?.id === current.row.id ? restored : null}
             paused={asking !== null}
             onSeal={seal}
