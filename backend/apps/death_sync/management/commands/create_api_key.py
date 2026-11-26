@@ -1,9 +1,9 @@
 """
 Management command to create API keys for external systems.
 """
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
-from apps.death_sync.models import ExternalApiKey
+from apps.death_sync.models import ExternalApiKey, source_identifier_problem
 from apps.tenants.models import Tenant
 
 
@@ -18,6 +18,9 @@ class Command(BaseCommand):
                           help="Type of external system")
         parser.add_argument("--expires-days", type=int, default=None,
                           help="Number of days until key expires (default: never)")
+        parser.add_argument("--allowed-source", action="append", default=[], dest="allowed_sources",
+                          help="A source the key may declare in X-Source-System (repeatable; "
+                               "none = only its system type)")
 
     def handle(self, *args, **options):
         from datetime import timedelta
@@ -28,6 +31,11 @@ class Command(BaseCommand):
         tenant_code = options["tenant"]
         system_type = options["system_type"]
         expires_days = options["expires_days"]
+        allowed_sources = list(dict.fromkeys(options["allowed_sources"]))
+        for source in allowed_sources:
+            reason = source_identifier_problem(source)
+            if reason:
+                raise CommandError(f"--allowed-source {source!r}: {reason}")
 
         # Get tenant
         try:
@@ -52,6 +60,7 @@ class Command(BaseCommand):
             key_hash=key_hash,
             key_prefix=key_prefix,
             expires_at=expires_at,
+            allowed_sources=allowed_sources,
         )
 
         # Display the raw key (only shown once!)
@@ -61,5 +70,6 @@ class Command(BaseCommand):
         self.stdout.write(f"  System Type: {system_type}")
         self.stdout.write(f"  Key Prefix: {key_prefix}...")
         self.stdout.write(f"  Expires: {expires_at or 'Never'}")
+        self.stdout.write(f"  Allowed sources: {', '.join(allowed_sources) or system_type}")
         self.stdout.write(f"\n{self.style.WARNING('IMPORTANT: Copy the key below. It will NOT be shown again!')}")
         self.stdout.write(f"\n  {self.style.SUCCESS(raw_key)}")

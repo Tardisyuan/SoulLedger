@@ -9,6 +9,7 @@ from apps.death_sync.models import (
     DeathRegistrationRequest,
     ExternalApiKey,
     WebhookConfig,
+    source_identifier_problem,
 )
 from apps.death_sync.services import PROGRESS_STAGES
 from apps.events.models import EventType, EventWebhookDelivery
@@ -17,16 +18,27 @@ from apps.events.models import EventType, EventWebhookDelivery
 class ExternalApiKeySerializer(serializers.ModelSerializer):
     """Serializer for ExternalApiKey (hides key_hash, shows raw_key on create)."""
     _raw_key = serializers.CharField(read_only=True, required=False)
+    allowed_sources = serializers.ListField(
+        child=serializers.CharField(), required=False, max_length=20,
+        help_text=ExternalApiKey._meta.get_field("allowed_sources").help_text,
+    )
 
     class Meta:
         model = ExternalApiKey
         fields = [
             'id', 'name', 'system_type', 'key_prefix', 'is_active', 'expires_at',
-            'rate_limit_per_minute', 'rate_limit_per_hour', 'allowed_ips',
+            'rate_limit_per_minute', 'rate_limit_per_hour', 'allowed_ips', 'allowed_sources',
             'can_register_death', 'can_query_status', 'can_manage_webhooks',
             'last_used_at', 'usage_count', '_raw_key',
         ]
         read_only_fields = ['key_prefix', 'last_used_at', 'usage_count']
+
+    def validate_allowed_sources(self, value):
+        for source in value:
+            reason = source_identifier_problem(source)
+            if reason:
+                raise serializers.ValidationError(f"{source!r}: {reason}")
+        return list(dict.fromkeys(value))
 
 
 class DeathRegistrationRequestSerializer(serializers.ModelSerializer):

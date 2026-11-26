@@ -108,6 +108,12 @@ export function ApiKeysPanel() {
             </td>
             <td className="px-3 py-2 whitespace-nowrap">
               <DomainEnum namespace="death_sync.api_keys.system_type" value={key.system_type} />
+              {/* Sources it may declare in X-Source-System; none listed = its system type only. */}
+              {(key.allowed_sources ?? []).length > 0 && (
+                <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
+                  {t("death_sync.api_keys.allowed_sources")}: {(key.allowed_sources ?? []).join(", ")}
+                </p>
+              )}
             </td>
             <td className="px-3 py-2 text-sm text-[oklch(var(--color-ink-muted))]">
               {GRANTS.filter((g) => key[g]).map((g) => t(`death_sync.api_keys.${g}`)).join(" · ") || (
@@ -177,6 +183,8 @@ function CreateKeyDialog({ onClose, onCreated }: { onClose: () => void; onCreate
     can_query_status: true,
     can_manage_webhooks: false,
   });
+  // Comma- or space-separated; the server validates each (A-Z, 0-9, _) and answers 400 otherwise.
+  const [sources, setSources] = useState("");
   const create = useMutation({
     mutationFn: (body: ExternalApiKeyCreate) => deathSyncApi.createApiKey(body),
     onSuccess: ({ data }) => onCreated(data),
@@ -191,7 +199,8 @@ function CreateKeyDialog({ onClose, onCreated }: { onClose: () => void; onCreate
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    create.mutate({ ...form, name: form.name.trim() });
+    const allowed_sources = sources.toUpperCase().split(/[\s,]+/).filter(Boolean);
+    create.mutate({ ...form, name: form.name.trim(), allowed_sources });
   };
   const formId = "death-sync-create-key";
 
@@ -224,6 +233,14 @@ function CreateKeyDialog({ onClose, onCreated }: { onClose: () => void; onCreate
           value={form.system_type}
           options={SYSTEM_TYPES.map((s) => ({ value: s, label: t(`death_sync.api_keys.system_type.${s}`) }))}
           onChange={(e) => setForm({ ...form, system_type: e.target.value as ExternalApiKeySystemType })}
+        />
+        <TextField
+          label={t("death_sync.api_keys.allowed_sources")}
+          description={t("death_sync.api_keys.allowed_sources_hint")}
+          mono
+          value={sources}
+          placeholder="HOSPITAL, POLICE"
+          onChange={(e) => setSources(e.target.value)}
         />
         <fieldset className="space-y-2">
           <legend className="text-sm text-[oklch(var(--color-ink-muted))]">{t("death_sync.api_keys.permissions")}</legend>

@@ -8,6 +8,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.death_sync.models import (
+    TUDI_SOURCE,
     DeathRegistrationRequest,
     DeathRegistrationStatus,
 )
@@ -34,8 +35,6 @@ class AmbiguousSoulError(Exception):
     """A name lookup matched more than one living soul (`lookup_soul`); recorded as SOUL_AMBIGUOUS."""
 
 
-#: `DeathRegistrationRequest.source_system` of a registration a 土地公 made (no API key).
-TUDI_SOURCE = "TUDI"
 
 
 class DeathSyncService:
@@ -96,7 +95,7 @@ class DeathSyncService:
         return alive[0] if alive else queryset.first()
 
     @staticmethod
-    def register_death(tenant, api_key, payload, idempotency_key, source_ip=None):
+    def register_death(tenant, api_key, payload, idempotency_key, source_ip=None, source_system=None):
         """
         Process a single death registration.
 
@@ -112,6 +111,8 @@ class DeathSyncService:
             payload: The validated request payload
             idempotency_key: Client-provided idempotency key
             source_ip: Client IP address
+            source_system: The source the key declared (`X-Source-System`, already checked against
+                `ExternalApiKey.permits_source` by the view); None = the key's `system_type`
 
         Returns:
             DeathRegistrationRequest instance
@@ -129,7 +130,7 @@ class DeathSyncService:
             tenant=tenant,
             api_key=api_key,
             idempotency_key=idempotency_key,
-            source_system=api_key.system_type,
+            source_system=source_system or api_key.system_type,
             source_reference_id=payload.get("source_reference", ""),
             source_payload=payload,
             source_ip=source_ip,
@@ -376,7 +377,7 @@ class DeathSyncService:
             return DeathSyncService._process(record, tenant, serializer.validated_data, start_time)
 
     @staticmethod
-    def process_batch(tenant, api_key, registrations, source_ip=None):
+    def process_batch(tenant, api_key, registrations, source_ip=None, source_system=None):
         """
         Process a batch of death registrations.
 
@@ -388,6 +389,7 @@ class DeathSyncService:
             api_key: The ExternalApiKey used
             registrations: List of registration payloads
             source_ip: Client IP address
+            source_system: as `register_death`; one source for the whole batch
 
         Returns:
             List of DeathRegistrationRequest instances, one per item, in order.
@@ -400,6 +402,7 @@ class DeathSyncService:
         # second keyless batch collided with the first on
         # uniq_death_reg_idempotency -- every time.
         nonce = uuid.uuid4().hex
+        source_system = source_system or api_key.system_type
         results = []
         for idx, reg in enumerate(registrations):
             payload = reg if isinstance(reg, dict) else {}
@@ -413,13 +416,14 @@ class DeathSyncService:
                         payload=serializer.validated_data,
                         idempotency_key=idempotency_key,
                         source_ip=source_ip,
+                        source_system=source_system,
                     )
                 else:
                     result = DeathRegistrationRequest(
                         tenant=tenant,
                         api_key=api_key,
                         idempotency_key=idempotency_key,
-                        source_system=api_key.system_type,
+                        source_system=source_system,
                         source_payload=payload,
                         source_ip=source_ip,
                         status=DeathRegistrationStatus.FAILED,
@@ -433,7 +437,7 @@ class DeathSyncService:
                 # the same key is not handed back.
                 result = DeathRegistrationRequest.objects.filter(
                     tenant=tenant,
-                    source_system=api_key.system_type,
+                    source_system=source_system,
                     idempotency_key=idempotency_key,
                 ).first()
                 if result is None:

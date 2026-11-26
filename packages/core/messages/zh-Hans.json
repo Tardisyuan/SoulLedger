@@ -4174,6 +4174,8 @@
       "name": "名称",
       "name_placeholder": "如「市立医院死亡登记」",
       "system_type_label": "系统类型",
+      "allowed_sources": "可声明的来源",
+      "allowed_sources_hint": "这个密钥可以在 X-Source-System 请求头里声明的来源，用逗号分隔，如 HOSPITAL, POLICE。留空则只能用它自己的系统类型。",
       "system_type": {
         "GOVERNMENT": "政府户籍",
         "HOSPITAL": "医院死亡证明",
