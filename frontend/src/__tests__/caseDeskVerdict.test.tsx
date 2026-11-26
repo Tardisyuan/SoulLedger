@@ -202,7 +202,12 @@ describe("案卷台就地判", () => {
     beforeEach(() => {
       fades = [];
       HTMLElement.prototype.animate = jest.fn(() => {
-        const a = { playState: "running", finish: jest.fn(() => (a.playState = "finished")) };
+        const a: { playState: string; finish: jest.Mock } = {
+          playState: "running",
+          finish: jest.fn(() => {
+            a.playState = "finished";
+          }),
+        };
         fades.push(a);
         return a as unknown as Animation;
       });
