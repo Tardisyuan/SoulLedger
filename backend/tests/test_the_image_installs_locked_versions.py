@@ -50,12 +50,20 @@ def test_every_declared_requirement_is_locked_within_its_range():
         )
 
 
+def _workflow(name):
+    """The workflow's text plus the composite action it installs Python through, if any (2026-11-27)."""
+    text = (REPO_ROOT / ".github" / "workflows" / name).read_text()
+    if "./.github/actions/setup-python-locked" in text:
+        text += (REPO_ROOT / ".github" / "actions" / "setup-python-locked" / "action.yml").read_text()
+    return text
+
+
 def test_the_dockerfile_and_ci_install_from_the_lock():
     dockerfile = (BACKEND / "Dockerfile").read_text()
     assert "-r requirements.lock" in dockerfile
     assert "-r requirements.txt" not in dockerfile
     for workflow in ("ci.yml", "security.yml"):
-        text = (REPO_ROOT / ".github" / "workflows" / workflow).read_text()
+        text = _workflow(workflow)
         assert "pip install -r requirements.txt" not in text, workflow
         assert "-r requirements.lock" in text, workflow
 
@@ -67,7 +75,7 @@ def test_ruff_has_one_pin_and_ci_installs_it():
     (ruff,) = [Requirement(line) for line in _lines(BACKEND / "requirements-dev.txt") if _norm(Requirement(line).name) == "ruff"]
     (spec,) = list(ruff.specifier)
     assert spec.operator == "==", f"ruff is not pinned: {ruff}"
-    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    ci = _workflow("ci.yml")
     assert "-r requirements-dev.txt" in ci
     assert not re.search(r"pip install ruff\b", ci), "ci.yml installs its own, unpinned ruff"
 

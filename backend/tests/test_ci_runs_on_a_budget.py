@@ -13,6 +13,7 @@ import pytest
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+SETUP_PYTHON = WORKFLOWS.parent / "actions" / "setup-python-locked"
 
 
 def _load(name):
@@ -88,7 +89,9 @@ def test_the_backend_suite_runs_in_parallel():
     data, _ = _load("ci.yml")
     steps = data["jobs"]["backend"]["steps"]
     runs = [step.get("run", "") for step in steps]
-    install = next(i for i, r in enumerate(runs) if "-r requirements-dev.txt" in r)
+    # The install lives in the composite action (2026-11-27), so the step that uses it is the install.
+    assert "-r requirements-dev.txt" in (SETUP_PYTHON / "action.yml").read_text()
+    install = next(i for i, s in enumerate(steps) if s.get("uses") == f"./.github/actions/{SETUP_PYTHON.name}")
     tests = next(i for i, r in enumerate(runs) if "python -m pytest" in r)
     assert install < tests
     # The command line itself, not the comment above it in the same `run:` block.
