@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
-import { useRovingPopupKeys } from "@/components/ui/data-grid/useRovingPopupKeys";
+import { ActionsMenu, type OverflowMenuItem } from "@/components/ui/data-grid/ActionsMenu";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { Button } from "@/src/components/ui/Button";
+import { Button, buttonVariants } from "@/src/components/ui/Button";
 
 /** 编辑 + the overflow menu: 重算功过 · 发起审批… · 删除 · 更正结案 (W-11a), each only for its holder. */
 export function SoulHeaderActions({
@@ -49,61 +48,25 @@ export function SoulHeaderActions({
   const { hasPermission } = usePermissions();
   const canDelete = hasPermission("soul.delete") && Boolean(onDelete);
 
-  /**
-   * The keyboard half of the `role="menu"` below — which was declared and not
-   * kept.
-   *
-   * What was missing: focus into the menu on open, ArrowUp/Down/Home/End,
-   * Escape, and focus returned to the ⋯ trigger on close. Its only dismissal
-   * path was a click on the scrim, and that scrim is `aria-hidden
-   * tabIndex={-1}` — unreachable by keyboard. So a screen-reader user was
-   * promised menu navigation and given none of it.
-   *
-   * Delete is still *completable* by keyboard (the item is a real `<button>`
-   * in tab order), so this is a broken promise to assistive tech rather than a
-   * dead end. It is still the third instance of this exact defect: `ActionsMenu`
-   * and `FilterBar` were the two found in the 2026-09-01 round, and
-   * `useRovingPopupKeys` was written for them — its own header names those two.
-   * `grep -rn useRovingPopupKeys` returned exactly those two consumers until
-   * this line. The hook existed; this menu was not in the sweep.
-   *
-   * `usePopupOpenState` is deliberately NOT used: the open flag is owned by the
-   * page (see the prop comment above), and hoisting it in here would quietly
-   * close the menu across a data reload. The focus-restore rule that hook
-   * carries is reproduced in `close` instead, which is the one line of it that
-   * matters here.
-   */
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const close = useCallback(
-    (restoreFocus: boolean) => {
-      setIsOverflowMenuOpen(false);
-      // Restored BEFORE the caller runs anything: `onDelete` opens a
-      // confirmation dialog, and a dialog returns focus on close to whatever
-      // held it on open — so the trigger has to be that element, or the return
-      // lands on `<body>`. Same reasoning as `ActionsMenu`'s header.
-      if (restoreFocus) triggerRef.current?.focus();
-    },
-    [setIsOverflowMenuOpen]
-  );
-  // Per-entry, as the hook's contract says, in menu order: 重算功过, 发起审批…,
-  // 删除, 更正结案 — each present only when the page handed one in (delete: when
-  // held). Memoised: a fresh array every render would re-run the hook's
-  // focus-on-open effect and pull focus back to the first item.
-  // Keyed on the booleans, not the callbacks: the page passes fresh arrows.
-  const hasRecalculate = Boolean(onRecalculate);
-  const hasStartWorkflow = Boolean(onStartWorkflow);
-  const hasTudi = Boolean(onRegisterByTudi);
-  const hasCorrect = Boolean(onCorrectSettlement);
-  const hasMarkLost = Boolean(onMarkLost);
-  const enabled = useMemo(
-    () => [hasRecalculate, hasStartWorkflow, hasTudi, hasMarkLost, canDelete, hasCorrect],
-    [hasRecalculate, hasStartWorkflow, hasTudi, hasMarkLost, canDelete, hasCorrect]
-  );
-  const { containerRef: menuRef, itemRefs } = useRovingPopupKeys({
-    open: isOverflowMenuOpen,
-    enabled,
-    onRequestClose: close,
-  });
+  // The shared row menu (portal, roving keys, Escape, focus back to ⋯ before the action runs). It used to be drawn
+  // here by hand with its own scrim (ui-style-web §2.4, 2026-11-26). Menu order: 重算功过 · 发起审批… · 土地登记 ·
+  // 标记失踪 | 删除 · 更正结案, each only when the page handed one in (delete: when held).
+  const items: OverflowMenuItem[] = [
+    ...(onRecalculate ? [{ key: "recalculate", label: t("souls.detail.recalculate"), onSelect: onRecalculate }] : []),
+    ...(onStartWorkflow ? [{ key: "workflow", label: t("workflow.start.menu"), onSelect: onStartWorkflow }] : []),
+    ...(onRegisterByTudi
+      ? [{ key: "tudi", label: t("earthGods.register_death"), onSelect: onRegisterByTudi, testId: "soul-register-by-tudi" }]
+      : []),
+    ...(onMarkLost ? [{ key: "lost", label: t("souls.lost.mark"), onSelect: onMarkLost, separatorAfter: true }] : []),
+    /* 移入回收站可恢复(「系统设置 › 回收站」):可逆的风险动作用 warning,danger-strong 只给不可逆的删除(规范 v3)。 */
+    ...(canDelete && onDelete
+      ? [{ key: "delete", label: t("souls.detail.delete"), onSelect: onDelete, tone: "warning" as const }]
+      : []),
+    /* 可逆(退回 DISPOSED,审判与处置都在)且单独审计:warning,不是 danger。 */
+    ...(onCorrectSettlement
+      ? [{ key: "correct", label: t("souls.detail.correct_settlement.action"), onSelect: onCorrectSettlement, tone: "warning" as const }]
+      : []),
+  ];
   // 页面只在持有对应码名时才交来这些回调,所以门禁写成「任一」:码名与回调一一对应。
   const menuCodenames = [
     ...(onDelete ? ["soul.delete"] : []),
@@ -113,7 +76,6 @@ export function SoulHeaderActions({
     ...(onCorrectSettlement ? ["soul.correct_settlement"] : []),
     ...(onMarkLost ? ["soul.transition"] : []),
   ];
-  const itemClass = "w-full text-left px-3 py-1 text-sm hover:bg-[oklch(var(--color-surface-2))] transition-colors";
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
@@ -135,127 +97,13 @@ export function SoulHeaderActions({
           (Stage 3 文档缺陷 #3)—— 删除既少见又后果重大,不该和日常的编辑
           分享同一份视觉权重。 */}
       <RequirePermission permissions={menuCodenames}>
-        <div className="relative">
-          <Button
-            ref={triggerRef}
-            type="button"
-            variant="secondary"
-            onClick={() => setIsOverflowMenuOpen((v) => !v)}
-            aria-haspopup="menu"
-            aria-expanded={isOverflowMenuOpen}
-            aria-label={tf("souls.detail.more_actions", "更多操作")}
-          >
-            ⋯
-          </Button>
-          {isOverflowMenuOpen && (
-            <>
-              <button
-                type="button"
-                aria-hidden="true"
-                tabIndex={-1}
-                className="fixed inset-0 z-10 cursor-default"
-                onClick={() => setIsOverflowMenuOpen(false)}
-              />
-              <div
-                ref={menuRef}
-                role="menu"
-                className="absolute right-0 mt-1 w-48 z-20 rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] py-1"
-              >
-                {onRecalculate ? (
-                  <button
-                    ref={(el) => { itemRefs.current[0] = el; }}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      close(true);
-                      onRecalculate();
-                    }}
-                    className={`${itemClass} text-[oklch(var(--color-ink))]`}
-                  >
-                    {t("souls.detail.recalculate")}
-                  </button>
-                ) : null}
-                {onStartWorkflow ? (
-                  <button
-                    ref={(el) => { itemRefs.current[1] = el; }}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      close(true);
-                      onStartWorkflow();
-                    }}
-                    className={`${itemClass} font-medium text-[oklch(var(--color-ink))]`}
-                  >
-                    {t("workflow.start.menu")}
-                  </button>
-                ) : null}
-                {onRegisterByTudi ? (
-                  <button
-                    ref={(el) => { itemRefs.current[2] = el; }}
-                    type="button"
-                    role="menuitem"
-                    data-testid="soul-register-by-tudi"
-                    onClick={() => {
-                      close(true);
-                      onRegisterByTudi();
-                    }}
-                    className={`${itemClass} text-[oklch(var(--color-ink))]`}
-                  >
-                    {t("earthGods.register_death")}
-                  </button>
-                ) : null}
-                {onMarkLost ? (
-                  <>
-                    <button
-                      ref={(el) => { itemRefs.current[3] = el; }}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        close(true);
-                        onMarkLost();
-                      }}
-                      className={`${itemClass} text-[oklch(var(--color-ink))]`}
-                    >
-                      {t("souls.lost.mark")}
-                    </button>
-                    <div role="separator" className="my-1 border-t border-[oklch(var(--color-line))]" />
-                  </>
-                ) : null}
-                {canDelete ? (
-                  <button
-                    ref={(el) => { itemRefs.current[4] = el; }}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      close(true);
-                      onDelete?.();
-                    }}
-                    /* 移入回收站可恢复(「系统设置 › 回收站」):可逆的风险动作用 warning,
-                       danger-strong 只给不可逆的删除(规范 v3)。 */
-                    className={`${itemClass} text-[oklch(var(--color-warning))]`}
-                  >
-                    {t("souls.detail.delete")}
-                  </button>
-                ) : null}
-                {onCorrectSettlement ? (
-                  <button
-                    ref={(el) => { itemRefs.current[5] = el; }}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      close(true);
-                      onCorrectSettlement();
-                    }}
-                    /* 可逆(退回 DISPOSED,审判与处置都在)且单独审计:warning,不是 danger。 */
-                    className={`${itemClass} text-[oklch(var(--color-warning))]`}
-                  >
-                    {t("souls.detail.correct_settlement.action")}
-                  </button>
-                ) : null}
-              </div>
-            </>
-          )}
-        </div>
+        <ActionsMenu
+          items={items}
+          menuLabel={tf("souls.detail.more_actions", "更多操作")}
+          trigger={{ label: "⋯", className: buttonVariants({ variant: "secondary" }) }}
+          open={isOverflowMenuOpen}
+          onOpenChange={setIsOverflowMenuOpen}
+        />
       </RequirePermission>
     </div>
   );

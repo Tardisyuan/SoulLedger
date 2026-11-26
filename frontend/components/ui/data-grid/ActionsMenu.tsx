@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { usePopupOpenState, useRovingPopupKeys } from './useRovingPopupKeys'
 import { createPortal } from 'react-dom'
@@ -10,8 +10,12 @@ export interface OverflowMenuItem {
   key: string
   label: React.ReactNode
   onSelect: () => void
-  tone?: 'default' | 'danger'
+  /** `warning`: risky but reversible (移入回收站、更正结案) — the warning colour, not danger. */
+  tone?: 'default' | 'danger' | 'warning'
   disabled?: boolean
+  testId?: string
+  /** A rule under this item, setting off what follows (灵魂详情:标记失踪 | 删除). */
+  separatorAfter?: boolean
 }
 
 export interface ActionsMenuProps {
@@ -25,6 +29,12 @@ export interface ActionsMenuProps {
    * contract is the same one; `menuLabel` stays the accessible name, so make it match the words.
    */
   trigger?: { label: React.ReactNode; className?: string; testId?: string }
+  /**
+   * Controlled open state, for a caller that unmounts this while it reloads (灵魂详情页头) and wants an open menu
+   * to survive that. Pass both or neither.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -58,15 +68,40 @@ export interface ActionsMenuProps {
  *   - Tab closes and lets the browser move on, rather than tabbing through a
  *     portal that sits nowhere near the trigger in DOM order.
  */
-export function ActionsMenu({ primary, items, menuLabel, trigger }: ActionsMenuProps) {
+export function ActionsMenu({ primary, items, menuLabel, trigger, open: openProp, onOpenChange }: ActionsMenuProps) {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const { open, setOpen, close } = usePopupOpenState(triggerRef)
+  const own = usePopupOpenState(triggerRef)
+  const open = openProp ?? own.open
+  const setOwnOpen = own.setOpen
+  const setOpen = useCallback(
+    (next: boolean) => (onOpenChange ? onOpenChange(next) : setOwnOpen(next)),
+    [onOpenChange, setOwnOpen]
+  )
+  const close = useCallback(
+    (restoreFocus: boolean) => {
+      setOpen(false)
+      if (restoreFocus) triggerRef.current?.focus()
+    },
+    [setOpen]
+  )
+  // Keyed on a string, not a fresh array: a new array every render re-runs the hook's focus-on-open effect, so any
+  // parent re-render while the menu is open pulled focus back to the first item.
+  const enabledKey = items.map((item) => (item.disabled ? '0' : '1')).join('')
+  const enabled = useMemo(() => [...enabledKey].map((c) => c === '1'), [enabledKey])
   const { containerRef: menuRef, itemRefs } = useRovingPopupKeys({
-    open,
-    enabled: items.map((item) => !item.disabled),
+    // Only once the panel is actually rendered (it waits for `pos`), or focus-on-open finds no items.
+    open: open && pos !== null,
+    enabled,
     onRequestClose: close,
   })
+
+  // Controlled and remounted while open: nothing ran `openAt`, so measure here.
+  useLayoutEffect(() => {
+    if (!open || pos) return
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (rect) setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+  }, [open, pos])
 
   useEffect(() => {
     if (!open) return
@@ -177,8 +212,8 @@ export function ActionsMenu({ primary, items, menuLabel, trigger }: ActionsMenuP
                 className="z-sidebar min-w-[168px] rounded-panel shadow-overlay border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] py-1"
               >
                 {items.map((item, index) => (
+                  <Fragment key={item.key}>
                   <button
-                    key={item.key}
                     ref={(el) => {
                       itemRefs.current[index] = el
                     }}
@@ -189,6 +224,7 @@ export function ActionsMenu({ primary, items, menuLabel, trigger }: ActionsMenuP
                     // the items must not also be tab stops.
                     tabIndex={-1}
                     disabled={item.disabled}
+                    data-testid={item.testId}
                     onClick={() => {
                       // Restore BEFORE the action runs — see the header note
                       // about @headlessui returning focus to whatever held it.
@@ -199,11 +235,15 @@ export function ActionsMenu({ primary, items, menuLabel, trigger }: ActionsMenuP
                       'flex min-h-(--control-h-sm) w-full items-center text-left px-3 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
                       item.tone === 'danger'
                         ? 'text-[oklch(var(--color-status-error))] hover:bg-[oklch(var(--color-status-error)/0.1)]'
+                        : item.tone === 'warning'
+                        ? 'text-[oklch(var(--color-warning))] hover:bg-[oklch(var(--color-surface-3))]'
                         : 'text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]'
                     )}
                   >
                     {item.label}
                   </button>
+                  {item.separatorAfter && <div role="separator" className="my-1 border-t border-[oklch(var(--color-line))]" />}
+                  </Fragment>
                 ))}
               </div>,
               document.body

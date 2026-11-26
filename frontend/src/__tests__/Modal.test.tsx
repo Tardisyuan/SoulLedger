@@ -1,7 +1,8 @@
 /**
  * Tests for Modal component
  */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { useState } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 
 jest.mock("@/src/contexts/I18nContext", () =>
@@ -107,6 +108,30 @@ describe("BaseModal", () => {
       fireEvent.keyDown(screen.getByLabelText("name"), { key: "Escape" });
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("takes focus in, closes on Escape and gives focus back to its opener (Base UI, modal by default)", async () => {
+    function Host() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>opener</button>
+          <BaseModal isOpen={open} onClose={() => setOpen(false)} title="Form">
+            <input aria-label="name" />
+          </BaseModal>
+        </>
+      );
+    }
+    render(<Host />);
+    const opener = screen.getByText("opener");
+    opener.focus();
+    fireEvent.click(opener);
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 
   it("renders title", () => {

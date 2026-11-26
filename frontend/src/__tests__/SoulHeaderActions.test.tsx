@@ -124,6 +124,33 @@ describe("SoulHeaderActions 的溢出菜单", () => {
     expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
   });
 
+  it("开关归页面:页头在重载时卸下再挂上,开着的菜单还在", async () => {
+    // 页面在 `loading` 时不渲染页头操作(app/souls/[id]/page.tsx 的 headerActions)。
+    function Reloading() {
+      const [open, setOpen] = useState(false);
+      const [mounted, setMounted] = useState(true);
+      return (
+        <>
+          <button type="button" onClick={() => setMounted((m) => !m)}>reload</button>
+          {mounted && <SoulHeaderActions onEdit={jest.fn()} onDelete={jest.fn()} isOverflowMenuOpen={open} setIsOverflowMenuOpen={setOpen} />}
+        </>
+      );
+    }
+    render(<Reloading />);
+    await act(async () => {
+      fireEvent.click(trigger());
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "reload" }));
+    });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "reload" }));
+    });
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(trigger()).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("触发器报告菜单的开合状态", async () => {
     render(<Harness />);
     expect(trigger()).toHaveAttribute("aria-expanded", "false");
@@ -186,7 +213,7 @@ describe("SoulHeaderActions 的更正结案项", () => {
  * 这里守:交了就有;只持 `workflow.create`、不持 `soul.delete` 的人也看得到 ⋯ 且没有删除;方向键按菜单次序走。
  */
 describe("SoulHeaderActions 的发起审批与重算功过项", () => {
-  function HarnessWith(props: { onStartWorkflow?: () => void; onRecalculate?: () => void }) {
+  function HarnessWith(props: { onStartWorkflow?: () => void; onRecalculate?: () => void; onRegisterByTudi?: () => void; onMarkLost?: () => void }) {
     const [open, setOpen] = useState(false);
     return (
       <SoulHeaderActions
@@ -249,6 +276,39 @@ describe("SoulHeaderActions 的发起审批与重算功过项", () => {
       fireEvent.keyDown(document, { key: "ArrowDown" });
     });
     expect(items[0]).toHaveFocus();
+  });
+
+  it("菜单开着时页面重渲染,焦点不被拉回第一项", async () => {
+    // 换成共用的 ActionsMenu 时补的:它每次渲染都交新的 enabled 数组,打开即聚焦的 effect 跟着重跑。
+    mockHeld.add("ledger.calculate");
+    mockHeld.add("workflow.create");
+    const props = { onRecalculate: jest.fn(), onStartWorkflow: jest.fn() };
+    const { rerender } = render(<HarnessWith {...props} />);
+    await act(async () => {
+      fireEvent.click(trigger());
+    });
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+    });
+    const items = screen.getAllByRole("menuitem");
+    expect(items[1]).toHaveFocus();
+    rerender(<HarnessWith {...props} onRecalculate={jest.fn()} />);
+    expect(items[1]).toHaveFocus();
+    expect(items[0]).not.toHaveFocus();
+  });
+
+  it("标记失踪与删除之间有分隔线,土地登记项保留 test id,删除是 warning 色", async () => {
+    mockHeld.add("tudi.register");
+    mockHeld.add("soul.transition");
+    render(<HarnessWith onRegisterByTudi={jest.fn()} onMarkLost={jest.fn()} />);
+    await act(async () => {
+      fireEvent.click(trigger());
+    });
+    expect(screen.getByTestId("soul-register-by-tudi")).toHaveAttribute("role", "menuitem");
+    const lost = screen.getByRole("menuitem", { name: "souls.lost.mark" });
+    expect(lost.nextElementSibling).toHaveAttribute("role", "separator");
+    expect(screen.getAllByRole("separator")).toHaveLength(1);
+    expect(screen.getByRole("menuitem", { name: "souls.detail.delete" }).className).toContain("--color-warning");
   });
 
   it("重算功过不再是页头上的按钮", () => {

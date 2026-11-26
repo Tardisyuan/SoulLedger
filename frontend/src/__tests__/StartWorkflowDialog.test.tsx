@@ -174,6 +174,31 @@ describe("StartWorkflowDialog — 灵魂与依赖", () => {
   });
 });
 
+describe("StartWorkflowDialog — 空着的必填格(审计 2026-11-26 B6:按钮不再灰着不说原因)", () => {
+  it("没选灵魂就点下一步:灵魂格下写 field_required,不发请求,案件类型格不跟着报", async () => {
+    renderDialog({});
+    fireEvent.change(reasonBox(), { target: { value: "复核" } });
+    submit();
+    await screen.findByText("common.field_required");
+    expect(screen.getAllByText("common.field_required")).toHaveLength(1);
+    expect(screen.getByLabelText(/workflow\.start\.soul/)).toHaveAccessibleDescription(/common\.field_required/);
+    expect(screen.queryByRole("button", { name: "workflow.start.submit" })).not.toBeInTheDocument();
+    expect(mockStart).not.toHaveBeenCalled();
+    expect(mockPreview).not.toHaveBeenCalled();
+  });
+
+  it("灵魂在、案件类型空着就点下一步:案件类型格下写 field_required,不发请求", async () => {
+    renderDialog();
+    await waitFor(() => expect(within(caseTypeSelect()).getAllByRole("option").length).toBeGreaterThan(1));
+    fireEvent.change(reasonBox(), { target: { value: "复核" } });
+    submit();
+    await screen.findByText("common.field_required");
+    expect(screen.getAllByText("common.field_required")).toHaveLength(1);
+    expect(caseTypeSelect()).toHaveAccessibleDescription(/common\.field_required/);
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+});
+
 describe("StartWorkflowDialog — 模板", () => {
   it("没有可用的存好的模板:只写一行 template_only,名字是案件类型,不出下拉", async () => {
     renderDialog();

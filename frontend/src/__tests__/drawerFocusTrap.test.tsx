@@ -251,6 +251,17 @@ describe("SettingsDrawer says what it is, and lets go", () => {
     expect(document.activeElement).toBe(gear);
   });
 
+  it("locks the page's scroll while open and gives back what was there", () => {
+    document.body.style.overflow = "clip";
+    render(<SettingsHost />);
+    fireEvent.click(screen.getByText("gear"));
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(document.body.style.overflow).toBe("clip");
+    document.body.style.overflow = "";
+  });
+
   it("wraps Tab at both ends of the drawer", () => {
     render(<SettingsHost />);
     fireEvent.click(screen.getByText("gear"));
