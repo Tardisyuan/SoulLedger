@@ -113,13 +113,13 @@ from .user_admin import (  # noqa: F401  re-exported: perm.members, soul_account
     MAX_RESET_CODE_ATTEMPTS,
     MAX_RESET_REQUESTS_PER_ADDRESS,
     RESET_REQUEST_WINDOW_SECONDS,
+    _admin_target_refusal,
     _end_everything,
     _open_work,
     _open_work_refusal,
     _org_subtree,
     _self_refusal,
     _target_refusal,
-    admin_target_refusal,
     role_assignment_refusal,
 )
 
@@ -470,7 +470,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
         """重置密码(第 8 条):旧密码当场作废、所有设备退出,返回 24 小时、只能用一次的设置链接,由管理员转交本人。
-        不再返回明文密码。对另一位管理员:只许没绑殿的 ADMIN,并带自己的两步验证码(`admin_target_refusal`)。"""
+        不再返回明文密码。对另一位管理员:只许没绑殿的 ADMIN,并带自己的两步验证码(`_admin_target_refusal`)。"""
         from . import officer_invite
 
         user = self.get_object()

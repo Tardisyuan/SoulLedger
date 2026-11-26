@@ -175,7 +175,7 @@ def test_granting_and_revoking_through_the_drawer_pushes_a_permission_refresh(wo
 
 
 def test_batch_touching_another_admin_follows_the_admin_target_rule(world):
-    """审计 2026-11-11 P-01:抽屉的「授为主角色」曾不过 `admin_target_refusal`,绑殿 ADMIN 可把同殿另一位 ADMIN
+    """审计 2026-11-11 P-01:抽屉的「授为主角色」曾不过 `_admin_target_refusal`,绑殿 ADMIN 可把同殿另一位 ADMIN
     降成 VIEWER,随后重置其密码。现在与 `assign_roles` 同一条:只许无殿 ADMIN 且带自己的两步验证码,整批不动。"""
     from tests.test_admin_account_actions_hardened import _code, _enable_mfa
 

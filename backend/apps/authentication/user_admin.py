@@ -44,7 +44,7 @@ def _open_work_refusal(open_work):
                    'The officer still holds open work; hand it over first.', open_work=open_work)
 
 
-def admin_target_refusal(request, target):
+def _admin_target_refusal(request, target):
     """管理员对另一位管理员的重置 / 停用 / 删除 / 改资料或角色(2026-10-29 用户决定第 8 条):
     只许**没绑殿**的 ADMIN 做,且这一次请求要带操作人自己的第二因素(`mfa_method` = totp | recovery、`mfa_code`),
     与关闭两步验证同一套校验、计数与锁定(`mfa.confirm_second_factor`)。目标不是 ADMIN、或是自己 → None(放行)。
@@ -75,11 +75,11 @@ def admin_target_refusal(request, target):
 
 
 def _target_refusal(request, target):
-    """Whether the caller may act on `target` at all: `admin_target_refusal` for another ADMIN, then the
+    """Whether the caller may act on `target` at all: `_admin_target_refusal` for another ADMIN, then the
     ceiling for everyone else (audit 2026-11-11 P-05) — a non-ADMIN holder of `user.manage` may not reset,
     deactivate, delete, edit or re-role an account holding a codename the caller lacks
     (`serializers.may_manage_user`). 403 `target_outranks_caller`."""
-    refused = admin_target_refusal(request, target)
+    refused = _admin_target_refusal(request, target)
     if refused:
         return refused
     if not may_manage_user(request.user, target):

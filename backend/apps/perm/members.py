@@ -4,7 +4,7 @@ GET  /perm/roles/<id>/members/  持这个角色的人(主角色与兼任都算),
 POST /perm/roles/<id>/members/  一批人授为主角色或兼任,或移除兼任。
 
 规则不在这里另写一份:每个人都过 `assign_roles` 那一套(`role_assignment_refusal`:角色存在、ADMIN 不兼任、
-不授高于自己的、绑殿 ADMIN 不任命 ADMIN)。批里有另一位 ADMIN 时,先过 `admin_target_refusal`(只许无殿 ADMIN 且带
+不授高于自己的、绑殿 ADMIN 不任命 ADMIN)。批里有另一位 ADMIN 时,先过 `_admin_target_refusal`(只许无殿 ADMIN 且带
 自己的两步验证码,与 `assign_roles` 同一条;审计 2026-11-11 P-01),被拒整批不动。人从 `scope_to_tenant` 后的用户里找,所以绑殿 ADMIN 只碰得到本殿,
 别殿的 id 与不存在的一样答 `not_found`。任何一人被拒,整批不动 —— 拒绝清单逐人列出。
 审计:每个被改的人一条通用 UPDATE 行(User 的 post_save 信号,事务提交时写,带 role / extra_roles 的前后值),
@@ -31,7 +31,7 @@ MAX_BATCH = 200
 
 
 class RoleMembersChangeSerializer(serializers.Serializer):
-    # `mfa_method` / `mfa_code` ride in the body undeclared, read by `admin_target_refusal` when the batch
+    # `mfa_method` / `mfa_code` ride in the body undeclared, read by `_admin_target_refusal` when the batch
     # names another ADMIN (P-01). Not declared here so the committed OpenAPI document does not change.
 
     action = serializers.ChoiceField(choices=["add", "remove"])
@@ -126,7 +126,7 @@ def _change(user, name, action, kind):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def role_members(request, pk):
-    from apps.authentication.user_admin import admin_target_refusal, role_assignment_refusal
+    from apps.authentication.user_admin import _admin_target_refusal, role_assignment_refusal
 
     role = Role.objects.filter(pk=pk).first()
     if role is None:
@@ -147,7 +147,7 @@ def role_members(request, pk):
     # outside the transaction, so one code covers the batch and a wrong code's counter is not rolled back.
     admin_target = _users(request).filter(pk__in=ids, role__in=ADMIN_ROLES).exclude(pk=request.user.pk).first()
     if admin_target is not None:
-        refused = admin_target_refusal(request, admin_target)
+        refused = _admin_target_refusal(request, admin_target)
         if refused:
             return refused
 

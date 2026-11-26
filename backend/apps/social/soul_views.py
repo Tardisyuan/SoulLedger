@@ -85,8 +85,14 @@ BAD_REQUEST = {400: SoulSocialErrorSerializer}
 
 
 class SoulSocialView(SoulAPIView):
-    """本模块的公共外壳。`SocialError` 是 `apps.core.problems.Refusal`(服务层不 import DRF,聊天代理也要
-    import `soul_circle`),由全局异常处理答成 `{detail, code}` + 它自己的状态码。"""
+    """本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+    DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+    聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+    """
+
+    # (The docstring is the OpenAPI description of every soul-social operation; kept as it was. The translation is
+    # now the global handler's: `SocialError` is an `apps.core.problems.Refusal`.)
 
     def paginate(self, queryset, serializer_class):
         paginator = TotalOrderPagination()
