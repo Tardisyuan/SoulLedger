@@ -840,7 +840,7 @@ def seed_cross_judgments(tenants):
         case = sent_on(record_death_first(convening).die(location=convening.origin_location))
         Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
         cite_grounds(case, convening, None)
-        cj = CrossTenantJudgmentService.create("沉香案·两界会审", "两界共审,先地府后希腊冥界", cn, None)
+        cj = CrossTenantJudgmentService.create("沉香案·两界会审", "两界共审,先地府后希腊冥界", cn)
         cj.judgment = case
         cj.save(update_fields=["judgment"])
     except Exception as exc:
@@ -851,7 +851,7 @@ def seed_cross_judgments(tenants):
             Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
             # The Fifth Court's own grounds, written before the verdict as every other case's are (`cite_grounds`).
             cite_grounds(case, soul, Verdict.FAILED if conclude else None)
-            cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后希腊冥界", cn, None)
+            cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后希腊冥界", cn)
             cj.judgment = case
             cj.save(update_fields=["judgment"])
             seat = CrossTenantJudgmentService.add_participant(cj, gr, None, ParticipantRole.CO_JUDGE, node_order=2)
