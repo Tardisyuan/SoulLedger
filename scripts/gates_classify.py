@@ -9,6 +9,7 @@ in run-gates.sh's history (`git log -L` on the old shell); the short form is kep
     gates_classify.py classify <root> [--full] [--gates-full]   shell assignments (eval) for run-gates.sh
     gates_classify.py readers <list file>                         stdin: top-level entries; the reader lines
     gates_classify.py proves <ledger> <tree>                      stdin: files, or "-"; prints full / selective
+    gates_classify.py side-base <ledger> [<merge-base>]           SIDE_BASE / SIDE_WHY assignments (eval)
     gates_classify.py e2e-missing <ledger> <tree> <a,b,…>         the projects that tree has not passed
     gates_classify.py e2e-auto [--demo]                           the first change a browser suite can see
 
@@ -269,6 +270,24 @@ def proves(ledger_text, tree, files):
     return "selective" if all(f in have for f in files.split("\n") if f) else ""
 
 
+def side_base(ledger, mb, root="."):
+    """A side's base: the newest of the last 300 commits from HEAD whose tree <ledger> vouches for, for the files
+    that commit changes against <mb> (no merge-base: a full pass only). (sha, why), sha "" when there is none."""
+    if not os.path.isfile(ledger):
+        return "", "; no pass recorded"
+    text = _read(ledger) or ""
+    trees = {line.split("\t", 1)[0] for line in text.split("\n") if "\t" in line}
+    for entry in _git(root, "log", "--format=%H %T", "-n", "300", "HEAD"):
+        sha, tree = entry.split(" ")
+        if tree not in trees:
+            continue
+        files = "\n".join(_git(root, "diff", "--name-only", "--no-renames", mb, sha)) if mb else "-"
+        kind = proves(text, tree, files)
+        if kind:
+            return sha, f"last tree that passed, {kind}"
+    return "", "; none of the last 300 commits has a tree that passed"
+
+
 def e2e_missing(ledger_text, tree, want):
     """The projects of <want> (comma-separated) that no line of the E2E ledger records for <tree>."""
     have = set()
@@ -294,6 +313,9 @@ def main(argv):
         print("\n".join(readers_for(args[0], set(sys.stdin.read().split("\n")))))
     elif cmd == "proves":
         print(proves(_read(args[0]) or "", args[1], sys.stdin.read()))
+    elif cmd == "side-base":
+        sha, why = side_base(args[0], args[1] if len(args) > 1 else "")
+        print(f"SIDE_BASE={shlex.quote(sha)}\nSIDE_WHY={shlex.quote(why)}")
     elif cmd == "e2e-missing":
         print("\n".join(e2e_missing(_read(args[0]) or "", args[1], args[2])))
     elif cmd == "e2e-auto":

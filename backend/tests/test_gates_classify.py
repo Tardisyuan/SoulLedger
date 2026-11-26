@@ -155,7 +155,65 @@ class TestLedgers:
         assert gc.e2e_missing(ledger, "t", "chromium,mobile-chrome") == ["mobile-chrome"]
 
 
+class TestSideBase:
+    """side_base: the newest commit of HEAD's last 300 whose tree the ledger vouches for, for what that commit changes
+    against the merge-base. A three-commit history: mb → a (adds a.py) → b (adds b.py)."""
+
+    @pytest.fixture
+    def repo(self, tmp_path):
+        r = tmp_path / "r"
+        r.mkdir()
+        g = lambda *a: subprocess.run(["git", "-C", str(r), "-c", "user.email=t@t", "-c", "user.name=t", *a],  # noqa: E731
+                                      capture_output=True, text=True, check=True).stdout.strip()
+        g("init", "-q")
+        sha = {}
+        for name in ("mb", "a", "b"):
+            (r / f"{name}.py").write_text(name)
+            g("add", "-A")
+            g("commit", "-q", "-m", name)
+            sha[name] = (g("rev-parse", "HEAD"), g("rev-parse", "HEAD^{tree}"))
+        return str(r), sha
+
+    def base(self, repo, ledger, mb, tmp_path):
+        path = tmp_path / "ledger"
+        if ledger is not None:
+            path.write_text(ledger)
+        return gc.side_base(str(path), mb, repo)
+
+    def test_no_ledger_and_no_matching_tree(self, repo, tmp_path):
+        r, sha = repo
+        assert self.base(r, None, sha["mb"][0], tmp_path) == ("", "; no pass recorded")
+        assert self.base(r, "nope\tx\t*\n", sha["mb"][0], tmp_path) == (
+            "", "; none of the last 300 commits has a tree that passed")
+
+    def test_the_newest_tree_whose_pass_covers_its_changes(self, repo, tmp_path):
+        r, sha = repo
+        mb = sha["mb"][0]
+        # b's selective pass covers only a.py, not b.py: b is skipped, a's full pass is the base.
+        ledger = f"{sha['b'][1]}\td\ta.py\n{sha['a'][1]}\td\t*\n"
+        assert self.base(r, ledger, mb, tmp_path) == (sha["a"][0], "last tree that passed, full")
+        # Two lines for b, united, cover a.py and b.py.
+        ledger += f"{sha['b'][1]}\td\tb.py\n"
+        assert self.base(r, ledger, mb, tmp_path) == (sha["b"][0], "last tree that passed, selective")
+
+    def test_without_a_merge_base_only_a_full_pass_counts(self, repo, tmp_path):
+        r, sha = repo
+        ledger = f"{sha['b'][1]}\td\ta.py|b.py\n{sha['a'][1]}\td\t*\n"
+        assert self.base(r, ledger, "", tmp_path)[0] == sha["a"][0]
+
+    def test_a_tree_without_a_tab_is_not_a_record(self, repo, tmp_path):
+        r, sha = repo
+        assert self.base(r, f"{sha['mb'][1]}\n", sha["mb"][0], tmp_path)[0] == ""
+
+
 class TestTheCommandLine:
+    def test_side_base_prints_assignments_bash_can_eval(self, tmp_path):
+        out = subprocess.run(["python3", "-I", str(ROOT / "scripts" / "gates_classify.py"), "side-base", str(tmp_path / "x"), ""],
+                             capture_output=True, text=True, check=True).stdout
+        sh = subprocess.run(["bash", "-c", 'eval "$1"; printf "%s|%s" "$SIDE_BASE" "$SIDE_WHY"', "_", out],
+                            capture_output=True, text=True, check=True).stdout
+        assert sh == "|; no pass recorded"
+
     def test_classify_prints_shell_assignments_bash_can_eval(self, checkout):
         out = subprocess.run(["python3", "-I", str(ROOT / "scripts" / "gates_classify.py"), "classify", checkout],
                              input="frontend/src/gone.ts\ntsconfig.x.json", capture_output=True, text=True, check=True).stdout
