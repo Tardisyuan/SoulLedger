@@ -136,7 +136,7 @@ def visible_judgments(request):
     residence reads and row-level DataScope, by running the list's own
     `get_queryset` rather than restating it. `citation_count` counts inside
     this set so the count and `?statute=` list cannot disagree."""
+    from apps.core.viewsets import scoped_queryset
     from apps.judgment.views import JudgmentViewSet
 
-    view = JudgmentViewSet(request=request, action="list", kwargs={}, format_kwarg=None)
-    return view.get_queryset().values("pk")
+    return scoped_queryset(JudgmentViewSet, request).values("pk")

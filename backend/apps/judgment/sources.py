@@ -137,6 +137,7 @@ def source_of(judgment) -> str:
 def elsewhere_counts(request) -> dict:
     """别处等着办的几样(见文件头的表)。每样都跑那个列表自己的 `get_queryset`,不另写范围。"""
     from apps.core.permissions import user_has_permission
+    from apps.core.viewsets import scoped_queryset
     from apps.dispatch import capture as capture_service
     from apps.dispatch.capture_views import _souls
     from apps.dispatch.views import CrossTenantJudgmentViewSet
@@ -147,7 +148,7 @@ def elsewhere_counts(request) -> dict:
     from apps.soul_accounts.views import OfficerRebirthApplicationViewSet
 
     def scoped(viewset, action="list"):
-        return viewset(request=request, action=action, kwargs={}, format_kwarg=None).get_queryset()
+        return scoped_queryset(viewset, request, action)
 
     counters = {
         "appeal": lambda: scoped(JudgmentAppealViewSet).filter(status__in=OPEN_APPEAL_STATUSES).count(),

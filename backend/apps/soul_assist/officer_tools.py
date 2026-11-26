@@ -19,6 +19,7 @@ import json
 from collections import Counter
 
 from apps.core.tenant import is_hall_less_admin
+from apps.core.viewsets import scoped_queryset
 from apps.perm.checker import check_permission
 from apps.soul_assist.providers import ToolSpec
 
@@ -42,7 +43,7 @@ def enabled_hall_ids():
 def _list_queryset(viewset_class, request, action="list"):
     """那个页面的列表会给这个调用者看的行 —— 跑视图集自己的 `get_queryset`,不重述它;
     ADMIN 再收窄到开了助手的殿。非 ADMIN 的视图集本来就只给本殿(本殿开着,才问得到这里)。"""
-    qs = viewset_class(request=request, action=action, kwargs={}, format_kwarg=None).get_queryset()
+    qs = scoped_queryset(viewset_class, request, action)
     if is_hall_less_admin(request.user):  # 视图集已按 SYSTEM_ADMIN / 本文明收窄;这里再去掉关了助手的殿
         qs = qs.filter(tenant_id__in=enabled_hall_ids())
     return qs
