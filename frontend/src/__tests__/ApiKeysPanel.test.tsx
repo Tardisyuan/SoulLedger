@@ -59,6 +59,7 @@ function key(over: Record<string, unknown> = {}) {
     rate_limit_per_minute: 60,
     rate_limit_per_hour: 1000,
     allowed_ips: [],
+    allowed_sources: [],
     can_register_death: true,
     can_query_status: true,
     can_manage_webhooks: false,
@@ -99,6 +100,9 @@ describe("access", () => {
   });
 
   it("ADMIN: both tabs, the rows, revoke only on an active key", async () => {
+    deathSyncApi.apiKeys.mockResolvedValue(
+      page([key({ allowed_sources: ["HOSPITAL", "POLICE"] }), key({ id: "k2", name: "旧钥", is_active: false })]),
+    );
     renderRoute();
     expect(screen.getByRole("link", { name: tZh("death_sync.tabs.api_keys") })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: tZh("death_sync.tabs.registrations") })).toBeInTheDocument();
@@ -110,6 +114,9 @@ describe("access", () => {
     expect(within(active).getByText(tZh("death_sync.api_keys.system_type.HOSPITAL"))).toBeInTheDocument();
     expect(within(active).getByText(/sk_abcd1/)).toBeInTheDocument();
     expect(within(active).getByRole("button", { name: tZh("death_sync.api_keys.revoke") })).toBeInTheDocument();
+    // The grant is listed where there is one, and absent where the list is empty (system type only).
+    expect(within(active).getByText(`${tZh("death_sync.api_keys.allowed_sources")}: HOSPITAL, POLICE`)).toBeInTheDocument();
+    expect(within(revoked).queryByText(new RegExp(tZh("death_sync.api_keys.allowed_sources")))).toBeNull();
     expect(within(revoked).getByText(tZh("death_sync.api_keys.status.REVOKED"))).toBeInTheDocument();
     expect(within(revoked).queryByRole("button", { name: tZh("death_sync.api_keys.revoke") })).toBeNull();
     expect(deathSyncApi.apiKeys).toHaveBeenCalledWith({ page: "1" });
@@ -126,6 +133,9 @@ describe("create: the key is shown once", () => {
     fireEvent.change(within(form).getByLabelText(new RegExp(tZh("death_sync.api_keys.name"))), { target: { value: " 新钥 " } });
     fireEvent.change(within(form).getByLabelText(tZh("death_sync.api_keys.system_type_label")), { target: { value: "GOVERNMENT" } });
     fireEvent.click(within(form).getByLabelText(tZh("death_sync.api_keys.can_manage_webhooks")));
+    fireEvent.change(within(form).getByLabelText(tZh("death_sync.api_keys.allowed_sources")), {
+      target: { value: " hospital,  police " },
+    });
     // The list refetch after a create must carry the prefix only.
     deathSyncApi.apiKeys.mockResolvedValue(page([key(), key({ id: "k3", name: "新钥", key_prefix: "sk_live_" })]));
     fireEvent.click(within(form).getByRole("button", { name: tZh("common.create") }));
@@ -137,6 +147,7 @@ describe("create: the key is shown once", () => {
         can_register_death: true,
         can_query_status: true,
         can_manage_webhooks: true,
+        allowed_sources: ["HOSPITAL", "POLICE"],
       })
     );
     const shown = await screen.findByTestId("revealed-api-key");

@@ -17,7 +17,7 @@ export type DeathRegistrationSummary = components["schemas"]["DeathRegistrationS
 export type ExternalApiKey = components["schemas"]["ExternalApiKey"];
 export type ExternalApiKeySystemType = ExternalApiKey["system_type"];
 export type ExternalApiKeyCreate = Pick<ExternalApiKey, "name" | "system_type"> &
-  Partial<Pick<ExternalApiKey, "can_register_death" | "can_query_status" | "can_manage_webhooks">>;
+  Partial<Pick<ExternalApiKey, "can_register_death" | "can_query_status" | "can_manage_webhooks" | "allowed_sources">>;
 
 /**
  * One row of `GET /death-sync/admin-webhooks/` (ADMIN-only, `AdminWebhookViewSet`).

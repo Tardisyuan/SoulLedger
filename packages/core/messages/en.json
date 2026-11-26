@@ -4174,6 +4174,8 @@
       "name": "Name",
       "name_placeholder": "e.g. “Municipal hospital death registry”",
       "system_type_label": "System type",
+      "allowed_sources": "Allowed sources",
+      "allowed_sources_hint": "Sources this key may declare in the X-Source-System header, separated by commas, e.g. HOSPITAL, POLICE. Empty: only its own system type.",
       "system_type": {
         "GOVERNMENT": "Civil registry",
         "HOSPITAL": "Hospital death certificates",
