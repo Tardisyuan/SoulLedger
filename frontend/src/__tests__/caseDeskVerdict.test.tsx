@@ -2,7 +2,8 @@
  * 案卷台就地判(用户 2026-11-14,fe-ia §3.5):右栏的判栏。按界面测 —— 1–4 只选中、⌘⏎ 落印、这一行滑出、选中到下一件、
  * 5 秒到点才发 `conclude/`、U 收回;未认领的先认领;要理由的裁决送去卷宗整页;393 宽不接键;选中后预取下一件;
  * 偏好「落印前先确认」打开时走回读层、当场发、没有撤回条。
- * 第四十六批第一节:判栏是最右一栏(栏头「判栏」),页头只有幽灵的「打开卷宗 ↗」、认领只在判栏;行滑出 400ms(第六十批 P5,此前 440;减少动态 120ms);
+ * 第四十六批第一节:判栏是最右一栏(栏头「判栏」),页头只有幽灵的「打开卷宗 ↗」、认领只在判栏;行滑出 400ms(第六十批 P5,此前 440;减少动态 120ms),
+ * 选中不等它滑完、落印当场到下一件,紧接着的第二印照收(第六十六批);卷宗淡入只在鼠标点选时播(第六十六批);
  * 撤回条在判栏里、⌘Z 撤回;要写理由的判决在选项上说、选中后落印键换成「去卷宗整页写理由 →」;回读层焦点在「返回」、⌘⏎ 落印。
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -128,11 +129,11 @@ describe("案卷台就地判", () => {
     expect(mockConclude).not.toHaveBeenCalled();
 
     await press({ key: "Enter", metaKey: true });
-    // Staged, not sent; the strip names who and what.
+    // Staged, not sent; the strip names who and what. The selection is already on the next case (batch 66).
     expect(mockConclude).not.toHaveBeenCalled();
     expect(screen.getByTestId("desk-undo")).toHaveTextContent("赵志强");
-    expect(screen.getByTestId("desk-rail")).toHaveAttribute("data-state", "sealed");
     expect(screen.getByTestId("desk-row-1")).toHaveAttribute("data-leaving");
+    expect(current()).toBe("desk-row-2");
 
     await run(SEAL_LEAVE_MS);
     expect(screen.queryByTestId("desk-row-1")).not.toBeInTheDocument();
@@ -149,17 +150,87 @@ describe("案卷台就地判", () => {
     expect(screen.queryByTestId("desk-undo")).not.toBeInTheDocument();
   });
 
-  it("the row leaves in 400 ms (strike 80, slide 160, collapse 160; batch 60 P5), not 440 or the old 600", async () => {
+  it("the row leaves in 400 ms (strike 80, slide 160, collapse 160; batch 60 P5), but the selection moves at once (batch 66)", async () => {
     expect(SEAL_LEAVE_MS).toBe(400);
     await judging();
     await press({ key: "1" });
     await press({ key: "Enter", metaKey: true });
+    expect(current()).toBe("desk-row-2");
     await run(SEAL_LEAVE_MS - 1);
     expect(screen.getByTestId("desk-row-1")).toHaveAttribute("data-leaving");
-    expect(current()).toBe("desk-row-1");
+    // The leaving row is not the current one at any point of its slide.
+    expect(screen.getByTestId("desk-row-1")).not.toHaveAttribute("aria-current");
     await run(1);
     expect(screen.queryByTestId("desk-row-1")).not.toBeInTheDocument();
     expect(current()).toBe("desk-row-2");
+  });
+
+  it("sealing a case mid-stack selects the one after it at once, not the top of the stack", async () => {
+    await judging();
+    await press({ key: "j" });
+    await waitFor(() => expect(screen.getByTestId("desk-case")).toHaveTextContent("哪吒"));
+    await waitFor(() => expect(screen.getByTestId("desk-rail")).toHaveAttribute("data-state", "judge"));
+    await press({ key: "1" });
+    await press({ key: "Enter", metaKey: true });
+    expect(screen.getByTestId("desk-row-2")).toHaveAttribute("data-leaving");
+    expect(current()).toBe("desk-row-3");
+  });
+
+  it("a second seal right after the first is taken, not swallowed by the first row's slide (batch 66)", async () => {
+    await judging();
+    await press({ key: "1" });
+    await press({ key: "Enter", metaKey: true });
+    // Still inside the first row's 400 ms: the rail is the next case's, with nothing chosen yet.
+    await waitFor(() => expect(document.querySelector('[data-testid="desk-rail"] [data-verdict="PASSED"]')).toHaveAttribute("aria-pressed", "false"));
+    await press({ key: "3" });
+    await press({ key: "Enter", metaKey: true });
+    expect(screen.getByTestId("desk-undo")).toHaveTextContent("哪吒");
+    // Staging the second sends the first (one window at a time); both rows slide out together.
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(mockConclude).toHaveBeenCalledWith("1", { verdict: "PASSED", notes: "" });
+    expect(screen.getByTestId("desk-row-1")).toHaveAttribute("data-leaving");
+    expect(screen.getByTestId("desk-row-2")).toHaveAttribute("data-leaving");
+    expect(current()).toBe("desk-row-3");
+    await run(UNDO_MS);
+    expect(mockConclude).toHaveBeenCalledWith("2", { verdict: "PURGATORY", notes: "" });
+  });
+
+  // J / K versus a click: caseDesk.test.tsx「picking a case with the mouse animates the dossier」.
+  describe("the dossier's 240 ms fade-up plays for a mouse pick only (batch 66)", () => {
+    const realAnimate = HTMLElement.prototype.animate;
+    let fades: { playState: string; finish: jest.Mock }[];
+    beforeEach(() => {
+      fades = [];
+      HTMLElement.prototype.animate = jest.fn(() => {
+        const a = { playState: "running", finish: jest.fn(() => (a.playState = "finished")) };
+        fades.push(a);
+        return a as unknown as Animation;
+      });
+    });
+    afterEach(() => {
+      HTMLElement.prototype.animate = realAnimate;
+    });
+
+    it("a switch while the last fade is still playing finishes that one and starts no other", async () => {
+      await judging();
+      fireEvent.click(screen.getByTestId("desk-row-2"));
+      expect(fades).toHaveLength(1);
+      fireEvent.click(screen.getByTestId("desk-row-3"));
+      expect(current()).toBe("desk-row-3");
+      expect(fades).toHaveLength(1);
+      expect(fades[0].finish).toHaveBeenCalled();
+      // Once it has finished, the next click plays again.
+      fireEvent.click(screen.getByTestId("desk-row-1"));
+      expect(fades).toHaveLength(2);
+    });
+
+    it("the move to the next case after a seal does not play it", async () => {
+      await judging();
+      await press({ key: "1" });
+      await press({ key: "Enter", metaKey: true });
+      expect(current()).toBe("desk-row-2");
+      expect(fades).toHaveLength(0);
+    });
   });
 
   it("the rail is its own column with a 判栏 head, and the undo strip sits inside it", async () => {
@@ -201,7 +272,6 @@ describe("案卷台就地判", () => {
     await judging();
     await press({ key: "3" });
     await press({ key: "Enter", ctrlKey: true });
-    await run(SEAL_LEAVE_MS);
     expect(current()).toBe("desk-row-2");
     await press({ key: "u" });
     await run(UNDO_MS * 2);
@@ -292,6 +362,7 @@ describe("案卷台就地判", () => {
       await press({ key: "Enter", metaKey: true });
       await run(SEAL_LEAVE_REDUCED_MS - 1);
       expect(screen.getByTestId("desk-row-1")).toHaveAttribute("data-leaving");
+      expect(current()).toBe("desk-row-2");
       await run(1);
       expect(screen.queryByTestId("desk-row-1")).not.toBeInTheDocument();
       expect(current()).toBe("desk-row-2");
@@ -351,7 +422,6 @@ describe("案卷台就地判", () => {
       fireEvent.click(await screen.findByTestId("seal-readback-confirm"));
       await waitFor(() => expect(mockConclude).toHaveBeenCalledWith("1", { verdict: "PASSED", notes: "" }));
       expect(screen.queryByTestId("desk-undo")).not.toBeInTheDocument();
-      await run(SEAL_LEAVE_MS);
       expect(current()).toBe("desk-row-2");
     });
 

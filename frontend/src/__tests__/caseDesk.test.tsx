@@ -492,7 +492,7 @@ describe("CaseDesk", () => {
     expect(screen.queryByTestId("desk-handler-held")).toBeNull();
   });
 
-  describe("switching cases animates the dossier", () => {
+  describe("picking a case with the mouse animates the dossier (J / K do not; batch 66)", () => {
     const realAnimate = (Element.prototype as { animate?: unknown }).animate;
     const realMatchMedia = window.matchMedia;
     let animate: jest.Mock;
@@ -505,12 +505,19 @@ describe("CaseDesk", () => {
       window.matchMedia = realMatchMedia;
     });
 
-    it("fades the dossier in on J, not on the first paint", async () => {
+    const shown = () => document.querySelector('[data-desk-row][aria-current="true"]')?.getAttribute("data-testid");
+
+    it("fades the dossier in on a click, not on J / K or the first paint", async () => {
       window.matchMedia = ((q: string) => ({ matches: false, media: q })) as unknown as typeof window.matchMedia;
       renderWithProviders(<CaseDesk />);
       await screen.findByTestId("desk-row-2");
       expect(animate).not.toHaveBeenCalled();
       fireEvent.keyDown(window, { key: "j" });
+      await waitFor(() => expect(shown()).toBe("desk-row-2"));
+      fireEvent.keyDown(window, { key: "k" });
+      await waitFor(() => expect(shown()).toBe("desk-row-1"));
+      expect(animate).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByTestId("desk-row-2"));
       await waitFor(() => expect(animate).toHaveBeenCalledTimes(1));
       expect(animate.mock.instances[0]).toBe(screen.getByTestId("desk-case"));
       expect(animate.mock.calls[0][0][0]).toEqual({ opacity: 0, transform: "translateY(8px)" });
@@ -520,8 +527,8 @@ describe("CaseDesk", () => {
       window.matchMedia = ((q: string) => ({ matches: q.includes("reduce"), media: q })) as unknown as typeof window.matchMedia;
       renderWithProviders(<CaseDesk />);
       await screen.findByTestId("desk-row-2");
-      fireEvent.keyDown(window, { key: "j" });
-      await waitFor(() => expect(screen.getByTestId("desk-case")).toBeInTheDocument());
+      fireEvent.click(screen.getByTestId("desk-row-2"));
+      await waitFor(() => expect(shown()).toBe("desk-row-2"));
       expect(animate).not.toHaveBeenCalled();
     });
   });

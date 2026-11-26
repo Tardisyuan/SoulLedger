@@ -188,7 +188,7 @@
   background: color-mix(in oklch, oklch(var(--color-ink)) 7%, transparent);
   box-shadow: inset 3px 0 0 oklch(var(--color-ink));
 }
-/* 落了印的一行(第四十六批第一节第 3 条),与判栏里的印同一刻开始,三段共 400ms(CaseDesk 的 SEAL_LEAVE_MS,到点移出摞):
+/* 落了印的一行(第四十六批第一节第 3 条),落印那一刻开始,三段共 400ms(CaseDesk 的 SEAL_LEAVE_MS,到点移出摞;选中不等它,第六十六批):
      0–80     名字上划一道 1px 墨线(从左往右画出来),press 80
      80–240   左移 24px,同时淡到 0,fast 160 出曲线(第六十批 P5:此前 200 ease-out,对齐四档)
      240–400  行高收起(li 的一行网格 1fr → 0fr),fast 160,ease-in-out

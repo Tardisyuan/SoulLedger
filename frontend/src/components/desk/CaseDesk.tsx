@@ -45,7 +45,7 @@ import s from "./desk.module.css";
  * 四组由服务端出自同一个快照、互斥,不再在前端去重。
  *
  * 就地判(用户 2026-11-14,fe-ia §3.5):右栏是判栏(`VerdictRail`,懒加载)。1–4 选、⌘⏎ 落印 —— 与快审同一个承诺:
- * 落印即这一行划线滑出(400ms,减少动态时 120ms 淡出)、选中到下一件,裁决在 5 秒撤回窗口(`useStagedCommit`)到点、落下一印、
+ * 落印即这一行划线滑出(400ms,减少动态时 120ms 淡出)、选中当场到下一件(第六十六批:不等滑完,紧接着的第二印照收),裁决在 5 秒撤回窗口(`useStagedCommit`)到点、落下一印、
  * 或离开本页时才发 `conclude/`;⌘Z(U 照旧)或撤回条收回。撤回条在判栏底部,盖住落印区(第四十六批第 4 条)。偏好「落印前先确认」打开时改走回读层(`SealReadback.tsx`),当场发、不计时。
  * 选中一件约 150ms 后预取下一件的卷宗,J 落下时不等。
  */
@@ -65,8 +65,10 @@ const VerdictRail = dynamic(() => import("./VerdictRail"), { ssr: false, loading
 
 /**
  * 落印后这一行离开摞的时长(第四十六批第一节第 3 条;第六十批 P5 对齐四档):划线 80 → 左移 24px 并淡出 160(出曲线)
- * → 行高收起 160,共 400。印在判栏里落下的同一刻开始划线(第 5 条)。三段的时长写在 desk.module.css 的
+ * → 行高收起 160,共 400,落印那一刻开始划线。三段的时长写在 desk.module.css 的
  * `.row[data-leaving]`,改一处要改两处(motionBatch60.test.ts 核对)。
+ * 第六十六批:这是行在摞上还画着的时长,选中不等它 —— 落印当场就移到下一件,滑出的那一行已经不是「当前件」,
+ * 判栏也已换成下一件(所以判栏的 `sealed` 印此时画不出来:当前件从不在 `gone` 里)。
  */
 export const SEAL_LEAVE_MS = 400;
 /** 减少动态时:不移动,划线后 120ms 淡出,行高立即收起。 */
@@ -138,18 +140,19 @@ export function CaseDesk() {
   const counts = desk.data?.counts ?? null;
   const monthPct = desk.data?.month_done_pct ?? null;
 
-  // 落了印的(撤回窗口里、请求在路上、已结而摞还没重取):不在摞上;正在滑出的那一行还画着(`leaving`)。
+  // 落了印的(撤回窗口里、请求在路上、已结而摞还没重取):不在摞上;正在滑出的行还画着(`leaving`),但不能再选中、
+  // 不算进「第 n / N 件」—— 选中在落印那一刻已经到了下一件。接连落印时可以有几行同时在滑出。
   const [gone, setGone] = useState<readonly string[]>([]);
-  const [leaving, setLeaving] = useState<string | null>(null);
-  const leaveTimer = useRef<number | undefined>(undefined);
+  const [leaving, setLeaving] = useState<readonly string[]>([]);
+  const leaveTimers = useRef(new Map<string, number>());
   const groups = DESK_GROUPS.map((group) => {
     const g = desk.data?.groups.find((x) => x.group === group);
     const rows = g?.rows ?? [];
-    const onDesk = (r: (typeof rows)[number]) => matchesSearch(r, query) && (!gone.includes(r.id) || r.id === leaving);
+    const onDesk = (r: (typeof rows)[number]) => matchesSearch(r, query) && (!gone.includes(r.id) || leaving.includes(r.id));
     return { group, total: g?.total ?? 0, rows: rows.filter(onDesk) };
   });
   const flat = groups.flatMap((g) => g.rows.map((row) => ({ row, group: g.group })));
-  const ids = flat.map((f) => f.row.id);
+  const ids = flat.flatMap((f) => (gone.includes(f.row.id) ? [] : [f.row.id]));
   const chosen = caseParam ?? picked;
   const currentId = chosen && ids.includes(chosen) ? chosen : (ids[0] ?? null);
   const current = flat.find((f) => f.row.id === currentId) ?? null;
@@ -158,27 +161,38 @@ export function CaseDesk() {
   const loading = desk.isPending;
   const failed = desk.isError;
 
-  // 换一件时卷宗淡入并上移 8px(与换页同一条「page-enter」:240ms 进场曲线)。不重新挂载 OpenCase,
+  // 鼠标点选换一件时卷宗淡入并上移 8px(与换页同一条「page-enter」:240ms 进场曲线)。不重新挂载 OpenCase,
   // 所以页签与滚动之外的本地状态不丢;减少动态效果时不播(全站的 1ms 规则管不到 Web Animations)。
+  // 第六十六批:键盘换件(J / K)、落印后移到下一件、撤回都不播,直接换;上一段还没播完又换件时也不播,
+  // 并把那一段直接播完 —— 按住 J 扫卷时内容不跳。
   const caseRef = useRef<HTMLElement>(null);
   const shownId = current?.row.id ?? null;
   const firstShown = useRef(true);
+  /** 下一次换件是不是鼠标点的(`select(id, true)`);每次 `select` 都重写,所以只管紧接着的那一次。 */
+  const fadeNext = useRef(false);
+  const fade = useRef<Animation | null>(null);
   useEffect(() => {
     if (!shownId) return;
+    const byMouse = fadeNext.current;
+    fadeNext.current = false;
     if (firstShown.current) {
       firstShown.current = false;
       return;
     }
     const el = caseRef.current;
-    if (!el?.animate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!el?.animate || reducedMotion()) return;
     el.scrollTop = 0;
-    el.animate(
-      [
-        { opacity: 0, transform: "translateY(8px)" },
-        { opacity: 1, transform: "none" },
-      ],
-      { duration: 240, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
-    );
+    const midway = fade.current?.playState === "running";
+    fade.current?.finish();
+    if (byMouse && !midway) {
+      fade.current = el.animate(
+        [
+          { opacity: 0, transform: "translateY(8px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: 240, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+      );
+    }
   }, [shownId]);
 
   /** 开 / 关一件只换 `?case=`,别的参数(`?source=`)留着。读 `window.location`:来源刚换时 `useUrlFilters` 还在防抖里。 */
@@ -189,8 +203,10 @@ export function CaseDesk() {
     const qs = params.toString();
     return qs ? `${pathname}?${qs}` : pathname;
   };
-  const select = (id: string | null) => {
+  /** `byMouse`:点了摞上的一行或「下一件」,卷宗淡入;键盘与程序换件不淡入(见上)。 */
+  const select = (id: string | null, byMouse = false) => {
     if (!id) return;
+    fadeNext.current = byMouse;
     setPicked(id);
     // 开着的一件换成下一件:换掉网址里的那一件,不多压一层历史。
     if (caseParam !== null) router.replace(caseHref(id), { scroll: false });
@@ -233,24 +249,29 @@ export function CaseDesk() {
   // W 不勾 = 不说(`create_workflow` 不带):原审由服务端按全部站生成审批流,与快审同一条(useJudgmentQueue 的 send)。
   const sealWindow = useStagedCommit<DeskSeal>((v) => void sendSeal(v));
 
-  /** 这一行划线滑出,选中落到它后面那一件(没有就前一件)。 */
+  /** 这一行停止滑出(滑完,或撤回):从 `leaving` 里拿掉,它的计时器作废。 */
+  const stopLeaving = (id: string) => {
+    window.clearTimeout(leaveTimers.current.get(id));
+    leaveTimers.current.delete(id);
+    setLeaving((prev) => prev.filter((x) => x !== id));
+  };
+  /** 这一行划线滑出;选中当场落到它后面那一件(没有就前一件),不等滑完(第六十六批)。 */
   const leave = (v: DeskSeal) => {
     const rest = ids.filter((x) => x !== v.id);
     const next = rest[Math.min(Math.max(ids.indexOf(v.id), 0), rest.length - 1)] ?? null;
     const nextName = flat.find((f) => f.row.id === next)?.row.soul_name ?? "";
     setStamp((n) => n + 1);
     setGone((prev) => (prev.includes(v.id) ? prev : [...prev, v.id]));
-    setLeaving(v.id);
+    setLeaving((prev) => (prev.includes(v.id) ? prev : [...prev, v.id]));
     setSealNote(next ? t("caseDesk.verdict.announce", { name: v.name, next: nextName }) : t("caseDesk.verdict.announce_last", { name: v.name }));
-    window.clearTimeout(leaveTimer.current);
-    leaveTimer.current = window.setTimeout(
-      () => {
-        setLeaving((x) => (x === v.id ? null : x));
-        if (currentRef.current === v.id && next) select(next);
-      },
-      reducedMotion() ? SEAL_LEAVE_REDUCED_MS : SEAL_LEAVE_MS,
-    );
+    if (currentRef.current === v.id && next) select(next);
+    window.clearTimeout(leaveTimers.current.get(v.id));
+    leaveTimers.current.set(v.id, window.setTimeout(() => stopLeaving(v.id), reducedMotion() ? SEAL_LEAVE_REDUCED_MS : SEAL_LEAVE_MS));
   };
+  useEffect(() => {
+    const timers = leaveTimers.current;
+    return () => timers.forEach((h) => window.clearTimeout(h));
+  }, []);
 
   const seal = (d: DeskVerdictDraft) => {
     if (!current || gone.includes(current.row.id)) return;
@@ -275,10 +296,9 @@ export function CaseDesk() {
   const undo = () => {
     const v = sealWindow.undo();
     if (!v) return;
-    // Undone mid-slide: the slide must not finish by moving the selection on to the next case.
-    window.clearTimeout(leaveTimer.current);
+    // Undone mid-slide: the row stops leaving and comes back, and the selection goes back to it.
+    stopLeaving(v.id);
     setGone((prev) => prev.filter((x) => x !== v.id));
-    setLeaving(null);
     setRestored(v);
     setSealNote(t("caseDesk.verdict.undone", { name: v.name }));
     select(v.id);
@@ -455,10 +475,10 @@ export function CaseDesk() {
                           className={s.row}
                           aria-current={row.id === currentId ? "true" : undefined}
                           data-desk-row=""
-                          data-leaving={row.id === leaving ? "" : undefined}
+                          data-leaving={leaving.includes(row.id) ? "" : undefined}
                           data-testid={`desk-row-${row.id}`}
                           onClick={() => {
-                            select(row.id);
+                            select(row.id, true);
                             if (window.matchMedia?.("(max-width: 768px)")?.matches) {
                               pushedCase.current = true;
                               router.push(caseHref(row.id));
@@ -500,7 +520,7 @@ export function CaseDesk() {
                 router.back();
               } else router.replace(caseHref(null), { scroll: false });
             }}
-            onNext={() => select(step(ids, currentId, 1))}
+            onNext={() => select(step(ids, currentId, 1), true)}
             onOpen={() => open(current.row.id)}
             claim={claimable ? { busy: move.isPending, run: () => move.mutate({ id: current.row.id, kind: "claim" }) } : null}
             release={releasable ? { busy: move.isPending, run: () => move.mutate({ id: current.row.id, kind: "release" }) } : null}
