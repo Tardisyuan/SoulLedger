@@ -155,7 +155,7 @@ export function SoulKarmaLedgerCard({
                   t={t}
                   className="tabular-nums text-[oklch(var(--color-ink))]"
                 >
-                  +{life.inheritedMerit}
+                  {signedNumber(life.inheritedMerit)}
                 </Figure>
                 <Figure
                   field="carried_demerit"
@@ -163,7 +163,7 @@ export function SoulKarmaLedgerCard({
                   t={t}
                   className="tabular-nums text-[oklch(var(--color-ink))]"
                 >
-                  -{life.inheritedDemerit}
+                  {signedNumber(-life.inheritedDemerit)}
                 </Figure>
               </span>
             )}
@@ -201,7 +201,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              +{rawMerit}
+              {signedNumber(rawMerit)}
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
@@ -212,7 +212,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              -{rawDemerit}
+              {signedNumber(-rawDemerit)}
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
@@ -223,7 +223,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              +{meritScore}
+              {signedNumber(meritScore)}
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
@@ -234,7 +234,7 @@ export function SoulKarmaLedgerCard({
               t={t}
               className="tabular-nums text-[oklch(var(--color-ink))]"
             >
-              -{demeritScore}
+              {demeritScore === null ? null : signedNumber(-demeritScore)}
             </Figure>
           </div>
           {/* WHY THE BALANCE ROW IS THE ONLY PART OF THIS BLOCK THAT IS GUARDED.
@@ -438,7 +438,7 @@ export function SoulKarmaLedgerCard({
                 t={t}
                 className="tabular-nums text-[oklch(var(--color-ink))]"
               >
-                +{inheritance.inherited_merit}
+                {signedNumber(inheritance.inherited_merit)}
               </Figure>
             </span>
             <span className="inline-flex items-baseline gap-1 text-[oklch(var(--color-ink))]">
@@ -449,7 +449,7 @@ export function SoulKarmaLedgerCard({
                 t={t}
                 className="tabular-nums text-[oklch(var(--color-ink))]"
               >
-                -{inheritance.inherited_demerit}
+                {signedNumber(-inheritance.inherited_demerit)}
               </Figure>
             </span>
           </div>

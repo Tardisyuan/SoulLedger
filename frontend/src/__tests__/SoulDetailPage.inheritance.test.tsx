@@ -251,7 +251,7 @@ describe("SoulDetailPage — inheritance panel", () => {
     const demerit = document.querySelector<HTMLElement>('[data-quantity-field="inherited_demerit"]');
     expect(merit?.textContent).toBe("+20");
     expect(merit?.dataset.quantity).toBe("magnitude");
-    expect(demerit?.textContent).toBe("-100");
+    expect(demerit?.textContent).toBe("−100");
     expect(demerit?.dataset.quantity).toBe("magnitude");
     expect(screen.getByText("souls.detail.merit:")).toBeInTheDocument();
     expect(screen.getByText("souls.detail.demerit:")).toBeInTheDocument();
@@ -320,7 +320,7 @@ describe("SoulDetailPage — which life the ledger belongs to", () => {
     const demerit = document.querySelector<HTMLElement>('[data-quantity-field="carried_demerit"]');
     expect(merit?.textContent).toBe("+40");
     expect(merit?.dataset.quantity).toBe("magnitude");
-    expect(demerit?.textContent).toBe("-30");
+    expect(demerit?.textContent).toBe("−30");
     expect(demerit?.dataset.quantity).toBe("magnitude");
   });
 

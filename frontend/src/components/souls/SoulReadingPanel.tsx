@@ -147,7 +147,7 @@ function BalanceReading({
           t={t}
           className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          {reading.merit == null ? <Withheld t={t} /> : `+${reading.merit}`}
+          {reading.merit == null ? <Withheld t={t} /> : signedNumber(reading.merit)}
         </Figure>
       </span>
       <span className={`${cell} ${wide}`} />
@@ -162,7 +162,7 @@ function BalanceReading({
           t={t}
           className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          {reading.demerit == null ? <Withheld t={t} /> : `-${reading.demerit}`}
+          {reading.demerit == null ? <Withheld t={t} /> : signedNumber(-reading.demerit)}
         </Figure>
       </span>
       <span className={`${last} ${wide}`} />

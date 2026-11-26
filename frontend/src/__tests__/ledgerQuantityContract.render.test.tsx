@@ -68,15 +68,15 @@ describe("SoulKarmaLedgerCard — every number says which kind it is", () => {
 
     expect(figures(container)).toEqual([
       { field: "merit", quantity: "magnitude", text: "+24", scaled: true },
-      { field: "demerit", quantity: "magnitude", text: "-9", scaled: true },
+      { field: "demerit", quantity: "magnitude", text: "−9", scaled: true },
       { field: "balance", quantity: "magnitude", text: "+15", scaled: true },
       { field: "raw_merit", quantity: "magnitude", text: "+30", scaled: true },
-      { field: "raw_demerit", quantity: "magnitude", text: "-12", scaled: true },
+      { field: "raw_demerit", quantity: "magnitude", text: "−12", scaled: true },
       { field: "merit_score", quantity: "magnitude", text: "+24", scaled: true },
-      { field: "demerit_score", quantity: "magnitude", text: "-9", scaled: true },
+      { field: "demerit_score", quantity: "magnitude", text: "−9", scaled: true },
       { field: "karmic_balance", quantity: "magnitude", text: "+15", scaled: true },
       { field: "inherited_merit", quantity: "magnitude", text: "+5", scaled: true },
-      { field: "inherited_demerit", quantity: "magnitude", text: "-9", scaled: true },
+      { field: "inherited_demerit", quantity: "magnitude", text: "−9", scaled: true },
       { field: "inherited_balance", quantity: "magnitude", text: "−4", scaled: true },
     ]);
   });
@@ -180,7 +180,7 @@ describe("SoulKarmaLedgerCard — every number says which kind it is", () => {
     expect(container.querySelector("[data-inheritance-bars]")).toBeNull();
     expect(figures(container).slice(-3)).toEqual([
       { field: "inherited_merit", quantity: "magnitude", text: "+5", scaled: true },
-      { field: "inherited_demerit", quantity: "magnitude", text: "-9", scaled: true },
+      { field: "inherited_demerit", quantity: "magnitude", text: "−9", scaled: true },
       { field: "inherited_balance", quantity: "magnitude", text: "−4", scaled: true },
     ]);
   });

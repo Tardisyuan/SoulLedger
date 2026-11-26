@@ -97,7 +97,7 @@ describe("the book settles forwards in time", () => {
     ).map((el) => (el.textContent ?? "").trim());
 
     // +5 → -7 → +23. Settled newest-first it would read +30 / +18 / +23.
-    expect(running).toEqual(["+5", "-7", "+23"]);
+    expect(running).toEqual(["+5", "−7", "+23"]);
   });
 
   it("numbers and dates the entries in that same order", () => {
@@ -119,7 +119,7 @@ describe("the book settles forwards in time", () => {
       Array.from(container.querySelectorAll('tbody [data-quantity-field="running_balance"]')).map(
         (el) => (el.textContent ?? "").trim()
       )
-    ).toEqual(["+5", "-7", "+23"]);
+    ).toEqual(["+5", "−7", "+23"]);
   });
 });
 
@@ -139,7 +139,7 @@ describe("功 and 过 each hold a column, and the empty one stays empty", () => 
     const [, , , , merit, demerit] = bodyRows(container)[1];
 
     expect(merit).toBe("");
-    expect(demerit).toBe("-12");
+    expect(demerit).toBe("−12");
   });
 
   it("never writes a zero or a dash into the empty side", () => {
@@ -168,7 +168,7 @@ describe("合计 appears once, at the foot", () => {
     // 功 35 = 30 + 5, 过 12, 销算余 +23. (cells[3] is the 条款 column: nothing to total.)
     expect(cells[3]).toBe("");
     expect(cells[4]).toBe("+35");
-    expect(cells[5]).toBe("-12");
+    expect(cells[5]).toBe("−12");
     expect(cells[6]).toBe("+23");
   });
 
@@ -349,7 +349,7 @@ describe("功 and 过 carry no colour — the heads and the signs tell them apar
     expect(colouredElements(container)).toEqual([]);
     // The signs are what is left to tell them apart, so they must be there.
     expect(bodyRows(container)[0][4]).toMatch(/^\+/);
-    expect(bodyRows(container)[1][5]).toMatch(/^-/);
+    expect(bodyRows(container)[1][5]).toMatch(/^−/);
   });
 
   it("draws the karma card's merit and demerit figures in ink too", () => {
