@@ -49,8 +49,10 @@ remote_sync() {
     # remote copy stayed and kept running (2026-10-29: a test deleted by a merge failed the gates there).
     # The synced .git no longer tracks it, so it shows up remotely as untracked; remove every such file
     # that is not one of this machine's own untracked files (those were just sent on purpose).
-    local keep; keep=$(git ls-files -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts)
-    ssh "$GATES_REMOTE" "cd '$RWORK' && git ls-files -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts" \
+    # .github and docs too (2026-11-26): a deleted workflow stayed remotely and failed test_ci_runs_on_a_budget.
+    local swept="backend frontend packages mobile mobile-officer scripts .github docs"
+    local keep; keep=$(git ls-files -o --exclude-standard -- $swept)
+    ssh "$GATES_REMOTE" "cd '$RWORK' && git ls-files -o --exclude-standard -- $swept" \
         | grep -vxF -f <(printf '%s\n' "$keep") \
         | ssh "$GATES_REMOTE" "cd '$RWORK' && xargs -r -d '\n' rm -f --"
 }
