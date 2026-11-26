@@ -1,0 +1,6 @@
+{
+  "death_sync.api_keys.allowed_sources": "Tepy Wenen",
+  "death_sync.api_keys.allowed_sources_hint": "Tepy Wenen Er X-Source-System, Mi: HOSPITAL, POLICE. Nen Sesh: Kher-N Hemsu Djes-Ef Wa.",
+  "death_sync.webhooks.url_invalid": "Wat: Tepy Em http:// Mi https://",
+  "map.pause_motion": "Smen Shem"
+}

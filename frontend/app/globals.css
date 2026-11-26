@@ -1419,7 +1419,8 @@ html.theme-switching *::after {
 
 
 /* 概览进页(v4 第七批 S04 `.roll` / `.ring`):主卡的大数字从 0 滚到实际值,「本月已结」环从 0 扫到实际百分比,
-   900ms、进场曲线,随元素挂上(数据到了)播一次。数字只用 CSS:`--n` 注册成整数才能被插值,`counter()` 把它写出来。
+   900ms、进场曲线,随元素挂上(数据到了)播一次。第六十六批:只在本会话第一次进概览时挂这两个类(`useCountUpOnce`),
+   之后再进直接是终值,变了的数挂 `animate-row-changed`。数字只用 CSS:`--n` 注册成整数才能被插值,`counter()` 把它写出来。
    这一层是 `aria-hidden` 的;真正的数在旁边的 sr-only 里 —— 读屏不念滚动,jsdom 与复制拿到的也是终值。
    减少动态效果时,上面那条通用规则把时长压到 1ms:直接是终态,`animationend` 照样触发。 */
 @property --roll-n {
@@ -2617,7 +2618,7 @@ li:last-child > .route-row {
 }
 .kpi-fill {
   transform-origin: left;
-  /* 第五十八批:进度条随 KPI 数字一起走 count(此前 800),起步 200 → fast 160。 */
+  /* 第五十八批:进度条随 KPI 数字一起走 count(此前 800),起步 200 → fast 160。第六十六批:只在本会话第一次看到这张卡时挂(StatCard)。 */
   animation: route-draw var(--transition-duration-count) cubic-bezier(0.4, 0, 0.2, 1) var(--transition-duration-fast) backwards;
 }
 @media (prefers-reduced-motion: reduce) {
