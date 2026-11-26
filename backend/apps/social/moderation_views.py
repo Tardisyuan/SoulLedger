@@ -69,7 +69,7 @@ from apps.social.moderation_serializers import (
     officer_media,
 )
 from apps.social.soul_circle import SocialError
-from apps.soul_assist.views import OfficerAssistThrottle
+from apps.soul_assist.throttles import OfficerAssistThrottle
 
 MODERATE = "social.moderate"
 ERRORS = {400: ModerationErrorSerializer, 403: ModerationErrorSerializer, 409: ModerationErrorSerializer}

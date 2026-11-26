@@ -29,8 +29,9 @@ from apps.core.tenant import scope_to_tenant
 from apps.judgment import claims, hall_stats, sources
 from apps.judgment.claims import ferry_barred
 from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED, JudgmentCitation
+from apps.judgment.queue import PENDING, JudgmentFilter, group_q, queue_counts_of
 from apps.judgment.serializers import JudgmentListSerializer, JudgmentQueueCountsSerializer, QueueGroup, _locale_from
-from apps.judgment.views import PENDING, JudgmentFilter, JudgmentViewSet, group_q, queue_counts_of
+from apps.judgment.views import JudgmentViewSet
 from apps.souls.models import Soul
 from apps.souls.serializers import SoulRecordSerializer, SoulSerializer
 

@@ -5,7 +5,7 @@
 
 **范围不在这里重写。** 每个计数都经那个页面自己的视图集 `get_queryset()` 求出
 (租户、暂居只读、行级 DataScope 全在里面,`apps/core/tenant.py` 无租户即空集),
-与 `apps/judgment/views.py::visible_judgments` 同一个办法。所以 ADMIN 在这里也是全殿数据,
+与 `apps/judgment/queue.py::visible_judgments` 同一个办法。所以 ADMIN 在这里也是全殿数据,
 结果里的 `scope` 如实写出。
 
 **两道权限检查**(同一张 `TOOLS` 表):
@@ -49,7 +49,8 @@ def _list_queryset(viewset_class, request, action="list"):
 
 
 def _judgment_queue_counts(request):
-    from apps.judgment.views import PENDING, JudgmentViewSet, queue_counts_of
+    from apps.judgment.queue import PENDING, queue_counts_of
+    from apps.judgment.views import JudgmentViewSet
 
     counts = queue_counts_of(_list_queryset(JudgmentViewSet, request).filter(PENDING), request.user)
     return {"scope": _scope(request), **counts}

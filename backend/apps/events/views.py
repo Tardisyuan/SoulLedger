@@ -8,7 +8,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.audit.views import caller_hall_tz, date_range_q
+from apps.core.dates import caller_hall_tz, date_range_q
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.events.models import SoulEvent

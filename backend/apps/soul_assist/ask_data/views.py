@@ -11,7 +11,8 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.problems import problem
 from apps.soul_assist.ask_data import service
 from apps.soul_assist.serializers import AssistErrorSerializer
-from apps.soul_assist.views import OfficerAssistBaseView, OfficerAssistThrottle
+from apps.soul_assist.throttles import OfficerAssistThrottle
+from apps.soul_assist.views import OfficerAssistBaseView
 
 
 class AskDataRequestSerializer(serializers.Serializer):

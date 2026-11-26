@@ -6,9 +6,15 @@
 **按分库约束写**(与 `apps/soul_accounts/models.py` 同一条):UUID 主键;只有同租户外键
 (灵魂、它自己的账号);不存 tenant 列,租户经 `soul__tenant` 一跳读出。
 """
+import re
 import uuid
 
 from django.db import models
+
+#: Expo 的两种前缀都认:`ExponentPushToken[...]` 是当前 `getExpoPushTokenAsync` 给的,
+#: `ExpoPushToken[...]` 是 expo-server-sdk 的 `isExpoPushToken` 同样接受的写法。
+#: 括号里只放 token 实际出现的字符,拒绝空白与控制字符 —— 这个值会原样进 Expo 请求体。
+EXPO_TOKEN_RE = re.compile(r"^Expo(nent)?PushToken\[[A-Za-z0-9_-]{8,200}\]$")
 
 
 class PushPlatform(models.TextChoices):

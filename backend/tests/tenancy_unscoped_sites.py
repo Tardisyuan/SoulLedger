@@ -254,7 +254,7 @@ SITES = [
     ('apps/judgment/views.py', 'Judgment._base_manager', 1, 'FILTERED', 'CONTEXT', "the batch's ids, already checked against get_queryset(); each officer's data-scope Q is applied on top"),
     ('apps/org/views.py', 'Soul.all_objects', 1, 'FILTERED', 'CONTEXT', 'souls owned by the unit being deleted (reached through get_object()); soft-deleted ones too, so a restore never points at a deleted unit'),
     ('apps/org/views.py', 'Judgment.all_objects', 1, 'FILTERED', 'CONTEXT', 'judgments owned by the unit being deleted (reached through get_object()); soft-deleted ones too'),
-    ('apps/judgment/views.py', 'JudgmentCitation.all_objects', 1, 'PK', 'CONTEXT', 'subquery of judgment ids citing one statute, used inside an already scoped judgment queryset'),
+    ('apps/judgment/queue.py', 'JudgmentCitation.all_objects', 1, 'PK', 'CONTEXT', 'subquery of judgment ids citing one statute, used inside an already scoped judgment queryset'),
     ('apps/ledger/management/commands/snapshot_balances.py', 'Tenant.objects', 1, 'FANOUT', 'CONTROL', 'reads the global Tenant table to fan out per-tenant work'),
     ('apps/ledger/services.py', 'Disposition.all_objects', 1, 'PK', 'CONTEXT', 'dispositions of one soul'),
     ('apps/ledger/tasks.py', 'Tenant.objects', 3, 'FANOUT', 'CONTROL', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant_id'),

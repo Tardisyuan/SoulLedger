@@ -14,17 +14,16 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import status, throttling
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.locale import locale_from_request
 from apps.core.permissions import TenantPermission
 from apps.core.problems import problem
-from apps.core.throttling import ClientIPIdentMixin
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_accounts.me_views import SoulAPIView
-from apps.soul_assist import config, service, sse, usage
+from apps.soul_assist import service, sse, usage
 from apps.soul_assist.models import AssistConversation, AssistMessage
 from apps.soul_assist.serializers import (
     AssistAnswerSerializer,
@@ -38,6 +37,7 @@ from apps.soul_assist.serializers import (
     stream_event_serializer,
     usage_summary,
 )
+from apps.soul_assist.throttles import AssistThrottle, OfficerAssistThrottle  # noqa: F401  re-exported
 
 #: `stream: true` 时 200 的正文(docs/ARCHITECTURE-soul-assist.md §13)。OpenAPI 描述不了「一串事件」,
 #: 这里声明的是**每一个** `data:` 行的 JSON。
@@ -60,24 +60,6 @@ def _reply(request, result, stream):
         return sse.response(request, result, render_answer_event)
     conversation, reply = result
     return Response({"conversation_id": conversation.pk, "answer": AssistMessageSerializer(reply).data})
-
-
-class AssistThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):
-    """按灵魂账号计。速率是生效配置(管理页可改,没改过就是 `DEFAULT_THROTTLE_RATES["assist"]`)。"""
-
-    scope = "assist"
-    side = "soul"
-
-    def get_rate(self):
-        return config.effective().rate(self.side)
-
-
-class OfficerAssistThrottle(AssistThrottle):
-    """按官员账号计。两端的每殿开关共用(Q3 = A),每小时次数在管理页上各一个数;
-    没改过时两端都是 `DEFAULT_THROTTLE_RATES["assist"]`。"""
-
-    scope = "assist_officer"
-    side = "officer"
 
 
 class _AssistErrors:

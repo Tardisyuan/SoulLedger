@@ -1096,7 +1096,7 @@ class TestCitationCount:
             "citation_count included another tenant's citation. A reverse "
             "aggregate resolves against the relation, not the related model's "
             "manager, so scoping the statute queryset does not scope this — "
-            "the Count's filter (apps/judgment/views.py::visible_judgments) "
+            "the Count's filter (apps/judgment/queue.py::visible_judgments) "
             "has to narrow it to the caller's judgment list."
         )
 
