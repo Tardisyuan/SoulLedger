@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { formatAsOf } from "@/src/lib/formatAsOf";
+import { formatAsOf } from "@soulledger/core/domain/dates";
 
 // Local-time constructors on purpose: "same day" is the viewer's calendar day, so the
 // fixtures must not depend on the machine's time zone.

@@ -11,6 +11,7 @@ import { SlipFrame, SlipRule, type SlipCiv } from "@/src/components/soul-account
 import type { SlipBundles, SlipLocale } from "@/src/components/soul-accounts/slipTexts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { civSkinOf } from "@/src/lib/civSkin";
+import { pad2 } from "@soulledger/core/domain/dates";
 
 const SEP = " · ";
 const MONO = "var(--font-mono)";
@@ -31,12 +32,11 @@ const EYEBROW_LEFT_GR = "ΑΙΔΗΣ · HADES";
 /** 文明决定上联印哪种文字;中性皮(四种之外的殿)跟官员台。 */
 const OWN_LOCALE: Partial<Record<SlipCiv, SlipLocale>> = { cn: "zh-Hans", eg: "egy", eu: "en", gr: "en" };
 
-const pad = (n: number) => String(n).padStart(2, "0");
 /** `YYYY-MM-DD HH:mm`:本地时间、24 小时、不带秒,与界面语言无关(不走 `formatDateTime`,它随语言变)。读不出来印破折号。 */
 function slipTime(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 /** 时间戳印的是打印机所在浏览器的本地时区,没有标注读的人不知道是哪个钟;补一个短名(`GMT+8`),读不出来就不补。 */

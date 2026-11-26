@@ -29,7 +29,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { formatAsOf } from "@/src/lib/formatAsOf";
+import { formatAsOf } from "@soulledger/core/domain/dates";
 import { saveBlob } from "@/src/lib/saveBlob";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";

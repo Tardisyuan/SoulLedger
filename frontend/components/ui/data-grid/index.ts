@@ -1,8 +1,5 @@
 export { DataGrid, type DataGridProps, type DataGridSelection } from './DataGrid'
 export {
-  renderGridCell,
-  toDataTableColumn,
-  columnAlign,
   EnumBadge,
   type DataGridColumn,
   type DataGridColumnType,

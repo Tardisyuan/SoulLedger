@@ -33,20 +33,8 @@ import type { InvalidateQueryFilters, Query, QueryClient } from "@tanstack/react
 
 import type { EventContext, EventHandler, EventPayload, HandlerResult } from "./eventTypes";
 
-export type {
-  BaseEventPayload,
-  DeathSyncEventPayload,
-  DispatchEventPayload,
-  EventContext,
-  EventHandler,
-  EventPayload,
-  HandlerResult,
-  NotificationEventPayload,
-  SchedulerEventPayload,
-  SocialEventPayload,
-  SoulEventPayload,
-  WorkflowEventPayload,
-} from "./eventTypes";
+// Only the three imported through this module (the payload types live in `./eventTypes`).
+export type { EventContext, EventPayload, SchedulerEventPayload } from "./eventTypes";
 
 
 // ── Event Registry ─────────────────────────────────────────────────────

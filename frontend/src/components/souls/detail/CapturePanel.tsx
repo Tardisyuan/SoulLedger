@@ -17,6 +17,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField } from "@/src/components/ui/Field";
 import { responseCode } from "@soulledger/core/api/client";
+import { pad2 } from "@soulledger/core/domain/dates";
 
 const CAPTURE_CODES = ["not_diyu", "not_alive", "lifespan_not_ended", "warrant_open", "wrong_status", "reason_required"];
 const ESCORTS: CaptureEscort[] = ["WUCHANG", "NIUTOU_MAMIAN"];
@@ -39,10 +40,9 @@ export function lifespanNotYet(soul: Soul): boolean {
   return !!f && !!f.month && !!f.day && f.year >= 1 && !lifespanEnded(soul);
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
 const fatedText = (soul: Soul) => {
   const f = soul.fated_death_date;
-  return f && f.month && f.day ? `${f.year}-${pad(f.month)}-${pad(f.day)}` : "";
+  return f && f.month && f.day ? `${f.year}-${pad2(f.month)}-${pad2(f.day)}` : "";
 };
 
 const DAY = 86_400_000;
