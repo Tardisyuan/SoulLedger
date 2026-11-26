@@ -196,6 +196,9 @@ test("第六十七批 五.3: the retry is ink-filled and the code is faint text 
     const code = StyleSheet.flatten(screen.getByTestId("error-code").props.style);
     expect(code.color).toBe(t.faintText);
     expect(code.color).not.toBe(t.inkSubtle);
+    // 第六十七批 三: a text-only fade is the faint colour alone, never with an opacity on top; 12/16 mono (`valueSm`).
+    expect(code.opacity).toBeUndefined();
+    expect(code).toMatchObject({ fontSize: 12, lineHeight: 16 });
     unmount();
   }
 });

@@ -1836,7 +1836,7 @@ export function ScreenError({
       {onRetry ? <Button testID={retryTestID ?? "screen-retry"} title={tr("soul_app.common.retry")} onPress={onRetry} style={styles.retry} /> : null}
       {onHome ? <Button testID="crash-home" kind="secondary" title={tr("soul_app.errors.go_home")} onPress={onHome} style={styles.home} /> : null}
       {error ? (
-        <Txt testID="error-code" variant="value" style={[styles.errorCode, { color: t.faintText }]}>
+        <Txt testID="error-code" variant="valueSm" style={{ color: t.faintText }}>
           {`${code} · ${clock}${error.requestId ? ` · request ${error.requestId}` : ""}`}
         </Txt>
       ) : null}
@@ -2402,7 +2402,6 @@ export const styles = StyleSheet.create({
   screenError: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6], paddingVertical: space[7] },
   retry: { alignSelf: "stretch", marginTop: space[1] },
   home: { alignSelf: "stretch" },
-  errorCode: { fontSize: 12, opacity: 0.8 },
   rows: { gap: space[2] },
   juan: { borderTopWidth: 1 },
   juanRow: { paddingVertical: space[3], borderBottomWidth: 1 },
