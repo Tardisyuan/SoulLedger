@@ -133,7 +133,6 @@ draft was deleted on 2026-10-24.*
 
 | 文件 | 状态 | 内容 |
 |---|---|---|
-| [claude-reference.md](claude-reference.md) | 已入库 | 本仓库的 Claude Code 参考（由 `../CLAUDE.md` 按需加载） |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 已入库 | 架构概览 |
 | [ARCHITECTURE-soul-app-and-domain-split.md](ARCHITECTURE-soul-app-and-domain-split.md) | 已入库 | 灵魂端 App 与按业务域拆分的设计稿（2026-09-13 起）;文首决策记录是拍板结果,正文「现状」一节是当时的快照 |
 | [ARCHITECTURE-sentence-plan.md](ARCHITECTURE-sentence-plan.md) | 已入库 | 受刑计划(处置流程节点)设计稿与决策记录(2026-09-18/19 拍板),已落地为 `backend/apps/sentence_plan/` |
