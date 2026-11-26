@@ -51,8 +51,6 @@ export default function VerdictRail({
   row,
   group,
   claim,
-  sealed,
-  stampKey,
   draft,
   paused = false,
   onSeal,
@@ -61,9 +59,6 @@ export default function VerdictRail({
   row: DeskRow;
   group: JudgmentQueueGroup;
   claim: { busy: boolean; run: () => void } | null;
-  /** 这一件刚落了印(撤回窗口里或已发出):印实落,键不再接。 */
-  sealed: boolean;
-  stampKey: number;
   /** 撤回回来的这一件:带着当时选的裁决与判词。 */
   draft: DeskVerdictDraft | null;
   /** 回读层开着:层里的按键归层,1–4 与 ⌘⏎ 不接。 */
@@ -81,12 +76,11 @@ export default function VerdictRail({
   const readback = useSealReadback();
 
   const judging = group === "mine" && !!data?.actions.conclude && !heldBeforeClaim(row) && !row.is_final;
-  const live = judging && !sealed;
   // 原审判「不过」(希腊判「通过」也一样)要先选理由 / 文书:这一栏没有理由面板,与快审一样送去卷宗整页,
   // 而不是发一个必然被 400 `fail_reason_required` 拒的请求。
   const needsReason = (code: VerdictCode) => (data?.judgment.kind ?? "ORIGINAL") === "ORIGINAL" && reasonsShown(row.civilization, code);
   const seal = () => {
-    if (!live || !selected) return;
+    if (!judging || !selected) return;
     if (needsReason(selected)) {
       onOpen();
       return;
@@ -102,7 +96,7 @@ export default function VerdictRail({
       "mod+Enter": () => wide() && seal(),
       n: () => wide() && document.getElementById("desk-verdict-notes")?.focus(),
     },
-    live && !paused,
+    judging && !paused,
   );
 
   if (claim) {
@@ -119,7 +113,7 @@ export default function VerdictRail({
     );
   }
 
-  if (!judging && !sealed) {
+  if (!judging) {
     // 为什么不能在这里判:服务端的拒绝码(他人认领、候审、城隍……),与认领的拒绝同一张译文表;没有码(读不到、待定)写通用的一句。
     const code = data?.actions.refusals?.conclude;
     const why =
@@ -150,9 +144,9 @@ export default function VerdictRail({
   }
 
   // 第 7 条:要写理由的判决选中后,判词与印位让开,落印键换成描边的「去卷宗整页写理由 →」(⌘⏎ 同样打开卷宗)。
-  const toDossier = live && !!selected && needsReason(selected);
+  const toDossier = !!selected && needsReason(selected);
   return (
-    <section className={s.rail} data-testid="desk-rail" data-state={sealed ? "sealed" : "judge"} aria-labelledby="desk-rail-head">
+    <section className={s.rail} data-testid="desk-rail" data-state="judge" aria-labelledby="desk-rail-head">
       <div className={s.railOpts} role="group" aria-labelledby="desk-rail-head">
         {VERDICTS.map((v) => (
           <button
@@ -161,7 +155,6 @@ export default function VerdictRail({
             data-verdict={v.code}
             aria-keyshortcuts={v.key}
             aria-pressed={selected === v.code}
-            disabled={!live}
             onClick={() => setSelected(v.code)}
             className={`${VERDICT_KEY_CLASS} ${VERDICT_KEY_COMPACT} ${selected === v.code ? OPT_CHOSEN : ""}`}
           >
@@ -184,7 +177,6 @@ export default function VerdictRail({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            disabled={!live}
             aria-keyshortcuts="N"
             placeholder={t("caseDesk.dossier.judge.words")}
             className={s.railWords}
@@ -203,20 +195,17 @@ export default function VerdictRail({
           </>
         ) : (
           <>
-            {/* 第 5 条:印 64,在落印键正上方,左印右说明。未落是虚线待落印,落下盖成实印(同时那一行开始划线)。 */}
+            {/* 第 5 条:印 64,在落印键正上方,左印右说明,虚线待落印。落印当场选中就换到下一件(第六十六批),
+                所以这一栏从不画落下的实印。 */}
             <div className={s.railSeal}>
-              {sealed ? (
-                <DossierSeal key={stampKey} civ={civ} hall={hallOf(row.court)} size={64} stamp />
-              ) : (
-                <DossierSeal civ={civ} hall={hallOf(row.court)} size={64} pending />
-              )}
-              <p>{sealed ? t("caseDesk.verdict.sealed") : t(readback ? "caseDesk.verdict.hint_readback" : "caseDesk.verdict.hint")}</p>
+              <DossierSeal civ={civ} hall={hallOf(row.court)} size={64} pending />
+              <p>{t(readback ? "caseDesk.verdict.hint_readback" : "caseDesk.verdict.hint")}</p>
             </div>
             <Button
               variant="primary"
               size="lg"
               className="w-full gap-2"
-              disabled={!live || !selected}
+              disabled={!selected}
               onClick={seal}
               aria-keyshortcuts="Meta+Enter Control+Enter"
               data-testid="desk-rail-seal"
