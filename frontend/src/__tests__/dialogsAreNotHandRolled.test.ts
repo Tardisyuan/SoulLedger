@@ -77,8 +77,7 @@ const ALLOWED: Record<string, string> = {
     "问一问 below 1024 px: a right drawer on the Base UI Dialog (as Drawer.tsx) — focus trap, Escape and focus return come from the primitive",
   "src/components/judgment/JudgmentDeskStage.tsx":
     "审判台 v3 的盖印确认层:全屏,是 Base UI Dialog.Popup 自己铺满(同 MediaGrid)—— 焦点圈、Esc、焦点归还来自原语",
-  "src/components/souls/detail/SoulHeaderActions.tsx":
-    "transparent aria-hidden click-catcher behind a role=menu with Escape and focus return — a menu, not a dialog",
+  // SoulHeaderActions left on 2026-11-27: its menu is the shared ActionsMenu now (portal, no scrim).
 };
 
 function tsxFiles(dir: string): string[] {
