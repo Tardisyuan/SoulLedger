@@ -113,11 +113,13 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
             {/* 规范 v1 §3.3:标题 16/600,下接区块边界线;右上角写 Esc(键盘上真正关它的那个键)。 */}
             <div className="flex shrink-0 items-center justify-between gap-3 px-6 py-3 border-b border-[oklch(var(--color-block))]">
               <Dialog.Title className={`text-[oklch(var(--color-ink))] ${titleClassName}`}>{title}</Dialog.Title>
+              {/* 点按区与抽屉的关闭键同一档(`Drawer.tsx`,触屏 44 × 44、精确指针 32);字框画在里面的 span 上,
+               * 外观不变(审计 2026-11-26 A1:原来整颗键只有约 30 × 22)。 */}
               <Dialog.Close
-                className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1 py-0.5"
+                className="-my-2 -mr-2 inline-flex size-(--control-h-sm) shrink-0 items-center justify-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
                 aria-label={t("common.close")}
               >
-                Esc
+                <span className="border border-[oklch(var(--color-line))] px-1 py-0.5">Esc</span>
               </Dialog.Close>
             </div>
 

@@ -45,9 +45,11 @@
   border: 0;
   cursor: pointer;
 }
-.door:hover {
-  background: oklch(var(--color-surface-2));
-  color: oklch(var(--color-ink));
+@media (hover: hover) and (pointer: fine) {
+  .door:hover {
+    background: oklch(var(--color-surface-2));
+    color: oklch(var(--color-ink));
+  }
 }
 .door[aria-current="page"],
 .door[aria-current="true"] {
@@ -114,10 +116,15 @@
   border-left: 0;
   border-right-color: oklch(var(--color-ink));
 }
-.door:hover .tip,
 .door:focus-visible .tip {
   display: block;
   animation: tipIn 0s 400ms backwards;
+}
+@media (hover: hover) and (pointer: fine) {
+  .door:hover .tip {
+    display: block;
+    animation: tipIn 0s 400ms backwards;
+  }
 }
 @keyframes tipIn {
   from { opacity: 0; }
@@ -191,8 +198,10 @@
   text-decoration: none;
   box-shadow: inset 0 -2px 0 transparent;
 }
-.tab:hover {
-  color: oklch(var(--color-ink));
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: oklch(var(--color-ink));
+  }
 }
 .tab[aria-current="page"] {
   color: oklch(var(--color-ink));

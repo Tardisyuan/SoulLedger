@@ -1903,8 +1903,10 @@ html.theme-switching *::after {
   fill: oklch(var(--color-ink-muted)) !important;
 }
 
-.react-flow__controls-button:hover {
-  background: oklch(var(--color-surface-2)) !important;
+@media (hover: hover) and (pointer: fine) {
+  .react-flow__controls-button:hover {
+    background: oklch(var(--color-surface-2)) !important;
+  }
 }
 
 .react-flow__controls-button:last-child {
@@ -2150,9 +2152,21 @@ html.theme-switching *::after {
   transition: background-color var(--transition-duration-state) ease-in-out;
 }
 
-.toast-close:hover {
-  background: oklch(var(--color-surface-3));
-  color: oklch(var(--color-ink));
+/* 触屏:点按区撑到 44 × 44(与抽屉、弹窗的关闭键同一档),负外边距吃掉多出的那圈,Toast 的版面不变。
+   失败的 Toast 不自动收起,这颗键是唯一的出口(审计 2026-11-26 A1)。 */
+@media (hover: none), (pointer: coarse) {
+  .toast-close {
+    width: 44px;
+    height: 44px;
+    margin: -11px -10px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .toast-close:hover {
+    background: oklch(var(--color-surface-3));
+    color: oklch(var(--color-ink));
+  }
 }
 
 /* 焦点环用字色 ink,内缩到按钮里:文明的焦点色在 surface-2 上不一定够 3:1(中性皮下它就是 ink)。 */
@@ -2268,6 +2282,11 @@ html.theme-switching *::after {
   to {
     transform: rotate(360deg);
   }
+}
+/* 工具条上的「暂停流动」按下时,两种循环停在原处(不归零,再按接着走)。 */
+.v4-map[data-paused] .flow,
+.v4-map[data-paused] .scan {
+  animation-play-state: paused;
 }
 /* 网格(--ink 5%)与顶边刻度:它是参照,不该比路线显眼。 */
 .v4-map .map-grid-lines {
@@ -3249,8 +3268,10 @@ li:last-child > .route-row {
 .demo-home .emblem-sheen::before {
   animation: none;
 }
-.demo-home .landing-card:hover .emblem-sheen::before {
-  animation: emblem-sheen 11s ease-in-out infinite;
+@media (hover: hover) and (pointer: fine) {
+  .demo-home .landing-card:hover .emblem-sheen::before {
+    animation: emblem-sheen 11s ease-in-out infinite;
+  }
 }
 /* 首屏光晕:跟着预览当前的文明换色(data-civ 只在这一层上,不改眉题与按钮)。 */
 .demo-home-glow {
@@ -3423,8 +3444,10 @@ li:last-child > .route-row {
   text-decoration-color: oklch(var(--color-ink) / 0.16);
   text-underline-offset: 2px;
 }
-.how-built-contact:hover {
-  color: oklch(var(--color-ink));
+@media (hover: hover) and (pointer: fine) {
+  .how-built-contact:hover {
+    color: oklch(var(--color-ink));
+  }
 }
 @container (max-width: 219.98px) {
   .demo-home-start {

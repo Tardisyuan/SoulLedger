@@ -140,8 +140,10 @@
   text-decoration: none;
   white-space: nowrap;
 }
-.triage:hover {
-  color: oklch(var(--color-ink));
+@media (hover: hover) and (pointer: fine) {
+  .triage:hover {
+    color: oklch(var(--color-ink));
+  }
 }
 
 .groupHead {
@@ -176,8 +178,10 @@
   color: inherit;
   cursor: pointer;
 }
-.row:hover {
-  background: oklch(var(--color-surface-1));
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: oklch(var(--color-surface-1));
+  }
 }
 /* 选中行是墨,不是文明色(用户 2026-11-14:文明色只上顶线、印、脊、焦点环四个记号)。 */
 .row[aria-current="true"] {
