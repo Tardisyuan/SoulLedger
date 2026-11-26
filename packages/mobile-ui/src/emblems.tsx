@@ -122,15 +122,6 @@ export const HERO: Record<CivKey, { f: string; c: string }> = {
   gr: { f: "M8 10H40M10 14H38M14 14V38M22 14V38M26 14V38M34 14V38M10 38H38M6 42H42", c: "M8 10H40M14 10V42M34 10V42M6 42H42" },
 };
 
-/** The letter paper's corner (1f), 14×14, drawn for the top-left and mirrored for the other three. */
-export const CORNER: Record<CivKey, string> = {
-  neutral: "M1 1H6",
-  cn: "M1 13V1H13M4 10V4H10V8H7",
-  eu: "M1 13V5A4 4 0 0 1 5 1H13M5 13V7A2 2 0 0 1 7 5H13",
-  eg: "M1 13V1H13M5 9C5 6 7 5 9 5",
-  gr: "M1 13V1H13M4 10V4H9V7H7",
-};
-
 /**
  * A journey node (1g, viewBox 24): 殿 / 圈 / 门 / 台阶 — the only thing that
  * changes by civilization on a line of stops. The sentence plan draws each
