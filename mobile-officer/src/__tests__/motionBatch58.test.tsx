@@ -64,7 +64,7 @@ describe("M10: a busy action button keeps its look; past 160 a line in its own i
     const onPress = jest.fn();
     renderOfficer(<ActionButton testID="a" kind="primary" title="批准" busy onPress={onPress} />);
     await act(async () => {});
-    expect(flat(screen.getByTestId("a")).opacity).toBe(1);
+    expect(flat(screen.getByTestId("a")).opacity ?? 1).toBe(1); // unset = not dimmed (Press since the style round)
     fireEvent.press(screen.getByTestId("a"));
     expect(onPress).not.toHaveBeenCalled();
     expect(screen.queryByTestId("a-busy", { includeHiddenElements: true })).toBeNull();
