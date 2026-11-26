@@ -91,6 +91,7 @@ export function NoticesTab({ onRead, onLand, gone, version }: { onRead?: () => v
           onRetry={reload}
           role={role}
           area={t("officer_app.areas.notices")}
+          error={error}
           emptyTitle={t("officer_app.notices.empty_title")}
           emptyBody={t("officer_app.notices.empty_body")}
         />

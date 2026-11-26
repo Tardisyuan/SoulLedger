@@ -94,7 +94,7 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
   const [tab, setTab] = useState<SoulTab>("identity");
   const [opened, setOpened] = useState<SoulTab[]>(["identity"]);
   const view = detailStateOf({ data, error });
-  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
+  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} error={error} />;
   const { soul, code } = data;
   const pick = (next: SoulTab) => {
     setTab(next);

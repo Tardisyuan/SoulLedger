@@ -242,7 +242,8 @@ describe("举报 · images (C-08 MediaTile)", () => {
     expect(viewer.className).toContain("bg-black");
     const shown = () => within(viewer).getByRole("img").getAttribute("src") ?? "";
     expect(shown()).toMatch(/m1\/\?t=s1$/);
-    expect(viewer).toHaveTextContent("图 1 · 1080×720 · 1 / 2");
+    expect(viewer).toHaveTextContent("图 1 · 1080×720");
+    expect(within(viewer).getByTestId("viewer-position").textContent?.replace(/\s/g, "")).toBe("1/2");
 
     fireEvent.keyDown(viewer, { key: "ArrowRight" });
     expect(shown()).toMatch(/m2\/\?t=s2$/);

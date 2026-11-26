@@ -72,7 +72,7 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
   const [failure, setFailure] = useState<string | null>(null);
 
   const state = detailStateOf({ data: j, error });
-  if (state || !j) return <StateView state={state ?? "loading"} onRetry={() => void reload()} />;
+  if (state || !j) return <StateView state={state ?? "loading"} onRetry={() => void reload()} error={error} />;
 
   const mode = wangsiMode(j);
   const level = j.grievance_level ?? "";

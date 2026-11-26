@@ -299,7 +299,7 @@ function DispatchLanding({ id, onSettled, onOpenSoul }: { id: string; onSettled:
   const load = useCallback(() => dispatchApi.get(id).then((r) => r.data), [id]);
   const { data, error, reload } = useCachedRemote(`detail:dispatch:${id}`, load);
   const view = detailStateOf({ data, error });
-  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
+  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} error={error} />;
   const mode = dispatchView(data, ownHall);
   if (mode.mode === "act") return <TodoDetail kind="reassignment" id={id} onSettled={onSettled} onOpenSoul={onOpenSoul} />;
   const line = dispatchStatusLine(data, mode.side);
@@ -387,7 +387,7 @@ function TodoDetail({
   };
 
   if (view === "gone" && whenGone) return <View style={{ padding: space[5] }}>{whenGone}</View>;
-  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
+  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} error={error} />;
   const note = handledNotice(data);
   // Decided here (第五十批 C1): what stays on screen is for looking back at, at 55 %.
   const done = decided && !!onDecided;
@@ -525,7 +525,7 @@ function JudgmentDetail({
   useEffect(() => {
     if (caseNumber) noteOpened({ type: "judgment", id, title: caseNumber, line: soulName });
   }, [id, caseNumber, soulName]);
-  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
+  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} error={error} />;
   if (record) return <EvidenceText record={record} onBack={() => setRecord(null)} />;
   // Sealed here (第五十批 C1): the 「已落印」 strip under the title takes the seal; the rest is for looking back at.
   const done = sealed && !!onDecided;

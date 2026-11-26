@@ -4,12 +4,13 @@
  * the outcome: the client's `afterSendEvent` hook (see `captureCrash`).
  */
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 import { initCrashReporting } from "@soulledger/mobile-ui/src/crashReport";
 import { RootErrorBoundary } from "@soulledger/mobile-ui/src/errorBoundary";
 import { I18nProvider } from "@soulledger/mobile-ui/src/i18n";
-import { ScreenError } from "@soulledger/mobile-ui/src/ui";
+import { themeFor } from "@soulledger/mobile-ui/src/theme";
+import { ScreenError, ThemeContext } from "@soulledger/mobile-ui/src/ui";
 import { renderSoul } from "./harness";
 
 type Listener = (event: { event_id?: string }, response: unknown) => void;
@@ -177,4 +178,24 @@ test("a failed request's short id is printed beside the code; without one there 
     </I18nProvider>
   );
   expect(screen.getByTestId("error-code")).not.toHaveTextContent(/request/);
+});
+
+test("第六十七批 五.3: the retry is ink-filled and the code is faint text at the foot, in both schemes", () => {
+  for (const scheme of ["light", "dark"] as const) {
+    const t = themeFor(null, scheme);
+    const { unmount } = render(
+      <ThemeContext.Provider value={t}>
+        <I18nProvider>
+          <ScreenError error={{ key: "soul_app.errors.network" }} onRetry={() => {}} />
+        </I18nProvider>
+      </ThemeContext.Provider>
+    );
+    const retry = StyleSheet.flatten(screen.getByTestId("screen-retry").props.style);
+    expect(retry.backgroundColor).toBe(t.ink);
+    expect(retry.backgroundColor).not.toBe("transparent");
+    const code = StyleSheet.flatten(screen.getByTestId("error-code").props.style);
+    expect(code.color).toBe(t.faintText);
+    expect(code.color).not.toBe(t.inkSubtle);
+    unmount();
+  }
 });

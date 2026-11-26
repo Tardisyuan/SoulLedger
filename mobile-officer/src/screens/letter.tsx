@@ -326,7 +326,7 @@ export function LetterThread({
   }
   const view = detailStateOf({ data: thread.data, error: thread.error });
   if (view || !thread.data)
-    return <StateView state={view ?? "loading"} onRetry={thread.reload} />;
+    return <StateView state={view ?? "loading"} onRetry={thread.reload} error={thread.error} />;
 
   const { conversation } = thread.data;
   const meId = user?.id;

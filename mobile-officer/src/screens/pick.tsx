@@ -80,7 +80,7 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
   }
 
   const view = detailStateOf({ data, error });
-  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
+  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} error={error} />;
   if (!segment) {
     return (
       <Screen testID="pick-readonly" edges={["left", "right"]}>
