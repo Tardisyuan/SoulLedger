@@ -79,7 +79,8 @@ def test_queue_counts_on_a_shard_split_a_held_greek_case_from_a_claimable_one():
     the souls by id now. Mutation: put `soul__ferry_passage` back in `held_q` -> CrossShardJoin, red."""
     from apps.authentication.models import User
     from apps.core.shard_reads import read_context
-    from apps.judgment.views import QueueGroup, queue_counts_of
+    from apps.judgment.queue import queue_counts_of
+    from apps.judgment.serializers import QueueGroup
     from tests.test_sharded_writes import _assign, _halls, _in_hall, cut
 
     hall = _halls()["GREEK"]
