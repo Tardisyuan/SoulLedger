@@ -551,7 +551,12 @@ describe("replying", () => {
     expect(within(screen.getByTestId("replying")).getByText("回复 许南")).toBeTruthy();
     fireEvent.changeText(screen.getByTestId("comment-body"), "谢谢");
     // 第六十七批 一: the comment field and its send key are both 48 (touch.controlMd), not 44.
-    expect(StyleSheet.flatten(screen.getByTestId("comment-body").props.style)).toMatchObject({ minHeight: 48 });
+    // The empty line itself is 48 too (padding + line + border): with 12 + 12 and an unset line the Huawei drew 55,
+    // its top 7pt above 发送 (2026-11-27). The line stays at least 1.8× the size so Android keeps the serif's top.
+    const body = StyleSheet.flatten(screen.getByTestId("comment-body").props.style) as Record<string, number>;
+    expect(body).toMatchObject({ minHeight: 48 });
+    expect(2 * body.paddingVertical + body.lineHeight + 2 * body.borderWidth).toBe(48);
+    expect(body.lineHeight / body.fontSize).toBeGreaterThanOrEqual(1.8);
     expect(StyleSheet.flatten(screen.getByTestId("comment-send").props.style)).toMatchObject({ minHeight: 48 });
     fireEvent.press(screen.getByTestId("comment-send"));
     await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));

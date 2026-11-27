@@ -216,7 +216,11 @@ describe("the four notices (1g)", () => {
     expect(body).not.toMatch(/\d+\s*\/\s*\d+/);
     expect(screen.getByTestId("assist-input").props.value).toBe("我为什么不能申请？");
     // 第六十七批 一: the field and its send key are both 48 (touch.controlMd), not 44.
-    expect(StyleSheet.flatten(screen.getByTestId("assist-input").props.style)).toMatchObject({ minHeight: 48 });
+    const input = StyleSheet.flatten(screen.getByTestId("assist-input").props.style) as Record<string, number>;
+    expect(input).toMatchObject({ minHeight: 48 });
+    // The empty line itself is 48 (padding + line + border), the line at least 1.8× so Android keeps the serif's top.
+    expect(2 * input.paddingVertical + input.lineHeight + 2 * input.borderWidth).toBe(48);
+    expect(input.lineHeight / input.fontSize).toBeGreaterThanOrEqual(1.8);
     expect(StyleSheet.flatten(screen.getByTestId("assist-send").props.style)).toMatchObject({ width: 48, height: 48 });
     expect(screen.queryByTestId("assist-answer")).toBeNull();
   });
