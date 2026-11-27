@@ -817,7 +817,8 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: radius.dialog, padding: 16, gap: 12 },
   introItem: { flexDirection: "row", gap: 12, borderTopWidth: 1, paddingTop: 12 },
   composer: { borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
-  input: { flex: 1, minHeight: touch.controlMd, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16 },
+  // One empty line is 7 + 32 + 7 + the border twice = 48, level with send / stop; a serif line under ~1.8× is clipped on Android.
+  input: { flex: 1, minHeight: touch.controlMd, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 7, fontSize: 16, lineHeight: 32 },
   send: { width: touch.controlMd, height: touch.controlMd, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   historyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
   screenTag: { borderLeftWidth: 2, paddingLeft: 8 },
