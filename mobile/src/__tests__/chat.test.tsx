@@ -463,6 +463,9 @@ describe("the conversation's eight states", () => {
     const compose = StyleSheet.flatten(screen.getByTestId("compose").props.style);
     expect(compose.fontFamily).toBe(family.serifHan);
     expect(compose.lineHeight / compose.fontSize).toBeGreaterThanOrEqual(1.8);
+    // One empty line (padding + line + border) is the send key's height, not 12 + 32 + 12 + 2 = 58 beside it.
+    const send = StyleSheet.flatten(screen.getByTestId("send").props.style);
+    expect(2 * compose.paddingVertical + compose.lineHeight + 2 * compose.borderWidth).toBe(send.minHeight);
   });
 
   it("a hall is named in the interface language, falling back to the server's hall", () => {
