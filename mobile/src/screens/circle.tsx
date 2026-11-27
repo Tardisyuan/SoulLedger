@@ -1151,7 +1151,7 @@ const styles = StyleSheet.create({
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
   // One empty line is 7 + 32 + 7 + the 1pt border twice = 48, level with 发送. The line stays 2× the size: under about
   // 1.8× Android clips the top of a serif first line; with no lineHeight the Huawei drew it 55 tall (2026-11-27).
-  commentInput: { flex: 1, minHeight: touch.controlMd, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 7, fontSize: 16, lineHeight: 32 },
+  commentInput: { flex: 1, minHeight: touch.controlMd, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: (touch.controlMd - 32 - 2) / 2, fontSize: 16, lineHeight: 32 }, // one empty line = the 48 send key
   send: { minHeight: touch.controlMd, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontSize: 14, letterSpacing: 0.6 },
 });
