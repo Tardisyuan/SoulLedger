@@ -466,6 +466,8 @@ describe("the conversation's eight states", () => {
     // One empty line (padding + line + border) is the send key's height, not 12 + 32 + 12 + 2 = 58 beside it.
     const send = StyleSheet.flatten(screen.getByTestId("send").props.style);
     expect(2 * compose.paddingVertical + compose.lineHeight + 2 * compose.borderWidth).toBe(send.minHeight);
+    // 48 on both platforms (user 2026-11-28; it was 44 on iOS). Jest renders as iOS.
+    expect(send.minHeight).toBe(48);
   });
 
   it("a hall is named in the interface language, falling back to the server's hall", () => {

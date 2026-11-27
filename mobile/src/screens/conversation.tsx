@@ -48,7 +48,7 @@ import { family, quoteFamily } from "@soulledger/mobile-ui/src/fonts";
 import { useI18n } from "@soulledger/mobile-ui/src/i18n";
 import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
-import { radius, PENDING_OPACITY, RECEDE_OPACITY } from "@soulledger/mobile-ui/src/theme";
+import { radius, touch, PENDING_OPACITY, RECEDE_OPACITY } from "@soulledger/mobile-ui/src/theme";
 import { useToast } from "@soulledger/mobile-ui/src/feedback";
 import { Button, FadeModal, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useLandingFade, useReducedMotion, useTheme, Press, useLayout } from "@soulledger/mobile-ui/src/ui";
 import type { AppStackParams } from "../navTypes";
@@ -1051,7 +1051,8 @@ function Dock({
     default: {
       const placeholder =
         mode.kind === "incoming" ? "soul_app.chat.compose.reply_placeholder" : mode.kind === "hall" ? "soul_app.chat.compose.hall_placeholder" : "soul_app.chat.compose.placeholder";
-      const size = ANDROID ? 48 : 44;
+      // 48 on both platforms, like the comment and assistant composers (Design batch 67 一; user 2026-11-28).
+      const size = touch.controlMd;
       return (
         <View testID="composer" style={[styles.dock, { paddingHorizontal: gutter }, styles.composer, pad]}>
           {/* A request room (throttled) takes text only: the server refuses an image there. */}
