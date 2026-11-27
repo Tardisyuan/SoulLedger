@@ -49,6 +49,32 @@ SplashScreen.setOptions({ duration: 0, fade: false });
 /** Module-level: a remount in the same process is not a cold start. */
 export const coldStart = { played: false };
 
+// From the first render of a cold start that will decide (the native splash is up) until it is done.
+let showing = false;
+const waiting = new Set<() => void>();
+
+/**
+ * Runs `fn` once nothing of the cold start -- the native splash or this layer -- is on screen; on the next tick if
+ * none is. The app lock's cold-start face prompt waits on it (iOS Simulator 2026-11-27): asked at once, the system
+ * sheet opened over the blank splash, iOS took the app to `inactive` in the middle of the cold start, and the splash
+ * was still up a minute after the face was recognised. Returns a cancel.
+ */
+export function afterColdStart(fn: () => void): () => void {
+  if (!showing) {
+    const id = setTimeout(fn, 0);
+    return () => clearTimeout(id);
+  }
+  waiting.add(fn);
+  return () => void waiting.delete(fn);
+}
+
+function coldStartOver() {
+  showing = false;
+  const fns = [...waiting];
+  waiting.clear();
+  fns.forEach((fn) => fn());
+}
+
 /** How long the splash may wait on a booting session before it plays. */
 const SESSION_WAIT_MS = 1000;
 
@@ -86,7 +112,11 @@ export function ColdStartView({
   /** Land the mark here instead of receding (read once, when the cold start decides to play). */
   land?: Land;
 }) {
-  const [phase, setPhase] = useState<Phase>(coldStart.played ? "done" : "wait");
+  const [phase, setPhase] = useState<Phase>(() => {
+    if (coldStart.played) return "done";
+    showing = true;
+    return "wait";
+  });
   const [waited, setWaited] = useState(false);
   const [interactive, setInteractive] = useState(false);
   const [target, setTarget] = useState<Land | null>(null);
@@ -118,6 +148,11 @@ export function ColdStartView({
       alive = false;
     };
   }, [phase, booting, skip, waited, land]);
+
+  // Done (here, or in a remount that finds it played): what waited on the cold start (afterColdStart) goes ahead.
+  useEffect(() => {
+    if (phase === "done") coldStartOver();
+  }, [phase]);
 
   // Frame 0 is the native splash: the ground, no mark yet.
   const drawn = useSharedValue(0);

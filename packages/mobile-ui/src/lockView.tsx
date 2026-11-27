@@ -4,13 +4,14 @@
  * 「{name} · {hall}」, or the name alone when the hall is not known), the main button and the text link 「用密码登录」. The apps pass their own words; whether
  * the lock is on, what a cold start is and what 「输入密码」 does stay in each app's `appLock.tsx`. When the lock is up
  * is `useAppLock` below, one state machine for both: it was two copies, and the same defect was fixed in both
- * (d6f1e348f). A leaf: ui and core only, so the officer app can import it.
+ * (d6f1e348f). A leaf: ui, the cold start and core only, so the officer app can import it.
  */
 import { onSessionResume, onSessionSuspend } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BackHandler, StyleSheet, View } from "react-native";
 
+import { afterColdStart } from "./coldStartView";
 import { Button, Txt, useTheme, Press } from "./ui";
 
 export const LOCK_AFTER_MS = 5 * 60 * 1000;
@@ -59,11 +60,11 @@ export function useAppLock({
   }, [prompt]);
 
   useEffect(() => {
-    // Asks once, as on a return. From a timer callback, not the effect body: `unlock` sets state before its
-    // first await, and react-hooks/set-state-in-effect refuses that synchronously in an effect.
+    // Asks once, as on a return -- but only once the cold start is off the screen, so the system sheet opens over
+    // 「已锁定」, not over the blank native splash (afterColdStart says why). Never synchronously in the effect body:
+    // `unlock` sets state before its first await, and react-hooks/set-state-in-effect refuses that.
     if (!coldStart) return;
-    const id = setTimeout(() => void unlock(), 0);
-    return () => clearTimeout(id);
+    return afterColdStart(() => void unlock());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the cold start is asked about once, on mount
   }, []);
 
