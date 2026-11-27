@@ -1,10 +1,10 @@
 {
-  "measured": "2026-11-21",
+  "measured": "2026-11-27",
   "tests": {
-    "backend": "11,859",
-    "web": "7,195",
-    "soul_app": "1,421",
-    "officer_app": "1,354",
+    "backend": "11,907",
+    "web": "7,229",
+    "soul_app": "1,437",
+    "officer_app": "1,357",
     "e2e": "≈ 270"
   },
   "github": "https://github.com/Tardisyuan/SoulLedger",
