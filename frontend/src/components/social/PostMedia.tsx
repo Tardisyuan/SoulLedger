@@ -226,7 +226,7 @@ export function MediaViewer({
           {current && index !== null ? (
             <>
               <div className="flex shrink-0 items-center gap-3 p-4 font-mono text-xs tabular-nums text-[oklch(var(--color-on-main))]">
-                {author ? <span className="min-w-0 truncate font-sans text-sm font-medium">{author}</span> : null}
+                {author ? <span title={author} className="min-w-0 truncate font-sans text-sm font-medium">{author}</span> : null}
                 {time ? <span>{time}</span> : null}
                 <span data-testid="viewer-position" className="ml-auto">
                   {index + 1} / {media.length}
