@@ -148,7 +148,7 @@ afterEach(() => jest.restoreAllMocks());
 // ── 入口 ───────────────────────────────────────────────────────────────
 
 describe("the 图 key", () => {
-  it("sits left of the field in a free conversation and in the hall, 44 square", () => {
+  it("sits left of the field in a free conversation and in the hall, 48 square (both platforms since 2026-11-28)", () => {
     for (const c of [conv(), hall()]) {
       const view = render(shell(chatState({ conversations: [c] }), <ConversationScreen id={c.id} />));
       const key = screen.getByTestId("chat-image-add");
@@ -156,7 +156,7 @@ describe("the 图 key", () => {
       expect(within(key).queryByText("图")).toBeNull();
       expect(key.props.accessibilityLabel).toBe("图");
       expect(within(key).UNSAFE_getByType(Svg).props).toMatchObject({ width: 20, height: 20, strokeWidth: 1.5 });
-      expect(StyleSheet.flatten(key.props.style)).toMatchObject({ width: 44, height: 44 });
+      expect(StyleSheet.flatten(key.props.style)).toMatchObject({ width: 48, height: 48 });
       // Left of the field: it comes first in the composer.
       const ids = screen.UNSAFE_root.findAll((n: { type: unknown; props: Record<string, unknown> }) => typeof n.type === "string" && !!n.props.testID).map((n: { props: Record<string, unknown> }) => n.props.testID);
       expect(ids.indexOf("chat-image-add")).toBeLessThan(ids.indexOf("compose"));
